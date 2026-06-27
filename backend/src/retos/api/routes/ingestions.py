@@ -27,6 +27,8 @@ class SourceScanCreate(BaseModel):
     max_files: int = Field(default=500, ge=1, le=10_000)
     max_bytes: int = Field(default=2_000_000, ge=1, le=50_000_000)
     max_segment_tokens: int = Field(default=220, ge=20, le=1000)
+    enable_ocr: bool = True
+    max_ocr_pages: int = Field(default=20, ge=1, le=500)
 
 
 def enqueue_text_ingestion(job: Job) -> None:
@@ -133,6 +135,8 @@ async def scan_source(
                 "max_files": payload.max_files,
                 "max_bytes": payload.max_bytes,
                 "max_segment_tokens": payload.max_segment_tokens,
+                "enable_ocr": payload.enable_ocr,
+                "max_ocr_pages": payload.max_ocr_pages,
             },
         )
         await uow.journal_events.add(

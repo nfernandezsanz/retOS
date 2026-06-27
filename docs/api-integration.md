@@ -212,7 +212,9 @@ curl --request POST http://localhost:8000/sources/<source_id>/scan \
     "run_inline":false,
     "max_files":500,
     "max_bytes":2000000,
-    "max_segment_tokens":220
+    "max_segment_tokens":220,
+    "enable_ocr":true,
+    "max_ocr_pages":20
   }'
 ```
 
@@ -220,8 +222,8 @@ The source must have `kind="mount"` and a local `file://` URI that is visible to
 or worker container. The scan creates one document/version/extracted-text artifact per new
 file and deterministic word-window segments with anchors based on the relative path.
 Existing content hashes in the same domain are skipped, so scanning the same corpus twice
-is idempotent. PDFs currently use local text extraction; OCR for scanned image-only pages
-is a separate pipeline step.
+is idempotent. PDFs first use local embedded-text extraction; when no text is available
+and `enable_ocr=true`, pages are rendered locally and OCR is run through Tesseract.
 
 In `RETOS_ENV=test`, or when `run_inline=true`, the scan runs inline. In Docker/runtime
 mode, the scan is queued as an `ingest.source` job and processed by the worker.

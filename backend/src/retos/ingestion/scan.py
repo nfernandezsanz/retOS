@@ -7,6 +7,8 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import pymupdf
+import pytesseract  # type: ignore[import-untyped]
+from PIL import Image
 from sqlalchemy.exc import IntegrityError
 
 from retos.api.routes.events import progress_store
@@ -68,14 +70,61 @@ def extract_pdf_text(raw: bytes) -> str:
     return "\n\n".join(pages)
 
 
-def extract_source_text(path: Path, *, max_bytes: int) -> tuple[str, bytes, str]:
+def ocr_pdf_text(raw: bytes, *, max_pages: int) -> str:
+    if max_pages < 1:
+        raise SourceScanError("max_ocr_pages must be positive")
+
+    pages: list[str] = []
+    with pymupdf.open(stream=raw, filetype="pdf") as document:  # type: ignore[no-untyped-call]
+        for page_number, page in enumerate(document):
+            if page_number >= max_pages:
+                break
+            pixmap = page.get_pixmap(
+                matrix=pymupdf.Matrix(2, 2),  # type: ignore[no-untyped-call]
+                alpha=False,
+            )
+            image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+            text = pytesseract.image_to_string(image, lang="eng").strip()
+            if text:
+                pages.append(text)
+    if not pages:
+        raise SourceScanError("PDF OCR produced no text")
+    return "\n\n".join(pages)
+
+
+def extract_pdf_content(
+    raw: bytes,
+    *,
+    enable_ocr: bool,
+    max_ocr_pages: int,
+) -> tuple[str, str, str]:
+    try:
+        return extract_pdf_text(raw), "pdf_text", "pdf_text"
+    except SourceScanError:
+        if not enable_ocr:
+            raise
+    return ocr_pdf_text(raw, max_pages=max_ocr_pages), "ocr_text", "pdf_ocr"
+
+
+def extract_source_text(
+    path: Path,
+    *,
+    max_bytes: int,
+    enable_ocr: bool = True,
+    max_ocr_pages: int = 20,
+) -> tuple[str, bytes, str, str]:
     raw = path.read_bytes()
     if len(raw) > max_bytes:
         raise SourceScanError(f"File exceeds max_bytes: {path}")
     suffix = path.suffix.lower()
     if suffix == ".pdf":
-        return extract_pdf_text(raw), raw, "pdf_text"
-    return raw.decode("utf-8", errors="replace"), raw, "raw_text"
+        text, artifact_kind, extraction_kind = extract_pdf_content(
+            raw,
+            enable_ocr=enable_ocr,
+            max_ocr_pages=max_ocr_pages,
+        )
+        return text, raw, artifact_kind, extraction_kind
+    return raw.decode("utf-8", errors="replace"), raw, "raw_text", "raw_text"
 
 
 async def run_source_scan(
@@ -113,10 +162,14 @@ async def run_source_scan(
         max_files = int(job.payload.get("max_files") or 500)
         max_bytes = int(job.payload.get("max_bytes") or 2_000_000)
         max_segment_tokens = int(job.payload.get("max_segment_tokens") or 220)
+        enable_ocr = bool(job.payload.get("enable_ocr", True))
+        max_ocr_pages = int(job.payload.get("max_ocr_pages") or 20)
         if max_files < 1:
             raise SourceScanError("max_files must be positive")
         if max_bytes < 1:
             raise SourceScanError("max_bytes must be positive")
+        if max_ocr_pages < 1:
+            raise SourceScanError("max_ocr_pages must be positive")
 
         await uow.jobs.update_status(job_id=job.id, status="running", started_at=started_at)
         await uow.journal_events.add(
@@ -141,7 +194,12 @@ async def run_source_scan(
             if scanned_files >= max_files:
                 break
             scanned_files += 1
-            text, raw, artifact_kind = extract_source_text(path, max_bytes=max_bytes)
+            text, raw, artifact_kind, extraction_kind = extract_source_text(
+                path,
+                max_bytes=max_bytes,
+                enable_ocr=enable_ocr,
+                max_ocr_pages=max_ocr_pages,
+            )
             file_hash = content_hash(raw)
             existing = await uow.documents.get_by_domain_and_hash(job.domain_id, file_hash)
             if existing is not None:
@@ -163,6 +221,7 @@ async def run_source_scan(
                         "source_id": source.id,
                         "relative_path": relative_path,
                         "suffix": path.suffix.lower(),
+                        "extraction": extraction_kind,
                         "segmenter": "word-window-v1",
                     }
                 },

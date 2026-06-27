@@ -14,8 +14,10 @@ from retos.domain.jobs import Job
 from retos.ingestion.scan import (
     SourceScanError,
     extract_pdf_text,
+    extract_source_text,
     fail_source_scan_job,
     iter_supported_files,
+    ocr_pdf_text,
     path_from_file_uri,
     read_text_file,
     run_source_scan,
@@ -67,6 +69,13 @@ def write_fixture_pdf(path: Path) -> None:
     document = pymupdf.open()
     page = document.new_page()
     page.insert_text((72, 72), "Mars rover sample caching mission brief.")
+    document.save(path)
+    document.close()
+
+
+def write_image_only_pdf(path: Path) -> None:
+    document = pymupdf.open()
+    document.new_page()
     document.save(path)
     document.close()
 
@@ -128,6 +137,51 @@ def test_extract_pdf_text_reads_digital_pdf(tmp_path: Path) -> None:
     text = extract_pdf_text(pdf_path.read_bytes())
 
     assert "Mars rover sample caching" in text
+
+
+def test_extract_source_text_uses_ocr_fallback_for_image_only_pdf(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pdf_path = tmp_path / "scan.pdf"
+    write_image_only_pdf(pdf_path)
+    monkeypatch.setattr(
+        "retos.ingestion.scan.pytesseract.image_to_string",
+        lambda image, lang: "OCR fallback text",
+    )
+
+    text, raw, artifact_kind, extraction_kind = extract_source_text(
+        pdf_path,
+        max_bytes=100_000,
+        enable_ocr=True,
+        max_ocr_pages=1,
+    )
+
+    assert text == "OCR fallback text"
+    assert raw == pdf_path.read_bytes()
+    assert artifact_kind == "ocr_text"
+    assert extraction_kind == "pdf_ocr"
+
+
+def test_extract_source_text_can_disable_pdf_ocr(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "scan.pdf"
+    write_image_only_pdf(pdf_path)
+
+    with pytest.raises(SourceScanError, match="no extractable text"):
+        extract_source_text(
+            pdf_path,
+            max_bytes=100_000,
+            enable_ocr=False,
+            max_ocr_pages=1,
+        )
+
+
+def test_ocr_pdf_text_requires_positive_page_limit(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "scan.pdf"
+    write_image_only_pdf(pdf_path)
+
+    with pytest.raises(SourceScanError, match="max_ocr_pages"):
+        ocr_pdf_text(pdf_path.read_bytes(), max_pages=0)
 
 
 def test_iter_supported_files_accepts_single_supported_file(tmp_path: Path) -> None:
@@ -217,6 +271,31 @@ def test_scan_source_endpoint_ingests_text_and_markdown_idempotently(
         headers=scan_admin_headers,
     )
     assert artifacts.json()[0]["kind"] == "pdf_text"
+
+
+def test_scan_source_endpoint_can_ocr_image_only_pdf(
+    scan_client: TestClient,
+    scan_admin_headers: dict[str, str],
+    scan_db_path: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_image_only_pdf(tmp_path / "image-only.pdf")
+    _, source_id = create_mount_source(scan_client, scan_admin_headers, tmp_path)
+    monkeypatch.setattr(
+        "retos.ingestion.scan.pytesseract.image_to_string",
+        lambda image, lang: "OCR endpoint text",
+    )
+
+    response = scan_client.post(
+        f"/sources/{source_id}/scan",
+        json={"max_segment_tokens": 20, "enable_ocr": True, "max_ocr_pages": 1},
+        headers=scan_admin_headers,
+    )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "succeeded"
+    assert count_scan_side_effects(scan_db_path) == (1, 1, 1, 1, 1)
 
 
 @pytest.mark.asyncio
