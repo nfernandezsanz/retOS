@@ -42,6 +42,10 @@ The first revision creates these tables:
 | `progress_events` | Persisted progress updates that can back SSE streams and UI timelines. |
 | `journal_events` | Append-only audit facts for user and system actions. |
 
+The first API-backed workflow is job creation: `POST /jobs` creates a queued job,
+writes a `job.created` journal event, writes a `job.queued` progress event, and emits
+a live SSE notification.
+
 ## Development Contract
 
 - ORM metadata and Alembic revisions must stay in sync.

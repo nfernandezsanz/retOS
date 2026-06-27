@@ -3,7 +3,13 @@ from types import TracebackType
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from retos.persistence.database import SessionFactory
-from retos.persistence.repositories import DomainRepository, SourceRepository
+from retos.persistence.repositories import (
+    DomainRepository,
+    JobRepository,
+    JournalRepository,
+    ProgressEventRepository,
+    SourceRepository,
+)
 
 
 class SQLAlchemyUnitOfWork:
@@ -12,11 +18,17 @@ class SQLAlchemyUnitOfWork:
         self.session: AsyncSession | None = None
         self.domains: DomainRepository
         self.sources: SourceRepository
+        self.jobs: JobRepository
+        self.journal_events: JournalRepository
+        self.progress_events: ProgressEventRepository
 
     async def __aenter__(self) -> SQLAlchemyUnitOfWork:
         self.session = self._session_factory()
         self.domains = DomainRepository(self.session)
         self.sources = SourceRepository(self.session)
+        self.jobs = JobRepository(self.session)
+        self.journal_events = JournalRepository(self.session)
+        self.progress_events = ProgressEventRepository(self.session)
         return self
 
     async def __aexit__(

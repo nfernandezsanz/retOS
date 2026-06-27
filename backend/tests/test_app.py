@@ -17,6 +17,7 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/auth/login" in route_paths
     assert "/domains" in route_paths
     assert "/domains/{domain_id}/sources" in route_paths
+    assert "/jobs" in route_paths
     assert "/events/progress" in route_paths
 
 

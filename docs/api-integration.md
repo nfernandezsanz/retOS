@@ -73,6 +73,51 @@ curl --no-buffer \
 
 The browser should reconnect with `Last-Event-ID` when a connection drops.
 
+## Jobs
+
+Create a durable job:
+
+```bash
+curl --request POST http://localhost:8000/jobs \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "kind":"ingest.source",
+    "domain_id":"<domain_id>",
+    "source_id":"<source_id>",
+    "payload":{"reason":"manual-ingest"}
+  }'
+```
+
+Valid `kind` values are:
+
+| Kind | Purpose |
+| --- | --- |
+| `ingest.source` | Scan/hash/extract documents from a source. |
+| `index.domain` | Rebuild searchable projections for a domain. |
+| `eval.run` | Run local evaluation suites. |
+| `agent.query` | Execute an auditable research query. |
+
+New jobs start as `queued`. Job creation persists:
+
+- a row in `jobs`
+- a `job.created` journal event
+- a `job.queued` progress event
+- a live SSE notification for connected clients
+
+List jobs:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  "http://localhost:8000/jobs?limit=100"
+```
+
+Read one job:
+
+```bash
+curl --header "Authorization: Bearer <token>" http://localhost:8000/jobs/<job_id>
+```
+
 ## Persistence Notes
 
 The API is wired through a SQLAlchemy async Unit of Work. Tests and smoke checks use SQLite with `RETOS_DATABASE_CREATE_ALL=true`. Production-like deployments should use Postgres and managed migrations.

@@ -86,6 +86,32 @@ def main() -> None:
             listed_sources.json()[0]["uri"] == "file:///tmp/retos-smoke-corpus",
             "created source missing from list",
         )
+        source_id = listed_sources.json()[0]["id"]
+
+        created_job = client.post(
+            "/jobs",
+            headers=auth_headers,
+            json={
+                "kind": "ingest.source",
+                "domain_id": domain_id,
+                "source_id": source_id,
+                "payload": {"source": "api-smoke"},
+            },
+        )
+        require(
+            created_job.status_code == 201,
+            f"job create failed: {created_job.status_code} {created_job.text}",
+        )
+        job = created_job.json()
+        require(job["status"] == "queued", "created job should be queued")
+        require(job["kind"] == "ingest.source", "invalid created job kind")
+
+        listed_jobs = client.get("/jobs", headers=auth_headers)
+        require(
+            listed_jobs.status_code == 200,
+            f"job list failed: {listed_jobs.status_code} {listed_jobs.text}",
+        )
+        require(any(item["id"] == job["id"] for item in listed_jobs.json()), "job missing")
 
         stream_timeout = httpx.Timeout(10, read=3)
         with client.stream(
@@ -110,7 +136,10 @@ def main() -> None:
                 ):
                     break
             require(lines, "progress stream did not emit any lines")
-            require(any("system.ready" in line for line in lines), "missing system.ready event")
+            require(
+                any("system.ready" in line or "job.queued" in line for line in lines),
+                "missing expected progress event",
+            )
 
 
 if __name__ == "__main__":
