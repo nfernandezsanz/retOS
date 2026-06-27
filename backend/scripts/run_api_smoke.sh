@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+host="${RETOS_SMOKE_HOST:-127.0.0.1}"
+port="${RETOS_SMOKE_PORT:-8000}"
+base_url="${RETOS_SMOKE_BASE_URL:-http://${host}:${port}}"
+log_file="${TMPDIR:-/tmp}/retos-api-smoke.log"
+python_bin="${PYTHON:-python}"
+
+if [[ -z "${PYTHON:-}" && -x "../.venv/bin/python" ]]; then
+  python_bin="../.venv/bin/python"
+fi
+
+export PYTHONPATH="${PYTHONPATH:-src}"
+export RETOS_ENV="${RETOS_ENV:-test}"
+export RETOS_ALLOW_PAID_LLM="${RETOS_ALLOW_PAID_LLM:-false}"
+export RETOS_JWT_SECRET="${RETOS_JWT_SECRET:-test-secret-value-that-is-long-enough}"
+export RETOS_BOOTSTRAP_ADMIN_EMAIL="${RETOS_BOOTSTRAP_ADMIN_EMAIL:-admin@retos.dev}"
+export RETOS_BOOTSTRAP_ADMIN_PASSWORD="${RETOS_BOOTSTRAP_ADMIN_PASSWORD:-test-admin-password}"
+
+"${python_bin}" -m uvicorn retos.main:app --host "${host}" --port "${port}" >"${log_file}" 2>&1 &
+server_pid="$!"
+
+cleanup() {
+  kill "${server_pid}" >/dev/null 2>&1 || true
+  wait "${server_pid}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+"${python_bin}" scripts/wait_http.py "${base_url}/healthz" 30
+"${python_bin}" scripts/smoke_api.py "${base_url}"

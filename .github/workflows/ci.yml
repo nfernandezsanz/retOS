@@ -14,15 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
       - name: Install dependencies
         run: python -m pip install -r backend/requirements-dev.txt
       - name: Format
-        run: cd backend && black --check --diff src tests
+        run: cd backend && black --check --diff src tests scripts
       - name: PEP 8
-        run: cd backend && ruff check src tests
+        run: cd backend && ruff check src tests scripts
       - name: Typecheck
         run: cd backend && mypy src
       - name: Test
@@ -30,12 +30,20 @@ jobs:
           RETOS_ENV: test
           RETOS_ALLOW_PAID_LLM: "false"
         run: cd backend && pytest
+      - name: API smoke
+        env:
+          RETOS_ENV: test
+          RETOS_ALLOW_PAID_LLM: "false"
+          RETOS_JWT_SECRET: test-secret-value-that-is-long-enough
+          RETOS_BOOTSTRAP_ADMIN_EMAIL: admin@retos.dev
+          RETOS_BOOTSTRAP_ADMIN_PASSWORD: test-admin-password
+        run: cd backend && scripts/run_api_smoke.sh
 
   frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: npm
@@ -44,3 +52,7 @@ jobs:
         run: cd frontend && npm ci
       - name: Check
         run: cd frontend && npm run check
+      - name: Install browser
+        run: cd frontend && npx playwright install --with-deps chromium
+      - name: Browser smoke
+        run: cd frontend && npm run e2e

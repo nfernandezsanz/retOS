@@ -6,7 +6,7 @@ Status values: `Not started`, `In progress`, `Blocked`, `In review`, `Complete`.
 
 | Phase | Status | Implementation | Tests | Coverage | Auditability | Docs | Risks |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 - Open Source Bootstrap | In progress | Scaffold created | Backend passing | 94.87% backend | Initial events only | In progress | Docker daemon not running locally |
+| 0 - Open Source Bootstrap | In progress | Scaffold created | Backend, API smoke, frontend, browser smoke wired | 94.87% backend | Initial events only | In progress | Full Docker build awaits daemon smoke |
 | 1 - Core Domain And Persistence | Not started | Pending | Pending | Pending | Pending | Pending | Schema design |
 | 2 - Ingestion, OCR, And BM25 | Not started | Pending | Pending | Pending | Pending | Pending | OCR quality |
 | 3 - Deep Agents Runtime | Not started | Pending | Pending | Pending | Pending | Pending | Tool budgets |
@@ -24,6 +24,8 @@ Status values: `Not started`, `In progress`, `Blocked`, `In review`, `Complete`.
 - [ ] Implementation complete
 - [ ] Unit tests added
 - [ ] Integration tests added where needed
+- [ ] API smoke hits running endpoints
+- [ ] Browser smoke opens the UI and verifies visible behavior
 - [ ] Evals added or updated where needed
 - [ ] Line coverage >= 90%
 - [ ] Branch coverage >= 90%

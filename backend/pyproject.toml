@@ -9,6 +9,9 @@ license = "MIT"
 [tool.pytest.ini_options]
 addopts = "--cov=retos --cov-branch --cov-report=term-missing --cov-fail-under=90"
 asyncio_mode = "auto"
+markers = [
+  "integration: tests that exercise service boundaries or running endpoints",
+]
 pythonpath = ["src"]
 testpaths = ["tests"]
 
@@ -28,7 +31,7 @@ exclude_lines = [
 [tool.ruff]
 target-version = "py314"
 line-length = 100
-src = ["src", "tests"]
+src = ["src", "tests", "scripts"]
 
 [tool.black]
 target-version = ["py314"]

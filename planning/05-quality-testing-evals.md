@@ -13,6 +13,14 @@ cd backend
 pytest
 ```
 
+Reality-check commands:
+
+```bash
+make api-smoke
+make frontend-e2e
+make integration
+```
+
 ## Test Layers
 
 | Layer | Scope | Paid Providers |
@@ -38,6 +46,20 @@ Rules:
 - Provider SDKs are wrapped behind adapters.
 - RabbitMQ is faked/eager for unit tests and only used in marked integration tests.
 - SSE tests use synthetic events and reconnect semantics.
+- API smoke tests must hit a running Uvicorn server over HTTP.
+- Browser smoke tests must open the actual React app with Playwright.
+
+## Continuous Reality Checks
+
+The project should never rely only on isolated unit tests. Every implementation slice should add or update:
+
+| Check | Trigger |
+| --- | --- |
+| API smoke | Any route, auth, SSE, provider, or job behavior changes. |
+| Browser smoke | Any user-visible UI, route, status, timeline, or evidence behavior changes. |
+| Compose config | Docker, env, worker, service, or port changes. |
+| Docker build/dry-run | Dockerfile, dependency, or image-role changes. |
+| Evals smoke | Retrieval, agent, citation, or answer behavior changes. |
 
 ## Initial Eval Types
 

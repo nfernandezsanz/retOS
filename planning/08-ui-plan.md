@@ -43,3 +43,13 @@ Show:
 - Give icon-only buttons accessible names.
 - Keep focus states visible.
 - Avoid layout shift during live updates.
+
+## Browser Verification
+
+Every UI slice should include a Playwright smoke test that:
+
+- Opens the running React app.
+- Verifies the primary view is visible.
+- Checks meaningful controls by role/name.
+- Checks live regions for async progress where applicable.
+- Exercises reconnect/error states when SSE behavior changes.

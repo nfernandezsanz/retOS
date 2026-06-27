@@ -33,8 +33,12 @@ make format-check
 make lint
 make typecheck
 make test
+make api-smoke
 make frontend-test
+make frontend-e2e
 ```
+
+Use `make integration` when changing API routes, auth, SSE, frontend routing, job status, or anything users observe through the browser.
 
 ## Security Rules
 
@@ -42,6 +46,7 @@ make frontend-test
 - Do not add tests that call paid LLM providers by default.
 - Do not log API keys, credentials, full document text, or raw uploads.
 - Use package-level adapters for external services so tests can mock them cleanly.
+- When a route or UI workflow changes, add or update an integration/API/browser smoke check.
 
 ## Commit Style
 

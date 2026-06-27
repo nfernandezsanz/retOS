@@ -12,11 +12,13 @@ Deliverables:
 - React frontend scaffold.
 - Docker Compose with Postgres, RabbitMQ, Ollama, API, worker, and web.
 - CI with lint, typecheck, tests, and coverage.
+- API smoke tests that hit running HTTP endpoints.
+- Browser smoke tests that open the React UI.
 - ADRs for major decisions.
 
 Exit criteria:
 
-- A contributor can clone, install dependencies, run tests, and inspect the Docker stack without secrets.
+- A contributor or autonomous agent can clone, install dependencies, run tests, smoke the API, open the UI through browser automation, and inspect the Docker stack without secrets.
 
 ## Phase 1 - Core Domain And Persistence
 
@@ -26,10 +28,12 @@ Deliverables:
 - SQLAlchemy async repositories and Alembic migrations.
 - Unit of Work.
 - Bootstrap admin persistence.
+- API smoke coverage for health, auth, domain/source CRUD, job creation, and progress events.
+- Browser smoke coverage for the initial admin/domain workflow.
 
 Exit criteria:
 
-- A domain/source can be registered and document versions can be persisted idempotently.
+- A domain/source can be registered through the API/UI, document versions can be persisted idempotently, and the behavior is visible through endpoint and browser smoke checks.
 
 ## Phase 2 - Ingestion, OCR, And BM25
 
@@ -45,6 +49,7 @@ Deliverables:
 Exit criteria:
 
 - A fixture corpus can be ingested twice without duplicates and searched with stable anchors.
+- API and browser smoke tests show scan/OCR/index progress in the UI.
 
 ## Phase 3 - Deep Agents Runtime
 
@@ -59,6 +64,7 @@ Deliverables:
 Exit criteria:
 
 - A fixture question produces a cited answer, verifiable ledger, and auditable tool timeline.
+- API and browser smoke tests show live agent progress and citations.
 
 ## Phase 4 - Product UI
 
@@ -74,6 +80,7 @@ Deliverables:
 Exit criteria:
 
 - A user can load a fixture corpus, index it, ask a question, and inspect evidence from the browser.
+- Playwright verifies the full happy path against the running UI.
 
 ## Phase 5 - Evals
 
@@ -87,6 +94,7 @@ Deliverables:
 Exit criteria:
 
 - CI runs smoke evals without network or paid providers.
+- Evals are included in the recurring validation loop.
 
 ## Phase 6 - Alpha Release
 
@@ -101,3 +109,4 @@ Deliverables:
 Exit criteria:
 
 - A user can run the stack locally and use Gemma 4 through Ollama.
+- Compose smoke tests verify the stack from a clean checkout.

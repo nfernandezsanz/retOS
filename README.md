@@ -4,6 +4,19 @@ RetOS is a local-first research system for auditable document investigation. It 
 
 The source of truth is the versioned corpus store. Search indexes are rebuildable projections, not the canonical record.
 
+## Current Status
+
+| Signal | Status |
+| --- | --- |
+| Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
+| Backend coverage | 94.87% line/branch coverage on the current scaffold. |
+| Stability | Green foundation: format, PEP 8, typecheck, tests, API smoke, frontend build, and browser smoke are enforced. |
+| Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
+| Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
+| Next milestone | Phase 1: core domain persistence, jobs, journals, progress events, and admin persistence. |
+
+This repository is intentionally being built as a staff-engineer-quality reference project: decisions are documented, quality gates are automated, integration checks hit real endpoints, UI smoke tests open the actual frontend, and every implementation phase is expected to leave behind tests, auditability, and operating notes.
+
 ## What This Repository Contains
 
 - A Python 3.14 FastAPI backend scaffold with secure settings, JWT helpers, Argon2 password hashing, SSE progress streaming, and Celery/RabbitMQ wiring.
@@ -11,6 +24,28 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 - Docker Compose for Postgres, RabbitMQ, Ollama, API, worker, and web services.
 - Planning, ADRs, and architecture assets for the open source implementation path.
 - Test and coverage defaults that avoid paid LLM calls.
+- CI jobs that validate backend format, PEP 8, types, tests, API smoke, frontend build, and browser smoke.
+
+## Development Model
+
+RetOS is designed to be developed primarily with autonomous coding agents such as Codex and Claude, with limited human interaction and strong written constraints. The repository is structured so agents can work from durable artifacts instead of relying on ad hoc chat memory:
+
+- `planning/` defines the roadmap, phase gates, testing policy, UI plan, auditability model, and implementation decisions.
+- `docs/adr/` records architectural decisions before they sprawl through the codebase.
+- `README.md`, `docs/docker.md`, and `CONTRIBUTING.md` describe how to build, test, run, and validate the system.
+- CI is expected to catch formatting, PEP 8, type, coverage, API, frontend, and browser regressions.
+- Agents should update plans, tests, docs, and ADRs in the same change when behavior or architecture changes.
+
+The intended loop is:
+
+```text
+read planning and ADRs
+  -> implement the smallest coherent slice
+  -> run Black continuously
+  -> run unit, integration, API smoke, and browser smoke checks
+  -> update docs and tracker
+  -> commit with a clear message
+```
 
 ## Architecture
 
@@ -87,6 +122,7 @@ make format-check
 make lint
 make typecheck
 make test
+make api-smoke
 ```
 
 Format backend code while working:
@@ -101,7 +137,35 @@ Install and check the frontend:
 cd frontend
 npm install
 npm run check
+npm run e2e
 ```
+
+Run the full local validation loop:
+
+```bash
+make check
+make integration
+make frontend-test
+make frontend-e2e
+docker compose --env-file .env.example config
+docker compose --dry-run build
+```
+
+## Quality Gates
+
+Every meaningful change should pass these gates:
+
+| Gate | Command | Purpose |
+| --- | --- | --- |
+| Backend format | `make format-check` | Enforces Black formatting. |
+| Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
+| Backend types | `make typecheck` | Enforces strict mypy on `src`. |
+| Backend tests | `make test` | Runs pytest with 90% coverage gate. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits `/healthz`, `/auth/login`, and `/events/progress` over HTTP. |
+| Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
+| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state. |
+| Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
+| Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
 
 ## Security Defaults
 
@@ -126,4 +190,4 @@ evals/        Future local evaluation datasets and reports
 
 ## Project Status
 
-This is the foundation commit for the open source implementation. The next milestone is Phase 0 completion: CI green, Docker smoke tests, and the first domain/document persistence slice.
+The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The next milestone is Phase 1: persistent domain/document/job/audit foundations with integration tests and UI-visible progress.
