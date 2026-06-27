@@ -4,11 +4,12 @@ import {
   Bot,
   CheckCircle2,
   Database,
+  FolderPlus,
   FileSearch,
   KeyRound,
   Link2,
   LockKeyhole,
-  Radio,
+  RefreshCw,
   Send,
   ServerCog,
   ShieldAlert,
@@ -51,6 +52,29 @@ type JobRead = {
   kind: string;
   status: string;
   payload: Record<string, unknown>;
+};
+
+type DomainRead = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type DocumentRead = {
+  id: string;
+  domain_id: string;
+  source_id: string | null;
+  external_id: string | null;
+  title: string;
+  content_hash: string;
+  metadata: Record<string, unknown>;
+  source_uri: string | null;
+  size_bytes: number | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type AgentCitation = {
@@ -119,6 +143,35 @@ async function loadProviderCatalog(token: string): Promise<ProviderCatalog> {
   });
 }
 
+async function loadDomains(token: string): Promise<DomainRead[]> {
+  return requestJson<DomainRead[]>("/domains", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function createDomain(
+  token: string,
+  payload: { slug: string; name: string; description: string | null },
+): Promise<DomainRead> {
+  return requestJson<DomainRead>("/domains", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function loadDocuments(token: string, domainId: string): Promise<DocumentRead[]> {
+  return requestJson<DocumentRead[]>(`/domains/${domainId}/documents`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 async function runAgentQuery(
   token: string,
   domainId: string,
@@ -154,7 +207,15 @@ function App() {
   const [catalog, setCatalog] = useState<ProviderCatalog | null>(null);
   const [isLoadingProvider, setIsLoadingProvider] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
-  const [domainId, setDomainId] = useState("");
+  const [domains, setDomains] = useState<DomainRead[]>([]);
+  const [selectedDomainId, setSelectedDomainId] = useState("");
+  const [documents, setDocuments] = useState<DocumentRead[]>([]);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
+  const [isCreatingDomain, setIsCreatingDomain] = useState(false);
+  const [domainSlug, setDomainSlug] = useState("");
+  const [domainName, setDomainName] = useState("");
+  const [domainDescription, setDomainDescription] = useState("");
   const [question, setQuestion] = useState("");
   const [queryResult, setQueryResult] = useState<AgentQueryResult | null>(null);
   const [queryJob, setQueryJob] = useState<JobRead | null>(null);
@@ -170,12 +231,45 @@ function App() {
 
   const providerStatus = catalog?.active.can_call ? "Ready" : "Needs attention";
 
+  const selectedDomain = useMemo(
+    () => domains.find((domain) => domain.id === selectedDomainId) ?? null,
+    [domains, selectedDomainId],
+  );
+
   const metrics = [
-    { label: "Domains", value: "0", icon: Database },
-    { label: "Documents", value: "0", icon: FileSearch },
+    { label: "Domains", value: domains.length.toString(), icon: Database },
+    { label: "Documents", value: documents.length.toString(), icon: FileSearch },
     { label: "Active jobs", value: "0", icon: Activity },
     { label: "Provider", value: activeProviderLabel, icon: Bot },
   ];
+
+  async function refreshWorkspace(accessToken?: string, preferredDomainId?: string) {
+    setIsLoadingWorkspace(true);
+    setWorkspaceError(null);
+    try {
+      const adminToken = accessToken ?? (await getAdminToken());
+      const nextDomains = await loadDomains(adminToken);
+      setDomains(nextDomains);
+
+      const nextSelectedDomainId =
+        preferredDomainId && nextDomains.some((domain) => domain.id === preferredDomainId)
+          ? preferredDomainId
+          : selectedDomainId && nextDomains.some((domain) => domain.id === selectedDomainId)
+            ? selectedDomainId
+            : nextDomains[0]?.id ?? "";
+
+      setSelectedDomainId(nextSelectedDomainId);
+      if (nextSelectedDomainId) {
+        setDocuments(await loadDocuments(adminToken, nextSelectedDomainId));
+      } else {
+        setDocuments([]);
+      }
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Workspace refresh failed");
+    } finally {
+      setIsLoadingWorkspace(false);
+    }
+  }
 
   async function handleProviderLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -187,6 +281,7 @@ function App() {
       setToken(accessToken);
       const nextCatalog = await loadProviderCatalog(accessToken);
       setCatalog(nextCatalog);
+      await refreshWorkspace(accessToken);
       setPassword("");
     } catch (error) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -195,6 +290,53 @@ function App() {
       setProviderError(error instanceof Error ? error.message : "Provider catalog failed");
     } finally {
       setIsLoadingProvider(false);
+    }
+  }
+
+  async function handleDomainChange(nextDomainId: string) {
+    setSelectedDomainId(nextDomainId);
+    setQueryResult(null);
+    setQueryJob(null);
+    setWorkspaceError(null);
+    if (!nextDomainId) {
+      setDocuments([]);
+      return;
+    }
+    setIsLoadingWorkspace(true);
+    try {
+      const accessToken = await getAdminToken();
+      setDocuments(await loadDocuments(accessToken, nextDomainId));
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Document refresh failed");
+    } finally {
+      setIsLoadingWorkspace(false);
+    }
+  }
+
+  async function handleCreateDomain(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWorkspaceError(null);
+    setIsCreatingDomain(true);
+    try {
+      const slug = domainSlug.trim().toLowerCase();
+      const name = domainName.trim();
+      if (!slug || !name) {
+        throw new Error("Domain slug and name are required");
+      }
+      const accessToken = await getAdminToken();
+      const domain = await createDomain(accessToken, {
+        slug,
+        name,
+        description: domainDescription.trim() || null,
+      });
+      setDomainSlug("");
+      setDomainName("");
+      setDomainDescription("");
+      await refreshWorkspace(accessToken, domain.id);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Domain creation failed");
+    } finally {
+      setIsCreatingDomain(false);
     }
   }
 
@@ -215,13 +357,12 @@ function App() {
     setQueryResult(null);
     setQueryJob(null);
     try {
-      const trimmedDomainId = domainId.trim();
       const trimmedQuestion = question.trim();
-      if (!trimmedDomainId || !trimmedQuestion) {
-        throw new Error("Domain ID and question are required");
+      if (!selectedDomainId || !trimmedQuestion) {
+        throw new Error("Select a domain and write a question");
       }
       const accessToken = await getAdminToken();
-      const response = await runAgentQuery(accessToken, trimmedDomainId, trimmedQuestion);
+      const response = await runAgentQuery(accessToken, selectedDomainId, trimmedQuestion);
       setQueryJob(response.job);
       if (!response.result) {
         throw new Error("Query was queued; open Jobs to inspect worker progress");
@@ -241,6 +382,10 @@ function App() {
     setProviderError(null);
     setQueryResult(null);
     setQueryJob(null);
+    setDomains([]);
+    setSelectedDomainId("");
+    setDocuments([]);
+    setWorkspaceError(null);
   }
 
   return (
@@ -265,9 +410,14 @@ function App() {
             <p className="eyebrow">Local-first research console</p>
             <h1>Auditable document investigation</h1>
           </div>
-          <button type="button" className="primary-action">
-            <Radio aria-hidden="true" />
-            Connect live updates
+          <button
+            type="button"
+            className="primary-action"
+            disabled={isLoadingWorkspace}
+            onClick={() => void refreshWorkspace()}
+          >
+            <RefreshCw aria-hidden="true" />
+            {isLoadingWorkspace ? "Refreshing workspace" : "Refresh workspace"}
           </button>
         </header>
 
@@ -290,19 +440,94 @@ function App() {
           <article className="panel" id="documents">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">Pipeline</p>
-                <h2>Processing timeline</h2>
+                <p className="eyebrow">Knowledge base</p>
+                <h2>Domains and documents</h2>
               </div>
-              <span className="status-pill">Idle</span>
+              <span className="status-pill">{selectedDomain ? selectedDomain.slug : "No domain"}</span>
             </div>
-            <ol className="timeline" aria-live="polite">
-              {pipelineSteps.map((step) => (
-                <li key={step.label} className={step.state}>
-                  <strong>{step.label}</strong>
-                  <span>{step.value}</span>
-                </li>
+            <form className="domain-form" onSubmit={handleCreateDomain}>
+              <label>
+                <span>Slug</span>
+                <input
+                  placeholder="legal-research"
+                  value={domainSlug}
+                  onChange={(event) => setDomainSlug(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Name</span>
+                <input
+                  placeholder="Legal research"
+                  value={domainName}
+                  onChange={(event) => setDomainName(event.target.value)}
+                />
+              </label>
+              <label className="span-two">
+                <span>Description</span>
+                <input
+                  placeholder="Purpose, scope, or data boundary"
+                  value={domainDescription}
+                  onChange={(event) => setDomainDescription(event.target.value)}
+                />
+              </label>
+              <button className="secondary-action" disabled={isCreatingDomain} type="submit">
+                <FolderPlus aria-hidden="true" />
+                {isCreatingDomain ? "Creating domain" : "Create domain"}
+              </button>
+            </form>
+            <div className="domain-toolbar">
+              <label>
+                <span>Active domain</span>
+                <select
+                  value={selectedDomainId}
+                  onChange={(event) => void handleDomainChange(event.target.value)}
+                >
+                  <option value="">Select a domain</option>
+                  {domains.map((domain) => (
+                    <option key={domain.id} value={domain.id}>
+                      {domain.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="ghost-action"
+                disabled={isLoadingWorkspace}
+                type="button"
+                onClick={() => void refreshWorkspace()}
+              >
+                <RefreshCw aria-hidden="true" />
+                {isLoadingWorkspace ? "Refreshing" : "Refresh"}
+              </button>
+            </div>
+            {workspaceError ? (
+              <p className="inline-error" role="alert">
+                {workspaceError}
+              </p>
+            ) : null}
+            <div className="document-list" aria-label="Domain documents">
+              {documents.map((document) => (
+                <article className="document-row" key={document.id}>
+                  <div>
+                    <strong>{document.title}</strong>
+                    <span>{document.source_uri ?? document.external_id ?? document.id}</span>
+                  </div>
+                  <span className="badge muted">{document.content_hash.slice(0, 10)}</span>
+                </article>
               ))}
-            </ol>
+              {selectedDomain && documents.length === 0 ? (
+                <div className="empty-state compact">
+                  <FileSearch aria-hidden="true" />
+                  <p>No documents registered for this domain yet.</p>
+                </div>
+              ) : null}
+              {!selectedDomain ? (
+                <div className="empty-state compact">
+                  <Database aria-hidden="true" />
+                  <p>Create or select a domain to inspect documents and run grounded queries.</p>
+                </div>
+              ) : null}
+            </div>
           </article>
 
           <article className="panel" id="queries">
@@ -314,14 +539,10 @@ function App() {
               <span className="status-pill local">Local model</span>
             </div>
             <form className="query-form" onSubmit={handleQuerySubmit}>
-              <label className="query-box compact-field">
-                <span>Domain ID</span>
-                <input
-                  placeholder="Paste a domain UUID"
-                  value={domainId}
-                  onChange={(event) => setDomainId(event.target.value)}
-                />
-              </label>
+              <div className="selected-domain">
+                <span>Active domain</span>
+                <strong>{selectedDomain ? selectedDomain.name : "Select a domain first"}</strong>
+              </div>
               <label className="query-box">
                 <span>Question</span>
                 <textarea
@@ -372,6 +593,24 @@ function App() {
                 </div>
               )}
             </section>
+          </article>
+
+          <article className="panel wide">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Pipeline</p>
+                <h2>Processing timeline</h2>
+              </div>
+              <span className="status-pill">Idle</span>
+            </div>
+            <ol className="timeline" aria-live="polite">
+              {pipelineSteps.map((step) => (
+                <li key={step.label} className={step.state}>
+                  <strong>{step.label}</strong>
+                  <span>{step.value}</span>
+                </li>
+              ))}
+            </ol>
           </article>
 
           <article className="panel wide" id="admin">

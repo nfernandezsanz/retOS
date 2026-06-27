@@ -43,6 +43,9 @@ Read a domain:
 curl --header "Authorization: Bearer <token>" http://localhost:8000/domains/<domain_id>
 ```
 
+The React console uses these endpoints to populate the workspace selector, refresh
+domain metrics, and create new research domains without requiring users to paste UUIDs.
+
 ## Sources
 
 Create a source for a domain:
@@ -111,6 +114,9 @@ Document creation persists:
 - a `document.created` journal event
 - a `document.created` progress event
 - a live SSE notification for connected clients
+
+The console reads this list after a domain is selected and uses it as the visible
+document inventory for the active research workspace.
 
 ## Artifacts
 
@@ -369,7 +375,16 @@ The response includes the active profile and the available profiles:
 The React console reads `VITE_RETOS_API_URL` and falls back to `http://localhost:8000`.
 The provider panel authenticates with `/auth/login`, stores the admin bearer token in
 browser local storage under `retos.adminToken`, and then calls `/llm/providers` and
-`/domains/{domain_id}/queries`.
+the workspace endpoints.
+
+Current console calls:
+
+- `POST /auth/login`
+- `GET /llm/providers`
+- `GET /domains`
+- `POST /domains`
+- `GET /domains/{domain_id}/documents`
+- `POST /domains/{domain_id}/queries`
 
 The UI treats the provider catalog as read-only operational status:
 
@@ -378,7 +393,8 @@ The UI treats the provider catalog as read-only operational status:
 - `enabled=false` plus `reason` explains whether configuration or cost opt-in is missing.
 - API keys are never returned to the browser.
 
-The query workspace currently asks for a domain ID and sends `run_inline=true` so the UI
+The workspace can create domains, select an active domain, render its document list, and
+send queries against the selected domain. Query execution uses `run_inline=true` so the UI
 can render the answer and citations immediately. Worker-backed query jobs are already
 available through the API by omitting `run_inline`; the streaming UI will attach that path
 to SSE progress in a later slice.

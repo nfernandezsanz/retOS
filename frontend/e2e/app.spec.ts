@@ -1,6 +1,17 @@
 import { expect, type Page, test } from "@playwright/test";
 
 async function mockProviderApi(page: Page) {
+  const domains = [
+    {
+      id: "domain-123",
+      slug: "smoke-research",
+      name: "Smoke Research",
+      description: "A smoke-test domain",
+      created_at: "2026-06-27T00:00:00Z",
+      updated_at: "2026-06-27T00:00:00Z",
+    },
+  ];
+
   await page.route("http://localhost:8000/auth/login", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -41,6 +52,50 @@ async function mockProviderApi(page: Page) {
           },
         ],
       },
+    });
+  });
+  await page.route("http://localhost:8000/domains", async (route) => {
+    if (route.request().method() === "POST") {
+      const created = {
+        id: "domain-456",
+        slug: "policy-research",
+        name: "Policy Research",
+        description: "Created from the console",
+        created_at: "2026-06-27T00:00:00Z",
+        updated_at: "2026-06-27T00:00:00Z",
+      };
+      domains.push(created);
+      await route.fulfill({
+        contentType: "application/json",
+        status: 201,
+        json: created,
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: domains,
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/documents/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: [
+        {
+          id: "document-1",
+          domain_id: "domain-123",
+          source_id: null,
+          external_id: "smoke-doc",
+          title: "Smoke Document",
+          content_hash: "abcdef1234567890",
+          metadata: {},
+          source_uri: "memory://smoke-doc",
+          size_bytes: 128,
+          created_at: "2026-06-27T00:00:00Z",
+          updated_at: "2026-06-27T00:00:00Z",
+        },
+      ],
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/queries/, async (route) => {
@@ -84,10 +139,9 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Auditable document investigation" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Refresh workspace" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Documents" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Processing timeline" })).toBeVisible();
-  await expect(page.getByRole("list").filter({ hasText: "Discover mounted files" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Domains and documents" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Run grounded query" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
 
@@ -98,16 +152,25 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("Ollama local runtime")).toBeVisible();
   await expect(page.getByText("OpenAI")).toBeVisible();
   await expect(page.getByText("Blocked")).toBeVisible();
+  await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
+  await expect(page.getByText("Smoke Document")).toBeVisible();
 
-  await page.getByLabel("Domain ID").fill("domain-123");
   await page
     .getByLabel("Question")
     .fill("What evidence mentions search readiness?");
   await page.getByRole("button", { name: "Run grounded query" }).click();
 
   await expect(page.getByText("Grounded answer for:")).toBeVisible();
-  await expect(page.getByText("Smoke Document")).toBeVisible();
+  await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
   await expect(page.getByText("page=1")).toBeVisible();
+
+  await page.getByLabel("Slug").fill("policy-research");
+  await page.getByLabel("Name").fill("Policy Research");
+  await page.getByLabel("Description").fill("Created from the console");
+  await page.getByRole("button", { name: "Create domain" }).click();
+
+  await expect(page.getByLabel("Active domain")).toHaveValue("domain-456");
+  await expect(page.getByRole("option", { name: "Policy Research" })).toBeAttached();
 });
 
 test("keeps provider controls usable on mobile", async ({ page }) => {

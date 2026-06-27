@@ -19,6 +19,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -138,6 +139,12 @@ h2 {
 }
 
 .secondary-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.primary-action:disabled,
+.ghost-action:disabled {
   cursor: wait;
   opacity: 0.72;
 }
@@ -266,6 +273,8 @@ h2 {
 
 .query-box textarea,
 .query-box input,
+.domain-form input,
+.domain-toolbar select,
 .provider-login input {
   min-height: 140px;
   width: 100%;
@@ -281,12 +290,16 @@ h2 {
 }
 
 .query-box input,
+.domain-form input,
+.domain-toolbar select,
 .query-box.compact-field input {
   min-height: 44px;
 }
 
 .query-box textarea:focus-visible,
 .query-box input:focus-visible,
+.domain-form input:focus-visible,
+.domain-toolbar select:focus-visible,
 .provider-login input:focus-visible,
 button:focus-visible {
   outline: 3px solid #93c5fd;
@@ -296,6 +309,93 @@ button:focus-visible {
 .query-form {
   display: grid;
   gap: 12px;
+}
+
+.domain-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.domain-form label,
+.domain-toolbar label {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.domain-form .span-two {
+  grid-column: 1 / -1;
+}
+
+.domain-form .secondary-action {
+  grid-column: 1 / -1;
+}
+
+.domain-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 16px;
+}
+
+.domain-toolbar .ghost-action {
+  min-width: 120px;
+}
+
+.document-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.document-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.document-row div {
+  min-width: 0;
+}
+
+.document-row strong,
+.document-row span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.document-row div > span {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.selected-domain {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.selected-domain span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.selected-domain strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
 }
 
 .query-result {
@@ -543,6 +643,8 @@ button:focus-visible {
 
   .metrics,
   .content-grid,
+  .domain-form,
+  .domain-toolbar,
   .admin-grid,
   .provider-summary {
     grid-template-columns: 1fr;
