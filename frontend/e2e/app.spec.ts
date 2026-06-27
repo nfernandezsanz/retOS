@@ -22,6 +22,29 @@ async function mockProviderApi(page: Page) {
       updated_at: "2026-06-27T00:00:00Z",
     },
   ];
+  const documents = [
+    {
+      id: "document-1",
+      domain_id: "domain-123",
+      source_id: null,
+      external_id: "smoke-doc",
+      title: "Smoke Document",
+      content_hash: "abcdef1234567890",
+      metadata: {},
+      source_uri: "memory://smoke-doc",
+      size_bytes: 128,
+      created_at: "2026-06-27T00:00:00Z",
+      updated_at: "2026-06-27T00:00:00Z",
+    },
+  ];
+  const jobs = [
+    {
+      id: "job-seed-1",
+      kind: "ingest.source",
+      status: "succeeded",
+      payload: {},
+    },
+  ];
 
   await page.route("http://localhost:8000/auth/login", async (route) => {
     await route.fulfill({
@@ -90,23 +113,16 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/documents/, async (route) => {
+    const domainId = new URL(route.request().url()).pathname.split("/")[2];
     await route.fulfill({
       contentType: "application/json",
-      json: [
-        {
-          id: "document-1",
-          domain_id: "domain-123",
-          source_id: null,
-          external_id: "smoke-doc",
-          title: "Smoke Document",
-          content_hash: "abcdef1234567890",
-          metadata: {},
-          source_uri: "memory://smoke-doc",
-          size_bytes: 128,
-          created_at: "2026-06-27T00:00:00Z",
-          updated_at: "2026-06-27T00:00:00Z",
-        },
-      ],
+      json: documents.filter((document) => document.domain_id === domainId),
+    });
+  });
+  await page.route("http://localhost:8000/jobs?limit=6", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: jobs,
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/sources/, async (route) => {
@@ -148,15 +164,43 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/index\/rebuild/, async (route) => {
+    jobs.unshift({
+      id: "job-index-1",
+      kind: "index.domain",
+      status: "queued",
+      payload: {},
+    });
     await route.fulfill({
       contentType: "application/json",
       status: 202,
-      json: {
-        id: "job-index-1",
-        kind: "index.domain",
-        status: "queued",
-        payload: {},
-      },
+      json: jobs[0],
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/ingestions\/text/, async (route) => {
+    const domainId = new URL(route.request().url()).pathname.split("/")[2];
+    documents.push({
+      id: "document-2",
+      domain_id: domainId,
+      source_id: null,
+      external_id: "inline-note",
+      title: "Policy Note",
+      content_hash: "fedcba9876543210",
+      metadata: {},
+      source_uri: "inline://policy-research/policy-note",
+      size_bytes: 256,
+      created_at: "2026-06-27T00:00:00Z",
+      updated_at: "2026-06-27T00:00:00Z",
+    });
+    jobs.unshift({
+      id: "job-text-1",
+      kind: "ingest.source",
+      status: "queued",
+      payload: {},
+    });
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: jobs[0],
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/queries/, async (route) => {
@@ -261,6 +305,14 @@ test("loads the operational console", async ({ page }) => {
 
   await page.getByRole("button", { name: "Rebuild index" }).click();
   await expect(page.getByLabel("Queued jobs").getByText("index.domain queued")).toBeVisible();
+
+  await page.getByPlaceholder("Research note").fill("Policy Note");
+  await page
+    .getByPlaceholder("Paste local fixture text, notes, transcripts, or extracted content.")
+    .fill("A policy note that can be ingested without touching paid providers.");
+  await page.getByRole("button", { name: "Queue text ingestion" }).click();
+  await expect(page.getByLabel("Queued jobs").getByText("ingest.source queued")).toBeVisible();
+  await expect(page.getByLabel("Domain documents").getByText("Policy Note")).toBeVisible();
 
   await page.getByRole("button", { name: "Connect live updates" }).click();
   await expect(page.getByLabel("Live progress events").getByText("system.ready")).toBeVisible();

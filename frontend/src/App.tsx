@@ -202,12 +202,41 @@ async function loadSources(token: string, domainId: string): Promise<SourceRead[
   });
 }
 
+async function loadJobs(token: string): Promise<JobRead[]> {
+  return requestJson<JobRead[]>("/jobs?limit=6", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 async function createSource(
   token: string,
   domainId: string,
   payload: { kind: SourceKind; name: string; uri: string },
 ): Promise<SourceRead> {
   return requestJson<SourceRead>(`/domains/${domainId}/sources`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function ingestText(
+  token: string,
+  domainId: string,
+  payload: {
+    source_id: string | null;
+    title: string;
+    text: string;
+    source_uri: string;
+    metadata: Record<string, string>;
+    max_segment_tokens: number;
+  },
+): Promise<JobRead> {
+  return requestJson<JobRead>(`/domains/${domainId}/ingestions/text`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -294,6 +323,15 @@ function parseProgressFrame(frame: string): ProgressEvent | null {
   }
 }
 
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80);
+}
+
 function App() {
   const [email, setEmail] = useState("admin@retos.dev");
   const [password, setPassword] = useState("");
@@ -315,6 +353,10 @@ function App() {
   const [isQueueingScan, setIsQueueingScan] = useState(false);
   const [isQueueingIndex, setIsQueueingIndex] = useState(false);
   const [queuedJobs, setQueuedJobs] = useState<JobRead[]>([]);
+  const [isIngestingText, setIsIngestingText] = useState(false);
+  const [textTitle, setTextTitle] = useState("");
+  const [textBody, setTextBody] = useState("");
+  const [textSourceId, setTextSourceId] = useState("");
   const [domainSlug, setDomainSlug] = useState("");
   const [domainName, setDomainName] = useState("");
   const [domainDescription, setDomainDescription] = useState("");
@@ -343,12 +385,16 @@ function App() {
   );
 
   const activeJobs = useMemo(
-    () =>
-      progressEvents.filter((event) => {
+    () => {
+      const eventJobs = progressEvents.filter((event) => {
         const status = event.data.status;
         return status === "queued" || status === "running" || event.event.endsWith(".started");
-      }).length,
-    [progressEvents],
+      }).length;
+      const recentJobs = queuedJobs.filter((job) => job.status === "queued" || job.status === "running")
+        .length;
+      return Math.max(eventJobs, recentJobs);
+    },
+    [progressEvents, queuedJobs],
   );
 
   const metrics = [
@@ -381,15 +427,18 @@ function App() {
 
       setSelectedDomainId(nextSelectedDomainId);
       if (nextSelectedDomainId) {
-        const [nextDocuments, nextSources] = await Promise.all([
+        const [nextDocuments, nextSources, nextJobs] = await Promise.all([
           loadDocuments(adminToken, nextSelectedDomainId),
           loadSources(adminToken, nextSelectedDomainId),
+          loadJobs(adminToken),
         ]);
         setDocuments(nextDocuments);
         setSources(nextSources);
+        setQueuedJobs(nextJobs);
       } else {
         setDocuments([]);
         setSources([]);
+        setQueuedJobs(await loadJobs(adminToken));
       }
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Workspace refresh failed");
@@ -425,6 +474,7 @@ function App() {
     setQueryResult(null);
     setQueryJob(null);
     setWorkspaceError(null);
+    setTextSourceId("");
     if (!nextDomainId) {
       setDocuments([]);
       setSources([]);
@@ -433,12 +483,14 @@ function App() {
     setIsLoadingWorkspace(true);
     try {
       const accessToken = await getAdminToken();
-      const [nextDocuments, nextSources] = await Promise.all([
+      const [nextDocuments, nextSources, nextJobs] = await Promise.all([
         loadDocuments(accessToken, nextDomainId),
         loadSources(accessToken, nextDomainId),
+        loadJobs(accessToken),
       ]);
       setDocuments(nextDocuments);
       setSources(nextSources);
+      setQueuedJobs(nextJobs);
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Document refresh failed");
     } finally {
@@ -499,6 +551,45 @@ function App() {
       setWorkspaceError(error instanceof Error ? error.message : "Source creation failed");
     } finally {
       setIsCreatingSource(false);
+    }
+  }
+
+  async function handleIngestText(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWorkspaceError(null);
+    setIsIngestingText(true);
+    try {
+      if (!selectedDomainId) {
+        throw new Error("Select a domain before ingesting text");
+      }
+      const title = textTitle.trim();
+      const text = textBody.trim();
+      if (!title || !text) {
+        throw new Error("Text title and content are required");
+      }
+      const accessToken = await getAdminToken();
+      const sourceUri = `inline://${selectedDomain?.slug ?? selectedDomainId}/${slugify(title) || "note"}`;
+      const job = await ingestText(accessToken, selectedDomainId, {
+        source_id: textSourceId || null,
+        title,
+        text,
+        source_uri: sourceUri,
+        metadata: { ingestion: "console" },
+        max_segment_tokens: 220,
+      });
+      setQueuedJobs((current) => [job, ...current].slice(0, 6));
+      setTextTitle("");
+      setTextBody("");
+      const [nextDocuments, nextJobs] = await Promise.all([
+        loadDocuments(accessToken, selectedDomainId),
+        loadJobs(accessToken),
+      ]);
+      setDocuments(nextDocuments);
+      setQueuedJobs(nextJobs.length > 0 ? nextJobs : [job]);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Text ingestion failed");
+    } finally {
+      setIsIngestingText(false);
     }
   }
 
@@ -650,6 +741,9 @@ function App() {
     setLiveError(null);
     setProgressEvents([]);
     setQueuedJobs([]);
+    setTextTitle("");
+    setTextBody("");
+    setTextSourceId("");
   }
 
   return (
@@ -868,6 +962,51 @@ function App() {
                   </div>
                 ) : null}
               </div>
+            </section>
+            <section className="text-ingestion" aria-label="Text ingestion">
+              <div className="section-heading">
+                <h3>Text ingestion</h3>
+              </div>
+              <form className="text-ingestion-form" onSubmit={handleIngestText}>
+                <label>
+                  <span>Title</span>
+                  <input
+                    placeholder="Research note"
+                    value={textTitle}
+                    onChange={(event) => setTextTitle(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Source</span>
+                  <select
+                    value={textSourceId}
+                    onChange={(event) => setTextSourceId(event.target.value)}
+                  >
+                    <option value="">No source</option>
+                    {sources.map((source) => (
+                      <option key={source.id} value={source.id}>
+                        {source.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="span-two">
+                  <span>Text</span>
+                  <textarea
+                    placeholder="Paste local fixture text, notes, transcripts, or extracted content."
+                    value={textBody}
+                    onChange={(event) => setTextBody(event.target.value)}
+                  />
+                </label>
+                <button
+                  className="secondary-action"
+                  disabled={!selectedDomainId || isIngestingText}
+                  type="submit"
+                >
+                  <FileSearch aria-hidden="true" />
+                  {isIngestingText ? "Queueing text" : "Queue text ingestion"}
+                </button>
+              </form>
             </section>
           </article>
 

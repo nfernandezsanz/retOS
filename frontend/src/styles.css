@@ -338,6 +338,9 @@ h2 {
 .domain-toolbar select,
 .source-form input,
 .source-form select,
+.text-ingestion-form input,
+.text-ingestion-form select,
+.text-ingestion-form textarea,
 .provider-login input {
   min-height: 140px;
   width: 100%;
@@ -352,11 +355,17 @@ h2 {
   resize: vertical;
 }
 
+.text-ingestion-form textarea {
+  resize: vertical;
+}
+
 .query-box input,
 .domain-form input,
 .domain-toolbar select,
 .source-form input,
 .source-form select,
+.text-ingestion-form input,
+.text-ingestion-form select,
 .query-box.compact-field input {
   min-height: 44px;
 }
@@ -367,6 +376,9 @@ h2 {
 .domain-toolbar select:focus-visible,
 .source-form input:focus-visible,
 .source-form select:focus-visible,
+.text-ingestion-form input:focus-visible,
+.text-ingestion-form select:focus-visible,
+.text-ingestion-form textarea:focus-visible,
 .provider-login input:focus-visible,
 button:focus-visible {
   outline: 3px solid #93c5fd;
@@ -379,7 +391,8 @@ button:focus-visible {
 }
 
 .domain-form,
-.source-form {
+.source-form,
+.text-ingestion-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -387,7 +400,8 @@ button:focus-visible {
 
 .domain-form label,
 .domain-toolbar label,
-.source-form label {
+.source-form label,
+.text-ingestion-form label {
   display: grid;
   gap: 8px;
   color: #334155;
@@ -395,12 +409,14 @@ button:focus-visible {
 }
 
 .domain-form .span-two,
-.source-form .span-two {
+.source-form .span-two,
+.text-ingestion-form .span-two {
   grid-column: 1 / -1;
 }
 
 .domain-form .secondary-action,
-.source-form .secondary-action {
+.source-form .secondary-action,
+.text-ingestion-form .secondary-action {
   grid-column: 1 / -1;
 }
 
@@ -450,6 +466,14 @@ button:focus-visible {
 }
 
 .source-workspace {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  border-top: 1px solid #dbe3ef;
+  padding-top: 18px;
+}
+
+.text-ingestion {
   display: grid;
   gap: 14px;
   margin-top: 18px;
@@ -778,6 +802,7 @@ button:focus-visible {
   .domain-form,
   .domain-toolbar,
   .source-form,
+  .text-ingestion-form,
   .admin-grid,
   .provider-summary {
     grid-template-columns: 1fr;
