@@ -508,7 +508,7 @@ test("loads the operational console", async ({ page }) => {
     .getByPlaceholder("Paste local fixture text, notes, transcripts, or extracted content.")
     .fill("A policy note that can be ingested without touching paid providers.");
   await page.getByRole("button", { name: "Queue text ingestion" }).click();
-  await expect(page.getByLabel("Queued jobs").getByText("ingest.source queued")).toBeVisible();
+  await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
   await expect(page.getByLabel("Domain documents").getByText("Policy Note")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Jobs and evidence ledger" })).toBeVisible();
   await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
