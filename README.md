@@ -83,9 +83,16 @@ python3 -m pip install -r backend/requirements-dev.txt
 Run backend checks:
 
 ```bash
+make format-check
 make lint
 make typecheck
 make test
+```
+
+Format backend code while working:
+
+```bash
+make format
 ```
 
 Install and check the frontend:

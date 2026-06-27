@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   backend:
@@ -16,7 +19,9 @@ jobs:
           python-version: "3.14"
       - name: Install dependencies
         run: python -m pip install -r backend/requirements-dev.txt
-      - name: Lint
+      - name: Format
+        run: cd backend && black --check --diff src tests
+      - name: PEP 8
         run: cd backend && ruff check src tests
       - name: Typecheck
         run: cd backend && mypy src

@@ -1,11 +1,14 @@
-.PHONY: help install test lint typecheck frontend-install frontend-test docker-build docker-up docker-down
+.PHONY: help install format format-check test lint typecheck check frontend-install frontend-test docker-build docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
 	@printf "  make install          Install backend dependencies\n"
+	@printf "  make format           Format backend code with Black\n"
+	@printf "  make format-check     Check backend Black formatting\n"
 	@printf "  make test             Run backend tests with coverage gate\n"
 	@printf "  make lint             Run backend lint checks\n"
 	@printf "  make typecheck        Run backend type checks\n"
+	@printf "  make check            Run backend format/lint/typecheck/tests\n"
 	@printf "  make frontend-install Install frontend dependencies\n"
 	@printf "  make frontend-test    Run frontend checks\n"
 	@printf "  make docker-build     Build Docker images\n"
@@ -15,6 +18,12 @@ help:
 install:
 	python3 -m pip install -r backend/requirements-dev.txt
 
+format:
+	cd backend && python3 -m black src tests
+
+format-check:
+	cd backend && python3 -m black --check --diff src tests
+
 test:
 	cd backend && python3 -m pytest
 
@@ -23,6 +32,8 @@ lint:
 
 typecheck:
 	cd backend && python3 -m mypy src
+
+check: format-check lint typecheck test
 
 frontend-install:
 	cd frontend && npm install

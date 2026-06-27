@@ -28,6 +28,8 @@ npm install
 Run before opening a pull request:
 
 ```bash
+make format
+make format-check
 make lint
 make typecheck
 make test

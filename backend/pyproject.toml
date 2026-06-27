@@ -30,6 +30,10 @@ target-version = "py314"
 line-length = 100
 src = ["src", "tests"]
 
+[tool.black]
+target-version = ["py314"]
+line-length = 100
+
 [tool.ruff.lint]
 select = [
   "E",
