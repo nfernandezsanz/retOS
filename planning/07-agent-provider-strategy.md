@@ -49,3 +49,16 @@ RetOS uses `deepagents.create_deep_agent` as the agentic runtime entrypoint. Cla
 | `max_subagents` | 3 |
 
 Paid providers remain disabled by default.
+
+## Provider Discovery Contract
+
+The backend exposes `GET /llm/providers` for authenticated admins. The endpoint returns
+only safe metadata:
+
+- Active provider name, model, paid/free flag, and whether calls are allowed.
+- Available profiles and whether each profile is configured and enabled.
+- A human-readable disabled reason when configuration or cost opt-in is missing.
+
+The endpoint never returns API keys and never performs a model call. This gives the UI a
+safe way to render provider switches and warnings before the Deep Agents runtime is
+connected.

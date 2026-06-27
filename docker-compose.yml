@@ -9,7 +9,15 @@ x-backend-build: &backend-build
 x-app-env: &app-env
   RETOS_DATABASE_URL: postgresql+asyncpg://retos:${RETOS_POSTGRES_PASSWORD:-retos}@postgres:5432/retos
   RETOS_CELERY_BROKER_URL: amqp://retos:${RETOS_RABBITMQ_PASSWORD:-retos}@rabbitmq:5672//
+  RETOS_PROVIDER: ${RETOS_PROVIDER:-local}
+  RETOS_MODEL: ${RETOS_MODEL:-ollama:gemma4}
+  RETOS_OLLAMA_MODEL: ${RETOS_OLLAMA_MODEL:-gemma4}
   RETOS_OLLAMA_BASE_URL: http://ollama:11434
+  RETOS_ALLOW_PAID_LLM: ${RETOS_ALLOW_PAID_LLM:-false}
+  RETOS_OPENAI_MODEL: ${RETOS_OPENAI_MODEL:-gpt-5-mini}
+  RETOS_ANTHROPIC_MODEL: ${RETOS_ANTHROPIC_MODEL:-claude-sonnet-4-5}
+  RETOS_GOOGLE_MODEL: ${RETOS_GOOGLE_MODEL:-gemini-2.5-flash}
+  RETOS_OPENROUTER_MODEL: ${RETOS_OPENROUTER_MODEL:-openai/gpt-5-mini}
 
 x-app-volumes: &app-volumes
   - retos_storage:/var/lib/retos/storage

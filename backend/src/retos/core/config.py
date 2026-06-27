@@ -48,7 +48,19 @@ class Settings(BaseSettings):
     index_root: str = "/var/lib/retos/index"
     provider: str = "local"
     model: str = "ollama:gemma4"
+    ollama_model: str = "gemma4"
     ollama_base_url: str = "http://localhost:11434"
+    openai_api_key: SecretStr | None = None
+    openai_model: str = "gpt-5-mini"
+    anthropic_api_key: SecretStr | None = None
+    anthropic_model: str = "claude-sonnet-4-5"
+    google_api_key: SecretStr | None = None
+    google_model: str = "gemini-2.5-flash"
+    openrouter_api_key: SecretStr | None = None
+    openrouter_model: str = "openai/gpt-5-mini"
+    azure_openai_api_key: SecretStr | None = None
+    azure_openai_endpoint: str | None = None
+    azure_openai_deployment: str | None = None
     allow_paid_llm: bool = False
 
     @property
@@ -80,6 +92,20 @@ class Settings(BaseSettings):
             )
         if self.is_production and any(str(origin) == "*" for origin in self.allowed_origins):
             raise ValueError("Wildcard CORS origins are not allowed in production")
+        if self.provider not in {
+            "fake",
+            "local",
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "azure",
+        }:
+            raise ValueError("RETOS_PROVIDER must be a known provider profile")
+        if self.provider not in {"fake", "local"} and not self.allow_paid_llm:
+            raise ValueError("Paid LLM providers require RETOS_ALLOW_PAID_LLM=true")
+        if self.provider == "local" and not self.ollama_model.strip():
+            raise ValueError("RETOS_OLLAMA_MODEL must not be empty for local provider")
 
 
 @lru_cache

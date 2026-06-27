@@ -88,6 +88,19 @@ def main() -> None:
             require(isinstance(token, str) and token, "missing access token")
             auth_headers = {"Authorization": f"Bearer {token}"}
 
+            provider_catalog = client.get("/llm/providers", headers=auth_headers)
+            require(
+                provider_catalog.status_code == 200,
+                f"provider catalog failed: {provider_catalog.status_code} {provider_catalog.text}",
+            )
+            providers = provider_catalog.json()
+            require(providers["active"]["provider"] == "local", "invalid active provider")
+            require(providers["active"]["paid"] is False, "local provider should not be paid")
+            require(
+                any(item["name"] == "local" and item["enabled"] for item in providers["providers"]),
+                "local provider missing from catalog",
+            )
+
             created_domain = client.post(
                 "/domains",
                 headers=auth_headers,

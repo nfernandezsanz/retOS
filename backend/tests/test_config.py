@@ -53,3 +53,26 @@ def test_bootstrap_admin_hashes_password() -> None:
     assert admin is not None
     assert admin.email == "admin@retos.dev"
     assert admin.password_hash != "test-admin-password"
+
+
+def test_paid_provider_requires_explicit_opt_in() -> None:
+    settings = Settings(
+        env="test",
+        provider="openai",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+    )
+
+    with pytest.raises(ValueError, match="Paid LLM"):
+        settings.validate_runtime_security()
+
+
+def test_local_provider_requires_model_name() -> None:
+    settings = Settings(
+        env="test",
+        provider="local",
+        ollama_model=" ",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+    )
+
+    with pytest.raises(ValueError, match="OLLAMA_MODEL"):
+        settings.validate_runtime_security()

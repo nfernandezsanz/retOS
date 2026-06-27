@@ -63,6 +63,24 @@ Equivalent manual command:
 docker compose exec ollama ollama pull gemma4
 ```
 
+## LLM Provider Configuration
+
+The default Docker profile is local-first:
+
+- `RETOS_PROVIDER=local`
+- `RETOS_MODEL=ollama:gemma4`
+- `RETOS_OLLAMA_MODEL=gemma4`
+- `RETOS_ALLOW_PAID_LLM=false`
+
+API, worker, and migrate share the same `retos-backend` image and the same provider
+environment. Non-secret provider settings are declared in `docker-compose.yml`; API keys
+come from a real `.env` file and are not present in `.env.example`.
+
+Paid providers remain blocked until both conditions are true:
+
+- The provider-specific key/configuration is present in `.env`.
+- `RETOS_ALLOW_PAID_LLM=true` is set explicitly.
+
 ## Runtime Roles
 
 The backend image uses `infra/docker/backend-entrypoint.sh`.

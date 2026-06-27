@@ -273,6 +273,46 @@ Search hits include stable citation data:
 
 If the index has not been built, search returns `409 Conflict`.
 
+## LLM Providers
+
+Provider discovery is admin-only and safe to call from the UI. It does not return API
+keys and does not perform paid model calls.
+
+```bash
+curl --request GET http://localhost:8000/llm/providers \
+  --header "Authorization: Bearer <token>"
+```
+
+The response includes the active profile and the available profiles:
+
+```json
+{
+  "active": {
+    "provider": "local",
+    "model": "ollama:gemma4",
+    "paid": false,
+    "can_call": true,
+    "reason": null
+  },
+  "providers": [
+    {
+      "name": "local",
+      "label": "Ollama local runtime",
+      "default_model": "gemma4",
+      "configured": true,
+      "enabled": true,
+      "paid": false,
+      "reason": null,
+      "base_url": "http://ollama:11434/"
+    }
+  ]
+}
+```
+
+`fake` is reserved for tests. `openai`, `anthropic`, `google`, `openrouter`, and
+`azure` require their provider-specific key/configuration and remain disabled unless
+`RETOS_ALLOW_PAID_LLM=true`.
+
 ## Progress Events
 
 Long-running workflows expose progress through Server-Sent Events:
