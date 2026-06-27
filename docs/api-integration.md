@@ -587,8 +587,20 @@ curl --header "Authorization: Bearer <token>" \
   "http://localhost:8000/audit/progress-events?limit=20"
 ```
 
+Export a combined audit snapshot:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  --output retos-audit-export.json \
+  "http://localhost:8000/audit/export?limit=200"
+```
+
 Both endpoints require an admin token and accept `limit` from `1` to `200`. Results are
 ordered newest first.
+
+The export endpoint requires an admin token, accepts `limit` from `1` to `1000`, returns
+`Content-Disposition: attachment; filename="retos-audit-export.json"`, and sets
+`Cache-Control: no-store`.
 
 Journal event shape:
 
@@ -622,9 +634,21 @@ Progress event shape:
 }
 ```
 
+Audit export shape:
+
+```json
+{
+  "schema_version": "retos.audit-export.v1",
+  "generated_at": "2026-06-27T00:00:00Z",
+  "limit": 200,
+  "journal_events": [],
+  "progress_events": []
+}
+```
+
 The React audit panel uses these endpoints to show durable journal/progress evidence next
-to the job ledger. SSE remains the live stream; `/audit/*` is the reloadable persisted
-record.
+to the job ledger and to download a JSON audit export without putting bearer tokens in
+URLs. SSE remains the live stream; `/audit/*` is the reloadable persisted record.
 
 ## Progress Events
 

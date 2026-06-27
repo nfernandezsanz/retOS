@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Database,
   CircleStop,
+  Download,
   FolderPlus,
   FileSearch,
   KeyRound,
@@ -191,6 +192,14 @@ type ProgressEventRead = {
   payload: Record<string, unknown>;
 };
 
+type AuditExportRead = {
+  schema_version: string;
+  generated_at: string;
+  limit: number;
+  journal_events: JournalEventRead[];
+  progress_events: ProgressEventRead[];
+};
+
 type LiveStatus = "disconnected" | "connecting" | "connected";
 
 const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
@@ -296,6 +305,42 @@ async function loadAuditProgressEvents(token: string): Promise<ProgressEventRead
       Authorization: `Bearer ${token}`,
     },
   });
+}
+
+function auditExportFilename(disposition: string | null): string {
+  const fallback = "retos-audit-export.json";
+  if (!disposition) {
+    return fallback;
+  }
+  const match = /filename="?([^";]+)"?/i.exec(disposition);
+  return match?.[1] ?? fallback;
+}
+
+async function exportAuditSnapshot(
+  token: string,
+): Promise<{ filename: string; snapshot: AuditExportRead }> {
+  const response = await fetch(`${API_BASE_URL}/audit/export?limit=200`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed with ${response.status}`);
+  }
+  const snapshot = (await response.json()) as AuditExportRead;
+  const filename = auditExportFilename(response.headers.get("content-disposition"));
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  return { filename, snapshot };
 }
 
 async function createSource(
@@ -581,7 +626,9 @@ function App() {
   const [journalEvents, setJournalEvents] = useState<JournalEventRead[]>([]);
   const [auditProgressEvents, setAuditProgressEvents] = useState<ProgressEventRead[]>([]);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+  const [isExportingAudit, setIsExportingAudit] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditExportMessage, setAuditExportMessage] = useState<string | null>(null);
   const liveAbortRef = useRef<AbortController | null>(null);
 
   const activeProviderLabel = useMemo(() => {
@@ -673,6 +720,7 @@ function App() {
   async function refreshAudit(accessToken?: string) {
     setIsLoadingAudit(true);
     setAuditError(null);
+    setAuditExportMessage(null);
     try {
       const adminToken = accessToken ?? (await getAdminToken());
       const [nextJournalEvents, nextProgressEvents, nextJobs] = await Promise.all([
@@ -687,6 +735,23 @@ function App() {
       setAuditError(error instanceof Error ? error.message : "Audit refresh failed");
     } finally {
       setIsLoadingAudit(false);
+    }
+  }
+
+  async function handleExportAudit() {
+    setIsExportingAudit(true);
+    setAuditError(null);
+    setAuditExportMessage(null);
+    try {
+      const accessToken = await getAdminToken();
+      const { filename, snapshot } = await exportAuditSnapshot(accessToken);
+      setAuditExportMessage(
+        `${filename}: ${snapshot.journal_events.length} journal, ${snapshot.progress_events.length} progress`,
+      );
+    } catch (error) {
+      setAuditError(error instanceof Error ? error.message : "Audit export failed");
+    } finally {
+      setIsExportingAudit(false);
     }
   }
 
@@ -1874,10 +1939,24 @@ function App() {
                 <RefreshCw aria-hidden="true" />
                 {isLoadingAudit ? "Refreshing audit" : "Refresh audit"}
               </button>
+              <button
+                className="ghost-action"
+                disabled={isExportingAudit}
+                type="button"
+                onClick={() => void handleExportAudit()}
+              >
+                <Download aria-hidden="true" />
+                {isExportingAudit ? "Exporting audit" : "Export audit"}
+              </button>
             </div>
             {auditError ? (
               <p className="inline-error" role="alert">
                 {auditError}
+              </p>
+            ) : null}
+            {auditExportMessage ? (
+              <p className="inline-success" role="status">
+                {auditExportMessage}
               </p>
             ) : null}
             <div className="job-ledger" aria-label="Recent jobs">

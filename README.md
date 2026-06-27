@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.09% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.12% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -189,7 +189,7 @@ Every meaningful change should pass these gates:
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
-| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, job lifecycle, and SSE over HTTP. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, job lifecycle, audit export, and SSE over HTTP. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |

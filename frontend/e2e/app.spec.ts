@@ -258,6 +258,22 @@ async function mockProviderApi(page: Page) {
       json: progressEvents,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/audit\/export\?limit=\d+/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      headers: {
+        "content-disposition": 'attachment; filename="retos-audit-export.json"',
+        "cache-control": "no-store",
+      },
+      json: {
+        schema_version: "retos.audit-export.v1",
+        generated_at: "2026-06-27T00:02:00Z",
+        limit: 200,
+        journal_events: journalEvents,
+        progress_events: progressEvents,
+      },
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/sources/, async (route) => {
     const domainId = new URL(route.request().url()).pathname.split("/")[2];
     if (route.request().method() === "POST") {
@@ -519,6 +535,8 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Export audit" }).click();
+  await expect(page.getByText("retos-audit-export.json:")).toBeVisible();
 
   await page.getByRole("button", { name: "Run eval smoke" }).click();
   await expect(page.getByLabel("Eval metrics").getByText("retrieval recall")).toBeVisible();

@@ -592,6 +592,39 @@ def main() -> None:
                 "created job missing from persisted progress events",
             )
 
+            audit_export = client.get(
+                "/audit/export",
+                headers=auth_headers,
+                params={"limit": 20},
+            )
+            require(
+                audit_export.status_code == 200,
+                f"audit export failed: {audit_export.status_code} {audit_export.text}",
+            )
+            require(
+                audit_export.headers.get("cache-control") == "no-store",
+                "audit export should disable caching",
+            )
+            audit_export_body = audit_export.json()
+            require(
+                audit_export_body["schema_version"] == "retos.audit-export.v1",
+                "unexpected audit export schema version",
+            )
+            require(
+                any(
+                    item["event_type"] == "job.created" and item["entity_id"] == job["id"]
+                    for item in audit_export_body["journal_events"]
+                ),
+                "created job missing from audit export journal events",
+            )
+            require(
+                any(
+                    item["event_type"] == "job.queued" and item["job_id"] == job["id"]
+                    for item in audit_export_body["progress_events"]
+                ),
+                "created job missing from audit export progress events",
+            )
+
             stream_timeout = httpx.Timeout(10, read=3)
             with client.stream(
                 "GET",

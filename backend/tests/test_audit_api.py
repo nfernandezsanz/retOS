@@ -55,7 +55,10 @@ def create_index_job(client: TestClient, headers: dict[str, str], domain_id: str
     return response.json()["id"]
 
 
-@pytest.mark.parametrize("path", ["/audit/journal-events", "/audit/progress-events"])
+@pytest.mark.parametrize(
+    "path",
+    ["/audit/journal-events", "/audit/progress-events", "/audit/export"],
+)
 def test_audit_events_require_admin_token(audit_client: TestClient, path: str) -> None:
     response = audit_client.get(path)
 
@@ -109,6 +112,49 @@ def test_audit_event_limit_is_validated(
 ) -> None:
     response = audit_client.get(
         "/audit/journal-events?limit=0",
+        headers=audit_admin_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_exports_audit_snapshot_with_download_headers(
+    audit_client: TestClient,
+    audit_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_domain(audit_client, audit_admin_headers, "audit-export")
+    job_id = create_index_job(audit_client, audit_admin_headers, domain_id)
+
+    response = audit_client.get(
+        "/audit/export?limit=5",
+        headers=audit_admin_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="retos-audit-export.json"'
+    )
+    assert response.headers["cache-control"] == "no-store"
+    body = response.json()
+    assert body["schema_version"] == "retos.audit-export.v1"
+    assert body["generated_at"]
+    assert body["limit"] == 5
+    assert any(
+        event["event_type"] == "job.created" and event["entity_id"] == job_id
+        for event in body["journal_events"]
+    )
+    assert any(
+        event["event_type"] == "job.queued" and event["job_id"] == job_id
+        for event in body["progress_events"]
+    )
+
+
+def test_audit_export_limit_is_validated(
+    audit_client: TestClient,
+    audit_admin_headers: dict[str, str],
+) -> None:
+    response = audit_client.get(
+        "/audit/export?limit=1001",
         headers=audit_admin_headers,
     )
 

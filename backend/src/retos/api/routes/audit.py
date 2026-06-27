@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
@@ -52,6 +53,14 @@ class ProgressEventRead(BaseModel):
         )
 
 
+class AuditExportRead(BaseModel):
+    schema_version: str
+    generated_at: datetime
+    limit: int
+    journal_events: list[JournalEventRead]
+    progress_events: list[ProgressEventRead]
+
+
 @router.get("/journal-events", response_model=list[JournalEventRead])
 async def list_journal_events(
     _: AdminSubjectDep,
@@ -72,3 +81,29 @@ async def list_progress_events(
     async with uow:
         events = await uow.progress_events.list(limit=limit)
     return [ProgressEventRead.from_event(event) for event in events]
+
+
+@router.get("/export", response_model=AuditExportRead)
+async def export_audit_events(
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> JSONResponse:
+    async with uow:
+        journal_events = await uow.journal_events.list(limit=limit)
+        progress_events = await uow.progress_events.list(limit=limit)
+
+    payload = AuditExportRead(
+        schema_version="retos.audit-export.v1",
+        generated_at=datetime.now(UTC),
+        limit=limit,
+        journal_events=[JournalEventRead.from_event(event) for event in journal_events],
+        progress_events=[ProgressEventRead.from_event(event) for event in progress_events],
+    )
+    return JSONResponse(
+        content=payload.model_dump(mode="json"),
+        headers={
+            "Content-Disposition": 'attachment; filename="retos-audit-export.json"',
+            "Cache-Control": "no-store",
+        },
+    )

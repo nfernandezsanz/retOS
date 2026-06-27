@@ -32,6 +32,7 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/evals/runs" in route_paths
     assert "/audit/journal-events" in route_paths
     assert "/audit/progress-events" in route_paths
+    assert "/audit/export" in route_paths
     assert "/events/progress" in route_paths
 
 
