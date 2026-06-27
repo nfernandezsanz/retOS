@@ -357,6 +357,50 @@ async def archive_document(
     return DocumentRead.from_document(document)
 
 
+@router.post("/documents/{document_id}/restore", response_model=DocumentRead)
+async def restore_document(
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    document_id: Annotated[str, Path(min_length=1)],
+) -> DocumentRead:
+    async with uow:
+        existing = await uow.documents.get(document_id)
+        if existing is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        if existing.archived_at is None:
+            return DocumentRead.from_document(existing)
+        document = await uow.documents.restore(document_id)
+        assert document is not None
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="document.restored",
+            entity_type="document",
+            entity_id=document.id,
+            payload={
+                "domain_id": document.domain_id,
+                "source_id": document.source_id,
+                "content_hash": document.content_hash,
+            },
+        )
+        await uow.progress_events.add(
+            job_id=None,
+            event_type="document.restored",
+            message=f"Restored document {document.title}",
+            payload={"document_id": document.id, "domain_id": document.domain_id},
+        )
+        await uow.commit()
+
+    progress_store.append(
+        "document.restored",
+        {
+            "document_id": document.id,
+            "domain_id": document.domain_id,
+            "title": document.title,
+        },
+    )
+    return DocumentRead.from_document(document)
+
+
 @router.get("/documents/{document_id}/versions", response_model=list[DocumentVersionRead])
 async def list_document_versions(
     _: AdminSubjectDep,

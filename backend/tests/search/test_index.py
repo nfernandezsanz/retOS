@@ -216,6 +216,35 @@ def test_rebuild_index_excludes_archived_documents(
     assert response.json()["hits"] == []
 
 
+def test_rebuild_index_includes_restored_documents(
+    search_client: TestClient,
+    search_admin_headers: dict[str, str],
+) -> None:
+    domain_id, document_id, _ = create_search_fixture(search_client, search_admin_headers)
+    search_client.delete(f"/documents/{document_id}", headers=search_admin_headers)
+
+    restored = search_client.post(
+        f"/documents/{document_id}/restore",
+        headers=search_admin_headers,
+    )
+    rebuild = search_client.post(
+        f"/domains/{domain_id}/index/rebuild",
+        json={"run_inline": True},
+        headers=search_admin_headers,
+    )
+    response = search_client.get(
+        f"/domains/{domain_id}/search",
+        params={"q": "apollo guidance", "limit": 5},
+        headers=search_admin_headers,
+    )
+
+    assert restored.status_code == 200
+    assert restored.json()["archived_at"] is None
+    assert rebuild.status_code == 202
+    assert response.status_code == 200
+    assert response.json()["hits"][0]["document_id"] == document_id
+
+
 def test_rebuild_index_rejects_missing_domain(
     search_client: TestClient,
     search_admin_headers: dict[str, str],

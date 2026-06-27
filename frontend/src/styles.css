@@ -460,7 +460,7 @@ button:focus-visible {
 
 .domain-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: end;
   margin-top: 16px;
@@ -485,6 +485,11 @@ button:focus-visible {
   border-radius: 8px;
   background: #f8fafc;
   padding: 12px;
+}
+
+.document-row.archived {
+  background: #fff7ed;
+  border-color: #fed7aa;
 }
 
 .document-summary {
@@ -535,6 +540,22 @@ button:focus-visible {
   font-weight: 800;
   margin-bottom: 6px;
   text-transform: uppercase;
+}
+
+.toggle-control {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.toggle-control input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
 }
 
 .icon-button.danger {

@@ -8,6 +8,7 @@ import {
   Database,
   CircleStop,
   Download,
+  RotateCcw,
   FolderPlus,
   FileSearch,
   KeyRound,
@@ -272,8 +273,13 @@ async function createDomain(
   });
 }
 
-async function loadDocuments(token: string, domainId: string): Promise<DocumentRead[]> {
-  return requestJson<DocumentRead[]>(`/domains/${domainId}/documents`, {
+async function loadDocuments(
+  token: string,
+  domainId: string,
+  includeArchived = false,
+): Promise<DocumentRead[]> {
+  const query = includeArchived ? "?include_archived=true" : "";
+  return requestJson<DocumentRead[]>(`/domains/${domainId}/documents${query}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -297,6 +303,15 @@ async function updateDocument(
 async function archiveDocument(token: string, documentId: string): Promise<DocumentRead> {
   return requestJson<DocumentRead>(`/documents/${documentId}`, {
     method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function restoreDocument(token: string, documentId: string): Promise<DocumentRead> {
+  return requestJson<DocumentRead>(`/documents/${documentId}/restore`, {
+    method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -617,6 +632,8 @@ function App() {
   const [documentEditTitle, setDocumentEditTitle] = useState("");
   const [isUpdatingDocument, setIsUpdatingDocument] = useState(false);
   const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null);
+  const [restoringDocumentId, setRestoringDocumentId] = useState<string | null>(null);
+  const [showArchivedDocuments, setShowArchivedDocuments] = useState(false);
   const [isCreatingDomain, setIsCreatingDomain] = useState(false);
   const [isCreatingSource, setIsCreatingSource] = useState(false);
   const [sourceName, setSourceName] = useState("");
@@ -733,7 +750,7 @@ function App() {
       setSelectedDomainId(nextSelectedDomainId);
       if (nextSelectedDomainId) {
         const [nextDocuments, nextSources, nextJobs] = await Promise.all([
-          loadDocuments(adminToken, nextSelectedDomainId),
+          loadDocuments(adminToken, nextSelectedDomainId, showArchivedDocuments),
           loadSources(adminToken, nextSelectedDomainId),
           loadJobs(adminToken),
         ]);
@@ -837,6 +854,7 @@ function App() {
     setQueryJob(null);
     setWorkspaceError(null);
     setTextSourceId("");
+    handleCancelDocumentEdit();
     if (!nextDomainId) {
       setDocuments([]);
       setSources([]);
@@ -846,7 +864,7 @@ function App() {
     try {
       const accessToken = await getAdminToken();
       const [nextDocuments, nextSources, nextJobs] = await Promise.all([
-        loadDocuments(accessToken, nextDomainId),
+        loadDocuments(accessToken, nextDomainId, showArchivedDocuments),
         loadSources(accessToken, nextDomainId),
         loadJobs(accessToken),
       ]);
@@ -960,7 +978,11 @@ function App() {
     try {
       const accessToken = await getAdminToken();
       const archived = await archiveDocument(accessToken, documentId);
-      setDocuments((current) => current.filter((document) => document.id !== archived.id));
+      setDocuments((current) =>
+        showArchivedDocuments
+          ? current.map((document) => (document.id === archived.id ? archived : document))
+          : current.filter((document) => document.id !== archived.id),
+      );
       if (editingDocumentId === documentId) {
         handleCancelDocumentEdit();
       }
@@ -969,6 +991,47 @@ function App() {
       setWorkspaceError(error instanceof Error ? error.message : "Document archive failed");
     } finally {
       setArchivingDocumentId(null);
+    }
+  }
+
+  async function handleRestoreDocument(documentId: string) {
+    setWorkspaceError(null);
+    setRestoringDocumentId(documentId);
+    try {
+      const accessToken = await getAdminToken();
+      const restored = await restoreDocument(accessToken, documentId);
+      setDocuments((current) =>
+        current.map((document) => (document.id === restored.id ? restored : document)),
+      );
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Document restore failed");
+    } finally {
+      setRestoringDocumentId(null);
+    }
+  }
+
+  async function handleArchivedToggle(event: React.ChangeEvent<HTMLInputElement>) {
+    const nextShowArchived = event.target.checked;
+    setShowArchivedDocuments(nextShowArchived);
+    handleCancelDocumentEdit();
+    setWorkspaceError(null);
+    if (!selectedDomainId) {
+      return;
+    }
+    setIsLoadingWorkspace(true);
+    try {
+      const accessToken = await getAdminToken();
+      const [nextDocuments, nextJobs] = await Promise.all([
+        loadDocuments(accessToken, selectedDomainId, nextShowArchived),
+        loadJobs(accessToken),
+      ]);
+      setDocuments(nextDocuments);
+      setQueuedJobs(nextJobs);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Document refresh failed");
+    } finally {
+      setIsLoadingWorkspace(false);
     }
   }
 
@@ -999,7 +1062,7 @@ function App() {
       setTextTitle("");
       setTextBody("");
       const [nextDocuments, nextJobs] = await Promise.all([
-        loadDocuments(accessToken, selectedDomainId),
+        loadDocuments(accessToken, selectedDomainId, showArchivedDocuments),
         loadJobs(accessToken),
       ]);
       setDocuments(nextDocuments);
@@ -1038,7 +1101,7 @@ function App() {
         uploadInput.value = "";
       }
       const [nextDocuments, nextJobs] = await Promise.all([
-        loadDocuments(accessToken, selectedDomainId),
+        loadDocuments(accessToken, selectedDomainId, showArchivedDocuments),
         loadJobs(accessToken),
       ]);
       setDocuments(nextDocuments);
@@ -1272,6 +1335,8 @@ function App() {
     setEditingDocumentId(null);
     setDocumentEditTitle("");
     setArchivingDocumentId(null);
+    setRestoringDocumentId(null);
+    setShowArchivedDocuments(false);
     setSources([]);
     setWorkspaceError(null);
     setLiveStatus("disconnected");
@@ -1394,6 +1459,15 @@ function App() {
                   ))}
                 </select>
               </label>
+              <label className="toggle-control">
+                <input
+                  type="checkbox"
+                  checked={showArchivedDocuments}
+                  disabled={!selectedDomainId || isLoadingWorkspace}
+                  onChange={(event) => void handleArchivedToggle(event)}
+                />
+                <span>Show archived</span>
+              </label>
               <button
                 className="ghost-action"
                 disabled={isLoadingWorkspace}
@@ -1412,9 +1486,11 @@ function App() {
             <div className="document-list" aria-label="Domain documents">
               {documents.map((document) => {
                 const isEditing = editingDocumentId === document.id;
+                const isArchived = document.archived_at !== null;
                 const isArchiving = archivingDocumentId === document.id;
+                const isRestoring = restoringDocumentId === document.id;
                 return (
-                  <article className="document-row" key={document.id}>
+                  <article className={`document-row${isArchived ? " archived" : ""}`} key={document.id}>
                     <div className="document-summary">
                       {isEditing ? (
                         <form className="document-edit-form" onSubmit={handleUpdateDocument}>
@@ -1457,10 +1533,11 @@ function App() {
                     </div>
                     <div className="document-meta">
                       <span className="badge muted">{document.content_hash.slice(0, 10)}</span>
+                      {isArchived ? <span className="badge warning">Archived</span> : null}
                       <div className="document-actions">
                         <button
                           className="icon-button"
-                          disabled={isEditing || isArchiving}
+                          disabled={isEditing || isArchiving || isRestoring || isArchived}
                           title="Edit document title"
                           type="button"
                           aria-label={`Edit ${document.title}`}
@@ -1468,16 +1545,29 @@ function App() {
                         >
                           <Pencil aria-hidden="true" />
                         </button>
-                        <button
-                          className="icon-button danger"
-                          disabled={isEditing || isArchiving}
-                          title="Archive document"
-                          type="button"
-                          aria-label={`Archive ${document.title}`}
-                          onClick={() => void handleArchiveDocument(document.id)}
-                        >
-                          {isArchiving ? <RefreshCw aria-hidden="true" /> : <Archive aria-hidden="true" />}
-                        </button>
+                        {isArchived ? (
+                          <button
+                            className="icon-button"
+                            disabled={isEditing || isRestoring}
+                            title="Restore document"
+                            type="button"
+                            aria-label={`Restore ${document.title}`}
+                            onClick={() => void handleRestoreDocument(document.id)}
+                          >
+                            {isRestoring ? <RefreshCw aria-hidden="true" /> : <RotateCcw aria-hidden="true" />}
+                          </button>
+                        ) : (
+                          <button
+                            className="icon-button danger"
+                            disabled={isEditing || isArchiving}
+                            title="Archive document"
+                            type="button"
+                            aria-label={`Archive ${document.title}`}
+                            onClick={() => void handleArchiveDocument(document.id)}
+                          >
+                            {isArchiving ? <RefreshCw aria-hidden="true" /> : <Archive aria-hidden="true" />}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </article>

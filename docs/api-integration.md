@@ -128,6 +128,14 @@ curl --request DELETE \
   http://localhost:8000/documents/<document_id>
 ```
 
+Restore an archived document to the active inventory:
+
+```bash
+curl --request POST \
+  --header "Authorization: Bearer <token>" \
+  http://localhost:8000/documents/<document_id>/restore
+```
+
 List immutable versions:
 
 ```bash
@@ -148,6 +156,9 @@ emit live SSE notifications. Archive operations set `archived_at`, persist
 `document.archived` journal/progress events, emit SSE notifications, hide the document
 from default lists, and exclude it from future BM25 rebuilds. The underlying versions,
 artifacts, and segments remain available for audit and historical reads.
+Restore operations clear `archived_at`, persist `document.restored` journal/progress
+events, emit SSE notifications, and return the document to active lists and future index
+rebuilds.
 
 The console reads this list after a domain is selected and uses it as the visible
 document inventory for the active research workspace.
@@ -576,6 +587,7 @@ Current console calls:
 - `GET /domains/{domain_id}/documents`
 - `PATCH /documents/{document_id}`
 - `DELETE /documents/{document_id}`
+- `POST /documents/{document_id}/restore`
 - `GET /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/ingestions/text`

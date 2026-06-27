@@ -376,6 +376,16 @@ class DocumentRepository:
             await self._session.flush()
         return document_from_record(record)
 
+    async def restore(self, document_id: str) -> Document | None:
+        record = await self._session.get(DocumentRecord, document_id)
+        if record is None:
+            return None
+        if record.archived_at is not None:
+            record.archived_at = None
+            record.updated_at = utc_now()
+            await self._session.flush()
+        return document_from_record(record)
+
     async def list_versions(self, document_id: str) -> list[DocumentVersion]:
         result = await self._session.scalars(
             select(DocumentVersionRecord)

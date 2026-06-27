@@ -244,6 +244,45 @@ async function mockProviderApi(page: Page) {
       ),
     });
   });
+  await page.route(/http:\/\/localhost:8000\/documents\/[^/]+\/restore$/, async (route) => {
+    const documentId = new URL(route.request().url()).pathname.split("/")[2];
+    const index = documents.findIndex((document) => document.id === documentId);
+    if (index === -1) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        json: { detail: "Document not found" },
+      });
+      return;
+    }
+
+    documents[index] = {
+      ...documents[index],
+      archived_at: null,
+      updated_at: "2026-06-27T00:05:00Z",
+    };
+    journalEvents.unshift({
+      id: `journal-document-restored-${documentId}`,
+      occurred_at: "2026-06-27T00:05:00Z",
+      actor: "admin@retos.dev",
+      event_type: "document.restored",
+      entity_type: "document",
+      entity_id: documentId,
+      payload: { domain_id: documents[index].domain_id },
+    });
+    progressEvents.unshift({
+      id: `progress-document-restored-${documentId}`,
+      job_id: null,
+      occurred_at: "2026-06-27T00:05:00Z",
+      event_type: "document.restored",
+      message: `Restored document ${documents[index].title}`,
+      payload: { document_id: documentId, domain_id: documents[index].domain_id },
+    });
+    await route.fulfill({
+      contentType: "application/json",
+      json: documents[index],
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/documents\/[^/]+$/, async (route) => {
     const documentId = new URL(route.request().url()).pathname.split("/")[2];
     const index = documents.findIndex((document) => document.id === documentId);
@@ -608,6 +647,12 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
   await page.getByRole("button", { name: "Archive Uploaded Fixture Reviewed" }).click();
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeHidden();
+  await page.getByLabel("Show archived").check();
+  await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
+  await page.getByRole("button", { name: "Restore Uploaded Fixture Reviewed" }).click();
+  await expect(page.getByRole("button", { name: "Archive Uploaded Fixture Reviewed" })).toBeVisible();
+  await page.getByLabel("Show archived").uncheck();
+  await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
 
   await page.getByPlaceholder("Research note", { exact: true }).fill("Policy Note");
   await page
@@ -622,6 +667,7 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Refresh audit" }).click();
   await expect(page.getByLabel("Journal events").getByText("job.created").first()).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("document.archived")).toBeVisible();
+  await expect(page.getByLabel("Journal events").getByText("document.restored")).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("job-text-1")).toBeVisible();
   await expect(
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),

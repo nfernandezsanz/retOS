@@ -274,7 +274,47 @@ def test_archive_document_hides_default_list_and_preserves_audit(
     assert count_events(documents_db_path, "progress_events", "document.archived") == 1
 
 
-def test_update_and_archive_require_existing_document(
+def test_restore_document_returns_to_active_list_and_preserves_audit(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+    documents_db_path: Path,
+) -> None:
+    domain_id, source_id = create_domain_and_source(documents_client, documents_admin_headers)
+    document_id, _ = create_document(
+        documents_client,
+        documents_admin_headers,
+        domain_id,
+        source_id,
+    )
+    documents_client.delete(f"/documents/{document_id}", headers=documents_admin_headers)
+
+    restored = documents_client.post(
+        f"/documents/{document_id}/restore",
+        headers=documents_admin_headers,
+    )
+
+    assert restored.status_code == 200
+    assert restored.json()["id"] == document_id
+    assert restored.json()["archived_at"] is None
+
+    default_list = documents_client.get(
+        f"/domains/{domain_id}/documents",
+        headers=documents_admin_headers,
+    )
+    assert default_list.status_code == 200
+    assert [item["id"] for item in default_list.json()] == [document_id]
+
+    second_restore = documents_client.post(
+        f"/documents/{document_id}/restore",
+        headers=documents_admin_headers,
+    )
+    assert second_restore.status_code == 200
+    assert second_restore.json()["archived_at"] is None
+    assert count_events(documents_db_path, "journal_events", "document.restored") == 1
+    assert count_events(documents_db_path, "progress_events", "document.restored") == 1
+
+
+def test_update_archive_and_restore_require_existing_document(
     documents_client: TestClient,
     documents_admin_headers: dict[str, str],
 ) -> None:
@@ -284,9 +324,14 @@ def test_update_and_archive_require_existing_document(
         headers=documents_admin_headers,
     )
     archived = documents_client.delete("/documents/missing", headers=documents_admin_headers)
+    restored = documents_client.post(
+        "/documents/missing/restore",
+        headers=documents_admin_headers,
+    )
 
     assert updated.status_code == 404
     assert archived.status_code == 404
+    assert restored.status_code == 404
 
 
 def test_create_artifact_and_segment_for_document_version(

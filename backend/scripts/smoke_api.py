@@ -503,6 +503,28 @@ def main() -> None:
                 any(item["id"] == document["id"] for item in archived_documents.json()),
                 "archived document missing from include_archived list",
             )
+            restored_document = client.post(
+                f"/documents/{document['id']}/restore",
+                headers=auth_headers,
+            )
+            require(
+                restored_document.status_code == 200,
+                "document restore failed: "
+                f"{restored_document.status_code} {restored_document.text}",
+            )
+            require(
+                restored_document.json()["archived_at"] is None,
+                "document restore did not clear archived_at",
+            )
+            restored_documents = client.get(
+                f"/domains/{domain_id}/documents",
+                headers=auth_headers,
+            )
+            require(restored_documents.status_code == 200, "restored document list failed")
+            require(
+                any(item["id"] == document["id"] for item in restored_documents.json()),
+                "restored document missing from active list",
+            )
 
             eval_smoke = client.post("/evals/smoke", headers=auth_headers)
             require(

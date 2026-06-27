@@ -55,6 +55,9 @@ The first API-backed workflows are document registration and job creation:
   writes `document.archived` journal/progress events, and emits a live SSE notification.
   Default document lists and BM25 rebuilds ignore archived documents; historical reads can
   still include them for audit.
+- `POST /documents/{document_id}/restore` clears `archived_at`, writes
+  `document.restored` journal/progress events, emits a live SSE notification, and returns
+  the document to active lists and future index rebuilds.
 - `POST /document-versions/{version_id}/artifacts` creates a rebuildable artifact and
   writes `artifact.created` journal/progress events.
 - `POST /document-versions/{version_id}/segments` creates a searchable/citable segment and
