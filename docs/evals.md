@@ -26,6 +26,23 @@ PYTHONPATH=src python scripts/run_eval_smoke.py --format json
 PYTHONPATH=src python scripts/run_eval_smoke.py --format markdown
 ```
 
+Run an opt-in SQuAD 2.0 dataset eval from a local file:
+
+```bash
+make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50
+```
+
+or directly:
+
+```bash
+cd backend
+PYTHONPATH=src python scripts/run_eval_smoke.py \
+  --suite squad \
+  --dataset-path ../evals/datasets/dev-v2.0.json \
+  --max-cases 50 \
+  --format markdown
+```
+
 ## What The Smoke Suite Measures
 
 The built-in suite creates a temporary Tantivy index and evaluates fixture cases for:
@@ -72,6 +89,28 @@ or read user-provided dataset files under explicit opt-in commands.
 | [Natural Questions](https://ai.google.com/research/NaturalQuestions/) | Real user questions with Wikipedia evidence. | The official Google page describes questions from real users requiring systems to read a Wikipedia article; the public GitHub repository is Apache-2.0. |
 | [HotpotQA](https://hotpotqa.github.io/) | Multi-hop retrieval and supporting-fact evaluation. | The official benchmark focuses on natural multi-hop questions and supporting facts for explainability. |
 
+## SQuAD 2.0 Adapter
+
+The SQuAD adapter reads the official JSON shape from a local file:
+
+```text
+data[] -> paragraphs[] -> qas[]
+```
+
+For answerable questions, the adapter creates one `EvalCase` with the paragraph context
+as the only document, the article title as the expected citation title, and the first
+official answer text as the expected grounded term. For impossible questions, it creates
+an abstention case with no indexed documents, which exercises RetOS no-evidence behavior
+without requiring a paid model to judge answerability inside a related paragraph.
+
+Adapter guarantees:
+
+- No network access.
+- No paid model calls.
+- `--max-cases` bounds runtime for local experiments.
+- Invalid or non-v2 dataset files fail fast with explicit errors.
+- Tests use tiny generated fixtures, not vendored benchmark data.
+
 ## Adapter Rules
 
 - Adapters must be optional and skipped unless dataset paths are provided.
@@ -83,11 +122,12 @@ or read user-provided dataset files under explicit opt-in commands.
 
 ## Next Implementation Step
 
-The next eval slice should add a small adapter interface:
+The next eval slice should add persisted JSON/Markdown report export for dataset-backed
+runs:
 
 ```text
-dataset file -> EvalCase[] -> local index -> scorer -> JSON/Markdown report
+dataset file -> EvalCase[] -> local index -> scorer -> evals/reports/*.json + *.md
 ```
 
-SQuAD 2.0 is the best first adapter because its unanswerable questions map directly to
-RetOS abstention scoring.
+After that, add Natural Questions or HotpotQA adapters for larger retrieval and multi-hop
+coverage.

@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-squad check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -16,6 +16,7 @@ help:
 	@printf "  make db-downgrade     Roll back the latest Alembic migration\n"
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
 	@printf "  make eval-smoke       Run deterministic local retrieval/citation evals\n"
+	@printf "  make eval-squad       Run opt-in SQuAD v2 evals with SQUAD_PATH=...\n"
 	@printf "  make check            Run backend format/lint/typecheck/tests\n"
 	@printf "  make frontend-install Install frontend dependencies\n"
 	@printf "  make frontend-test    Run frontend checks\n"
@@ -56,6 +57,12 @@ api-smoke:
 
 eval-smoke:
 	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --format markdown
+
+eval-squad:
+ifndef SQUAD_PATH
+	$(error SQUAD_PATH is required, for example make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json)
+endif
+	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite squad --dataset-path "$(SQUAD_PATH)" --max-cases "$(or $(MAX_CASES),50)" --format markdown
 
 check: format-check lint typecheck test eval-smoke
 

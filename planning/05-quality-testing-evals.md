@@ -18,6 +18,7 @@ Reality-check commands:
 ```bash
 make api-smoke
 make eval-smoke
+make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50
 make frontend-e2e
 make integration
 make docker-smoke
@@ -95,7 +96,7 @@ The smoke suite is included in `make check` and GitHub Actions.
 
 | Dataset | Fit |
 | --- | --- |
-| SQuAD 2.0 | First adapter candidate for paragraph QA plus unanswerable/abstention cases. |
+| SQuAD 2.0 | Implemented as an opt-in local adapter for paragraph QA plus unanswerable/abstention cases. |
 | Natural Questions | Real user questions with Wikipedia evidence for open-domain retrieval pressure. |
 | HotpotQA | Multi-hop retrieval and supporting-fact evaluation for explainability. |
 

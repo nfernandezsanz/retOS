@@ -9,11 +9,11 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.66% line/branch coverage on the current scaffold. |
+| Backend coverage | 91.05% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
-| Next milestone | Phase 5: local eval adapters and persisted eval reports. |
+| Next milestone | Phase 5: persisted dataset eval reports and broader dataset adapters. |
 
 This repository is intentionally being built as a staff-engineer-quality reference project: decisions are documented, quality gates are automated, integration checks hit real endpoints, UI smoke tests open the actual frontend, and every implementation phase is expected to leave behind tests, auditability, and operating notes.
 
@@ -32,6 +32,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - LLM provider catalog API with local Ollama `gemma4` as the default profile and paid providers blocked unless explicitly enabled.
 - Auditable `agent.query` jobs that search indexed evidence, persist grounded answers and citations, and emit journal/progress events.
 - Deterministic local eval smoke for retrieval recall, citation validity, grounded answers, abstention, and budget compliance.
+- Opt-in SQuAD 2.0 adapter for local dataset-backed evals without network or paid providers.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for documents, jobs, OCR, indexing, and agent runs.
 - Docker Compose for Postgres, RabbitMQ, Ollama, API, worker, and web services.
 - Planning, ADRs, and architecture assets for the open source implementation path.
@@ -138,6 +139,7 @@ make lint
 make typecheck
 make test
 make eval-smoke
+make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50
 make api-smoke
 ```
 
@@ -185,6 +187,7 @@ Every meaningful change should pass these gates:
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
+| SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file. |
 | API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan, text ingestion queueing, BM25 rebuild/search, job lifecycle, and SSE over HTTP. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state. |
@@ -215,4 +218,4 @@ evals/        Local evaluation reports and optional dataset caches
 
 ## Project Status
 
-The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: local eval adapters and persisted eval reports.
+The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: persisted dataset eval reports and broader dataset adapters.

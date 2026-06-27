@@ -1,0 +1,106 @@
+import importlib.util
+import json
+from pathlib import Path
+from types import ModuleType
+
+
+def load_eval_cli() -> ModuleType:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "run_eval_smoke.py"
+    spec = importlib.util.spec_from_file_location("run_eval_smoke", script_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load eval CLI from {script_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def write_squad_cli_fixture(path: Path) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "version": "v2.0",
+                "data": [
+                    {
+                        "title": "Solar System",
+                        "paragraphs": [
+                            {
+                                "context": (
+                                    "Mars is called the Red Planet because iron oxide dust "
+                                    "covers much of its surface."
+                                ),
+                                "qas": [
+                                    {
+                                        "id": "mars-red-planet",
+                                        "question": "Why is Mars called the Red Planet?",
+                                        "answers": [
+                                            {"text": "iron oxide dust", "answer_start": 39}
+                                        ],
+                                        "is_impossible": False,
+                                    },
+                                    {
+                                        "id": "mars-ocean-depth",
+                                        "question": "How deep are the oceans on Mars today?",
+                                        "answers": [],
+                                        "is_impossible": True,
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_eval_cli_runs_squad_suite_from_local_file(tmp_path: Path, capsys) -> None:
+    dataset_path = write_squad_cli_fixture(tmp_path / "squad.json")
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="json",
+        suite="squad",
+        dataset_path=dataset_path,
+        max_cases=2,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert '"suite_name": "squad-v2"' in captured.out
+    assert '"case_count": 2' in captured.out
+
+
+def test_eval_cli_requires_dataset_path_for_squad(tmp_path: Path, capsys) -> None:
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="markdown",
+        suite="squad",
+        dataset_path=None,
+        max_cases=1,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "--dataset-path is required" in captured.err
+
+
+def test_eval_cli_rejects_non_positive_max_cases(tmp_path: Path, capsys) -> None:
+    dataset_path = write_squad_cli_fixture(tmp_path / "squad.json")
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="markdown",
+        suite="squad",
+        dataset_path=dataset_path,
+        max_cases=0,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "--max-cases must be greater than zero" in captured.err
