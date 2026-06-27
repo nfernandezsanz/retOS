@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import httpx
+import pymupdf
 
 
 def require(condition: bool, message: str) -> None:
@@ -48,6 +49,11 @@ def prepare_scan_source() -> tuple[str, Path | None]:
         "# Biology\n\nOcean biology notes mention plankton and salinity.",
         encoding="utf-8",
     )
+    document = pymupdf.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "Mars rover sample caching mission brief.")
+    document.save(root / "mission-brief.pdf")
+    document.close()
     return root.as_uri(), root
 
 

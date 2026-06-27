@@ -2,6 +2,7 @@ import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
 
+import pymupdf
 import pytest
 from fastapi.testclient import TestClient
 
@@ -12,6 +13,7 @@ from retos.domain.documents import utc_now
 from retos.domain.jobs import Job
 from retos.ingestion.scan import (
     SourceScanError,
+    extract_pdf_text,
     fail_source_scan_job,
     iter_supported_files,
     path_from_file_uri,
@@ -58,7 +60,15 @@ def write_fixture_corpus(root: Path) -> None:
         "# Biology\n\nOcean biology notes mention plankton and salinity.",
         encoding="utf-8",
     )
-    (root / "ignored.pdf").write_bytes(b"%PDF fixture")
+    write_fixture_pdf(root / "mission-brief.pdf")
+
+
+def write_fixture_pdf(path: Path) -> None:
+    document = pymupdf.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "Mars rover sample caching mission brief.")
+    document.save(path)
+    document.close()
 
 
 def create_mount_source(
@@ -108,7 +118,16 @@ def test_iter_supported_files_filters_text_and_markdown(tmp_path: Path) -> None:
 
     files = [path.name for path in iter_supported_files(tmp_path)]
 
-    assert files == ["apollo-notes.txt", "biology.md"]
+    assert files == ["apollo-notes.txt", "biology.md", "mission-brief.pdf"]
+
+
+def test_extract_pdf_text_reads_digital_pdf(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "fixture.pdf"
+    write_fixture_pdf(pdf_path)
+
+    text = extract_pdf_text(pdf_path.read_bytes())
+
+    assert "Mars rover sample caching" in text
 
 
 def test_iter_supported_files_accepts_single_supported_file(tmp_path: Path) -> None:
@@ -176,14 +195,28 @@ def test_scan_source_endpoint_ingests_text_and_markdown_idempotently(
     assert first.json()["status"] == "succeeded"
     assert second.status_code == 202
     assert second.json()["status"] == "succeeded"
-    assert count_scan_side_effects(scan_db_path) == (2, 2, 2, 2, 2)
+    assert count_scan_side_effects(scan_db_path) == (3, 3, 3, 3, 2)
 
     documents = scan_client.get(f"/domains/{domain_id}/documents", headers=scan_admin_headers)
     assert documents.status_code == 200
     assert {item["external_id"] for item in documents.json()} == {
         "apollo-notes.txt",
         "biology.md",
+        "mission-brief.pdf",
     }
+
+    pdf_document = next(
+        item for item in documents.json() if item["external_id"] == "mission-brief.pdf"
+    )
+    versions = scan_client.get(
+        f"/documents/{pdf_document['id']}/versions",
+        headers=scan_admin_headers,
+    )
+    artifacts = scan_client.get(
+        f"/document-versions/{versions.json()[0]['id']}/artifacts",
+        headers=scan_admin_headers,
+    )
+    assert artifacts.json()[0]["kind"] == "pdf_text"
 
 
 @pytest.mark.asyncio

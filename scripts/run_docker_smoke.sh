@@ -38,7 +38,27 @@ trap finish EXIT
 
 "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
 "${compose[@]}" up --build -d --wait --wait-timeout 180 postgres rabbitmq api worker web
-"${compose[@]}" exec -T api sh -lc 'mkdir -p /var/lib/retos/storage/smoke-corpus && printf "%s\n" "Apollo guidance computers used deterministic checklists." > /var/lib/retos/storage/smoke-corpus/apollo-notes.txt && printf "%s\n\n%s\n" "# Biology" "Ocean biology notes mention plankton and salinity." > /var/lib/retos/storage/smoke-corpus/biology.md'
+"${compose[@]}" exec -T api python - <<'PY'
+from pathlib import Path
+
+import pymupdf
+
+root = Path("/var/lib/retos/storage/smoke-corpus")
+root.mkdir(parents=True, exist_ok=True)
+(root / "apollo-notes.txt").write_text(
+    "Apollo guidance computers used deterministic checklists.\n",
+    encoding="utf-8",
+)
+(root / "biology.md").write_text(
+    "# Biology\n\nOcean biology notes mention plankton and salinity.\n",
+    encoding="utf-8",
+)
+document = pymupdf.open()
+page = document.new_page()
+page.insert_text((72, 72), "Mars rover sample caching mission brief.")
+document.save(root / "mission-brief.pdf")
+document.close()
+PY
 curl --fail --silent --show-error http://127.0.0.1:8000/healthz >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null
 RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me \

@@ -202,7 +202,7 @@ finish.
 
 ## Mounted Source Scan
 
-Scan a mounted `file://` source for `.txt` and `.md` files:
+Scan a mounted `file://` source for `.txt`, `.md`, and digital `.pdf` files:
 
 ```bash
 curl --request POST http://localhost:8000/sources/<source_id>/scan \
@@ -217,10 +217,11 @@ curl --request POST http://localhost:8000/sources/<source_id>/scan \
 ```
 
 The source must have `kind="mount"` and a local `file://` URI that is visible to the API
-or worker container. The scan creates one document/version/raw-text artifact per new file
-and deterministic word-window segments with anchors based on the relative path. Existing
-content hashes in the same domain are skipped, so scanning the same corpus twice is
-idempotent.
+or worker container. The scan creates one document/version/extracted-text artifact per new
+file and deterministic word-window segments with anchors based on the relative path.
+Existing content hashes in the same domain are skipped, so scanning the same corpus twice
+is idempotent. PDFs currently use local text extraction; OCR for scanned image-only pages
+is a separate pipeline step.
 
 In `RETOS_ENV=test`, or when `run_inline=true`, the scan runs inline. In Docker/runtime
 mode, the scan is queued as an `ingest.source` job and processed by the worker.

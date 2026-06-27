@@ -6,13 +6,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+import pymupdf
 from sqlalchemy.exc import IntegrityError
 
 from retos.api.routes.events import progress_store
 from retos.ingestion.text import chunk_text, content_hash
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
-SUPPORTED_TEXT_SUFFIXES = frozenset({".txt", ".md"})
+SUPPORTED_SOURCE_SUFFIXES = frozenset({".txt", ".md", ".pdf"})
 
 
 @dataclass(frozen=True)
@@ -40,11 +41,11 @@ def path_from_file_uri(uri: str) -> Path:
 
 def iter_supported_files(root: Path) -> Iterable[Path]:
     if root.is_file():
-        if root.suffix.lower() in SUPPORTED_TEXT_SUFFIXES:
+        if root.suffix.lower() in SUPPORTED_SOURCE_SUFFIXES:
             yield root
         return
     for path in sorted(root.rglob("*")):
-        if path.is_file() and path.suffix.lower() in SUPPORTED_TEXT_SUFFIXES:
+        if path.is_file() and path.suffix.lower() in SUPPORTED_SOURCE_SUFFIXES:
             yield path
 
 
@@ -53,6 +54,28 @@ def read_text_file(path: Path, *, max_bytes: int) -> tuple[str, bytes]:
     if len(raw) > max_bytes:
         raise SourceScanError(f"File exceeds max_bytes: {path}")
     return raw.decode("utf-8", errors="replace"), raw
+
+
+def extract_pdf_text(raw: bytes) -> str:
+    pages: list[str] = []
+    with pymupdf.open(stream=raw, filetype="pdf") as document:  # type: ignore[no-untyped-call]
+        for page in document:
+            text = page.get_text("text").strip()
+            if text:
+                pages.append(text)
+    if not pages:
+        raise SourceScanError("PDF contains no extractable text")
+    return "\n\n".join(pages)
+
+
+def extract_source_text(path: Path, *, max_bytes: int) -> tuple[str, bytes, str]:
+    raw = path.read_bytes()
+    if len(raw) > max_bytes:
+        raise SourceScanError(f"File exceeds max_bytes: {path}")
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        return extract_pdf_text(raw), raw, "pdf_text"
+    return raw.decode("utf-8", errors="replace"), raw, "raw_text"
 
 
 async def run_source_scan(
@@ -118,7 +141,7 @@ async def run_source_scan(
             if scanned_files >= max_files:
                 break
             scanned_files += 1
-            text, raw = read_text_file(path, max_bytes=max_bytes)
+            text, raw, artifact_kind = extract_source_text(path, max_bytes=max_bytes)
             file_hash = content_hash(raw)
             existing = await uow.documents.get_by_domain_and_hash(job.domain_id, file_hash)
             if existing is not None:
@@ -148,7 +171,7 @@ async def run_source_scan(
             )
             await uow.documents.add_artifact(
                 document_version_id=version.id,
-                kind="raw_text",
+                kind=artifact_kind,
                 uri=source_uri,
                 sha256=file_hash,
                 size_bytes=len(raw),
