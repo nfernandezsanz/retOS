@@ -6,8 +6,10 @@ import {
   Database,
   FileSearch,
   KeyRound,
+  Link2,
   LockKeyhole,
   Radio,
+  Send,
   ServerCog,
   ShieldAlert,
 } from "lucide-react";
@@ -42,6 +44,35 @@ type ProviderCatalog = {
 type TokenResponse = {
   access_token: string;
   token_type: "bearer";
+};
+
+type JobRead = {
+  id: string;
+  kind: string;
+  status: string;
+  payload: Record<string, unknown>;
+};
+
+type AgentCitation = {
+  segment_id: string;
+  document_id: string;
+  document_version_id: string;
+  title: string;
+  anchor: string | null;
+  score: number;
+  text: string;
+};
+
+type AgentQueryResult = {
+  answer: string;
+  provider: string;
+  model: string;
+  citations: AgentCitation[];
+};
+
+type AgentQueryResponse = {
+  job: JobRead;
+  result: AgentQueryResult | null;
 };
 
 const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
@@ -88,6 +119,24 @@ async function loadProviderCatalog(token: string): Promise<ProviderCatalog> {
   });
 }
 
+async function runAgentQuery(
+  token: string,
+  domainId: string,
+  question: string,
+): Promise<AgentQueryResponse> {
+  return requestJson<AgentQueryResponse>(`/domains/${domainId}/queries`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      question,
+      limit: 5,
+      run_inline: true,
+    }),
+  });
+}
+
 function providerLabel(name: ProviderName): string {
   if (name === "local") {
     return "Ollama";
@@ -105,6 +154,12 @@ function App() {
   const [catalog, setCatalog] = useState<ProviderCatalog | null>(null);
   const [isLoadingProvider, setIsLoadingProvider] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
+  const [domainId, setDomainId] = useState("");
+  const [question, setQuestion] = useState("");
+  const [queryResult, setQueryResult] = useState<AgentQueryResult | null>(null);
+  const [queryJob, setQueryJob] = useState<JobRead | null>(null);
+  const [isRunningQuery, setIsRunningQuery] = useState(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
 
   const activeProviderLabel = useMemo(() => {
     if (!catalog) {
@@ -143,11 +198,49 @@ function App() {
     }
   }
 
+  async function getAdminToken(): Promise<string> {
+    if (token) {
+      return token;
+    }
+    const accessToken = await login(email, password);
+    localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+    setToken(accessToken);
+    return accessToken;
+  }
+
+  async function handleQuerySubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsRunningQuery(true);
+    setQueryError(null);
+    setQueryResult(null);
+    setQueryJob(null);
+    try {
+      const trimmedDomainId = domainId.trim();
+      const trimmedQuestion = question.trim();
+      if (!trimmedDomainId || !trimmedQuestion) {
+        throw new Error("Domain ID and question are required");
+      }
+      const accessToken = await getAdminToken();
+      const response = await runAgentQuery(accessToken, trimmedDomainId, trimmedQuestion);
+      setQueryJob(response.job);
+      if (!response.result) {
+        throw new Error("Query was queued; open Jobs to inspect worker progress");
+      }
+      setQueryResult(response.result);
+    } catch (error) {
+      setQueryError(error instanceof Error ? error.message : "Agent query failed");
+    } finally {
+      setIsRunningQuery(false);
+    }
+  }
+
   function handleDisconnect() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setToken("");
     setCatalog(null);
     setProviderError(null);
+    setQueryResult(null);
+    setQueryJob(null);
   }
 
   return (
@@ -220,14 +313,65 @@ function App() {
               </div>
               <span className="status-pill local">Local model</span>
             </div>
-            <label className="query-box">
-              <span>Question</span>
-              <textarea placeholder="Ask a grounded question about the indexed corpus." />
-            </label>
-            <button type="button" className="secondary-action">
-              <Bot aria-hidden="true" />
-              Run with Gemma 4
-            </button>
+            <form className="query-form" onSubmit={handleQuerySubmit}>
+              <label className="query-box compact-field">
+                <span>Domain ID</span>
+                <input
+                  placeholder="Paste a domain UUID"
+                  value={domainId}
+                  onChange={(event) => setDomainId(event.target.value)}
+                />
+              </label>
+              <label className="query-box">
+                <span>Question</span>
+                <textarea
+                  placeholder="Ask a grounded question about the indexed corpus."
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                />
+              </label>
+              <button className="secondary-action" disabled={isRunningQuery} type="submit">
+                <Send aria-hidden="true" />
+                {isRunningQuery ? "Running query" : "Run grounded query"}
+              </button>
+              {queryError ? (
+                <p className="inline-error" role="alert">
+                  {queryError}
+                </p>
+              ) : null}
+            </form>
+            <section className="query-result" aria-live="polite">
+              {queryResult ? (
+                <>
+                  <div className="result-meta">
+                    <span>Job {queryJob?.status ?? "unknown"}</span>
+                    <span>{queryResult.model}</span>
+                    <span>{queryResult.citations.length} citations</span>
+                  </div>
+                  <p>{queryResult.answer}</p>
+                  <div className="citation-list" aria-label="Query citations">
+                    {queryResult.citations.map((citation) => (
+                      <article className="citation-row" key={citation.segment_id}>
+                        <div>
+                          <strong>{citation.title}</strong>
+                          <span>{citation.anchor ?? "No anchor"}</span>
+                        </div>
+                        <p>{citation.text}</p>
+                        <span className="badge muted">
+                          <Link2 aria-hidden="true" />
+                          {citation.segment_id.slice(0, 8)}
+                        </span>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="empty-state compact">
+                  <Bot aria-hidden="true" />
+                  <p>Run a query to inspect the answer, citations, provider, and job status.</p>
+                </div>
+              )}
+            </section>
           </article>
 
           <article className="panel wide" id="admin">

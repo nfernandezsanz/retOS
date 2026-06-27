@@ -368,7 +368,8 @@ The response includes the active profile and the available profiles:
 
 The React console reads `VITE_RETOS_API_URL` and falls back to `http://localhost:8000`.
 The provider panel authenticates with `/auth/login`, stores the admin bearer token in
-browser local storage under `retos.adminToken`, and then calls `/llm/providers`.
+browser local storage under `retos.adminToken`, and then calls `/llm/providers` and
+`/domains/{domain_id}/queries`.
 
 The UI treats the provider catalog as read-only operational status:
 
@@ -376,6 +377,11 @@ The UI treats the provider catalog as read-only operational status:
 - `paid=true` means the UI must show a cost warning before future query execution.
 - `enabled=false` plus `reason` explains whether configuration or cost opt-in is missing.
 - API keys are never returned to the browser.
+
+The query workspace currently asks for a domain ID and sends `run_inline=true` so the UI
+can render the answer and citations immediately. Worker-backed query jobs are already
+available through the API by omitting `run_inline`; the streaming UI will attach that path
+to SSE progress in a later slice.
 
 ## Progress Events
 

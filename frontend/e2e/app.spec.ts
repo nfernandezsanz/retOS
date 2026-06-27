@@ -43,6 +43,36 @@ async function mockProviderApi(page: Page) {
       },
     });
   });
+  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/queries/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        job: {
+          id: "job-query-1",
+          kind: "agent.query",
+          status: "succeeded",
+          payload: {},
+        },
+        result: {
+          answer:
+            "Grounded answer for: What evidence mentions search readiness?\n\nThe indexed evidence points to: Smoke segment text for search readiness.",
+          provider: "local",
+          model: "ollama:gemma4",
+          citations: [
+            {
+              segment_id: "segment-1234567890",
+              document_id: "document-1",
+              document_version_id: "version-1",
+              title: "Smoke Document",
+              anchor: "page=1",
+              score: 1.23,
+              text: "Smoke segment text for search readiness.",
+            },
+          ],
+        },
+      },
+    });
+  });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -58,7 +88,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Documents" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Processing timeline" })).toBeVisible();
   await expect(page.getByRole("list").filter({ hasText: "Discover mounted files" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Run with Gemma 4" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run grounded query" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
 
   await page.getByLabel("Password").fill("retos-dev-admin-change-me");
@@ -68,6 +98,16 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("Ollama local runtime")).toBeVisible();
   await expect(page.getByText("OpenAI")).toBeVisible();
   await expect(page.getByText("Blocked")).toBeVisible();
+
+  await page.getByLabel("Domain ID").fill("domain-123");
+  await page
+    .getByLabel("Question")
+    .fill("What evidence mentions search readiness?");
+  await page.getByRole("button", { name: "Run grounded query" }).click();
+
+  await expect(page.getByText("Grounded answer for:")).toBeVisible();
+  await expect(page.getByText("Smoke Document")).toBeVisible();
+  await expect(page.getByText("page=1")).toBeVisible();
 });
 
 test("keeps provider controls usable on mobile", async ({ page }) => {

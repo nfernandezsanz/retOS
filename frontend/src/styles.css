@@ -265,6 +265,7 @@ h2 {
 }
 
 .query-box textarea,
+.query-box input,
 .provider-login input {
   min-height: 140px;
   width: 100%;
@@ -279,11 +280,86 @@ h2 {
   resize: vertical;
 }
 
+.query-box input,
+.query-box.compact-field input {
+  min-height: 44px;
+}
+
 .query-box textarea:focus-visible,
+.query-box input:focus-visible,
 .provider-login input:focus-visible,
 button:focus-visible {
   outline: 3px solid #93c5fd;
   outline-offset: 2px;
+}
+
+.query-form {
+  display: grid;
+  gap: 12px;
+}
+
+.query-result {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  border-top: 1px solid #dbe3ef;
+  padding-top: 16px;
+}
+
+.query-result > p {
+  margin: 0;
+  color: #1e293b;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.result-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.citation-list {
+  display: grid;
+  gap: 10px;
+}
+
+.citation-row {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.citation-row div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.citation-row strong,
+.citation-row span {
+  overflow-wrap: anywhere;
+}
+
+.citation-row p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.5;
 }
 
 .empty-state {
@@ -407,11 +483,17 @@ button:focus-visible {
 .badge {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   min-height: 26px;
   padding: 0 8px;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 800;
+}
+
+.badge svg {
+  width: 14px;
+  height: 14px;
 }
 
 .badge.success {

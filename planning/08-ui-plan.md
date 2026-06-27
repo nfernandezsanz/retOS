@@ -31,7 +31,9 @@ The UI is a working console, not a landing page. It must make background process
   management.
 - Paid providers are visibly marked and remain blocked unless backend configuration and
   `RETOS_ALLOW_PAID_LLM=true` allow them.
-- Browser smoke tests mock the API contract and verify the visible provider flow.
+- The query workspace posts to `/domains/{domain_id}/queries` with `run_inline=true` and
+  renders the grounded answer, job status, provider model, and citation cards.
+- Browser smoke tests mock the API contract and verify provider and query flows.
 
 ## Processing UI
 
