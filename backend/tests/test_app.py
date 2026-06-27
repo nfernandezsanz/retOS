@@ -27,6 +27,7 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/llm/providers" in route_paths
     assert "/domains/{domain_id}/queries" in route_paths
     assert "/evals/smoke" in route_paths
+    assert "/evals/runs" in route_paths
     assert "/audit/journal-events" in route_paths
     assert "/audit/progress-events" in route_paths
     assert "/events/progress" in route_paths

@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel, ValidationError
 
 from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep
 from retos.api.routes.events import progress_store
@@ -79,6 +79,38 @@ class EvalReportRead(BaseModel):
 class EvalRunResponse(BaseModel):
     job: JobRead
     report: EvalReportRead
+
+
+class EvalRunRead(BaseModel):
+    job: JobRead
+    report: EvalReportRead | None
+
+
+def report_from_payload(payload: dict[str, Any]) -> EvalReportRead | None:
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        return None
+    try:
+        return EvalReportRead.model_validate(result)
+    except ValidationError:
+        return None
+
+
+@router.get("/runs", response_model=list[EvalRunRead])
+async def list_eval_runs(
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> list[EvalRunRead]:
+    async with uow:
+        jobs = await uow.jobs.list_by_kind(kind="eval.run", limit=limit)
+    return [
+        EvalRunRead(
+            job=JobRead.from_job(job),
+            report=report_from_payload(job.payload),
+        )
+        for job in jobs
+    ]
 
 
 @router.post(

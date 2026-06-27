@@ -155,6 +155,11 @@ type EvalRunResponse = {
   report: EvalReport;
 };
 
+type EvalRunRead = {
+  job: JobRead;
+  report: EvalReport | null;
+};
+
 type ProgressEvent = {
   id: number;
   event: string;
@@ -376,6 +381,14 @@ async function runSmokeEval(token: string): Promise<EvalRunResponse> {
   });
 }
 
+async function loadEvalRuns(token: string): Promise<EvalRunRead[]> {
+  return requestJson<EvalRunRead[]>("/evals/runs?limit=6", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 function providerLabel(name: ProviderName): string {
   if (name === "local") {
     return "Ollama";
@@ -478,6 +491,7 @@ function App() {
   const [queryError, setQueryError] = useState<string | null>(null);
   const [evalReport, setEvalReport] = useState<EvalReport | null>(null);
   const [evalJob, setEvalJob] = useState<JobRead | null>(null);
+  const [evalRuns, setEvalRuns] = useState<EvalRunRead[]>([]);
   const [isRunningEval, setIsRunningEval] = useState(false);
   const [evalError, setEvalError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
@@ -595,6 +609,20 @@ function App() {
     }
   }
 
+  async function refreshEvalRuns(accessToken?: string) {
+    setEvalError(null);
+    try {
+      const adminToken = accessToken ?? (await getAdminToken());
+      const runs = await loadEvalRuns(adminToken);
+      setEvalRuns(runs);
+      const latestWithReport = runs.find((run) => run.report !== null);
+      setEvalJob(runs[0]?.job ?? null);
+      setEvalReport(latestWithReport?.report ?? null);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "Eval history refresh failed");
+    }
+  }
+
   async function handleProviderLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoadingProvider(true);
@@ -607,6 +635,7 @@ function App() {
       setCatalog(nextCatalog);
       await refreshWorkspace(accessToken);
       await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
       setPassword("");
     } catch (error) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -816,8 +845,17 @@ function App() {
       const response = await runSmokeEval(accessToken);
       setEvalJob(response.job);
       setEvalReport(response.report);
-      setQueuedJobs((current) => [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(0, 12));
+      setEvalRuns((current) =>
+        [
+          { job: response.job, report: response.report },
+          ...current.filter((run) => run.job.id !== response.job.id),
+        ].slice(0, 6),
+      );
+      setQueuedJobs((current) =>
+        [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(0, 12),
+      );
       await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Eval smoke failed");
     } finally {
@@ -900,6 +938,7 @@ function App() {
     setQueryJob(null);
     setEvalReport(null);
     setEvalJob(null);
+    setEvalRuns([]);
     setEvalError(null);
     setDomains([]);
     setSelectedDomainId("");
@@ -1386,6 +1425,50 @@ function App() {
                 <div className="empty-state compact">
                   <CheckCircle2 aria-hidden="true" />
                   <p>Run the local smoke eval to verify retrieval, citations, grounding, abstention, and budget compliance.</p>
+                </div>
+              )}
+            </section>
+            <section className="eval-history" aria-label="Eval run history">
+              <div className="section-heading">
+                <h3>Run history</h3>
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label="Refresh eval history"
+                  onClick={() => void refreshEvalRuns()}
+                >
+                  <RefreshCw aria-hidden="true" />
+                </button>
+              </div>
+              {evalRuns.length > 0 ? (
+                <div className="eval-run-list">
+                  {evalRuns.map((run) => {
+                    const metrics = run.report ? Object.values(run.report.metrics) : [];
+                    const averageScore =
+                      metrics.length > 0
+                        ? formatScore(metrics.reduce((total, value) => total + value, 0) / metrics.length)
+                        : "No report";
+                    return (
+                      <article className="eval-run-row" key={run.job.id}>
+                        <div>
+                          <span className={run.job.status === "succeeded" ? "badge success" : "badge warning"}>
+                            {run.job.status}
+                          </span>
+                          <strong>{run.report?.suite_name ?? "retos-smoke"}</strong>
+                          <span>{formatDateTime(run.job.completed_at ?? run.job.updated_at)}</span>
+                        </div>
+                        <div className="provider-badges">
+                          <span className="badge muted">{run.report?.case_count ?? 0} cases</span>
+                          <span className="badge muted">{averageScore}</span>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="empty-state compact">
+                  <Activity aria-hidden="true" />
+                  <p>No eval runs have been recorded yet.</p>
                 </div>
               )}
             </section>

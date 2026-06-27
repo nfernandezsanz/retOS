@@ -382,6 +382,21 @@ def main() -> None:
             require(eval_body["report"]["passed"] is True, "eval report did not pass")
             require(eval_body["report"]["case_count"] == 3, "unexpected eval case count")
 
+            eval_runs = client.get("/evals/runs", headers=auth_headers)
+            require(
+                eval_runs.status_code == 200,
+                f"eval runs failed: {eval_runs.status_code} {eval_runs.text}",
+            )
+            latest_eval_run = eval_runs.json()[0]
+            require(
+                latest_eval_run["job"]["id"] == eval_body["job"]["id"],
+                "latest eval run did not match smoke eval",
+            )
+            require(
+                latest_eval_run["report"]["passed"] is True,
+                "latest eval run report did not pass",
+            )
+
             created_job = client.post(
                 "/jobs",
                 headers=auth_headers,

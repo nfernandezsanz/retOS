@@ -49,11 +49,13 @@ The UI is a working console, not a landing page. It must make background process
 - The audit panel reads `/audit/journal-events?limit=20` and
   `/audit/progress-events?limit=20` to render durable journal/progress records beside the
   live SSE stream.
-- The eval panel posts to `/evals/smoke`, renders the returned `eval.run` job, metric
-  scorecards, and per-case pass/failure rows.
+- The eval panel posts to `/evals/smoke`, reads `/evals/runs?limit=6`, and renders the
+  returned `eval.run` job, metric scorecards, per-case pass/failure rows, and a compact
+  newest-first run history.
 - Browser smoke tests mock the API contract and verify provider, domain creation,
   document/source inventory, text ingestion, scan/index queueing, job/audit filtering,
-  persisted audit events, eval smoke execution, query, and live progress flows.
+  persisted audit events, eval smoke execution, eval run history, query, and live
+  progress flows.
 
 ## Processing UI
 

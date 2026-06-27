@@ -50,8 +50,16 @@ curl --request POST http://localhost:8000/evals/smoke \
 ```
 
 The API creates a durable `eval.run` job, persists the report under `job.payload.result`,
-writes journal/progress events, and returns the report immediately. The React console
-uses this endpoint in the `Local evals` panel to show metrics and per-case status.
+writes journal/progress events, and returns the report immediately. Recent persisted
+runs are available through:
+
+```bash
+curl "http://localhost:8000/evals/runs?limit=6" \
+  --header "Authorization: Bearer <token>"
+```
+
+The React console uses these endpoints in the `Local evals` panel to show metrics,
+per-case status, and a newest-first run history.
 
 ## Public Dataset Roadmap
 
@@ -75,7 +83,7 @@ or read user-provided dataset files under explicit opt-in commands.
 
 ## Next Implementation Step
 
-The next eval slice should add a small adapter interface and persisted report listing:
+The next eval slice should add a small adapter interface:
 
 ```text
 dataset file -> EvalCase[] -> local index -> scorer -> JSON/Markdown report

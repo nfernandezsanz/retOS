@@ -38,6 +38,12 @@ def test_smoke_eval_requires_admin_token(evals_client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def test_eval_runs_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.get("/evals/runs")
+
+    assert response.status_code == 401
+
+
 def test_smoke_eval_runs_and_persists_auditable_job(
     evals_client: TestClient,
     evals_admin_headers: dict[str, str],
@@ -82,6 +88,85 @@ def test_smoke_eval_runs_and_persists_auditable_job(
         event["event_type"] == "eval.completed" and event["job_id"] == job_id
         for event in progress_events.json()
     )
+
+    eval_runs = evals_client.get("/evals/runs", headers=evals_admin_headers)
+    assert eval_runs.status_code == 200
+    assert eval_runs.json()[0]["job"]["id"] == job_id
+    assert eval_runs.json()[0]["report"]["passed"] is True
+    assert eval_runs.json()[0]["report"]["case_count"] == 3
+
+
+def test_eval_runs_lists_recent_reports_first(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert first.status_code == 202
+
+    def fake_suite(*, index_root: object) -> EvalSuiteReport:
+        return EvalSuiteReport(
+            suite_name="retos-smoke",
+            passed=False,
+            case_count=1,
+            retrieval_recall=0.0,
+            citation_validity=1.0,
+            grounded_answer=0.0,
+            abstention=1.0,
+            budget_compliance=1.0,
+            cases=(
+                EvalCaseResult(
+                    case_id="later-failing-case",
+                    question="What failed later?",
+                    passed=False,
+                    retrieval_recall=False,
+                    citation_validity=True,
+                    grounded_answer=False,
+                    abstention=True,
+                    budget_compliance=True,
+                    answer="No grounded answer.",
+                    citations=(),
+                    failures=("retrieval_recall", "grounded_answer"),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr("retos.api.routes.evals.run_smoke_eval_suite", fake_suite)
+
+    second = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert second.status_code == 202
+
+    eval_runs = evals_client.get("/evals/runs?limit=2", headers=evals_admin_headers)
+
+    assert eval_runs.status_code == 200
+    runs = eval_runs.json()
+    assert [run["job"]["id"] for run in runs] == [
+        second.json()["job"]["id"],
+        first.json()["job"]["id"],
+    ]
+    assert runs[0]["report"]["passed"] is False
+    assert runs[1]["report"]["passed"] is True
+
+
+def test_eval_runs_tolerates_malformed_report_payload(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> None:
+    created = evals_client.post(
+        "/jobs",
+        headers=evals_admin_headers,
+        json={
+            "kind": "eval.run",
+            "payload": {"result": {"suite_name": "retos-smoke"}},
+        },
+    )
+    assert created.status_code == 201
+
+    eval_runs = evals_client.get("/evals/runs", headers=evals_admin_headers)
+
+    assert eval_runs.status_code == 200
+    assert eval_runs.json()[0]["job"]["id"] == created.json()["id"]
+    assert eval_runs.json()[0]["report"] is None
 
 
 def test_smoke_eval_persists_failed_report(
@@ -152,3 +237,8 @@ def test_smoke_eval_marks_job_failed_when_suite_crashes(
     assert len(eval_jobs) == 1
     assert eval_jobs[0]["status"] == "failed"
     assert eval_jobs[0]["error"] == "broken eval fixture"
+
+    eval_runs = evals_client.get("/evals/runs", headers=evals_admin_headers)
+    assert eval_runs.status_code == 200
+    assert eval_runs.json()[0]["job"]["id"] == eval_jobs[0]["id"]
+    assert eval_runs.json()[0]["report"] is None

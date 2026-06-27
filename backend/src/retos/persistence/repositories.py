@@ -1,3 +1,4 @@
+import builtins
 from datetime import datetime
 from typing import cast
 from uuid import uuid4
@@ -542,6 +543,15 @@ class JobRepository:
     async def list(self, *, limit: int = 100) -> list[Job]:
         result = await self._session.scalars(
             select(JobRecord)
+            .order_by(JobRecord.created_at.desc(), JobRecord.id.desc())
+            .limit(limit)
+        )
+        return [job_from_record(record) for record in result]
+
+    async def list_by_kind(self, *, kind: JobKind, limit: int = 100) -> builtins.list[Job]:
+        result = await self._session.scalars(
+            select(JobRecord)
+            .where(JobRecord.kind == kind)
             .order_by(JobRecord.created_at.desc(), JobRecord.id.desc())
             .limit(limit)
         )

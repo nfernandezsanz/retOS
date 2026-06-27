@@ -418,6 +418,33 @@ The run writes:
 - `eval.queued`, `job.running`, `eval.completed`, and `job.succeeded` journal events
 - live SSE progress events for connected clients
 
+List recent persisted eval runs:
+
+```bash
+curl "http://localhost:8000/evals/runs?limit=6" \
+  --header "Authorization: Bearer <token>"
+```
+
+The response is ordered newest-first and includes runs that failed before a report
+was produced:
+
+```json
+[
+  {
+    "job": {
+      "id": "<job_id>",
+      "kind": "eval.run",
+      "status": "succeeded"
+    },
+    "report": {
+      "suite_name": "retos-smoke",
+      "passed": true,
+      "case_count": 3
+    }
+  }
+]
+```
+
 ### Frontend Runtime Notes
 
 The React console reads `VITE_RETOS_API_URL` and falls back to `http://localhost:8000`.
@@ -438,6 +465,7 @@ Current console calls:
 - `POST /sources/{source_id}/scan`
 - `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
+- `GET /evals/runs?limit=6`
 - `POST /evals/smoke`
 - `GET /jobs?limit=12`
 - `GET /audit/journal-events?limit=20`

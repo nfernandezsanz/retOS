@@ -128,6 +128,7 @@ async function mockProviderApi(page: Page) {
       },
     ],
   };
+  const evalRuns: { job: ReturnType<typeof jobFixture>; report: typeof evalReport | null }[] = [];
 
   function recordAudit(job: ReturnType<typeof jobFixture>) {
     journalEvents.unshift({
@@ -340,11 +341,18 @@ async function mockProviderApi(page: Page) {
   await page.route("http://localhost:8000/evals/smoke", async (route) => {
     const job = jobFixture("job-eval-1", "eval.run", "succeeded", { result: evalReport });
     jobs.unshift(job);
+    evalRuns.unshift({ job, report: evalReport });
     recordAudit(job);
     await route.fulfill({
       contentType: "application/json",
       status: 202,
       json: { job, report: evalReport },
+    });
+  });
+  await page.route("http://localhost:8000/evals/runs?limit=6", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: evalRuns,
     });
   });
   await page.route("http://localhost:8000/events/progress", async (route) => {
@@ -442,6 +450,8 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval metrics").getByText("retrieval recall")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("apollo-guidance")).toBeVisible();
   await expect(page.locator("#evals").getByText("eval.run succeeded")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("3 cases")).toBeVisible();
 
   await page.getByLabel("Filter jobs").selectOption("index.domain");
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();
