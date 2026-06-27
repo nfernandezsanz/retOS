@@ -32,6 +32,16 @@ Run an opt-in SQuAD 2.0 dataset eval from a local file:
 make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50
 ```
 
+Persist both JSON and Markdown reports:
+
+```bash
+make eval-squad \
+  SQUAD_PATH=evals/datasets/dev-v2.0.json \
+  MAX_CASES=50 \
+  REPORT_DIR=evals/reports \
+  REPORT_STEM=squad-v2-dev-50
+```
+
 or directly:
 
 ```bash
@@ -40,6 +50,8 @@ PYTHONPATH=src python scripts/run_eval_smoke.py \
   --suite squad \
   --dataset-path ../evals/datasets/dev-v2.0.json \
   --max-cases 50 \
+  --report-dir ../evals/reports \
+  --report-stem squad-v2-dev-50 \
   --format markdown
 ```
 
@@ -108,6 +120,7 @@ Adapter guarantees:
 - No network access.
 - No paid model calls.
 - `--max-cases` bounds runtime for local experiments.
+- `--report-dir` writes reproducible JSON and Markdown report artifacts.
 - Invalid or non-v2 dataset files fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.
 
@@ -117,17 +130,11 @@ Adapter guarantees:
 - CI must not download public datasets by default.
 - Tests must use tiny fixtures or generated subsets.
 - Paid LLM calls remain disabled unless a live-eval profile is explicitly enabled.
-- Reports should be written as JSON plus Markdown summaries under `evals/reports/`.
+- Reports should be written as JSON plus Markdown summaries under `evals/reports/`
+  with explicit stems for named runs.
 - Any dataset cache directory must stay out of git.
 
 ## Next Implementation Step
 
-The next eval slice should add persisted JSON/Markdown report export for dataset-backed
-runs:
-
-```text
-dataset file -> EvalCase[] -> local index -> scorer -> evals/reports/*.json + *.md
-```
-
-After that, add Natural Questions or HotpotQA adapters for larger retrieval and multi-hop
-coverage.
+Add Natural Questions or HotpotQA adapters for larger retrieval and multi-hop coverage,
+then expose dataset-backed report creation through the admin API.

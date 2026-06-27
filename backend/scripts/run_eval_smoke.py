@@ -42,6 +42,17 @@ def parse_args() -> argparse.Namespace:
         default="json",
         help="Report output format.",
     )
+    parser.add_argument(
+        "--report-dir",
+        type=Path,
+        default=None,
+        help="Optional directory where JSON and Markdown reports should be written.",
+    )
+    parser.add_argument(
+        "--report-stem",
+        default=None,
+        help="Optional report filename stem. Defaults to the suite name.",
+    )
     return parser.parse_args()
 
 
@@ -55,6 +66,8 @@ def main() -> int:
                 suite=args.suite,
                 dataset_path=args.dataset_path,
                 max_cases=args.max_cases,
+                report_dir=args.report_dir,
+                report_stem=args.report_stem,
             )
     return run(
         index_root=args.index_root,
@@ -62,6 +75,8 @@ def main() -> int:
         suite=args.suite,
         dataset_path=args.dataset_path,
         max_cases=args.max_cases,
+        report_dir=args.report_dir,
+        report_stem=args.report_stem,
     )
 
 
@@ -72,6 +87,8 @@ def run(
     suite: str,
     dataset_path: Path | None,
     max_cases: int | None,
+    report_dir: Path | None = None,
+    report_stem: str | None = None,
 ) -> int:
     try:
         report = build_report(
@@ -87,6 +104,13 @@ def run(
         print(report.to_markdown())
     else:
         print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+    if report_dir is not None:
+        json_path, markdown_path = write_report_files(
+            report=report,
+            report_dir=report_dir,
+            report_stem=report_stem,
+        )
+        print(f"Wrote eval reports: {json_path} {markdown_path}", file=sys.stderr)
     return 0 if report.passed else 1
 
 
@@ -114,6 +138,32 @@ def build_report(
         suite_name="squad-v2",
         cases=cases,
     )
+
+
+def write_report_files(
+    *,
+    report: EvalSuiteReport,
+    report_dir: Path,
+    report_stem: str | None,
+) -> tuple[Path, Path]:
+    report_dir.mkdir(parents=True, exist_ok=True)
+    stem = sanitize_report_stem(report_stem or report.suite_name)
+    json_path = report_dir / f"{stem}.json"
+    markdown_path = report_dir / f"{stem}.md"
+    json_path.write_text(
+        json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    markdown_path.write_text(report.to_markdown(), encoding="utf-8")
+    return json_path, markdown_path
+
+
+def sanitize_report_stem(value: str) -> str:
+    stem = "".join(
+        character if character.isalnum() or character in ("-", "_") else "-" for character in value
+    )
+    stem = "-".join(part for part in stem.strip("-_").split("-") if part)
+    return stem[:120] or "eval-report"
 
 
 if __name__ == "__main__":

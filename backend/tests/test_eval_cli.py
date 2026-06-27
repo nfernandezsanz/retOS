@@ -73,6 +73,49 @@ def test_eval_cli_runs_squad_suite_from_local_file(tmp_path: Path, capsys) -> No
     assert '"case_count": 2' in captured.out
 
 
+def test_eval_cli_writes_json_and_markdown_reports(tmp_path: Path, capsys) -> None:
+    dataset_path = write_squad_cli_fixture(tmp_path / "squad.json")
+    report_dir = tmp_path / "reports"
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="markdown",
+        suite="squad",
+        dataset_path=dataset_path,
+        max_cases=2,
+        report_dir=report_dir,
+        report_stem="nightly/squad v2",
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Wrote eval reports:" in captured.err
+    json_report = report_dir / "nightly-squad-v2.json"
+    markdown_report = report_dir / "nightly-squad-v2.md"
+    assert json_report.exists()
+    assert markdown_report.exists()
+    assert json.loads(json_report.read_text(encoding="utf-8"))["suite_name"] == "squad-v2"
+    assert "# Eval Report: squad-v2" in markdown_report.read_text(encoding="utf-8")
+
+
+def test_eval_cli_uses_suite_name_as_default_report_stem(tmp_path: Path) -> None:
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="json",
+        suite="smoke",
+        dataset_path=None,
+        max_cases=None,
+        report_dir=tmp_path / "reports",
+    )
+
+    assert exit_code == 0
+    assert (tmp_path / "reports" / "retos-smoke.json").exists()
+    assert (tmp_path / "reports" / "retos-smoke.md").exists()
+
+
 def test_eval_cli_requires_dataset_path_for_squad(tmp_path: Path, capsys) -> None:
     cli = load_eval_cli()
 

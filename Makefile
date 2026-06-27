@@ -62,7 +62,7 @@ eval-squad:
 ifndef SQUAD_PATH
 	$(error SQUAD_PATH is required, for example make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json)
 endif
-	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite squad --dataset-path "$(SQUAD_PATH)" --max-cases "$(or $(MAX_CASES),50)" --format markdown
+	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite squad --dataset-path "$(SQUAD_PATH)" --max-cases "$(or $(MAX_CASES),50)" --format markdown $(if $(REPORT_DIR),--report-dir "$(REPORT_DIR)",) $(if $(REPORT_STEM),--report-stem "$(REPORT_STEM)",)
 
 check: format-check lint typecheck test eval-smoke
 

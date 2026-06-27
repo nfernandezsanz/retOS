@@ -139,7 +139,7 @@ make lint
 make typecheck
 make test
 make eval-smoke
-make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50
+make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50 REPORT_DIR=evals/reports
 make api-smoke
 ```
 
@@ -187,7 +187,7 @@ Every meaningful change should pass these gates:
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
-| SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file. |
+| SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan, text ingestion queueing, BM25 rebuild/search, job lifecycle, and SSE over HTTP. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state. |
