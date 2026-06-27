@@ -24,6 +24,15 @@ The UI is a working console, not a landing page. It must make background process
 | Evals | Run and inspect local evals. |
 | Settings/Admin | Admin account, providers, Ollama, budgets, audit export. |
 
+## Implemented Frontend Contracts
+
+- The admin provider panel logs in through `/auth/login` and reads `/llm/providers`.
+- The provider catalog is rendered as operational status, not as editable secret
+  management.
+- Paid providers are visibly marked and remain blocked unless backend configuration and
+  `RETOS_ALLOW_PAID_LLM=true` allow them.
+- Browser smoke tests mock the API contract and verify the visible provider flow.
+
 ## Processing UI
 
 Show:

@@ -313,6 +313,19 @@ The response includes the active profile and the available profiles:
 `azure` require their provider-specific key/configuration and remain disabled unless
 `RETOS_ALLOW_PAID_LLM=true`.
 
+### Frontend Runtime Notes
+
+The React console reads `VITE_RETOS_API_URL` and falls back to `http://localhost:8000`.
+The provider panel authenticates with `/auth/login`, stores the admin bearer token in
+browser local storage under `retos.adminToken`, and then calls `/llm/providers`.
+
+The UI treats the provider catalog as read-only operational status:
+
+- `active.can_call=true` means the selected profile is ready to call.
+- `paid=true` means the UI must show a cost warning before future query execution.
+- `enabled=false` plus `reason` explains whether configuration or cost opt-in is missing.
+- API keys are never returned to the browser.
+
 ## Progress Events
 
 Long-running workflows expose progress through Server-Sent Events:
