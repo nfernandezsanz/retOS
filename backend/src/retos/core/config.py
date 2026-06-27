@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = Field(default=8000, ge=1, le=65535)
     database_url: str = "postgresql+asyncpg://retos:retos@localhost:5432/retos"
+    database_create_all: bool = False
     celery_broker_url: str = "amqp://retos:retos@localhost:5672//"
     celery_result_backend: str = "rpc://"
     jwt_secret: SecretStr = SecretStr(DEVELOPMENT_JWT_SECRET)

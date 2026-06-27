@@ -5,6 +5,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from retos.core.config import Settings
 from retos.core.security import TokenError, decode_access_token
+from retos.persistence.database import SessionFactory
+from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -13,7 +15,12 @@ def get_request_settings(request: Request) -> Settings:
     return cast(Settings, request.app.state.settings)
 
 
+def get_session_factory(request: Request) -> SessionFactory:
+    return cast(SessionFactory, request.app.state.session_factory)
+
+
 SettingsDep = Annotated[Settings, Depends(get_request_settings)]
+SessionFactoryDep = Annotated[SessionFactory, Depends(get_session_factory)]
 BearerDep = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
 
 
@@ -41,3 +48,10 @@ def require_admin(
 
 
 AdminSubjectDep = Annotated[str, Depends(require_admin)]
+
+
+def get_unit_of_work(factory: SessionFactoryDep) -> SQLAlchemyUnitOfWork:
+    return SQLAlchemyUnitOfWork(factory)
+
+
+UnitOfWorkDep = Annotated[SQLAlchemyUnitOfWork, Depends(get_unit_of_work)]

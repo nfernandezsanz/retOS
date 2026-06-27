@@ -4,8 +4,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from retos.api.routes import auth, events, health
+from retos.api.routes import auth, domains, events, health
 from retos.core.config import Settings, get_settings
+from retos.persistence.database import (
+    create_engine,
+    create_schema,
+    create_session_factory,
+    dispose_engine,
+)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -13,8 +19,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     resolved.validate_runtime_security()
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        yield
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        engine = create_engine(resolved.database_url)
+        app.state.database_engine = engine
+        app.state.session_factory = create_session_factory(engine)
+        if resolved.database_create_all:
+            await create_schema(engine)
+        try:
+            yield
+        finally:
+            await dispose_engine(engine)
 
     app = FastAPI(
         title="RetOS API",
@@ -33,5 +47,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(domains.router)
     app.include_router(events.router)
     return app

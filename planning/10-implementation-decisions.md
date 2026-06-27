@@ -13,6 +13,7 @@ Last updated: 2026-06-27
 | Admin | Bootstrap admin plus React Settings/Admin views |
 | Queue | Celery with RabbitMQ |
 | Durable state | Postgres |
+| Persistence pattern | SQLAlchemy async repositories behind a Unit of Work |
 | Search | Tantivy through an adapter |
 | OCR | Local OCR in the MVP |
 | Agent runtime | `deepagents.create_deep_agent` |
@@ -48,3 +49,4 @@ Rules:
 - External systems must sit behind adapters.
 - Tests must mock providers by default.
 - Docker is part of the development contract.
+- API smoke should exercise real HTTP endpoints for each product-visible slice.
