@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   Bot,
   CheckCircle2,
   Database,
+  CircleStop,
   FolderPlus,
   FileSearch,
   KeyRound,
@@ -98,6 +99,14 @@ type AgentQueryResponse = {
   job: JobRead;
   result: AgentQueryResult | null;
 };
+
+type ProgressEvent = {
+  id: number;
+  event: string;
+  data: Record<string, string | number | boolean | null>;
+};
+
+type LiveStatus = "disconnected" | "connecting" | "connected";
 
 const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
 const TOKEN_STORAGE_KEY = "retos.adminToken";
@@ -200,6 +209,29 @@ function providerLabel(name: ProviderName): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+function parseSseFrames(buffer: string): { frames: string[]; rest: string } {
+  const parts = buffer.split(/\n\n/);
+  return {
+    frames: parts.slice(0, -1),
+    rest: parts.at(-1) ?? "",
+  };
+}
+
+function parseProgressFrame(frame: string): ProgressEvent | null {
+  const dataLines = frame
+    .split(/\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.replace(/^data:\s?/, ""));
+  if (dataLines.length === 0) {
+    return null;
+  }
+  try {
+    return JSON.parse(dataLines.join("\n")) as ProgressEvent;
+  } catch {
+    return null;
+  }
+}
+
 function App() {
   const [email, setEmail] = useState("admin@retos.dev");
   const [password, setPassword] = useState("");
@@ -221,6 +253,10 @@ function App() {
   const [queryJob, setQueryJob] = useState<JobRead | null>(null);
   const [isRunningQuery, setIsRunningQuery] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
+  const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
+  const liveAbortRef = useRef<AbortController | null>(null);
 
   const activeProviderLabel = useMemo(() => {
     if (!catalog) {
@@ -236,12 +272,27 @@ function App() {
     [domains, selectedDomainId],
   );
 
+  const activeJobs = useMemo(
+    () =>
+      progressEvents.filter((event) => {
+        const status = event.data.status;
+        return status === "queued" || status === "running" || event.event.endsWith(".started");
+      }).length,
+    [progressEvents],
+  );
+
   const metrics = [
     { label: "Domains", value: domains.length.toString(), icon: Database },
     { label: "Documents", value: documents.length.toString(), icon: FileSearch },
-    { label: "Active jobs", value: "0", icon: Activity },
+    { label: "Active jobs", value: activeJobs.toString(), icon: Activity },
     { label: "Provider", value: activeProviderLabel, icon: Bot },
   ];
+
+  useEffect(() => {
+    return () => {
+      liveAbortRef.current?.abort();
+    };
+  }, []);
 
   async function refreshWorkspace(accessToken?: string, preferredDomainId?: string) {
     setIsLoadingWorkspace(true);
@@ -375,7 +426,73 @@ function App() {
     }
   }
 
+  async function handleConnectLiveUpdates() {
+    if (liveStatus === "connected" || liveStatus === "connecting") {
+      liveAbortRef.current?.abort();
+      liveAbortRef.current = null;
+      setLiveStatus("disconnected");
+      return;
+    }
+
+    setLiveStatus("connecting");
+    setLiveError(null);
+    const controller = new AbortController();
+    liveAbortRef.current = controller;
+    try {
+      const accessToken = await getAdminToken();
+      if (controller.signal.aborted) {
+        return;
+      }
+      const response = await fetch(`${API_BASE_URL}/events/progress`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        signal: controller.signal,
+      });
+      if (!response.ok || !response.body) {
+        throw new Error(`Live updates failed with ${response.status}`);
+      }
+
+      setLiveStatus("connected");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        const parsed = parseSseFrames(buffer);
+        buffer = parsed.rest;
+        const nextEvents = parsed.frames
+          .map(parseProgressFrame)
+          .filter((event): event is ProgressEvent => event !== null);
+        if (nextEvents.length > 0) {
+          setProgressEvents((current) => [...current, ...nextEvents].slice(-8));
+        }
+      }
+
+      if (!controller.signal.aborted) {
+        setLiveStatus("disconnected");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      setLiveStatus("disconnected");
+      setLiveError(error instanceof Error ? error.message : "Live updates failed");
+    } finally {
+      if (liveAbortRef.current === controller) {
+        liveAbortRef.current = null;
+      }
+    }
+  }
+
   function handleDisconnect() {
+    liveAbortRef.current?.abort();
+    liveAbortRef.current = null;
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setToken("");
     setCatalog(null);
@@ -386,6 +503,9 @@ function App() {
     setSelectedDomainId("");
     setDocuments([]);
     setWorkspaceError(null);
+    setLiveStatus("disconnected");
+    setLiveError(null);
+    setProgressEvents([]);
   }
 
   return (
@@ -601,7 +721,32 @@ function App() {
                 <p className="eyebrow">Pipeline</p>
                 <h2>Processing timeline</h2>
               </div>
-              <span className="status-pill">Idle</span>
+              <span className={liveStatus === "connected" ? "status-pill local" : "status-pill"}>
+                {liveStatus === "connected" ? "Live" : "Offline"}
+              </span>
+            </div>
+            <div className="live-toolbar">
+              <button
+                className={liveStatus === "connected" ? "ghost-action" : "secondary-action"}
+                type="button"
+                onClick={() => void handleConnectLiveUpdates()}
+              >
+                {liveStatus === "connected" ? (
+                  <CircleStop aria-hidden="true" />
+                ) : (
+                  <RefreshCw aria-hidden="true" />
+                )}
+                {liveStatus === "connecting"
+                  ? "Connecting"
+                  : liveStatus === "connected"
+                    ? "Disconnect live updates"
+                    : "Connect live updates"}
+              </button>
+              {liveError ? (
+                <p className="inline-error" role="alert">
+                  {liveError}
+                </p>
+              ) : null}
             </div>
             <ol className="timeline" aria-live="polite">
               {pipelineSteps.map((step) => (
@@ -611,6 +756,23 @@ function App() {
                 </li>
               ))}
             </ol>
+            <section className="event-ledger" aria-label="Live progress events" aria-live="polite">
+              {progressEvents.map((event) => (
+                <article className="event-row" key={`${event.id}-${event.event}`}>
+                  <span className="event-id">#{event.id}</span>
+                  <div>
+                    <strong>{event.event}</strong>
+                    <span>{String(event.data.message ?? event.data.job_id ?? "Progress update")}</span>
+                  </div>
+                </article>
+              ))}
+              {progressEvents.length === 0 ? (
+                <div className="empty-state compact">
+                  <Activity aria-hidden="true" />
+                  <p>Connect live updates to watch job and ingestion progress as events arrive.</p>
+                </div>
+              ) : null}
+            </section>
           </article>
 
           <article className="panel wide" id="admin">

@@ -128,6 +128,22 @@ async function mockProviderApi(page: Page) {
       },
     });
   });
+  await page.route("http://localhost:8000/events/progress", async (route) => {
+    await route.fulfill({
+      contentType: "text/event-stream",
+      body: [
+        "id: 1",
+        "event: system.ready",
+        'data: {"id":1,"event":"system.ready","data":{"message":"RetOS API is ready"}}',
+        "",
+        "id: 2",
+        "event: agent.started",
+        'data: {"id":2,"event":"agent.started","data":{"job_id":"job-query-1","status":"running","message":"Agent query started"}}',
+        "",
+        "",
+      ].join("\n"),
+    });
+  });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -143,6 +159,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Documents" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Domains and documents" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Run grounded query" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
 
   await page.getByLabel("Password").fill("retos-dev-admin-change-me");
@@ -171,6 +188,10 @@ test("loads the operational console", async ({ page }) => {
 
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-456");
   await expect(page.getByRole("option", { name: "Policy Research" })).toBeAttached();
+
+  await page.getByRole("button", { name: "Connect live updates" }).click();
+  await expect(page.getByLabel("Live progress events").getByText("system.ready")).toBeVisible();
+  await expect(page.getByLabel("Live progress events").getByText("Agent query started")).toBeVisible();
 });
 
 test("keeps provider controls usable on mobile", async ({ page }) => {

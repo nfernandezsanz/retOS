@@ -37,8 +37,10 @@ The UI is a working console, not a landing page. It must make background process
 - The query workspace posts to `/domains/{domain_id}/queries` with `run_inline=true` and
   renders the grounded answer, job status, provider model, and citation cards without
   requiring users to paste domain UUIDs.
+- The processing panel connects to `/events/progress` with authenticated `fetch`
+  streaming, parses SSE frames, and renders a compact live progress ledger.
 - Browser smoke tests mock the API contract and verify provider, domain creation,
-  document inventory, and query flows.
+  document inventory, query, and live progress flows.
 
 ## Processing UI
 
@@ -50,7 +52,8 @@ Show:
 - Last SSE event and timestamp.
 - Retry action for failed jobs.
 - Normalized error detail with suggested action.
-- Snapshot recovery plus `Last-Event-ID` reconnect semantics.
+- Snapshot recovery plus `Last-Event-ID` reconnect semantics. The first live ledger is
+  implemented; persisted resume state and richer per-job grouping remain pending.
 
 ## Accessibility
 

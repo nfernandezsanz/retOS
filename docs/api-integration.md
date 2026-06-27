@@ -396,8 +396,8 @@ The UI treats the provider catalog as read-only operational status:
 The workspace can create domains, select an active domain, render its document list, and
 send queries against the selected domain. Query execution uses `run_inline=true` so the UI
 can render the answer and citations immediately. Worker-backed query jobs are already
-available through the API by omitting `run_inline`; the streaming UI will attach that path
-to SSE progress in a later slice.
+available through the API by omitting `run_inline`; the live progress panel reads the same
+SSE stream that ingestion, indexing, and agent jobs write to.
 
 ## Progress Events
 
@@ -410,6 +410,11 @@ curl --no-buffer \
 ```
 
 The browser should reconnect with `Last-Event-ID` when a connection drops.
+
+Because the progress stream is authenticated, the React console consumes it with
+`fetch()` and a readable stream so it can send the bearer token. Browser `EventSource`
+does not support custom authorization headers. The UI keeps the latest progress events
+in a compact ledger and reserves space for empty, connected, and error states.
 
 ## Jobs
 
