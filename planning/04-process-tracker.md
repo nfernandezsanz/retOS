@@ -6,8 +6,8 @@ Status values: `Not started`, `In progress`, `Blocked`, `In review`, `Complete`.
 
 | Phase | Status | Implementation | Tests | Coverage | Auditability | Docs | Risks |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 - Open Source Bootstrap | In progress | Scaffold created | Backend, API smoke, frontend, browser smoke, Docker build, Docker stack smoke wired | 92.67% backend | Initial events only | In progress | Full product flows pending |
-| 1 - Core Domain And Persistence | In progress | Domain/source/document/artifact/segment persistence, Alembic catalog schema, durable jobs API | Unit/API smoke/migration coverage | 92.67% backend | Document/artifact/segment/job creation writes journal and progress events | API and database guides added | Admin/user persistence still pending |
+| 0 - Open Source Bootstrap | In progress | Scaffold created | Backend, API smoke, frontend, browser smoke, Docker build, Docker stack smoke wired | 92.55% backend | Initial events only | In progress | Full product flows pending |
+| 1 - Core Domain And Persistence | In progress | Admin/domain/source/document/artifact/segment persistence, Alembic catalog schema, durable jobs API | Unit/API smoke/migration coverage | 92.55% backend | Document/artifact/segment/job creation writes journal and progress events | API and database guides added | Role management UI still pending |
 | 2 - Ingestion, OCR, And BM25 | Not started | Pending | Pending | Pending | Pending | Pending | OCR quality |
 | 3 - Deep Agents Runtime | Not started | Pending | Pending | Pending | Pending | Pending | Tool budgets |
 | 4 - Product UI | Not started | Pending | Pending | Pending | Pending | Pending | Streaming UX |

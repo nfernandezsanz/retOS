@@ -32,6 +32,7 @@ The first revision creates these tables:
 
 | Table | Purpose |
 | --- | --- |
+| `admin_users` | Persisted admin identities used by login and bootstrap. |
 | `domains` | User-managed research workspaces. |
 | `sources` | Upload, mounted path, or URL inputs attached to a domain. |
 | `documents` | Canonical document records keyed by domain and content hash. |
@@ -44,6 +45,8 @@ The first revision creates these tables:
 
 The first API-backed workflows are document registration and job creation:
 
+- Application startup bootstraps `RETOS_BOOTSTRAP_ADMIN_EMAIL` into `admin_users`
+  when it is configured and no user exists yet for that email.
 - `POST /domains/{domain_id}/documents` creates a document, writes version `1`,
   writes `document.created` journal/progress events, and emits a live SSE notification.
 - `POST /document-versions/{version_id}/artifacts` creates a rebuildable artifact and

@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from retos.persistence.database import SessionFactory
 from retos.persistence.repositories import (
+    AdminUserRepository,
     DocumentRepository,
     DomainRepository,
     JobRepository,
@@ -17,6 +18,7 @@ class SQLAlchemyUnitOfWork:
     def __init__(self, session_factory: SessionFactory) -> None:
         self._session_factory = session_factory
         self.session: AsyncSession | None = None
+        self.admin_users: AdminUserRepository
         self.domains: DomainRepository
         self.sources: SourceRepository
         self.documents: DocumentRepository
@@ -26,6 +28,7 @@ class SQLAlchemyUnitOfWork:
 
     async def __aenter__(self) -> SQLAlchemyUnitOfWork:
         self.session = self._session_factory()
+        self.admin_users = AdminUserRepository(self.session)
         self.domains = DomainRepository(self.session)
         self.sources = SourceRepository(self.session)
         self.documents = DocumentRepository(self.session)

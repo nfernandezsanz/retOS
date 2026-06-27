@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 92.67% line/branch coverage on the current scaffold. |
+| Backend coverage | 92.55% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -22,6 +22,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - A Python 3.14 FastAPI backend scaffold with secure settings, JWT helpers, Argon2 password hashing, SSE progress streaming, and Celery/RabbitMQ wiring.
 - Initial SQLAlchemy async persistence for domain and source management through a Unit of Work.
 - Alembic migrations for domains, sources, documents, versions, artifacts, segments, jobs, progress events, and audit journals.
+- Persisted admin users with idempotent bootstrap at startup.
 - Durable documents API with immutable initial versions, audit journal entries, progress events, and live SSE notifications.
 - Durable artifact and segment APIs for OCR outputs, rebuildable projections, retrieval chunks, and citation anchors.
 - Durable jobs API with persisted job, journal, progress-event records, and live SSE notifications.
@@ -186,7 +187,7 @@ Every meaningful change should pass these gates:
 
 - Paid providers are disabled by default with `RETOS_ALLOW_PAID_LLM=false`.
 - The production JWT secret must be at least 32 characters and must not use the development placeholder.
-- A default bootstrap admin password is allowed only in development.
+- A default bootstrap admin password is allowed only in development and is materialized as a persisted admin user at startup.
 - Passwords are hashed with Argon2 through `pwdlib`.
 - JWTs include issuer, audience, issue time, not-before time, and expiration.
 - CORS is explicit; wildcard origins are rejected outside development.

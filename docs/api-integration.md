@@ -4,7 +4,9 @@ This guide documents the stable integration surface currently available to the R
 
 ## Authentication
 
-All management endpoints require an admin bearer token.
+All management endpoints require an admin bearer token. The default local admin is
+persisted in `admin_users` during application startup when the bootstrap environment
+variables are configured.
 
 ```bash
 curl --request POST http://localhost:8000/auth/login \
@@ -225,4 +227,4 @@ curl --header "Authorization: Bearer <token>" http://localhost:8000/jobs/<job_id
 
 ## Persistence Notes
 
-The API is wired through a SQLAlchemy async Unit of Work. Tests and smoke checks use SQLite with `RETOS_DATABASE_CREATE_ALL=true`. Production-like deployments should use Postgres and managed migrations.
+The API is wired through a SQLAlchemy async Unit of Work. Tests and smoke checks use SQLite with `RETOS_DATABASE_CREATE_ALL=true`. Production-like deployments should use Postgres and managed migrations. Login reads persisted `admin_users`; bootstrap settings only create the initial account idempotently.

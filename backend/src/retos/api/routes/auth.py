@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr, SecretStr
 
-from retos.api.dependencies import SettingsDep
+from retos.api.dependencies import SettingsDep, UnitOfWorkDep
 from retos.core.security import create_access_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -18,16 +18,16 @@ class TokenResponse(BaseModel):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest, settings: SettingsDep) -> TokenResponse:
-    bootstrap = settings.bootstrap_admin
-    if bootstrap is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Bootstrap admin is not configured",
-        )
-
+async def login(
+    payload: LoginRequest,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+) -> TokenResponse:
     password = payload.password.get_secret_value()
-    if payload.email != bootstrap.email or not verify_password(password, bootstrap.password_hash):
+    async with uow:
+        admin = await uow.admin_users.get_by_email(str(payload.email))
+
+    if admin is None or not admin.is_active or not verify_password(password, admin.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -35,7 +35,7 @@ async def login(payload: LoginRequest, settings: SettingsDep) -> TokenResponse:
         )
 
     token = create_access_token(
-        subject=bootstrap.email,
+        subject=admin.email,
         roles=("admin",),
         settings=settings,
     )

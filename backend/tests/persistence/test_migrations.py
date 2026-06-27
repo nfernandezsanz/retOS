@@ -8,6 +8,7 @@ from retos.persistence.models import Base
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_TABLES = {
+    "admin_users",
     "artifacts",
     "document_versions",
     "documents",

@@ -1,4 +1,16 @@
+import sqlite3
+from pathlib import Path
+
 from fastapi.testclient import TestClient
+from sqlalchemy.engine import make_url
+
+from retos.core.config import Settings
+
+
+def sqlite_path(settings: Settings) -> Path:
+    database = make_url(settings.database_url)
+    assert database.database is not None
+    return Path(database.database)
 
 
 def test_login_issues_admin_token(client: TestClient) -> None:
@@ -11,6 +23,22 @@ def test_login_issues_admin_token(client: TestClient) -> None:
     body = response.json()
     assert body["token_type"] == "bearer"
     assert body["access_token"]
+
+
+def test_bootstrap_admin_is_persisted(client: TestClient, settings: Settings) -> None:
+    response = client.get("/healthz")
+    assert response.status_code == 200
+
+    connection = sqlite3.connect(sqlite_path(settings))
+    try:
+        count = connection.execute(
+            "select count(*) from admin_users where email = ?",
+            ("admin@retos.dev",),
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert count == 1
 
 
 def test_login_rejects_bad_password(client: TestClient) -> None:
@@ -34,4 +62,4 @@ def test_login_rejects_when_bootstrap_admin_disabled(settings) -> None:  # type:
             json={"email": "admin@retos.dev", "password": "test-admin-password"},
         )
 
-    assert response.status_code == 503
+    assert response.status_code == 401

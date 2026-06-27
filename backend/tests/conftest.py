@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,9 +10,12 @@ from retos.core.config import Settings
 
 
 @pytest.fixture
-def settings() -> Settings:
+def settings(tmp_path: Path) -> Settings:
+    db_path = tmp_path / "retos-test.db"
     return Settings(
         env="test",
+        database_url=f"sqlite+aiosqlite:///{db_path}",
+        database_create_all=True,
         jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
         bootstrap_admin_password=SecretStr("test-admin-password"),
         allowed_origins=["http://localhost:5173"],

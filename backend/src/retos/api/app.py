@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from retos.api.routes import auth, documents, domains, events, health, jobs
 from retos.core.config import Settings, get_settings
+from retos.persistence.bootstrap import bootstrap_admin_user
 from retos.persistence.database import (
     create_engine,
     create_schema,
@@ -25,6 +26,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.session_factory = create_session_factory(engine)
         if resolved.database_create_all:
             await create_schema(engine)
+        await bootstrap_admin_user(
+            settings=resolved,
+            session_factory=app.state.session_factory,
+        )
         try:
             yield
         finally:

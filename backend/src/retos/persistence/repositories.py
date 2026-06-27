@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from retos.domain.admin import AdminUser
 from retos.domain.documents import (
     Artifact,
     Document,
@@ -15,6 +16,7 @@ from retos.domain.documents import (
 )
 from retos.domain.jobs import Job, JobKind, JobStatus, JournalEvent, ProgressEvent
 from retos.persistence.models import (
+    AdminUserRecord,
     ArtifactRecord,
     DocumentRecord,
     DocumentVersionRecord,
@@ -25,6 +27,17 @@ from retos.persistence.models import (
     SegmentRecord,
     SourceRecord,
 )
+
+
+def admin_user_from_record(record: AdminUserRecord) -> AdminUser:
+    return AdminUser(
+        id=record.id,
+        email=record.email,
+        password_hash=record.password_hash,
+        is_active=record.is_active,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
 
 
 def domain_from_record(record: DomainRecord) -> Domain:
@@ -171,6 +184,37 @@ class DomainRepository:
         if record is None:
             return None
         return domain_from_record(record)
+
+
+class AdminUserRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add(
+        self,
+        *,
+        email: str,
+        password_hash: str,
+        is_active: bool = True,
+    ) -> AdminUser:
+        record = AdminUserRecord(
+            id=str(uuid4()),
+            email=email,
+            password_hash=password_hash,
+            is_active=is_active,
+        )
+        self._session.add(record)
+        await self._session.flush()
+        return admin_user_from_record(record)
+
+    async def get_by_email(self, email: str) -> AdminUser | None:
+        result = await self._session.scalars(
+            select(AdminUserRecord).where(AdminUserRecord.email == email)
+        )
+        record = result.one_or_none()
+        if record is None:
+            return None
+        return admin_user_from_record(record)
 
 
 class SourceRepository:

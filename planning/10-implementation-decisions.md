@@ -10,7 +10,7 @@ Last updated: 2026-06-27
 | Backend | FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic |
 | Frontend | React, TypeScript, Vite |
 | Streaming | Server-Sent Events |
-| Admin | Bootstrap admin plus React Settings/Admin views |
+| Admin | Persisted bootstrap admin plus React Settings/Admin views |
 | Queue | Celery with RabbitMQ |
 | Durable state | Postgres |
 | Persistence pattern | SQLAlchemy async repositories behind a Unit of Work, with Alembic migrations as the schema contract |
