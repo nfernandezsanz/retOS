@@ -1,0 +1,54 @@
+# Git and repository metadata
+.git
+.github
+.gitignore
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Local runtimes and generated data
+.venv
+venv
+env
+__pycache__
+**/__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+retos_storage
+retos_index
+retos_uploads
+retos_ollama
+retos_postgres
+retos_rabbitmq
+retos_tmp
+
+# Frontend generated files
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/coverage
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Source not needed in runtime images
+backend/tests
+planning
+docs
+
+# Local/editor noise
+.DS_Store
+.idea
+.vscode
+*.log
+tmp
+temp

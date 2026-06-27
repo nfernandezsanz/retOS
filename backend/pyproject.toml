@@ -1,0 +1,63 @@
+[project]
+name = "retos-backend"
+version = "0.1.0"
+description = "RetOS API, worker, and research runtime"
+requires-python = ">=3.14,<3.15"
+readme = "../README.md"
+license = "MIT"
+
+[tool.pytest.ini_options]
+addopts = "--cov=retos --cov-branch --cov-report=term-missing --cov-fail-under=90"
+asyncio_mode = "auto"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["src/retos"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "B",
+  "UP",
+  "S",
+  "ASYNC",
+  "SIM",
+  "RUF",
+]
+ignore = [
+  "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/retos/api/routes/auth.py" = ["S105"]
+"src/retos/core/config.py" = ["S104", "S105"]
+"tests/*.py" = ["S105"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "sse_starlette.*"]
+ignore_missing_imports = true

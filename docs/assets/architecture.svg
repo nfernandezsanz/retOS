@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520" role="img" aria-labelledby="title desc">
+  <title id="title">RetOS architecture</title>
+  <desc id="desc">Documents flow into a versioned corpus store, reproducible ingestion, rebuildable indexes, a Deep Agents runtime, and auditable answers.</desc>
+  <rect width="1120" height="520" fill="#f8fafc"/>
+  <g font-family="Inter, Arial, sans-serif" fill="#0f172a">
+    <text x="56" y="58" font-size="30" font-weight="800">RetOS architecture</text>
+    <text x="56" y="88" font-size="16" fill="#475569">Local-first, Dockerized, auditable document research</text>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 10; }
+      .title { font: 700 17px Inter, Arial, sans-serif; fill: #0f172a; }
+      .body { font: 14px Inter, Arial, sans-serif; fill: #475569; }
+      .arrow { stroke: #2563eb; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect class="box" x="56" y="142" width="184" height="106"/>
+  <text class="title" x="78" y="180">Documents</text>
+  <text class="body" x="78" y="208">Uploads, mounts, PDFs,</text>
+  <text class="body" x="78" y="230">Markdown, images</text>
+  <path class="arrow" d="M248 195 H330"/>
+  <rect class="box" x="340" y="142" width="190" height="106"/>
+  <text class="title" x="362" y="180">Corpus store</text>
+  <text class="body" x="362" y="208">Versioned raw files,</text>
+  <text class="body" x="362" y="230">artifacts, anchors</text>
+  <path class="arrow" d="M538 195 H620"/>
+  <rect class="box" x="630" y="142" width="190" height="106"/>
+  <text class="title" x="652" y="180">Ingestion</text>
+  <text class="body" x="652" y="208">Hash, extract, OCR,</text>
+  <text class="body" x="652" y="230">normalize, segment</text>
+  <path class="arrow" d="M828 195 H910"/>
+  <rect class="box" x="920" y="142" width="154" height="106"/>
+  <text class="title" x="942" y="180">Indexes</text>
+  <text class="body" x="942" y="208">Tantivy BM25</text>
+  <text class="body" x="942" y="230">metadata filters</text>
+  <path class="arrow" d="M997 256 V326"/>
+  <rect class="box" x="838" y="338" width="236" height="112"/>
+  <text class="title" x="860" y="376">Deep Agents runtime</text>
+  <text class="body" x="860" y="404">Search, read, expand,</text>
+  <text class="body" x="860" y="426">cite, verify</text>
+  <path class="arrow" d="M830 394 H748"/>
+  <rect class="box" x="510" y="338" width="228" height="112"/>
+  <text class="title" x="532" y="376">Answer + ledger</text>
+  <text class="body" x="532" y="404">Claims, citations,</text>
+  <text class="body" x="532" y="426">confidence, hashes</text>
+  <path class="arrow" d="M502 394 H420"/>
+  <rect class="box" x="174" y="338" width="236" height="112"/>
+  <text class="title" x="196" y="376">Audit journal</text>
+  <text class="body" x="196" y="404">Append-only events,</text>
+  <text class="body" x="196" y="426">traces, reproducibility</text>
+</svg>

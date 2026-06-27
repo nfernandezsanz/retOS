@@ -1,0 +1,120 @@
+name: retos
+
+x-app-build: &app-build
+  context: .
+  dockerfile: backend/Dockerfile
+
+x-app-env: &app-env
+  RETOS_DATABASE_URL: postgresql+asyncpg://retos:${RETOS_POSTGRES_PASSWORD:-retos}@postgres:5432/retos
+  RETOS_CELERY_BROKER_URL: amqp://retos:${RETOS_RABBITMQ_PASSWORD:-retos}@rabbitmq:5672//
+  RETOS_OLLAMA_BASE_URL: http://ollama:11434
+
+x-app-volumes: &app-volumes
+  - retos_storage:/var/lib/retos/storage
+  - retos_index:/var/lib/retos/index
+
+services:
+  api:
+    build: *app-build
+    command: ["api"]
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    environment: *app-env
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).read()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes: *app-volumes
+
+  worker:
+    build: *app-build
+    command: ["worker"]
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes: *app-volumes
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    init: true
+    ports:
+      - "8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-bookworm
+    environment:
+      POSTGRES_DB: retos
+      POSTGRES_USER: retos
+      POSTGRES_PASSWORD: ${RETOS_POSTGRES_PASSWORD:-retos}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retos -d retos"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - retos_postgres:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: retos
+      RABBITMQ_DEFAULT_PASS: ${RETOS_RABBITMQ_PASSWORD:-retos}
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - retos_rabbitmq:/var/lib/rabbitmq
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - retos_ollama:/root/.ollama
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    profiles: ["models"]
+    entrypoint: ["/bin/sh", "-lc"]
+    command: ["ollama pull ${RETOS_OLLAMA_MODEL:-gemma4}"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      - ollama
+
+volumes:
+  retos_postgres:
+  retos_rabbitmq:
+  retos_storage:
+  retos_index:
+  retos_ollama:
