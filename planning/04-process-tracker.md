@@ -6,9 +6,9 @@ Status values: `Not started`, `In progress`, `Blocked`, `In review`, `Complete`.
 
 | Phase | Status | Implementation | Tests | Coverage | Auditability | Docs | Risks |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 - Open Source Bootstrap | In progress | Scaffold created | Backend, API smoke, frontend, browser smoke, Docker build, Docker stack smoke wired | 91.00% backend | Initial events only | In progress | Full product flows pending |
-| 1 - Core Domain And Persistence | In progress | Admin/domain/source/document/artifact/segment persistence, Alembic catalog schema, durable jobs lifecycle | Unit/API smoke/migration coverage | 91.00% backend | Document/artifact/segment/job creation and transitions write journal/progress events | API and database guides added | Role management UI still pending |
-| 2 - Ingestion, OCR, And BM25 | In progress | Text ingestion API, Celery task, deterministic word chunking, raw-text artifact persistence, Tantivy BM25 rebuild/search | Unit/API smoke/Docker worker smoke coverage started | 91.00% backend | Ingestion and indexing queue/start/success/failure write journal/progress/SSE events | API, Docker, database guides updated | OCR and incremental scans still pending |
+| 0 - Open Source Bootstrap | In progress | Scaffold created | Backend, API smoke, frontend, browser smoke, Docker build, Docker stack smoke wired | 90.64% backend | Initial events only | In progress | Full product flows pending |
+| 1 - Core Domain And Persistence | In progress | Admin/domain/source/document/artifact/segment persistence, Alembic catalog schema, durable jobs lifecycle | Unit/API smoke/migration coverage | 90.64% backend | Document/artifact/segment/job creation and transitions write journal/progress events | API and database guides added | Role management UI still pending |
+| 2 - Ingestion, OCR, And BM25 | In progress | Mounted `.txt`/`.md` source scan, text ingestion API, Celery tasks, deterministic word chunking, raw-text artifact persistence, Tantivy BM25 rebuild/search | Unit/API smoke/Docker worker smoke coverage started | 90.64% backend | Scan/ingestion/indexing queue/start/success/failure write journal/progress/SSE events | API, Docker, database guides updated | OCR and PDF extraction still pending |
 | 3 - Deep Agents Runtime | Not started | Pending | Pending | Pending | Pending | Pending | Tool budgets |
 | 4 - Product UI | Not started | Pending | Pending | Pending | Pending | Pending | Streaming UX |
 | 5 - Evals | Not started | Pending | Pending | Pending | Pending | Pending | Stable scorers |

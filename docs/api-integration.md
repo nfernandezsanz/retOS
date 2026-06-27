@@ -200,6 +200,31 @@ Local API smoke runs with `RETOS_ENV=test`, so it verifies queuing without requi
 broker. Docker smoke runs RabbitMQ and the worker and waits for the ingestion job to
 finish.
 
+## Mounted Source Scan
+
+Scan a mounted `file://` source for `.txt` and `.md` files:
+
+```bash
+curl --request POST http://localhost:8000/sources/<source_id>/scan \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "run_inline":false,
+    "max_files":500,
+    "max_bytes":2000000,
+    "max_segment_tokens":220
+  }'
+```
+
+The source must have `kind="mount"` and a local `file://` URI that is visible to the API
+or worker container. The scan creates one document/version/raw-text artifact per new file
+and deterministic word-window segments with anchors based on the relative path. Existing
+content hashes in the same domain are skipped, so scanning the same corpus twice is
+idempotent.
+
+In `RETOS_ENV=test`, or when `run_inline=true`, the scan runs inline. In Docker/runtime
+mode, the scan is queued as an `ingest.source` job and processed by the worker.
+
 ## BM25 Search
 
 Rebuild the local Tantivy BM25 projection for a domain:

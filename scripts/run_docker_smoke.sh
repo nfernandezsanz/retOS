@@ -38,8 +38,10 @@ trap finish EXIT
 
 "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
 "${compose[@]}" up --build -d --wait --wait-timeout 180 postgres rabbitmq api worker web
+"${compose[@]}" exec -T api sh -lc 'mkdir -p /var/lib/retos/storage/smoke-corpus && printf "%s\n" "Apollo guidance computers used deterministic checklists." > /var/lib/retos/storage/smoke-corpus/apollo-notes.txt && printf "%s\n\n%s\n" "# Biology" "Ocean biology notes mention plankton and salinity." > /var/lib/retos/storage/smoke-corpus/biology.md'
 curl --fail --silent --show-error http://127.0.0.1:8000/healthz >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null
 RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me \
   RETOS_EXPECT_WORKER=1 \
+  RETOS_SMOKE_SCAN_SOURCE_URI=file:///var/lib/retos/storage/smoke-corpus \
   "${python_bin}" backend/scripts/smoke_api.py http://127.0.0.1:8000

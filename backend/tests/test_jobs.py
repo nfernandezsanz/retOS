@@ -81,6 +81,66 @@ async def test_text_ingestion_task_marks_failure_and_disposes_engine(
 
 
 @pytest.mark.asyncio
+async def test_scan_source_task_disposes_engine_on_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, object]] = []
+    result = SimpleNamespace(created_documents=2)
+
+    monkeypatch.setattr(tasks, "get_settings", lambda: SimpleNamespace(database_url="sqlite://"))
+    monkeypatch.setattr(tasks, "create_engine", lambda url: "engine")
+    monkeypatch.setattr(tasks, "create_session_factory", lambda engine: "factory")
+    monkeypatch.setattr(tasks, "SQLAlchemyUnitOfWork", lambda factory: SimpleNamespace())
+
+    async def fake_run_source_scan(**kwargs: object) -> object:
+        calls.append(("scan", kwargs["job_id"]))
+        return result
+
+    async def fake_dispose_engine(engine: object) -> None:
+        calls.append(("dispose", engine))
+
+    monkeypatch.setattr(tasks, "run_source_scan", fake_run_source_scan)
+    monkeypatch.setattr(tasks, "dispose_engine", fake_dispose_engine)
+
+    created_documents = await tasks._scan_source_task("job-scan")
+
+    assert created_documents == 2
+    assert ("scan", "job-scan") in calls
+    assert calls[-1] == ("dispose", "engine")
+
+
+@pytest.mark.asyncio
+async def test_scan_source_task_marks_failure_and_disposes_engine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, object]] = []
+
+    monkeypatch.setattr(tasks, "get_settings", lambda: SimpleNamespace(database_url="sqlite://"))
+    monkeypatch.setattr(tasks, "create_engine", lambda url: "engine")
+    monkeypatch.setattr(tasks, "create_session_factory", lambda engine: "factory")
+    monkeypatch.setattr(tasks, "SQLAlchemyUnitOfWork", lambda factory: SimpleNamespace())
+
+    async def fake_run_source_scan(**_: object) -> object:
+        raise RuntimeError("broken scan")
+
+    async def fake_fail_source_scan_job(**kwargs: object) -> None:
+        calls.append(("fail", kwargs["error"]))
+
+    async def fake_dispose_engine(engine: object) -> None:
+        calls.append(("dispose", engine))
+
+    monkeypatch.setattr(tasks, "run_source_scan", fake_run_source_scan)
+    monkeypatch.setattr(tasks, "fail_source_scan_job", fake_fail_source_scan_job)
+    monkeypatch.setattr(tasks, "dispose_engine", fake_dispose_engine)
+
+    with pytest.raises(RuntimeError, match="broken scan"):
+        await tasks._scan_source_task("job-scan")
+
+    assert ("fail", "broken scan") in calls
+    assert calls[-1] == ("dispose", "engine")
+
+
+@pytest.mark.asyncio
 async def test_rebuild_domain_index_task_disposes_engine_on_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
