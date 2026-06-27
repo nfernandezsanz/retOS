@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 93.26% line/branch coverage on the current scaffold. |
+| Backend coverage | 92.50% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -22,6 +22,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - A Python 3.14 FastAPI backend scaffold with secure settings, JWT helpers, Argon2 password hashing, SSE progress streaming, and Celery/RabbitMQ wiring.
 - Initial SQLAlchemy async persistence for domain and source management through a Unit of Work.
 - Alembic migrations for domains, sources, documents, versions, artifacts, segments, jobs, progress events, and audit journals.
+- Durable documents API with immutable initial versions, audit journal entries, progress events, and live SSE notifications.
 - Durable jobs API with persisted job, journal, progress-event records, and live SSE notifications.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for documents, jobs, OCR, indexing, and agent runs.
 - Docker Compose for Postgres, RabbitMQ, Ollama, API, worker, and web services.
@@ -173,12 +174,12 @@ Every meaningful change should pass these gates:
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
-| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source CRUD, job creation/listing, and SSE over HTTP. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document CRUD, job creation/listing, and SSE over HTTP. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
-| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, and hits health, auth, domain/source CRUD, job creation/listing, SSE, and web over HTTP. |
+| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, and hits health, auth, domain/source/document CRUD, job creation/listing, SSE, and web over HTTP. |
 
 ## Security Defaults
 

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 
 SourceKind = Literal["upload", "mount", "url"]
 
@@ -28,3 +28,27 @@ class Source:
     uri: str
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True)
+class Document:
+    id: str
+    domain_id: str
+    source_id: str | None
+    external_id: str | None
+    title: str
+    content_hash: str
+    metadata: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class DocumentVersion:
+    id: str
+    document_id: str
+    version: int
+    source_uri: str
+    content_hash: str
+    size_bytes: int
+    created_at: datetime

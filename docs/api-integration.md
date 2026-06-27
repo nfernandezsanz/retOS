@@ -61,6 +61,55 @@ curl --header "Authorization: Bearer <token>" \
   http://localhost:8000/domains/<domain_id>/sources
 ```
 
+## Documents
+
+Create a document with its immutable initial version:
+
+```bash
+curl --request POST http://localhost:8000/domains/<domain_id>/documents \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "source_id":"<source_id>",
+    "external_id":"fixture-001",
+    "title":"Fixture Document",
+    "content_hash":"sha256:abc12345",
+    "source_uri":"upload://fixture-001.txt",
+    "size_bytes":128,
+    "metadata":{"language":"en"}
+  }'
+```
+
+`content_hash` accepts raw hex or `sha256:<hex>`. Hashes are unique per domain.
+
+List documents for a domain:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  "http://localhost:8000/domains/<domain_id>/documents?limit=100"
+```
+
+Read one document:
+
+```bash
+curl --header "Authorization: Bearer <token>" http://localhost:8000/documents/<document_id>
+```
+
+List immutable versions:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  http://localhost:8000/documents/<document_id>/versions
+```
+
+Document creation persists:
+
+- a row in `documents`
+- version `1` in `document_versions`
+- a `document.created` journal event
+- a `document.created` progress event
+- a live SSE notification for connected clients
+
 ## Progress Events
 
 Long-running workflows expose progress through Server-Sent Events:

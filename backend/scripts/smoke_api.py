@@ -87,6 +87,49 @@ def main() -> None:
             "created source missing from list",
         )
         source_id = listed_sources.json()[0]["id"]
+        smoke_document_hash = (
+            "sha256:0000000000000000000000000000000000000000000000000000000000000001"
+        )
+
+        created_document = client.post(
+            f"/domains/{domain_id}/documents",
+            headers=auth_headers,
+            json={
+                "source_id": source_id,
+                "external_id": "smoke-document-001",
+                "title": "Smoke Document",
+                "content_hash": smoke_document_hash,
+                "source_uri": "file:///tmp/retos-smoke-corpus/document.txt",
+                "size_bytes": 42,
+                "metadata": {"fixture": True},
+            },
+        )
+        require(
+            created_document.status_code == 201,
+            f"document create failed: {created_document.status_code} {created_document.text}",
+        )
+        document = created_document.json()
+        require(document["title"] == "Smoke Document", "invalid created document title")
+
+        listed_documents = client.get(f"/domains/{domain_id}/documents", headers=auth_headers)
+        require(
+            listed_documents.status_code == 200,
+            f"document list failed: {listed_documents.status_code} {listed_documents.text}",
+        )
+        require(
+            any(item["id"] == document["id"] for item in listed_documents.json()),
+            "created document missing from list",
+        )
+
+        listed_versions = client.get(
+            f"/documents/{document['id']}/versions",
+            headers=auth_headers,
+        )
+        require(
+            listed_versions.status_code == 200,
+            f"document versions failed: {listed_versions.status_code} {listed_versions.text}",
+        )
+        require(listed_versions.json()[0]["version"] == 1, "missing initial document version")
 
         created_job = client.post(
             "/jobs",
@@ -137,7 +180,10 @@ def main() -> None:
                     break
             require(lines, "progress stream did not emit any lines")
             require(
-                any("system.ready" in line or "job.queued" in line for line in lines),
+                any(
+                    "system.ready" in line or "document.created" in line or "job.queued" in line
+                    for line in lines
+                ),
                 "missing expected progress event",
             )
 

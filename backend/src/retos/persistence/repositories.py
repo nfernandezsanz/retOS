@@ -4,9 +4,11 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from retos.domain.documents import Domain, Source, SourceKind
+from retos.domain.documents import Document, DocumentVersion, Domain, Source, SourceKind
 from retos.domain.jobs import Job, JobKind, JobStatus, JournalEvent, ProgressEvent
 from retos.persistence.models import (
+    DocumentRecord,
+    DocumentVersionRecord,
     DomainRecord,
     JobRecord,
     JournalEventRecord,
@@ -35,6 +37,32 @@ def source_from_record(record: SourceRecord) -> Source:
         uri=record.uri,
         created_at=record.created_at,
         updated_at=record.updated_at,
+    )
+
+
+def document_from_record(record: DocumentRecord) -> Document:
+    return Document(
+        id=record.id,
+        domain_id=record.domain_id,
+        source_id=record.source_id,
+        external_id=record.external_id,
+        title=record.title,
+        content_hash=record.content_hash,
+        metadata=record.metadata_,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
+
+
+def document_version_from_record(record: DocumentVersionRecord) -> DocumentVersion:
+    return DocumentVersion(
+        id=record.id,
+        document_id=record.document_id,
+        version=record.version,
+        source_uri=record.source_uri,
+        content_hash=record.content_hash,
+        size_bytes=record.size_bytes,
+        created_at=record.created_at,
     )
 
 
@@ -158,6 +186,82 @@ class SourceRepository:
         if record is None:
             return None
         return source_from_record(record)
+
+
+class DocumentRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add_with_initial_version(
+        self,
+        *,
+        domain_id: str,
+        source_id: str | None,
+        external_id: str | None,
+        title: str,
+        content_hash: str,
+        metadata: dict[str, object],
+        source_uri: str,
+        size_bytes: int,
+    ) -> tuple[Document, DocumentVersion]:
+        document_record = DocumentRecord(
+            id=str(uuid4()),
+            domain_id=domain_id,
+            source_id=source_id,
+            external_id=external_id,
+            title=title,
+            content_hash=content_hash,
+            metadata_=metadata,
+        )
+        self._session.add(document_record)
+        await self._session.flush()
+
+        version_record = DocumentVersionRecord(
+            id=str(uuid4()),
+            document_id=document_record.id,
+            version=1,
+            source_uri=source_uri,
+            content_hash=content_hash,
+            size_bytes=size_bytes,
+        )
+        self._session.add(version_record)
+        await self._session.flush()
+        return document_from_record(document_record), document_version_from_record(version_record)
+
+    async def get(self, document_id: str) -> Document | None:
+        record = await self._session.get(DocumentRecord, document_id)
+        if record is None:
+            return None
+        return document_from_record(record)
+
+    async def get_by_domain_and_hash(self, domain_id: str, content_hash: str) -> Document | None:
+        result = await self._session.scalars(
+            select(DocumentRecord).where(
+                DocumentRecord.domain_id == domain_id,
+                DocumentRecord.content_hash == content_hash,
+            )
+        )
+        record = result.one_or_none()
+        if record is None:
+            return None
+        return document_from_record(record)
+
+    async def list_for_domain(self, domain_id: str, *, limit: int = 100) -> list[Document]:
+        result = await self._session.scalars(
+            select(DocumentRecord)
+            .where(DocumentRecord.domain_id == domain_id)
+            .order_by(DocumentRecord.created_at.desc(), DocumentRecord.id.desc())
+            .limit(limit)
+        )
+        return [document_from_record(record) for record in result]
+
+    async def list_versions(self, document_id: str) -> list[DocumentVersion]:
+        result = await self._session.scalars(
+            select(DocumentVersionRecord)
+            .where(DocumentVersionRecord.document_id == document_id)
+            .order_by(DocumentVersionRecord.version)
+        )
+        return [document_version_from_record(record) for record in result]
 
 
 class JobRepository:
