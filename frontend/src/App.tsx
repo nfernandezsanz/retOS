@@ -10,6 +10,7 @@ import {
   KeyRound,
   Link2,
   LockKeyhole,
+  Play,
   RefreshCw,
   Send,
   ServerCog,
@@ -74,6 +75,18 @@ type DocumentRead = {
   metadata: Record<string, unknown>;
   source_uri: string | null;
   size_bytes: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type SourceKind = "upload" | "mount" | "url";
+
+type SourceRead = {
+  id: string;
+  domain_id: string;
+  kind: SourceKind;
+  name: string;
+  uri: string;
   created_at: string;
   updated_at: string;
 };
@@ -181,6 +194,55 @@ async function loadDocuments(token: string, domainId: string): Promise<DocumentR
   });
 }
 
+async function loadSources(token: string, domainId: string): Promise<SourceRead[]> {
+  return requestJson<SourceRead[]>(`/domains/${domainId}/sources`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function createSource(
+  token: string,
+  domainId: string,
+  payload: { kind: SourceKind; name: string; uri: string },
+): Promise<SourceRead> {
+  return requestJson<SourceRead>(`/domains/${domainId}/sources`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function scanSource(token: string, sourceId: string): Promise<JobRead> {
+  return requestJson<JobRead>(`/sources/${sourceId}/scan`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      run_inline: false,
+      max_files: 500,
+      max_bytes: 2000000,
+      max_segment_tokens: 220,
+      enable_ocr: true,
+      max_ocr_pages: 20,
+    }),
+  });
+}
+
+async function rebuildIndex(token: string, domainId: string): Promise<JobRead> {
+  return requestJson<JobRead>(`/domains/${domainId}/index/rebuild`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ run_inline: false }),
+  });
+}
+
 async function runAgentQuery(
   token: string,
   domainId: string,
@@ -242,9 +304,17 @@ function App() {
   const [domains, setDomains] = useState<DomainRead[]>([]);
   const [selectedDomainId, setSelectedDomainId] = useState("");
   const [documents, setDocuments] = useState<DocumentRead[]>([]);
+  const [sources, setSources] = useState<SourceRead[]>([]);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
   const [isCreatingDomain, setIsCreatingDomain] = useState(false);
+  const [isCreatingSource, setIsCreatingSource] = useState(false);
+  const [sourceName, setSourceName] = useState("");
+  const [sourceUri, setSourceUri] = useState("");
+  const [sourceKind, setSourceKind] = useState<SourceKind>("mount");
+  const [isQueueingScan, setIsQueueingScan] = useState(false);
+  const [isQueueingIndex, setIsQueueingIndex] = useState(false);
+  const [queuedJobs, setQueuedJobs] = useState<JobRead[]>([]);
   const [domainSlug, setDomainSlug] = useState("");
   const [domainName, setDomainName] = useState("");
   const [domainDescription, setDomainDescription] = useState("");
@@ -311,9 +381,15 @@ function App() {
 
       setSelectedDomainId(nextSelectedDomainId);
       if (nextSelectedDomainId) {
-        setDocuments(await loadDocuments(adminToken, nextSelectedDomainId));
+        const [nextDocuments, nextSources] = await Promise.all([
+          loadDocuments(adminToken, nextSelectedDomainId),
+          loadSources(adminToken, nextSelectedDomainId),
+        ]);
+        setDocuments(nextDocuments);
+        setSources(nextSources);
       } else {
         setDocuments([]);
+        setSources([]);
       }
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Workspace refresh failed");
@@ -351,12 +427,18 @@ function App() {
     setWorkspaceError(null);
     if (!nextDomainId) {
       setDocuments([]);
+      setSources([]);
       return;
     }
     setIsLoadingWorkspace(true);
     try {
       const accessToken = await getAdminToken();
-      setDocuments(await loadDocuments(accessToken, nextDomainId));
+      const [nextDocuments, nextSources] = await Promise.all([
+        loadDocuments(accessToken, nextDomainId),
+        loadSources(accessToken, nextDomainId),
+      ]);
+      setDocuments(nextDocuments);
+      setSources(nextSources);
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Document refresh failed");
     } finally {
@@ -388,6 +470,66 @@ function App() {
       setWorkspaceError(error instanceof Error ? error.message : "Domain creation failed");
     } finally {
       setIsCreatingDomain(false);
+    }
+  }
+
+  async function handleCreateSource(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWorkspaceError(null);
+    setIsCreatingSource(true);
+    try {
+      if (!selectedDomainId) {
+        throw new Error("Select a domain before adding a source");
+      }
+      const name = sourceName.trim();
+      const uri = sourceUri.trim();
+      if (!name || !uri) {
+        throw new Error("Source name and URI are required");
+      }
+      const accessToken = await getAdminToken();
+      const source = await createSource(accessToken, selectedDomainId, {
+        kind: sourceKind,
+        name,
+        uri,
+      });
+      setSources((current) => [...current, source]);
+      setSourceName("");
+      setSourceUri("");
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Source creation failed");
+    } finally {
+      setIsCreatingSource(false);
+    }
+  }
+
+  async function handleScanSource(sourceId: string) {
+    setWorkspaceError(null);
+    setIsQueueingScan(true);
+    try {
+      const accessToken = await getAdminToken();
+      const job = await scanSource(accessToken, sourceId);
+      setQueuedJobs((current) => [job, ...current].slice(0, 6));
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Source scan failed");
+    } finally {
+      setIsQueueingScan(false);
+    }
+  }
+
+  async function handleRebuildIndex() {
+    setWorkspaceError(null);
+    setIsQueueingIndex(true);
+    try {
+      if (!selectedDomainId) {
+        throw new Error("Select a domain before rebuilding the index");
+      }
+      const accessToken = await getAdminToken();
+      const job = await rebuildIndex(accessToken, selectedDomainId);
+      setQueuedJobs((current) => [job, ...current].slice(0, 6));
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Index rebuild failed");
+    } finally {
+      setIsQueueingIndex(false);
     }
   }
 
@@ -502,10 +644,12 @@ function App() {
     setDomains([]);
     setSelectedDomainId("");
     setDocuments([]);
+    setSources([]);
     setWorkspaceError(null);
     setLiveStatus("disconnected");
     setLiveError(null);
     setProgressEvents([]);
+    setQueuedJobs([]);
   }
 
   return (
@@ -648,6 +792,83 @@ function App() {
                 </div>
               ) : null}
             </div>
+            <section className="source-workspace" aria-label="Domain sources">
+              <div className="section-heading">
+                <h3>Sources</h3>
+                <button
+                  className="ghost-action"
+                  disabled={!selectedDomainId || isQueueingIndex}
+                  type="button"
+                  onClick={() => void handleRebuildIndex()}
+                >
+                  <RefreshCw aria-hidden="true" />
+                  {isQueueingIndex ? "Queueing index" : "Rebuild index"}
+                </button>
+              </div>
+              <form className="source-form" onSubmit={handleCreateSource}>
+                <label>
+                  <span>Kind</span>
+                  <select
+                    value={sourceKind}
+                    onChange={(event) => setSourceKind(event.target.value as SourceKind)}
+                  >
+                    <option value="mount">Mount</option>
+                    <option value="upload">Upload</option>
+                    <option value="url">URL</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Name</span>
+                  <input
+                    placeholder="Research corpus"
+                    value={sourceName}
+                    onChange={(event) => setSourceName(event.target.value)}
+                  />
+                </label>
+                <label className="span-two">
+                  <span>URI</span>
+                  <input
+                    placeholder="file:///corpus/research"
+                    value={sourceUri}
+                    onChange={(event) => setSourceUri(event.target.value)}
+                  />
+                </label>
+                <button
+                  className="secondary-action"
+                  disabled={!selectedDomainId || isCreatingSource}
+                  type="submit"
+                >
+                  <FolderPlus aria-hidden="true" />
+                  {isCreatingSource ? "Adding source" : "Add source"}
+                </button>
+              </form>
+              <div className="source-list">
+                {sources.map((source) => (
+                  <article className="source-row" key={source.id}>
+                    <div>
+                      <strong>{source.name}</strong>
+                      <span>{source.uri}</span>
+                    </div>
+                    <span className="badge muted">{source.kind}</span>
+                    <button
+                      className="ghost-action"
+                      disabled={source.kind !== "mount" || isQueueingScan}
+                      type="button"
+                      onClick={() => void handleScanSource(source.id)}
+                    >
+                      <Play aria-hidden="true" />
+                      {isQueueingScan ? "Queueing" : "Scan"}
+                    </button>
+                  </article>
+                ))}
+                {selectedDomain && sources.length === 0 ? (
+                  <div className="empty-state compact">
+                    <Database aria-hidden="true" />
+                    <p>Add a mounted source to scan files into this domain.</p>
+                  </div>
+                ) : null}
+              </div>
+            </section>
           </article>
 
           <article className="panel" id="queries">
@@ -757,6 +978,15 @@ function App() {
               ))}
             </ol>
             <section className="event-ledger" aria-label="Live progress events" aria-live="polite">
+              {queuedJobs.length > 0 ? (
+                <div className="queued-jobs" aria-label="Queued jobs">
+                  {queuedJobs.map((job) => (
+                    <span className="badge muted" key={job.id}>
+                      {job.kind} {job.status}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               {progressEvents.map((event) => (
                 <article className="event-row" key={`${event.id}-${event.event}`}>
                   <span className="event-id">#{event.id}</span>

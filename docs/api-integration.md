@@ -384,6 +384,10 @@ Current console calls:
 - `GET /domains`
 - `POST /domains`
 - `GET /domains/{domain_id}/documents`
+- `GET /domains/{domain_id}/sources`
+- `POST /domains/{domain_id}/sources`
+- `POST /sources/{source_id}/scan`
+- `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
 
 The UI treats the provider catalog as read-only operational status:
@@ -393,9 +397,10 @@ The UI treats the provider catalog as read-only operational status:
 - `enabled=false` plus `reason` explains whether configuration or cost opt-in is missing.
 - API keys are never returned to the browser.
 
-The workspace can create domains, select an active domain, render its document list, and
-send queries against the selected domain. Query execution uses `run_inline=true` so the UI
-can render the answer and citations immediately. Worker-backed query jobs are already
+The workspace can create domains, select an active domain, render its document and source
+inventory, create mounted sources, queue source scans, rebuild the BM25 index, and send
+queries against the selected domain. Query execution uses `run_inline=true` so the UI can
+render the answer and citations immediately. Worker-backed query jobs are already
 available through the API by omitting `run_inline`; the live progress panel reads the same
 SSE stream that ingestion, indexing, and agent jobs write to.
 

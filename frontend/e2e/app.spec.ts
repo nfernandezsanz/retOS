@@ -11,6 +11,17 @@ async function mockProviderApi(page: Page) {
       updated_at: "2026-06-27T00:00:00Z",
     },
   ];
+  const sources = [
+    {
+      id: "source-123",
+      domain_id: "domain-123",
+      kind: "mount",
+      name: "Mounted Corpus",
+      uri: "file:///corpus/smoke",
+      created_at: "2026-06-27T00:00:00Z",
+      updated_at: "2026-06-27T00:00:00Z",
+    },
+  ];
 
   await page.route("http://localhost:8000/auth/login", async (route) => {
     await route.fulfill({
@@ -98,6 +109,56 @@ async function mockProviderApi(page: Page) {
       ],
     });
   });
+  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/sources/, async (route) => {
+    const domainId = new URL(route.request().url()).pathname.split("/")[2];
+    if (route.request().method() === "POST") {
+      const created = {
+        id: "source-456",
+        domain_id: domainId,
+        kind: "mount",
+        name: "Policy Corpus",
+        uri: "file:///corpus/policy",
+        created_at: "2026-06-27T00:00:00Z",
+        updated_at: "2026-06-27T00:00:00Z",
+      };
+      sources.push(created);
+      await route.fulfill({
+        contentType: "application/json",
+        status: 201,
+        json: created,
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: sources.filter((source) => source.domain_id === domainId),
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/sources\/[^/]+\/scan/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: {
+        id: "job-scan-1",
+        kind: "ingest.source",
+        status: "queued",
+        payload: {},
+      },
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/index\/rebuild/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: {
+        id: "job-index-1",
+        kind: "index.domain",
+        status: "queued",
+        payload: {},
+      },
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/queries/, async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -171,6 +232,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("Blocked")).toBeVisible();
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
   await expect(page.getByText("Smoke Document")).toBeVisible();
+  await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();
 
   await page
     .getByLabel("Question")
@@ -182,12 +244,23 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("page=1")).toBeVisible();
 
   await page.getByLabel("Slug").fill("policy-research");
-  await page.getByLabel("Name").fill("Policy Research");
+  await page.getByPlaceholder("Legal research").fill("Policy Research");
   await page.getByLabel("Description").fill("Created from the console");
   await page.getByRole("button", { name: "Create domain" }).click();
 
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-456");
   await expect(page.getByRole("option", { name: "Policy Research" })).toBeAttached();
+
+  await page.getByPlaceholder("Research corpus").fill("Policy Corpus");
+  await page.getByLabel("URI").fill("file:///corpus/policy");
+  await page.getByRole("button", { name: "Add source" }).click();
+  await expect(page.getByLabel("Domain sources").getByText("Policy Corpus")).toBeVisible();
+
+  await page.getByLabel("Domain sources").getByRole("button", { name: "Scan" }).first().click();
+  await expect(page.getByLabel("Queued jobs").getByText("ingest.source queued")).toBeVisible();
+
+  await page.getByRole("button", { name: "Rebuild index" }).click();
+  await expect(page.getByLabel("Queued jobs").getByText("index.domain queued")).toBeVisible();
 
   await page.getByRole("button", { name: "Connect live updates" }).click();
   await expect(page.getByLabel("Live progress events").getByText("system.ready")).toBeVisible();

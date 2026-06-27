@@ -34,13 +34,16 @@ The UI is a working console, not a landing page. It must make background process
 - The workspace reads `/domains`, creates domains through `POST /domains`, keeps an
   active domain selector, and loads `/domains/{domain_id}/documents` for the selected
   corpus.
+- The workspace reads and creates sources through `/domains/{domain_id}/sources`, queues
+  mounted source scans through `/sources/{source_id}/scan`, and queues BM25 rebuilds
+  through `/domains/{domain_id}/index/rebuild`.
 - The query workspace posts to `/domains/{domain_id}/queries` with `run_inline=true` and
   renders the grounded answer, job status, provider model, and citation cards without
   requiring users to paste domain UUIDs.
 - The processing panel connects to `/events/progress` with authenticated `fetch`
   streaming, parses SSE frames, and renders a compact live progress ledger.
 - Browser smoke tests mock the API contract and verify provider, domain creation,
-  document inventory, query, and live progress flows.
+  document/source inventory, scan/index queueing, query, and live progress flows.
 
 ## Processing UI
 

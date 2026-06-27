@@ -284,6 +284,12 @@ h2 {
   margin-top: 16px;
 }
 
+.queued-jobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .event-row {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
@@ -330,6 +336,8 @@ h2 {
 .query-box input,
 .domain-form input,
 .domain-toolbar select,
+.source-form input,
+.source-form select,
 .provider-login input {
   min-height: 140px;
   width: 100%;
@@ -347,6 +355,8 @@ h2 {
 .query-box input,
 .domain-form input,
 .domain-toolbar select,
+.source-form input,
+.source-form select,
 .query-box.compact-field input {
   min-height: 44px;
 }
@@ -355,6 +365,8 @@ h2 {
 .query-box input:focus-visible,
 .domain-form input:focus-visible,
 .domain-toolbar select:focus-visible,
+.source-form input:focus-visible,
+.source-form select:focus-visible,
 .provider-login input:focus-visible,
 button:focus-visible {
   outline: 3px solid #93c5fd;
@@ -366,25 +378,29 @@ button:focus-visible {
   gap: 12px;
 }
 
-.domain-form {
+.domain-form,
+.source-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .domain-form label,
-.domain-toolbar label {
+.domain-toolbar label,
+.source-form label {
   display: grid;
   gap: 8px;
   color: #334155;
   font-weight: 700;
 }
 
-.domain-form .span-two {
+.domain-form .span-two,
+.source-form .span-two {
   grid-column: 1 / -1;
 }
 
-.domain-form .secondary-action {
+.domain-form .secondary-action,
+.source-form .secondary-action {
   grid-column: 1 / -1;
 }
 
@@ -431,6 +447,67 @@ button:focus-visible {
   color: #64748b;
   font-size: 13px;
   margin-top: 4px;
+}
+
+.source-workspace {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  border-top: 1px solid #dbe3ef;
+  padding-top: 18px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.section-heading .ghost-action {
+  min-width: 150px;
+}
+
+.source-list {
+  display: grid;
+  gap: 10px;
+}
+
+.source-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.source-row div {
+  min-width: 0;
+}
+
+.source-row strong,
+.source-row span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.source-row div > span {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.source-row .ghost-action {
+  min-width: 96px;
 }
 
 .selected-domain {
@@ -700,13 +777,20 @@ button:focus-visible {
   .content-grid,
   .domain-form,
   .domain-toolbar,
+  .source-form,
   .admin-grid,
   .provider-summary {
     grid-template-columns: 1fr;
   }
 
-  .provider-row {
+  .provider-row,
+  .source-row {
     grid-template-columns: 1fr;
+  }
+
+  .section-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .live-toolbar .secondary-action,
