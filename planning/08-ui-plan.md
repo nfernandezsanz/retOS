@@ -46,6 +46,9 @@ The UI is a working console, not a landing page. It must make background process
   requiring users to paste domain UUIDs.
 - The processing panel connects to `/events/progress` with authenticated `fetch`
   streaming, parses SSE frames, and renders a compact live progress ledger.
+- The processing panel tracks the latest persisted `progress:*` SSE cursor and sends it
+  as `Last-Event-ID` on reconnect, allowing reloadable progress replay after API
+  restarts.
 - The audit panel renders recent jobs with status/kind filtering, identifiers, timestamps,
   error state, and payload summaries.
 - The audit panel reads `/audit/journal-events?limit=20` and
@@ -72,8 +75,8 @@ Show:
 - Last SSE event and timestamp.
 - Retry action for failed jobs.
 - Normalized error detail with suggested action.
-- Snapshot recovery plus `Last-Event-ID` reconnect semantics. The first live ledger is
-  implemented; persisted resume state and richer per-job grouping remain pending.
+- Snapshot recovery plus `Last-Event-ID` reconnect semantics. The live ledger and
+  persisted resume cursor are implemented; richer per-job grouping remains pending.
 
 ## Accessibility
 

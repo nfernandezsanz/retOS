@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.12% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.26% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -19,7 +19,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 
 ## What This Repository Contains
 
-- A Python 3.14 FastAPI backend scaffold with secure settings, JWT helpers, Argon2 password hashing, SSE progress streaming, and Celery/RabbitMQ wiring.
+- A Python 3.14 FastAPI backend scaffold with secure settings, JWT helpers, Argon2 password hashing, persisted-resume SSE progress streaming, and Celery/RabbitMQ wiring.
 - Initial SQLAlchemy async persistence for domain and source management through a Unit of Work.
 - Alembic migrations for domains, sources, documents, versions, artifacts, segments, jobs, progress events, and audit journals.
 - Persisted admin users with idempotent bootstrap at startup.

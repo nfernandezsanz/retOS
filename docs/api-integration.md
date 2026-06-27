@@ -667,6 +667,17 @@ Because the progress stream is authenticated, the React console consumes it with
 does not support custom authorization headers. The UI keeps the latest progress events
 in a compact ledger and reserves space for empty, connected, and error states.
 
+SSE ids are stable cursors:
+
+- `progress:<progress_event_id>` is backed by the persisted `progress_events` table and
+  can resume after API restarts.
+- `live:<number>` is an in-memory notification cursor for process-local events.
+
+On connect, the API replays recent persisted progress events before live memory events.
+When `Last-Event-ID` is a `progress:*` cursor, the replay starts after that persisted
+row. The React console tracks the latest `progress:*` id separately and sends it on the
+next authenticated fetch reconnect.
+
 ## Jobs
 
 Create a durable job:

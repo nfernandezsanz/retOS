@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import cast
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from retos.domain.admin import AdminUser
@@ -619,6 +619,39 @@ class ProgressEventRepository:
         result = await self._session.scalars(
             select(ProgressEventRecord)
             .order_by(ProgressEventRecord.occurred_at.desc(), ProgressEventRecord.id.desc())
+            .limit(limit)
+        )
+        return [progress_event_from_record(record) for record in result]
+
+    async def list_chronological(self, *, limit: int = 100) -> builtins.list[ProgressEvent]:
+        result = await self._session.scalars(
+            select(ProgressEventRecord)
+            .order_by(ProgressEventRecord.occurred_at.desc(), ProgressEventRecord.id.desc())
+            .limit(limit)
+        )
+        return [progress_event_from_record(record) for record in reversed(result.all())]
+
+    async def list_after(
+        self,
+        *,
+        event_id: str,
+        limit: int = 100,
+    ) -> builtins.list[ProgressEvent]:
+        target = await self._session.get(ProgressEventRecord, event_id)
+        if target is None:
+            return await self.list_chronological(limit=limit)
+        result = await self._session.scalars(
+            select(ProgressEventRecord)
+            .where(
+                or_(
+                    ProgressEventRecord.occurred_at > target.occurred_at,
+                    and_(
+                        ProgressEventRecord.occurred_at == target.occurred_at,
+                        ProgressEventRecord.id > target.id,
+                    ),
+                )
+            )
+            .order_by(ProgressEventRecord.occurred_at.asc(), ProgressEventRecord.id.asc())
             .limit(limit)
         )
         return [progress_event_from_record(record) for record in result]

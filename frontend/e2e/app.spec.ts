@@ -439,13 +439,13 @@ async function mockProviderApi(page: Page) {
     await route.fulfill({
       contentType: "text/event-stream",
       body: [
-        "id: 1",
-        "event: system.ready",
-        'data: {"id":1,"event":"system.ready","data":{"message":"RetOS API is ready"}}',
+        "id: progress:progress-seed-1",
+        "event: job.queued",
+        'data: {"id":"progress:progress-seed-1","event":"job.queued","data":{"job_id":"job-seed-1","message":"Persisted progress replayed"}}',
         "",
-        "id: 2",
+        "id: live:2",
         "event: agent.started",
-        'data: {"id":2,"event":"agent.started","data":{"job_id":"job-query-1","status":"running","message":"Agent query started"}}',
+        'data: {"id":"live:2","event":"agent.started","data":{"job_id":"job-query-1","status":"running","message":"Agent query started"}}',
         "",
         "",
       ].join("\n"),
@@ -559,7 +559,8 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();
 
   await page.getByRole("button", { name: "Connect live updates" }).click();
-  await expect(page.getByLabel("Live progress events").getByText("system.ready")).toBeVisible();
+  await expect(page.getByLabel("Live progress events").getByText("job.queued")).toBeVisible();
+  await expect(page.getByText("Resume progress:progress")).toBeVisible();
   await expect(page.getByLabel("Live progress events").getByText("Agent query started")).toBeVisible();
 });
 

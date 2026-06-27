@@ -653,6 +653,37 @@ def main() -> None:
                     and any(item.startswith("data:") for item in lines),
                     f"progress stream did not emit an SSE event/data pair: {lines}",
                 )
+                replay_id = next(
+                    (item.removeprefix("id:").strip() for item in lines if item.startswith("id:")),
+                    "",
+                )
+                require(
+                    replay_id.startswith(("progress:", "live:")),
+                    f"progress stream emitted unexpected id: {replay_id}",
+                )
+
+            with client.stream(
+                "GET",
+                "/events/progress",
+                headers={**auth_headers, "Last-Event-ID": replay_id},
+                timeout=stream_timeout,
+            ) as resumed_stream:
+                require(
+                    resumed_stream.status_code == 200,
+                    f"resumed progress stream failed: {resumed_stream.status_code}",
+                )
+                resumed_lines: list[str] = []
+                for line in resumed_stream.iter_lines():
+                    if line:
+                        resumed_lines.append(line)
+                    if any(item.startswith("event:") for item in resumed_lines) and any(
+                        item.startswith("data:") for item in resumed_lines
+                    ):
+                        break
+                require(
+                    resumed_lines,
+                    "resumed progress stream did not emit any lines",
+                )
     finally:
         if temp_scan_root is not None:
             shutil.rmtree(temp_scan_root, ignore_errors=True)

@@ -168,9 +168,9 @@ type EvalRunRead = {
 };
 
 type ProgressEvent = {
-  id: number;
+  id: string;
   event: string;
-  data: Record<string, string | number | boolean | null>;
+  data: Record<string, unknown>;
 };
 
 type JournalEventRead = {
@@ -531,7 +531,8 @@ function parseProgressFrame(frame: string): ProgressEvent | null {
     return null;
   }
   try {
-    return JSON.parse(dataLines.join("\n")) as ProgressEvent;
+    const parsed = JSON.parse(dataLines.join("\n")) as ProgressEvent;
+    return { ...parsed, id: String(parsed.id) };
   } catch {
     return null;
   }
@@ -622,6 +623,7 @@ function App() {
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
   const [liveError, setLiveError] = useState<string | null>(null);
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
+  const [lastProgressCursor, setLastProgressCursor] = useState<string | null>(null);
   const [jobFilter, setJobFilter] = useState("all");
   const [journalEvents, setJournalEvents] = useState<JournalEventRead[]>([]);
   const [auditProgressEvents, setAuditProgressEvents] = useState<ProgressEventRead[]>([]);
@@ -630,6 +632,7 @@ function App() {
   const [auditError, setAuditError] = useState<string | null>(null);
   const [auditExportMessage, setAuditExportMessage] = useState<string | null>(null);
   const liveAbortRef = useRef<AbortController | null>(null);
+  const lastPersistedEventIdRef = useRef<string | null>(null);
 
   const activeProviderLabel = useMemo(() => {
     if (!catalog) {
@@ -1103,10 +1106,14 @@ function App() {
       if (controller.signal.aborted) {
         return;
       }
+      const liveHeaders: HeadersInit = {
+        Authorization: `Bearer ${accessToken}`,
+      };
+      if (lastPersistedEventIdRef.current) {
+        liveHeaders["Last-Event-ID"] = lastPersistedEventIdRef.current;
+      }
       const response = await fetch(`${API_BASE_URL}/events/progress`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: liveHeaders,
         signal: controller.signal,
       });
       if (!response.ok || !response.body) {
@@ -1130,6 +1137,13 @@ function App() {
           .map(parseProgressFrame)
           .filter((event): event is ProgressEvent => event !== null);
         if (nextEvents.length > 0) {
+          const lastPersisted = nextEvents.findLast((event) =>
+            event.id.startsWith("progress:"),
+          );
+          if (lastPersisted) {
+            lastPersistedEventIdRef.current = lastPersisted.id;
+            setLastProgressCursor(lastPersisted.id);
+          }
           setProgressEvents((current) => [...current, ...nextEvents].slice(-8));
         }
       }
@@ -1172,6 +1186,8 @@ function App() {
     setLiveStatus("disconnected");
     setLiveError(null);
     setProgressEvents([]);
+    setLastProgressCursor(null);
+    lastPersistedEventIdRef.current = null;
     setQueuedJobs([]);
     setJournalEvents([]);
     setAuditProgressEvents([]);
@@ -1592,6 +1608,9 @@ function App() {
                 <p className="inline-error" role="alert">
                   {liveError}
                 </p>
+              ) : null}
+              {lastProgressCursor ? (
+                <span className="resume-cursor">Resume {lastProgressCursor.slice(0, 18)}</span>
               ) : null}
             </div>
             <ol className="timeline" aria-live="polite">
