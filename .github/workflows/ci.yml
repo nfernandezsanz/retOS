@@ -30,6 +30,10 @@ jobs:
           RETOS_ENV: test
           RETOS_ALLOW_PAID_LLM: "false"
         run: cd backend && pytest
+      - name: Eval smoke
+        env:
+          RETOS_ALLOW_PAID_LLM: "false"
+        run: cd backend && PYTHONPATH=src python scripts/run_eval_smoke.py --format markdown
       - name: API smoke
         env:
           RETOS_ENV: test

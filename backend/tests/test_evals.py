@@ -1,0 +1,72 @@
+from pathlib import Path
+
+from retos.evals.smoke import (
+    EvalCase,
+    EvalDocument,
+    run_smoke_eval_suite,
+    score_case,
+    smoke_eval_cases,
+)
+from retos.search.index import SearchHit
+
+
+def test_smoke_eval_suite_passes_with_local_index(tmp_path: Path) -> None:
+    report = run_smoke_eval_suite(index_root=tmp_path)
+
+    assert report.passed is True
+    assert report.case_count == 3
+    assert report.retrieval_recall == 1.0
+    assert report.citation_validity == 1.0
+    assert report.grounded_answer == 1.0
+    assert report.abstention == 1.0
+    assert report.budget_compliance == 1.0
+    assert report.to_dict()["metrics"]["retrieval_recall"] == 1.0
+    assert "Eval Report: retos-smoke" in report.to_markdown()
+
+
+def test_smoke_eval_cases_are_immutable_fixtures() -> None:
+    cases = smoke_eval_cases()
+
+    assert [case.id for case in cases] == [
+        "apollo-guidance",
+        "marine-salinity",
+        "no-evidence",
+    ]
+    assert all(case.max_citations == 5 for case in cases)
+
+
+def test_eval_case_reports_missing_grounding() -> None:
+    case = EvalCase(
+        id="grounding",
+        question="What does the fixture mention?",
+        documents=(
+            EvalDocument(
+                id="fixture",
+                title="Fixture",
+                text="The fixture mentions deterministic evidence.",
+                anchor="fixture://grounding#p1",
+            ),
+        ),
+        expected_citation_titles=("Fixture",),
+        expected_answer_terms=("missing answer term",),
+    )
+    hits = [
+        SearchHit(
+            segment_id="grounding-fixture-segment-0",
+            document_id="grounding-fixture",
+            document_version_id="grounding-fixture-v1",
+            title="Fixture",
+            text="The fixture mentions deterministic evidence.",
+            anchor="fixture://grounding#p1",
+            ordinal=0,
+            score=1.0,
+        )
+    ]
+
+    result = score_case(case, hits, "Grounded answer without the expected phrase.")
+
+    assert result.passed is False
+    assert result.retrieval_recall is True
+    assert result.citation_validity is True
+    assert result.grounded_answer is False
+    assert result.failures == ("grounded_answer",)

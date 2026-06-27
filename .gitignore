@@ -70,6 +70,12 @@ retos_postgres/
 retos_rabbitmq/
 retos_tmp/
 
+# Local eval datasets and generated reports
+evals/datasets/
+evals/cache/
+evals/reports/
+!evals/.gitkeep
+
 # Docker and Compose
 docker-compose.override.yml
 .docker/

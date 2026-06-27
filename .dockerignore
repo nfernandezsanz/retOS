@@ -28,6 +28,9 @@ retos_ollama
 retos_postgres
 retos_rabbitmq
 retos_tmp
+evals/datasets
+evals/cache
+evals/reports
 
 # Frontend generated files
 node_modules

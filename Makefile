@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -15,6 +15,7 @@ help:
 	@printf "  make db-upgrade       Apply Alembic migrations\n"
 	@printf "  make db-downgrade     Roll back the latest Alembic migration\n"
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
+	@printf "  make eval-smoke       Run deterministic local retrieval/citation evals\n"
 	@printf "  make check            Run backend format/lint/typecheck/tests\n"
 	@printf "  make frontend-install Install frontend dependencies\n"
 	@printf "  make frontend-test    Run frontend checks\n"
@@ -53,7 +54,10 @@ db-downgrade:
 api-smoke:
 	cd backend && PYTHON="$(BACKEND_PYTHON)" scripts/run_api_smoke.sh
 
-check: format-check lint typecheck test
+eval-smoke:
+	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --format markdown
+
+check: format-check lint typecheck test eval-smoke
 
 frontend-install:
 	cd frontend && npm install

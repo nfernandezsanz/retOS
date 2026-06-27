@@ -17,6 +17,7 @@ Reality-check commands:
 
 ```bash
 make api-smoke
+make eval-smoke
 make frontend-e2e
 make integration
 make docker-smoke
@@ -73,3 +74,29 @@ The project should never rely only on isolated unit tests. Every implementation 
 | Abstention | Missing evidence leads to no-answer behavior. | Deterministic |
 | Budget compliance | Runs respect tool and runtime budgets. | Deterministic |
 | Provider parity | Provider switching preserves contracts. | Fake providers |
+
+## Implemented Eval Smoke
+
+`make eval-smoke` runs `backend/scripts/run_eval_smoke.py` with a temporary Tantivy
+index. It does not call providers, does not download datasets, and does not require
+RabbitMQ or Postgres.
+
+Current metrics:
+
+- Retrieval recall.
+- Citation validity.
+- Grounded answer terms.
+- Abstention when evidence is missing.
+- Citation budget compliance.
+
+The smoke suite is included in `make check` and GitHub Actions.
+
+## Public Dataset Candidates
+
+| Dataset | Fit |
+| --- | --- |
+| SQuAD 2.0 | First adapter candidate for paragraph QA plus unanswerable/abstention cases. |
+| Natural Questions | Real user questions with Wikipedia evidence for open-domain retrieval pressure. |
+| HotpotQA | Multi-hop retrieval and supporting-fact evaluation for explainability. |
+
+Dataset adapters must be opt-in and must not make CI depend on network downloads.
