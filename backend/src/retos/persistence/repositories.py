@@ -531,6 +531,14 @@ class JobRepository:
         await self._session.flush()
         return job_from_record(record)
 
+    async def update_payload(self, *, job_id: str, payload: dict[str, object]) -> Job | None:
+        record = await self._session.get(JobRecord, job_id)
+        if record is None:
+            return None
+        record.payload = payload
+        await self._session.flush()
+        return job_from_record(record)
+
     async def list(self, *, limit: int = 100) -> list[Job]:
         result = await self._session.scalars(
             select(JobRecord)

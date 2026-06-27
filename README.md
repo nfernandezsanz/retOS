@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.70% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.23% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -30,6 +30,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Mounted source scanner for `.txt`, `.md`, digital `.pdf`, and OCR fallback for image-only PDFs with idempotent duplicate-hash skips, extracted-text artifacts, deterministic segments, and scan progress.
 - Tantivy BM25 search adapter with durable `index.domain` jobs, rebuildable domain indexes, searchable segments, and citation anchors.
 - LLM provider catalog API with local Ollama `gemma4` as the default profile and paid providers blocked unless explicitly enabled.
+- Auditable `agent.query` jobs that search indexed evidence, persist grounded answers and citations, and emit journal/progress events.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for documents, jobs, OCR, indexing, and agent runs.
 - Docker Compose for Postgres, RabbitMQ, Ollama, API, worker, and web services.
 - Planning, ADRs, and architecture assets for the open source implementation path.

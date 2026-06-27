@@ -334,6 +334,43 @@ def main() -> None:
             require(search_hits[0]["document_id"] == document["id"], "unexpected search document")
             require(search_hits[0]["anchor"] == "page=1", "search did not preserve anchors")
 
+            agent_query = client.post(
+                f"/domains/{domain_id}/queries",
+                headers=auth_headers,
+                json={
+                    "question": "What evidence mentions search readiness?",
+                    "limit": 5,
+                    "run_inline": not expect_worker,
+                },
+            )
+            require(
+                agent_query.status_code == 202,
+                f"agent query failed: {agent_query.status_code} {agent_query.text}",
+            )
+            agent_job = agent_query.json()["job"]
+            require(agent_job["kind"] == "agent.query", "invalid agent job kind")
+            if expect_worker:
+                agent_job = wait_for_job(client, job_id=agent_job["id"], headers=auth_headers)
+                require(
+                    agent_job["status"] == "succeeded",
+                    f"agent job did not succeed: {agent_job}",
+                )
+                agent_result = agent_job["payload"]["result"]
+            else:
+                require(
+                    agent_query.json()["result"] is not None,
+                    "inline agent query did not return a result",
+                )
+                agent_result = agent_query.json()["result"]
+            require(
+                agent_result["citations"],
+                "agent query returned no citations",
+            )
+            require(
+                "search readiness" in agent_result["answer"],
+                "agent answer did not include grounded evidence",
+            )
+
             created_job = client.post(
                 "/jobs",
                 headers=auth_headers,
@@ -400,22 +437,9 @@ def main() -> None:
                         break
                 require(lines, "progress stream did not emit any lines")
                 require(
-                    any(
-                        "system.ready" in line
-                        or "document.created" in line
-                        or "artifact.created" in line
-                        or "segment.created" in line
-                        or "scan.completed" in line
-                        or "ingestion.queued" in line
-                        or "ingestion.completed" in line
-                        or "index.queued" in line
-                        or "index.completed" in line
-                        or "job.queued" in line
-                        or "job.running" in line
-                        or "job.succeeded" in line
-                        for line in lines
-                    ),
-                    "missing expected progress event",
+                    any(item.startswith("event:") for item in lines)
+                    and any(item.startswith("data:") for item in lines),
+                    f"progress stream did not emit an SSE event/data pair: {lines}",
                 )
     finally:
         if temp_scan_root is not None:

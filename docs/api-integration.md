@@ -273,6 +273,57 @@ Search hits include stable citation data:
 
 If the index has not been built, search returns `409 Conflict`.
 
+## Agent Queries
+
+Agent queries are durable jobs that use indexed evidence and return citation-backed
+answers. The current implementation runs the safe RetOS research harness path for
+`fake`/`local` profiles without paid provider calls.
+
+```bash
+curl --request POST http://localhost:8000/domains/<domain_id>/queries \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "question":"What evidence mentions search readiness?",
+    "limit":5,
+    "run_inline":true
+  }'
+```
+
+The response always includes the durable job. When `run_inline=true`, or in
+`RETOS_ENV=test`, it also includes the result:
+
+```json
+{
+  "job": {
+    "id": "<job_id>",
+    "kind": "agent.query",
+    "status": "succeeded"
+  },
+  "result": {
+    "answer": "Grounded answer for: ...",
+    "provider": "local",
+    "model": "ollama:gemma4",
+    "citations": [
+      {
+        "segment_id": "<segment_id>",
+        "document_id": "<document_id>",
+        "document_version_id": "<version_id>",
+        "title": "Fixture Document",
+        "anchor": "page=1",
+        "score": 1.23,
+        "text": "Matching evidence text"
+      }
+    ]
+  }
+}
+```
+
+In Docker/runtime mode, omit `run_inline` to queue the job for the worker. The worker
+stores the final result under `job.payload.result`, writes `agent.*` journal/progress
+events, and emits SSE progress. If the domain index has not been built, the API returns
+`409 Conflict` and marks the job failed.
+
 ## LLM Providers
 
 Provider discovery is admin-only and safe to call from the UI. It does not return API

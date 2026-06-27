@@ -62,3 +62,14 @@ only safe metadata:
 The endpoint never returns API keys and never performs a model call. This gives the UI a
 safe way to render provider switches and warnings before the Deep Agents runtime is
 connected.
+
+## Implemented Query Contract
+
+`POST /domains/{domain_id}/queries` creates a durable `agent.query` job. The first
+implementation searches the domain BM25 index, builds a grounded answer from retrieved
+segments, persists citations under `job.payload.result`, and writes `agent.queued`,
+`agent.started`, `agent.completed`, or `agent.failed` progress/journal events.
+
+The Deep Agents harness factory is present through `deepagents.create_deep_agent` with a
+RetOS-specific system prompt. Full model invocation, tool budgets, subagent execution,
+and evidence-checking middleware remain the next runtime slice.
