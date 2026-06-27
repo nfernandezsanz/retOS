@@ -53,7 +53,10 @@ The next audit hardening pass should add:
 - `tool_call.completed`
 - `evidence.cited`
 - `answer.finalized`
-- `eval_run.completed`
+- `eval.queued`
+- `eval.started`
+- `eval.completed`
+- `eval.failed`
 
 ## Evidence Ledger
 

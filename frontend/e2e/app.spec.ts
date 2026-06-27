@@ -75,6 +75,59 @@ async function mockProviderApi(page: Page) {
       payload: { status: "queued" },
     },
   ];
+  const evalReport = {
+    suite_name: "retos-smoke",
+    passed: true,
+    case_count: 3,
+    metrics: {
+      retrieval_recall: 1,
+      citation_validity: 1,
+      grounded_answer: 1,
+      abstention: 1,
+      budget_compliance: 1,
+    },
+    cases: [
+      {
+        case_id: "apollo-guidance",
+        question: "What did Apollo guidance computers use for mission operations?",
+        passed: true,
+        retrieval_recall: true,
+        citation_validity: true,
+        grounded_answer: true,
+        abstention: true,
+        budget_compliance: true,
+        answer: "Grounded answer for Apollo guidance computers.",
+        citations: [{ title: "Apollo Guidance Notes" }],
+        failures: [],
+      },
+      {
+        case_id: "marine-salinity",
+        question: "Which notes mention salinity and plankton?",
+        passed: true,
+        retrieval_recall: true,
+        citation_validity: true,
+        grounded_answer: true,
+        abstention: true,
+        budget_compliance: true,
+        answer: "Grounded answer for marine salinity.",
+        citations: [{ title: "Marine Biology Notes" }],
+        failures: [],
+      },
+      {
+        case_id: "no-evidence",
+        question: "Which document explains medieval ceramic kiln temperatures?",
+        passed: true,
+        retrieval_recall: true,
+        citation_validity: true,
+        grounded_answer: true,
+        abstention: true,
+        budget_compliance: true,
+        answer: "I could not find enough indexed evidence to answer this question.",
+        citations: [],
+        failures: [],
+      },
+    ],
+  };
 
   function recordAudit(job: ReturnType<typeof jobFixture>) {
     journalEvents.unshift({
@@ -284,6 +337,16 @@ async function mockProviderApi(page: Page) {
       },
     });
   });
+  await page.route("http://localhost:8000/evals/smoke", async (route) => {
+    const job = jobFixture("job-eval-1", "eval.run", "succeeded", { result: evalReport });
+    jobs.unshift(job);
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: { job, report: evalReport },
+    });
+  });
   await page.route("http://localhost:8000/events/progress", async (route) => {
     await route.fulfill({
       contentType: "text/event-stream",
@@ -316,6 +379,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Domains and documents" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Run grounded query" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Local evals" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
 
   await page.getByLabel("Password").fill("retos-dev-admin-change-me");
@@ -373,6 +437,11 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),
   ).toBeVisible();
+
+  await page.getByRole("button", { name: "Run eval smoke" }).click();
+  await expect(page.getByLabel("Eval metrics").getByText("retrieval recall")).toBeVisible();
+  await expect(page.getByLabel("Eval cases").getByText("apollo-guidance")).toBeVisible();
+  await expect(page.locator("#evals").getByText("eval.run succeeded")).toBeVisible();
 
   await page.getByLabel("Filter jobs").selectOption("index.domain");
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();

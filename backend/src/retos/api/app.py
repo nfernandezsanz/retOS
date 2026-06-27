@@ -10,6 +10,7 @@ from retos.api.routes import (
     auth,
     documents,
     domains,
+    evals,
     events,
     health,
     ingestions,
@@ -72,5 +73,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(search.router)
     app.include_router(agent.router)
     app.include_router(audit.router)
+    app.include_router(evals.router)
     app.include_router(events.router)
     return app

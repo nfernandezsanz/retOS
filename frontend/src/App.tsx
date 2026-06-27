@@ -120,6 +120,41 @@ type AgentQueryResponse = {
   result: AgentQueryResult | null;
 };
 
+type EvalMetrics = {
+  retrieval_recall: number;
+  citation_validity: number;
+  grounded_answer: number;
+  abstention: number;
+  budget_compliance: number;
+};
+
+type EvalCaseResult = {
+  case_id: string;
+  question: string;
+  passed: boolean;
+  retrieval_recall: boolean;
+  citation_validity: boolean;
+  grounded_answer: boolean;
+  abstention: boolean;
+  budget_compliance: boolean;
+  answer: string;
+  citations: Record<string, unknown>[];
+  failures: string[];
+};
+
+type EvalReport = {
+  suite_name: string;
+  passed: boolean;
+  case_count: number;
+  metrics: EvalMetrics;
+  cases: EvalCaseResult[];
+};
+
+type EvalRunResponse = {
+  job: JobRead;
+  report: EvalReport;
+};
+
 type ProgressEvent = {
   id: number;
   event: string;
@@ -332,6 +367,15 @@ async function runAgentQuery(
   });
 }
 
+async function runSmokeEval(token: string): Promise<EvalRunResponse> {
+  return requestJson<EvalRunResponse>("/evals/smoke", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 function providerLabel(name: ProviderName): string {
   if (name === "local") {
     return "Ollama";
@@ -395,6 +439,10 @@ function summarizePayload(payload: Record<string, unknown>): string {
     .join(" | ");
 }
 
+function formatScore(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
 function App() {
   const [email, setEmail] = useState("admin@retos.dev");
   const [password, setPassword] = useState("");
@@ -428,6 +476,10 @@ function App() {
   const [queryJob, setQueryJob] = useState<JobRead | null>(null);
   const [isRunningQuery, setIsRunningQuery] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
+  const [evalReport, setEvalReport] = useState<EvalReport | null>(null);
+  const [evalJob, setEvalJob] = useState<JobRead | null>(null);
+  const [isRunningEval, setIsRunningEval] = useState(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
   const [liveError, setLiveError] = useState<string | null>(null);
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
@@ -756,6 +808,23 @@ function App() {
     }
   }
 
+  async function handleRunSmokeEval() {
+    setIsRunningEval(true);
+    setEvalError(null);
+    try {
+      const accessToken = await getAdminToken();
+      const response = await runSmokeEval(accessToken);
+      setEvalJob(response.job);
+      setEvalReport(response.report);
+      setQueuedJobs((current) => [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(0, 12));
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "Eval smoke failed");
+    } finally {
+      setIsRunningEval(false);
+    }
+  }
+
   async function handleConnectLiveUpdates() {
     if (liveStatus === "connected" || liveStatus === "connecting") {
       liveAbortRef.current?.abort();
@@ -829,6 +898,9 @@ function App() {
     setProviderError(null);
     setQueryResult(null);
     setQueryJob(null);
+    setEvalReport(null);
+    setEvalJob(null);
+    setEvalError(null);
     setDomains([]);
     setSelectedDomainId("");
     setDocuments([]);
@@ -857,6 +929,7 @@ function App() {
           <a href="#overview">Overview</a>
           <a href="#documents">Documents</a>
           <a href="#queries">Queries</a>
+          <a href="#evals">Evals</a>
           <a href="#audit">Audit</a>
           <a href="#admin">Admin</a>
         </nav>
@@ -1244,6 +1317,80 @@ function App() {
             </section>
           </article>
 
+          <article className="panel wide" id="evals">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Quality</p>
+                <h2>Local evals</h2>
+              </div>
+              <span className={evalReport?.passed ? "status-pill local" : "status-pill"}>
+                {evalReport ? (evalReport.passed ? "Passing" : "Failing") : "Not run"}
+              </span>
+            </div>
+            <div className="eval-toolbar">
+              <button
+                className="secondary-action"
+                disabled={isRunningEval}
+                type="button"
+                onClick={() => void handleRunSmokeEval()}
+              >
+                <CheckCircle2 aria-hidden="true" />
+                {isRunningEval ? "Running eval smoke" : "Run eval smoke"}
+              </button>
+              {evalJob ? (
+                <div className="selected-domain">
+                  <span>Eval job</span>
+                  <strong>
+                    {evalJob.kind} {evalJob.status}
+                  </strong>
+                </div>
+              ) : null}
+            </div>
+            {evalError ? (
+              <p className="inline-error" role="alert">
+                {evalError}
+              </p>
+            ) : null}
+            <section className="eval-result" aria-label="Eval smoke results" aria-live="polite">
+              {evalReport ? (
+                <>
+                  <div className="eval-metrics" aria-label="Eval metrics">
+                    {Object.entries(evalReport.metrics).map(([name, value]) => (
+                      <article className="eval-metric" key={name}>
+                        <span>{name.replaceAll("_", " ")}</span>
+                        <strong>{formatScore(value)}</strong>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="eval-case-list" aria-label="Eval cases">
+                    {evalReport.cases.map((evalCase) => (
+                      <article className="eval-case-row" key={evalCase.case_id}>
+                        <div>
+                          <span className={evalCase.passed ? "badge success" : "badge warning"}>
+                            {evalCase.passed ? "pass" : "fail"}
+                          </span>
+                          <strong>{evalCase.case_id}</strong>
+                          <span>{evalCase.question}</span>
+                        </div>
+                        <div className="provider-badges">
+                          <span className="badge muted">{evalCase.citations.length} citations</span>
+                          <span className="badge muted">
+                            {evalCase.failures.length ? evalCase.failures.join(", ") : "no failures"}
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="empty-state compact">
+                  <CheckCircle2 aria-hidden="true" />
+                  <p>Run the local smoke eval to verify retrieval, citations, grounding, abstention, and budget compliance.</p>
+                </div>
+              )}
+            </section>
+          </article>
+
           <article className="panel wide" id="admin">
             <div className="panel-heading">
               <div>
@@ -1360,6 +1507,7 @@ function App() {
                   <option value="failed">Failed</option>
                   <option value="ingest.source">Ingestion</option>
                   <option value="index.domain">Indexing</option>
+                  <option value="eval.run">Evals</option>
                   <option value="agent.query">Agent queries</option>
                 </select>
               </label>

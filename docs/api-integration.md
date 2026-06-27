@@ -370,6 +370,54 @@ The response includes the active profile and the available profiles:
 `azure` require their provider-specific key/configuration and remain disabled unless
 `RETOS_ALLOW_PAID_LLM=true`.
 
+## Evals
+
+Run the deterministic local smoke eval suite:
+
+```bash
+curl --request POST http://localhost:8000/evals/smoke \
+  --header "Authorization: Bearer <token>"
+```
+
+The endpoint requires an admin token, does not call paid providers, and returns
+`202 Accepted` with a durable `eval.run` job plus the report:
+
+```json
+{
+  "job": {
+    "id": "<job_id>",
+    "kind": "eval.run",
+    "status": "succeeded"
+  },
+  "report": {
+    "suite_name": "retos-smoke",
+    "passed": true,
+    "case_count": 3,
+    "metrics": {
+      "retrieval_recall": 1.0,
+      "citation_validity": 1.0,
+      "grounded_answer": 1.0,
+      "abstention": 1.0,
+      "budget_compliance": 1.0
+    },
+    "cases": [
+      {
+        "case_id": "apollo-guidance",
+        "passed": true,
+        "failures": []
+      }
+    ]
+  }
+}
+```
+
+The run writes:
+
+- an `eval.run` job with the report under `job.payload.result`
+- `eval.queued`, `eval.started`, and `eval.completed` progress events
+- `eval.queued`, `job.running`, `eval.completed`, and `job.succeeded` journal events
+- live SSE progress events for connected clients
+
 ### Frontend Runtime Notes
 
 The React console reads `VITE_RETOS_API_URL` and falls back to `http://localhost:8000`.
@@ -390,6 +438,7 @@ Current console calls:
 - `POST /sources/{source_id}/scan`
 - `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
+- `POST /evals/smoke`
 - `GET /jobs?limit=12`
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`
@@ -403,9 +452,10 @@ The UI treats the provider catalog as read-only operational status:
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text ingestions, queue source scans, rebuild the
-BM25 index, read recent jobs, read persisted audit/progress events, filter the job ledger
-by status/kind, and send queries against the selected domain. Query execution uses
-`run_inline=true` so the UI can render the answer and citations immediately.
+BM25 index, run local smoke evals, read recent jobs, read persisted audit/progress
+events, filter the job ledger by status/kind, and send queries against the selected
+domain. Query execution uses `run_inline=true` so the UI can render the answer and
+citations immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.

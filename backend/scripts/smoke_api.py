@@ -371,6 +371,17 @@ def main() -> None:
                 "agent answer did not include grounded evidence",
             )
 
+            eval_smoke = client.post("/evals/smoke", headers=auth_headers)
+            require(
+                eval_smoke.status_code == 202,
+                f"eval smoke failed: {eval_smoke.status_code} {eval_smoke.text}",
+            )
+            eval_body = eval_smoke.json()
+            require(eval_body["job"]["kind"] == "eval.run", "invalid eval job kind")
+            require(eval_body["job"]["status"] == "succeeded", "eval job did not succeed")
+            require(eval_body["report"]["passed"] is True, "eval report did not pass")
+            require(eval_body["report"]["case_count"] == 3, "unexpected eval case count")
+
             created_job = client.post(
                 "/jobs",
                 headers=auth_headers,

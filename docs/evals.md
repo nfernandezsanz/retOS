@@ -40,6 +40,19 @@ The built-in suite creates a temporary Tantivy index and evaluates fixture cases
 
 The suite exits non-zero if any case fails.
 
+## API And UI
+
+The same smoke suite is available through the API:
+
+```bash
+curl --request POST http://localhost:8000/evals/smoke \
+  --header "Authorization: Bearer <token>"
+```
+
+The API creates a durable `eval.run` job, persists the report under `job.payload.result`,
+writes journal/progress events, and returns the report immediately. The React console
+uses this endpoint in the `Local evals` panel to show metrics and per-case status.
+
 ## Public Dataset Roadmap
 
 Do not vendor large benchmark datasets into this repository. Add adapters that download
@@ -62,7 +75,7 @@ or read user-provided dataset files under explicit opt-in commands.
 
 ## Next Implementation Step
 
-The next eval slice should add a small adapter interface:
+The next eval slice should add a small adapter interface and persisted report listing:
 
 ```text
 dataset file -> EvalCase[] -> local index -> scorer -> JSON/Markdown report
