@@ -9,7 +9,7 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 | Service | Purpose |
 | --- | --- |
 | `api` | FastAPI REST/SSE API. |
-| `worker` | Celery worker for long jobs. |
+| `worker` | Celery worker for long jobs, running the same backend image as `api` with a different command. |
 | `web` | React console served by Nginx. |
 | `postgres` | Durable catalog, jobs, journals, and ledgers. |
 | `rabbitmq` | Celery broker. |
@@ -39,6 +39,7 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Backend tests pass with >= 90% line and branch coverage.
 - Frontend builds.
 - Compose config validates.
+- Compose topology validates that API, worker, and migrations share one backend image.
 - Docker images build.
 - Docker stack smoke starts core services and hits API/web endpoints.
 - No secrets are baked into images.

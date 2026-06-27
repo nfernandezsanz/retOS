@@ -27,6 +27,10 @@ The `worker` service intentionally does not have its own build. It runs the exac
 The `migrate` service also uses `retos-backend` and runs `command: ["migrate"]`.
 It applies `alembic upgrade head` before API and worker start.
 
+CI enforces this topology with `scripts/check_docker_topology.sh`: `api`, `worker`,
+and `migrate` must resolve to the same backend image, only `api` may declare the
+shared backend build, and each role may differ only by command.
+
 ## Smoke Test
 
 Run the same Docker smoke used by CI:

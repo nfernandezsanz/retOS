@@ -68,6 +68,7 @@ integration: api-smoke frontend-e2e
 
 docker-config:
 	docker compose --env-file .env.example config
+	scripts/check_docker_topology.sh
 
 docker-build:
 	docker compose build api web
