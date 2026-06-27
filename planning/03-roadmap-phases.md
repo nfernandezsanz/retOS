@@ -71,7 +71,7 @@ Exit criteria:
 Deliverables:
 
 - Domain management.
-- Document upload/mount management.
+- Document upload and mounted source management.
 - Live job timeline for scan, OCR, extraction, segmentation, and indexing.
 - Query workspace with provider/budget selection.
 - Evidence and audit views.
@@ -79,7 +79,7 @@ Deliverables:
 
 Exit criteria:
 
-- A user can load a fixture corpus, index it, ask a question, and inspect evidence from the browser.
+- A user can upload a fixture file, load a mounted fixture corpus, index it, ask a question, and inspect evidence from the browser.
 - Playwright verifies the full happy path against the running UI.
 
 ## Phase 5 - Evals

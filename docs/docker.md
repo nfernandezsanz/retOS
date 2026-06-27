@@ -39,7 +39,7 @@ Run the same Docker smoke used by CI:
 make docker-smoke
 ```
 
-The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, creates a small mounted `.txt`/`.md`/`.pdf` corpus in the shared storage volume, creates a tiny SQuAD fixture in the eval dataset volume, waits for healthchecks, hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan through the worker, text ingestion through the worker, BM25 index rebuild through the worker, search, local and SQuAD eval endpoints with report export, job lifecycle transitions, persisted audit endpoints, SSE, and web over HTTP, then removes its temporary containers and volumes.
+The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, creates a small mounted `.txt`/`.md`/`.pdf` corpus in the shared storage volume, creates a tiny SQuAD fixture in the eval dataset volume, waits for healthchecks, hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan through the worker, text ingestion through the worker, file upload ingestion through the worker, BM25 index rebuild through the worker, search, local and SQuAD eval endpoints with report export, job lifecycle transitions, persisted audit endpoints, SSE, and web over HTTP, then removes its temporary containers and volumes.
 
 ## Run
 
@@ -76,9 +76,11 @@ The default Docker profile is local-first:
 - `RETOS_OLLAMA_MODEL=gemma4`
 - `RETOS_ALLOW_PAID_LLM=false`
 
-API, worker, and migrate share the same `retos-backend` image and the same provider
-environment. Non-secret provider settings are declared in `docker-compose.yml`; API keys
-come from a real `.env` file and are not present in `.env.example`.
+API, worker, and migrate share the same `retos-backend` image, Python dependencies, OCR
+runtime, provider environment, and mounted storage roots. The API writes uploaded files
+under `RETOS_STORAGE_ROOT`; the worker reads those same files from the same named volume.
+Non-secret provider settings are declared in `docker-compose.yml`; API keys come from a
+real `.env` file and are not present in `.env.example`.
 
 Eval datasets and report exports are mounted separately from the corpus and index:
 

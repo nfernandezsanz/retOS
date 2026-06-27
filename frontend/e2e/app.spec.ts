@@ -328,6 +328,33 @@ async function mockProviderApi(page: Page) {
       json: job,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/ingestions\/upload/, async (route) => {
+    const domainId = new URL(route.request().url()).pathname.split("/")[2];
+    documents.push({
+      id: "document-upload-1",
+      domain_id: domainId,
+      source_id: null,
+      external_id: "uploaded-fixture.txt",
+      title: "Uploaded Fixture",
+      content_hash: "1234567890abcdef",
+      metadata: { ingestion: { kind: "file_upload" } },
+      source_uri: "storage://uploads/domain-456/uploaded-fixture.txt",
+      size_bytes: 512,
+      created_at: "2026-06-27T00:00:00Z",
+      updated_at: "2026-06-27T00:00:00Z",
+    });
+    const job = jobFixture("job-upload-1", "ingest.source", "succeeded", {
+      ingestion_kind: "file_upload",
+      filename: "uploaded-fixture.txt",
+    });
+    jobs.unshift(job);
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: job,
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/queries/, async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -466,7 +493,17 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Rebuild index" }).click();
   await expect(page.getByLabel("Queued jobs").getByText("index.domain queued")).toBeVisible();
 
-  await page.getByPlaceholder("Research note").fill("Policy Note");
+  await page.getByLabel("Upload file").setInputFiles({
+    name: "uploaded-fixture.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Uploaded fixture text for browser smoke."),
+  });
+  await page.getByPlaceholder("Uploaded research note").fill("Uploaded Fixture");
+  await page.getByRole("button", { name: "Queue upload" }).click();
+  await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture")).toBeVisible();
+  await expect(page.getByLabel("Recent jobs").getByText("job-upload-1")).toBeVisible();
+
+  await page.getByPlaceholder("Research note", { exact: true }).fill("Policy Note");
   await page
     .getByPlaceholder("Paste local fixture text, notes, transcripts, or extracted content.")
     .fill("A policy note that can be ingested without touching paid providers.");

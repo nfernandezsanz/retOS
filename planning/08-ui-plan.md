@@ -37,8 +37,10 @@ The UI is a working console, not a landing page. It must make background process
 - The workspace reads and creates sources through `/domains/{domain_id}/sources`, queues
   mounted source scans through `/sources/{source_id}/scan`, and queues BM25 rebuilds
   through `/domains/{domain_id}/index/rebuild`.
-- The workspace queues inline text corpora through `/domains/{domain_id}/ingestions/text`,
-  refreshes documents, and reads recent jobs through `/jobs?limit=12`.
+- The workspace queues uploaded `.txt`, `.md`, and `.pdf` files through
+  `/domains/{domain_id}/ingestions/upload`, queues inline text corpora through
+  `/domains/{domain_id}/ingestions/text`, refreshes documents, and reads recent jobs
+  through `/jobs?limit=12`.
 - The query workspace posts to `/domains/{domain_id}/queries` with `run_inline=true` and
   renders the grounded answer, job status, provider model, and citation cards without
   requiring users to paste domain UUIDs.
@@ -53,9 +55,9 @@ The UI is a working console, not a landing page. It must make background process
   returned `eval.run` job, metric scorecards, per-case pass/failure rows, and a compact
   newest-first run history.
 - Browser smoke tests mock the API contract and verify provider, domain creation,
-  document/source inventory, text ingestion, scan/index queueing, job/audit filtering,
-  persisted audit events, eval smoke execution, eval run history, query, and live
-  progress flows.
+  document/source inventory, file upload, text ingestion, scan/index queueing,
+  job/audit filtering, persisted audit events, eval smoke execution, eval run history,
+  query, and live progress flows.
 
 ## Processing UI
 

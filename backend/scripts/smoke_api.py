@@ -255,6 +255,43 @@ def main() -> None:
                     "worker did not persist ingested document",
                 )
 
+            uploaded = client.post(
+                f"/domains/{domain_id}/ingestions/upload",
+                headers=auth_headers,
+                data={"title": "Smoke Uploaded File", "max_segment_tokens": "20"},
+                files={
+                    "file": (
+                        "smoke-upload.txt",
+                        b"Uploaded smoke fixture mentions citations and audit trails.",
+                        "text/plain",
+                    )
+                },
+            )
+            require(
+                uploaded.status_code == 202,
+                f"file upload queue failed: {uploaded.status_code} {uploaded.text}",
+            )
+            upload_job = uploaded.json()
+            require(upload_job["kind"] == "ingest.source", "invalid upload job kind")
+            if expect_worker:
+                upload_job = wait_for_job(client, job_id=upload_job["id"], headers=auth_headers)
+            require(
+                upload_job["status"] == "succeeded", f"upload job did not succeed: {upload_job}"
+            )
+
+            uploaded_documents = client.get(
+                f"/domains/{domain_id}/documents",
+                headers=auth_headers,
+            )
+            require(
+                uploaded_documents.status_code == 200,
+                f"uploaded document list failed: {uploaded_documents.status_code}",
+            )
+            require(
+                any(item["title"] == "Smoke Uploaded File" for item in uploaded_documents.json()),
+                "uploaded document missing from list",
+            )
+
             smoke_document_hash = (
                 "sha256:0000000000000000000000000000000000000000000000000000000000000001"
             )

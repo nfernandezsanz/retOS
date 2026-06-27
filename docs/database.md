@@ -61,6 +61,10 @@ The first API-backed workflows are document registration and job creation:
   worker materializes the text as a document, initial version, `raw_text` artifact, and
   deterministic segments, then writes `document.ingested`, `job.succeeded` or `job.failed`,
   and ingestion progress events.
+- `POST /domains/{domain_id}/ingestions/upload` stores sanitized `.txt`, `.md`, or `.pdf`
+  uploads in shared storage, queues an `ingest.source` job, and lets the worker create the
+  canonical document/version, `extracted_text` artifact, deterministic segments, and
+  upload-specific journal/progress events.
 - `POST /sources/{source_id}/scan` queues an `ingest.source` job for mounted `file://`
   `.txt`, `.md`, and digital `.pdf` corpora. The scan skips duplicate domain content
   hashes, preserving idempotency for repeated fixture corpus runs.

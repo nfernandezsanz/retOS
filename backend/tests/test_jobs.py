@@ -110,6 +110,70 @@ async def test_scan_source_task_disposes_engine_on_success(
 
 
 @pytest.mark.asyncio
+async def test_file_upload_ingestion_task_disposes_engine_on_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, object]] = []
+    result = SimpleNamespace(document=SimpleNamespace(id="document-upload"))
+
+    monkeypatch.setattr(tasks, "get_settings", lambda: SimpleNamespace(database_url="sqlite://"))
+    monkeypatch.setattr(tasks, "create_engine", lambda url: "engine")
+    monkeypatch.setattr(tasks, "create_session_factory", lambda engine: "factory")
+    monkeypatch.setattr(tasks, "SQLAlchemyUnitOfWork", lambda factory: SimpleNamespace())
+
+    async def fake_run_file_upload_ingestion(**kwargs: object) -> object:
+        calls.append(("upload", kwargs["job_id"]))
+        return result
+
+    async def fake_dispose_engine(engine: object) -> None:
+        calls.append(("dispose", engine))
+
+    monkeypatch.setattr(tasks, "run_file_upload_ingestion", fake_run_file_upload_ingestion)
+    monkeypatch.setattr(tasks, "dispose_engine", fake_dispose_engine)
+
+    document_id = await tasks._run_file_upload_ingestion_task("job-upload")
+
+    assert document_id == "document-upload"
+    assert ("upload", "job-upload") in calls
+    assert calls[-1] == ("dispose", "engine")
+
+
+@pytest.mark.asyncio
+async def test_file_upload_ingestion_task_marks_failure_and_disposes_engine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, object]] = []
+
+    monkeypatch.setattr(tasks, "get_settings", lambda: SimpleNamespace(database_url="sqlite://"))
+    monkeypatch.setattr(tasks, "create_engine", lambda url: "engine")
+    monkeypatch.setattr(tasks, "create_session_factory", lambda engine: "factory")
+    monkeypatch.setattr(tasks, "SQLAlchemyUnitOfWork", lambda factory: SimpleNamespace())
+
+    async def fake_run_file_upload_ingestion(**_: object) -> object:
+        raise RuntimeError("broken upload")
+
+    async def fake_fail_file_upload_ingestion_job(**kwargs: object) -> None:
+        calls.append(("fail", kwargs["error"]))
+
+    async def fake_dispose_engine(engine: object) -> None:
+        calls.append(("dispose", engine))
+
+    monkeypatch.setattr(tasks, "run_file_upload_ingestion", fake_run_file_upload_ingestion)
+    monkeypatch.setattr(
+        tasks,
+        "fail_file_upload_ingestion_job",
+        fake_fail_file_upload_ingestion_job,
+    )
+    monkeypatch.setattr(tasks, "dispose_engine", fake_dispose_engine)
+
+    with pytest.raises(RuntimeError, match="broken upload"):
+        await tasks._run_file_upload_ingestion_task("job-upload")
+
+    assert ("fail", "broken upload") in calls
+    assert calls[-1] == ("dispose", "engine")
+
+
+@pytest.mark.asyncio
 async def test_scan_source_task_marks_failure_and_disposes_engine(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

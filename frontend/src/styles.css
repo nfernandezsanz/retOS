@@ -346,6 +346,8 @@ h2 {
 .domain-toolbar select,
 .source-form input,
 .source-form select,
+.file-upload-form input,
+.file-upload-form select,
 .text-ingestion-form input,
 .text-ingestion-form select,
 .text-ingestion-form textarea,
@@ -373,6 +375,8 @@ h2 {
 .domain-toolbar select,
 .source-form input,
 .source-form select,
+.file-upload-form input,
+.file-upload-form select,
 .text-ingestion-form input,
 .text-ingestion-form select,
 .eval-dataset-form input,
@@ -386,6 +390,8 @@ h2 {
 .domain-toolbar select:focus-visible,
 .source-form input:focus-visible,
 .source-form select:focus-visible,
+.file-upload-form input:focus-visible,
+.file-upload-form select:focus-visible,
 .text-ingestion-form input:focus-visible,
 .text-ingestion-form select:focus-visible,
 .text-ingestion-form textarea:focus-visible,
@@ -403,6 +409,7 @@ button:focus-visible {
 
 .domain-form,
 .source-form,
+.file-upload-form,
 .text-ingestion-form,
 .eval-dataset-form {
   display: grid;
@@ -413,6 +420,7 @@ button:focus-visible {
 .domain-form label,
 .domain-toolbar label,
 .source-form label,
+.file-upload-form label,
 .text-ingestion-form label,
 .eval-dataset-form label {
   display: grid;
@@ -423,6 +431,7 @@ button:focus-visible {
 
 .domain-form .span-two,
 .source-form .span-two,
+.file-upload-form .span-two,
 .text-ingestion-form .span-two,
 .eval-dataset-form .span-two {
   grid-column: 1 / -1;
@@ -430,6 +439,7 @@ button:focus-visible {
 
 .domain-form .secondary-action,
 .source-form .secondary-action,
+.file-upload-form .secondary-action,
 .text-ingestion-form .secondary-action,
 .eval-dataset-form .secondary-action {
   grid-column: 1 / -1;
@@ -1150,6 +1160,7 @@ button:focus-visible {
   .domain-form,
   .domain-toolbar,
   .source-form,
+  .file-upload-form,
   .text-ingestion-form,
   .eval-dataset-form,
   .audit-toolbar,

@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.90% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.09% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -27,6 +27,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Durable artifact and segment APIs for OCR outputs, rebuildable projections, retrieval chunks, and citation anchors.
 - Durable jobs API with persisted lifecycle transitions, journal records, progress-event records, and live SSE notifications.
 - Text ingestion API and Celery worker path that hashes inline text, creates document/version/artifact/segment records, and emits auditable progress.
+- File upload ingestion API and React flow for `.txt`, `.md`, and `.pdf` documents, using shared storage so the API and worker process the same uploaded bytes from the same backend image/runtime.
 - Mounted source scanner for `.txt`, `.md`, digital `.pdf`, and OCR fallback for image-only PDFs with idempotent duplicate-hash skips, extracted-text artifacts, deterministic segments, and scan progress.
 - Tantivy BM25 search adapter with durable `index.domain` jobs, rebuildable domain indexes, searchable segments, and citation anchors.
 - LLM provider catalog API with local Ollama `gemma4` as the default profile and paid providers blocked unless explicitly enabled.
@@ -188,12 +189,12 @@ Every meaningful change should pass these gates:
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
-| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan, text ingestion queueing, BM25 rebuild/search, job lifecycle, and SSE over HTTP. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, job lifecycle, and SSE over HTTP. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
-| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, domain/source/document/artifact/segment CRUD, worker-backed source scan, worker-backed text ingestion, worker-backed BM25 rebuild/search, job lifecycle, SSE, and web over HTTP. |
+| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, domain/source/document/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, job lifecycle, SSE, and web over HTTP. |
 
 ## Security Defaults
 

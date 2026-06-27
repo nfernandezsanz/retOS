@@ -333,6 +333,37 @@ async function ingestText(
   });
 }
 
+async function uploadDocumentFile(
+  token: string,
+  domainId: string,
+  payload: {
+    file: File;
+    source_id: string | null;
+    title: string | null;
+  },
+): Promise<JobRead> {
+  const form = new FormData();
+  form.append("file", payload.file);
+  if (payload.source_id) {
+    form.append("source_id", payload.source_id);
+  }
+  if (payload.title) {
+    form.append("title", payload.title);
+  }
+  form.append("max_segment_tokens", "220");
+  const response = await fetch(`${API_BASE_URL}/domains/${domainId}/ingestions/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: form,
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed with ${response.status}`);
+  }
+  return (await response.json()) as JobRead;
+}
+
 async function scanSource(token: string, sourceId: string): Promise<JobRead> {
   return requestJson<JobRead>(`/sources/${sourceId}/scan`, {
     method: "POST",
@@ -517,9 +548,13 @@ function App() {
   const [isQueueingIndex, setIsQueueingIndex] = useState(false);
   const [queuedJobs, setQueuedJobs] = useState<JobRead[]>([]);
   const [isIngestingText, setIsIngestingText] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [textTitle, setTextTitle] = useState("");
   const [textBody, setTextBody] = useState("");
   const [textSourceId, setTextSourceId] = useState("");
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadSourceId, setUploadSourceId] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [domainSlug, setDomainSlug] = useState("");
   const [domainName, setDomainName] = useState("");
   const [domainDescription, setDomainDescription] = useState("");
@@ -820,6 +855,45 @@ function App() {
     }
   }
 
+  async function handleUploadFile(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const uploadForm = event.currentTarget;
+    setWorkspaceError(null);
+    setIsUploadingFile(true);
+    try {
+      if (!selectedDomainId) {
+        throw new Error("Select a domain before uploading a file");
+      }
+      if (!uploadFile) {
+        throw new Error("Choose a supported .txt, .md, or .pdf file");
+      }
+      const accessToken = await getAdminToken();
+      const job = await uploadDocumentFile(accessToken, selectedDomainId, {
+        file: uploadFile,
+        source_id: uploadSourceId || null,
+        title: uploadTitle.trim() || null,
+      });
+      setQueuedJobs((current) => [job, ...current].slice(0, 6));
+      setUploadTitle("");
+      setUploadSourceId("");
+      setUploadFile(null);
+      const uploadInput = uploadForm.elements.namedItem("uploadFile");
+      if (uploadInput instanceof HTMLInputElement) {
+        uploadInput.value = "";
+      }
+      const [nextDocuments, nextJobs] = await Promise.all([
+        loadDocuments(accessToken, selectedDomainId),
+        loadJobs(accessToken),
+      ]);
+      setDocuments(nextDocuments);
+      setQueuedJobs(nextJobs.length > 0 ? nextJobs : [job]);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "File upload failed");
+    } finally {
+      setIsUploadingFile(false);
+    }
+  }
+
   async function handleScanSource(sourceId: string) {
     setWorkspaceError(null);
     setIsQueueingScan(true);
@@ -1040,6 +1114,9 @@ function App() {
     setTextTitle("");
     setTextBody("");
     setTextSourceId("");
+    setUploadTitle("");
+    setUploadSourceId("");
+    setUploadFile(null);
   }
 
   return (
@@ -1259,6 +1336,53 @@ function App() {
                   </div>
                 ) : null}
               </div>
+            </section>
+            <section className="file-upload" aria-label="File upload">
+              <div className="section-heading">
+                <h3>File upload</h3>
+              </div>
+              <form className="file-upload-form" onSubmit={handleUploadFile}>
+                <label>
+                  <span>File</span>
+                  <input
+                    aria-label="Upload file"
+                    accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf"
+                    name="uploadFile"
+                    type="file"
+                    onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <label>
+                  <span>Title</span>
+                  <input
+                    placeholder="Uploaded research note"
+                    value={uploadTitle}
+                    onChange={(event) => setUploadTitle(event.target.value)}
+                  />
+                </label>
+                <label className="span-two">
+                  <span>Source</span>
+                  <select
+                    value={uploadSourceId}
+                    onChange={(event) => setUploadSourceId(event.target.value)}
+                  >
+                    <option value="">No source</option>
+                    {sources.map((source) => (
+                      <option key={source.id} value={source.id}>
+                        {source.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="secondary-action"
+                  disabled={!selectedDomainId || isUploadingFile}
+                  type="submit"
+                >
+                  <FileSearch aria-hidden="true" />
+                  {isUploadingFile ? "Queueing upload" : "Queue upload"}
+                </button>
+              </form>
             </section>
             <section className="text-ingestion" aria-label="Text ingestion">
               <div className="section-heading">

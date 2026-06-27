@@ -206,6 +206,41 @@ Local API smoke runs with `RETOS_ENV=test`, so it verifies queuing without requi
 broker. Docker smoke runs RabbitMQ and the worker and waits for the ingestion job to
 finish.
 
+## File Upload Ingestion
+
+Queue an uploaded `.txt`, `.md`, or `.pdf` file for a domain:
+
+```bash
+curl --request POST http://localhost:8000/domains/<domain_id>/ingestions/upload \
+  --header "Authorization: Bearer <token>" \
+  --form "file=@./fixture-note.txt;type=text/plain" \
+  --form "title=Fixture Upload" \
+  --form "max_segment_tokens=220" \
+  --form "enable_ocr=true" \
+  --form "max_ocr_pages=20"
+```
+
+Optional fields:
+
+- `source_id`: attaches the uploaded document to an existing source in the same domain.
+- `title`: overrides the filename as the visible document title.
+- `max_bytes`: defaults to 2 MB for the current product slice.
+- `max_segment_tokens`: controls deterministic word-window chunking.
+- `enable_ocr` and `max_ocr_pages`: allow local OCR fallback for image-only PDFs.
+
+The API sanitizes the filename, rejects unsupported extensions before writing the file,
+stores bytes under `RETOS_STORAGE_ROOT/uploads/<domain_id>/<upload_id>/`, creates a
+durable `ingest.source` job, writes `upload.queued` journal/progress records, and emits
+SSE progress. In Docker/runtime mode, RabbitMQ dispatches the job to the worker. The API
+and worker use the same `retos-backend` image and the same storage volume, so the worker
+processes the exact uploaded bytes instead of relying on a parallel implementation path.
+
+When the worker succeeds, it creates the canonical document, immutable version,
+text artifact (`raw_text`, `extracted_text`, or `ocr_text` depending on extraction),
+deterministic segments, `document.ingested` journal event, `job.succeeded`
+journal/progress records, and live `upload.completed` progress. Duplicate content hashes
+in the same domain are rejected consistently with mounted scans and text ingestion.
+
 ## Mounted Source Scan
 
 Scan a mounted `file://` source for `.txt`, `.md`, and digital `.pdf` files:
@@ -508,6 +543,7 @@ Current console calls:
 - `GET /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/ingestions/text`
+- `POST /domains/{domain_id}/ingestions/upload`
 - `POST /sources/{source_id}/scan`
 - `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
@@ -526,11 +562,11 @@ The UI treats the provider catalog as read-only operational status:
 - API keys are never returned to the browser.
 
 The workspace can create domains, select an active domain, render its document and source
-inventory, create mounted sources, queue text ingestions, queue source scans, rebuild the
-BM25 index, run local smoke/SQuAD evals, read recent jobs, read persisted audit/progress
-events, filter the job ledger by status/kind, and send queries against the selected
-domain. Query execution uses `run_inline=true` so the UI can render the answer and
-citations immediately.
+inventory, create mounted sources, queue text and file upload ingestions, queue source
+scans, rebuild the BM25 index, run local smoke/SQuAD evals, read recent jobs, read
+persisted audit/progress events, filter the job ledger by status/kind, and send queries
+against the selected domain. Query execution uses `run_inline=true` so the UI can render
+the answer and citations immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.
