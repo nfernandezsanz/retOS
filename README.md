@@ -9,11 +9,11 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 92.40% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.31% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
-| Next milestone | Phase 1: core domain persistence, jobs, journals, progress events, and admin persistence. |
+| Next milestone | Phase 2: ingestion, OCR, and BM25 search projections. |
 
 This repository is intentionally being built as a staff-engineer-quality reference project: decisions are documented, quality gates are automated, integration checks hit real endpoints, UI smoke tests open the actual frontend, and every implementation phase is expected to leave behind tests, auditability, and operating notes.
 
@@ -26,6 +26,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Durable documents API with immutable initial versions, audit journal entries, progress events, and live SSE notifications.
 - Durable artifact and segment APIs for OCR outputs, rebuildable projections, retrieval chunks, and citation anchors.
 - Durable jobs API with persisted lifecycle transitions, journal records, progress-event records, and live SSE notifications.
+- Text ingestion API and Celery worker path that hashes inline text, creates document/version/artifact/segment records, and emits auditable progress.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for documents, jobs, OCR, indexing, and agent runs.
 - Docker Compose for Postgres, RabbitMQ, Ollama, API, worker, and web services.
 - Planning, ADRs, and architecture assets for the open source implementation path.
@@ -176,12 +177,12 @@ Every meaningful change should pass these gates:
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
-| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document/artifact/segment CRUD, job lifecycle, and SSE over HTTP. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document/artifact/segment CRUD, text ingestion queueing, job lifecycle, and SSE over HTTP. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
-| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, and hits health, auth, domain/source/document/artifact/segment CRUD, job lifecycle, SSE, and web over HTTP. |
+| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, and hits health, auth, domain/source/document/artifact/segment CRUD, worker-backed text ingestion, job lifecycle, SSE, and web over HTTP. |
 
 ## Security Defaults
 
@@ -191,7 +192,7 @@ Every meaningful change should pass these gates:
 - Passwords are hashed with Argon2 through `pwdlib`.
 - JWTs include issuer, audience, issue time, not-before time, and expiration.
 - CORS is explicit; wildcard origins are rejected outside development.
-- RabbitMQ carries job commands and IDs only. Documents and artifacts stay in Postgres-backed metadata and storage volumes.
+- RabbitMQ carries job commands and IDs only; Celery task results are ignored by default. Documents, artifacts, and durable job state stay in Postgres-backed metadata and storage volumes.
 
 ## Repository Layout
 
@@ -206,4 +207,4 @@ evals/        Future local evaluation datasets and reports
 
 ## Project Status
 
-The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The next milestone is Phase 1: persistent domain/document/job/audit foundations with integration tests and UI-visible progress.
+The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 2: ingestion, OCR, and BM25 search projections with integration tests and UI-visible progress.

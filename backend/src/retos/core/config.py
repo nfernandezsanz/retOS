@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://retos:retos@localhost:5432/retos"
     database_create_all: bool = False
     celery_broker_url: str = "amqp://retos:retos@localhost:5672//"
-    celery_result_backend: str = "rpc://"
+    celery_result_backend: str | None = None
     jwt_secret: SecretStr = SecretStr(DEVELOPMENT_JWT_SECRET)
     jwt_issuer: str = "retos"
     jwt_audience: str = "retos-api"

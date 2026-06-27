@@ -15,6 +15,8 @@ celery_app.conf.update(
     task_default_queue="retos",
     task_acks_late=True,
     task_reject_on_worker_lost=True,
+    task_ignore_result=True,
+    worker_enable_remote_control=False,
     worker_prefetch_multiplier=1,
     task_serializer="json",
     accept_content=["json"],

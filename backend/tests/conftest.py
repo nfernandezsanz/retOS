@@ -6,7 +6,15 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from retos.api.app import create_app
+from retos.api.routes.events import progress_store
 from retos.core.config import Settings
+
+
+@pytest.fixture(autouse=True)
+def reset_progress_store() -> Iterator[None]:
+    progress_store.reset()
+    yield
+    progress_store.reset()
 
 
 @pytest.fixture

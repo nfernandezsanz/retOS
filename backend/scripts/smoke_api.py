@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 
 import httpx
 
@@ -15,6 +16,7 @@ def main() -> None:
     base_url = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     admin_email = os.environ.get("RETOS_BOOTSTRAP_ADMIN_EMAIL", "admin@retos.dev")
     admin_password = os.environ.get("RETOS_BOOTSTRAP_ADMIN_PASSWORD", "test-admin-password")
+    expect_worker = os.environ.get("RETOS_EXPECT_WORKER", "0") == "1"
 
     with httpx.Client(base_url=base_url, timeout=10) as client:
         health = client.get("/healthz")
@@ -87,6 +89,62 @@ def main() -> None:
             "created source missing from list",
         )
         source_id = listed_sources.json()[0]["id"]
+
+        ingestion = client.post(
+            f"/domains/{domain_id}/ingestions/text",
+            headers=auth_headers,
+            json={
+                "source_id": source_id,
+                "title": "Smoke Ingested Text",
+                "text": " ".join(f"smoke-token-{index}" for index in range(55)),
+                "source_uri": "inline://smoke/ingested.txt",
+                "metadata": {"fixture": "api-smoke"},
+                "max_segment_tokens": 20,
+            },
+        )
+        require(
+            ingestion.status_code == 202,
+            f"text ingestion queue failed: {ingestion.status_code} {ingestion.text}",
+        )
+        ingestion_job = ingestion.json()
+        require(ingestion_job["status"] == "queued", "ingestion job should start queued")
+
+        if expect_worker:
+            deadline = time.monotonic() + 60
+            completed_ingestion = ingestion_job
+            while time.monotonic() < deadline:
+                fetched = client.get(f"/jobs/{ingestion_job['id']}", headers=auth_headers)
+                require(
+                    fetched.status_code == 200,
+                    f"ingestion job fetch failed: {fetched.status_code} {fetched.text}",
+                )
+                completed_ingestion = fetched.json()
+                if completed_ingestion["status"] in {"succeeded", "failed", "cancelled"}:
+                    break
+                time.sleep(1)
+            require(
+                completed_ingestion["status"] == "succeeded",
+                f"ingestion job did not succeed: {completed_ingestion}",
+            )
+
+            ingested_documents = client.get(
+                f"/domains/{domain_id}/documents",
+                headers=auth_headers,
+            )
+            require(
+                ingested_documents.status_code == 200,
+                f"ingested document list failed: {ingested_documents.status_code}",
+            )
+            ingested_document = next(
+                (
+                    item
+                    for item in ingested_documents.json()
+                    if item["title"] == "Smoke Ingested Text"
+                ),
+                None,
+            )
+            require(ingested_document is not None, "worker did not persist ingested document")
+
         smoke_document_hash = (
             "sha256:0000000000000000000000000000000000000000000000000000000000000001"
         )
@@ -245,6 +303,8 @@ def main() -> None:
                     or "document.created" in line
                     or "artifact.created" in line
                     or "segment.created" in line
+                    or "ingestion.queued" in line
+                    or "ingestion.completed" in line
                     or "job.queued" in line
                     or "job.running" in line
                     or "job.succeeded" in line

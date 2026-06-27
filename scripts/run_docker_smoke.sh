@@ -41,4 +41,5 @@ trap finish EXIT
 curl --fail --silent --show-error http://127.0.0.1:8000/healthz >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null
 RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me \
+  RETOS_EXPECT_WORKER=1 \
   "${python_bin}" backend/scripts/smoke_api.py http://127.0.0.1:8000

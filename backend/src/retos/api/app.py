@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from retos.api.routes import auth, documents, domains, events, health, jobs
+from retos.api.routes import auth, documents, domains, events, health, ingestions, jobs
 from retos.core.config import Settings, get_settings
 from retos.persistence.bootstrap import bootstrap_admin_user
 from retos.persistence.database import (
@@ -54,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth.router)
     app.include_router(domains.router)
     app.include_router(documents.router)
+    app.include_router(ingestions.router)
     app.include_router(jobs.router)
     app.include_router(events.router)
     return app

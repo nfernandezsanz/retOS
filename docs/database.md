@@ -57,6 +57,10 @@ The first API-backed workflows are document registration and job creation:
   `job.queued` progress event, and emits a live SSE notification.
 - `POST /jobs/{job_id}/start|complete|fail|cancel` changes durable job status and
   writes journal/progress/SSE events for every transition.
+- `POST /domains/{domain_id}/ingestions/text` queues an `ingest.source` job. The Celery
+  worker materializes the text as a document, initial version, `raw_text` artifact, and
+  deterministic segments, then writes `document.ingested`, `job.succeeded` or `job.failed`,
+  and ingestion progress events.
 
 ## Development Contract
 

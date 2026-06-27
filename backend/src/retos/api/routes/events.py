@@ -18,7 +18,11 @@ class ProgressEvent(BaseModel):
 
 class InMemoryProgressStore:
     def __init__(self) -> None:
-        self._events: list[ProgressEvent] = [
+        self._events: list[ProgressEvent] = []
+        self.reset()
+
+    def reset(self) -> None:
+        self._events = [
             ProgressEvent(
                 id=1,
                 event="system.ready",

@@ -35,7 +35,7 @@ Run the same Docker smoke used by CI:
 make docker-smoke
 ```
 
-The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, waits for healthchecks, hits health, auth, domain/source/document/artifact/segment CRUD, job lifecycle transitions, SSE, and web over HTTP, then removes its temporary containers and volumes.
+The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, waits for healthchecks, hits health, auth, domain/source/document/artifact/segment CRUD, text ingestion through the worker, job lifecycle transitions, SSE, and web over HTTP, then removes its temporary containers and volumes.
 
 ## Run
 
@@ -92,7 +92,7 @@ See [database.md](database.md) for schema and migration details.
 - Application containers run as non-root users.
 - The backend image installs local OCR support for English and Spanish.
 - `.dockerignore` excludes secrets, local volumes, virtualenvs, caches, tests, planning docs, and generated frontend assets.
-- RabbitMQ carries lightweight job messages only. Documents and artifacts belong in Postgres-backed metadata and storage volumes.
+- RabbitMQ carries lightweight job messages only. Celery task results are ignored by default, and worker remote-control gossip/mingle is disabled for RabbitMQ 4 compatibility; durable job status, documents, and artifacts belong in Postgres-backed metadata and storage volumes.
 - Development passwords in `.env.example` must be changed for anything beyond local use.
 - `postgres:18-bookworm` stores data under a major-version-aware directory, so the volume is mounted at `/var/lib/postgresql`, not `/var/lib/postgresql/data`.
 

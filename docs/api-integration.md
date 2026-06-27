@@ -168,6 +168,38 @@ curl --header "Authorization: Bearer <token>" \
 
 Segments are ordered by `ordinal` and are unique per document version.
 
+## Text Ingestion
+
+Queue plain-text ingestion for a domain:
+
+```bash
+curl --request POST http://localhost:8000/domains/<domain_id>/ingestions/text \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "source_id":"<source_id>",
+    "title":"Fixture Text",
+    "text":"The worker will hash, version, artifact, and segment this text.",
+    "source_uri":"inline://fixture.txt",
+    "metadata":{"language":"en"},
+    "max_segment_tokens":220
+  }'
+```
+
+The response is `202 Accepted` with a durable `ingest.source` job in `queued` status.
+Outside `RETOS_ENV=test`, the API dispatches a Celery task to RabbitMQ. The worker then:
+
+- transitions the job to `running`
+- creates the canonical document and immutable version
+- creates a `raw_text` artifact
+- creates deterministic word-window segments
+- transitions the job to `succeeded` or `failed`
+- writes journal/progress records and SSE updates
+
+Local API smoke runs with `RETOS_ENV=test`, so it verifies queuing without requiring a
+broker. Docker smoke runs RabbitMQ and the worker and waits for the ingestion job to
+finish.
+
 ## Progress Events
 
 Long-running workflows expose progress through Server-Sent Events:
