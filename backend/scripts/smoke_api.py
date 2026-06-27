@@ -195,6 +195,20 @@ def main() -> None:
         require(job["status"] == "queued", "created job should be queued")
         require(job["kind"] == "ingest.source", "invalid created job kind")
 
+        started_job = client.post(f"/jobs/{job['id']}/start", headers=auth_headers)
+        require(
+            started_job.status_code == 200,
+            f"job start failed: {started_job.status_code} {started_job.text}",
+        )
+        require(started_job.json()["status"] == "running", "started job should be running")
+
+        completed_job = client.post(f"/jobs/{job['id']}/complete", headers=auth_headers)
+        require(
+            completed_job.status_code == 200,
+            f"job complete failed: {completed_job.status_code} {completed_job.text}",
+        )
+        require(completed_job.json()["status"] == "succeeded", "completed job should succeed")
+
         listed_jobs = client.get("/jobs", headers=auth_headers)
         require(
             listed_jobs.status_code == 200,
@@ -232,6 +246,8 @@ def main() -> None:
                     or "artifact.created" in line
                     or "segment.created" in line
                     or "job.queued" in line
+                    or "job.running" in line
+                    or "job.succeeded" in line
                     for line in lines
                 ),
                 "missing expected progress event",

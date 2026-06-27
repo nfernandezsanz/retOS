@@ -22,6 +22,8 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/document-versions/{version_id}/artifacts" in route_paths
     assert "/document-versions/{version_id}/segments" in route_paths
     assert "/jobs" in route_paths
+    assert "/jobs/{job_id}/start" in route_paths
+    assert "/jobs/{job_id}/complete" in route_paths
     assert "/events/progress" in route_paths
 
 

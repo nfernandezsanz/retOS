@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import cast
 from uuid import uuid4
 
@@ -474,6 +475,27 @@ class JobRepository:
         record = await self._session.get(JobRecord, job_id)
         if record is None:
             return None
+        return job_from_record(record)
+
+    async def update_status(
+        self,
+        *,
+        job_id: str,
+        status: JobStatus,
+        started_at: datetime | None = None,
+        completed_at: datetime | None = None,
+        error: str | None = None,
+    ) -> Job | None:
+        record = await self._session.get(JobRecord, job_id)
+        if record is None:
+            return None
+        record.status = status
+        record.error = error
+        if started_at is not None:
+            record.started_at = started_at
+        if completed_at is not None:
+            record.completed_at = completed_at
+        await self._session.flush()
         return job_from_record(record)
 
     async def list(self, *, limit: int = 100) -> list[Job]:

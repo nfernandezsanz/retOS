@@ -66,6 +66,27 @@ def count_audit_rows(db_path: Path) -> tuple[int, int]:
         connection.close()
 
 
+def create_job(
+    client: TestClient,
+    headers: dict[str, str],
+    *,
+    kind: str = "ingest.source",
+) -> dict[str, object]:
+    domain_id, source_id = create_domain_and_source(client, headers)
+    response = client.post(
+        "/jobs",
+        json={
+            "kind": kind,
+            "domain_id": domain_id,
+            "source_id": source_id,
+            "payload": {"reason": "api-test"},
+        },
+        headers=headers,
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
 def test_jobs_require_admin_token(jobs_client: TestClient) -> None:
     response = jobs_client.get("/jobs")
 
@@ -109,6 +130,71 @@ def test_create_list_and_get_job(
     assert fetched.json()["id"] == job["id"]
 
     assert count_audit_rows(jobs_db_path) == (1, 1)
+
+
+def test_job_transition_lifecycle(
+    jobs_client: TestClient,
+    jobs_admin_headers: dict[str, str],
+    jobs_db_path: Path,
+) -> None:
+    job = create_job(jobs_client, jobs_admin_headers)
+
+    started = jobs_client.post(f"/jobs/{job['id']}/start", headers=jobs_admin_headers)
+    assert started.status_code == 200
+    assert started.json()["status"] == "running"
+    assert started.json()["started_at"]
+    assert started.json()["completed_at"] is None
+
+    completed = jobs_client.post(f"/jobs/{job['id']}/complete", headers=jobs_admin_headers)
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "succeeded"
+    assert completed.json()["completed_at"]
+
+    assert count_audit_rows(jobs_db_path) == (3, 3)
+
+
+def test_job_failure_records_error(
+    jobs_client: TestClient,
+    jobs_admin_headers: dict[str, str],
+) -> None:
+    job = create_job(jobs_client, jobs_admin_headers, kind="index.domain")
+
+    started = jobs_client.post(f"/jobs/{job['id']}/start", headers=jobs_admin_headers)
+    failed = jobs_client.post(
+        f"/jobs/{job['id']}/fail",
+        json={"error": "fixture failure"},
+        headers=jobs_admin_headers,
+    )
+
+    assert started.status_code == 200
+    assert failed.status_code == 200
+    assert failed.json()["status"] == "failed"
+    assert failed.json()["error"] == "fixture failure"
+
+
+def test_job_transition_rejects_invalid_order(
+    jobs_client: TestClient,
+    jobs_admin_headers: dict[str, str],
+) -> None:
+    job = create_job(jobs_client, jobs_admin_headers)
+
+    response = jobs_client.post(f"/jobs/{job['id']}/complete", headers=jobs_admin_headers)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Cannot transition job from queued to succeeded"
+
+
+def test_cancel_job_from_queue(
+    jobs_client: TestClient,
+    jobs_admin_headers: dict[str, str],
+) -> None:
+    job = create_job(jobs_client, jobs_admin_headers)
+
+    response = jobs_client.post(f"/jobs/{job['id']}/cancel", headers=jobs_admin_headers)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelled"
+    assert response.json()["completed_at"]
 
 
 def test_create_job_rejects_missing_domain(

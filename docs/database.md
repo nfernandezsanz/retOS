@@ -55,6 +55,8 @@ The first API-backed workflows are document registration and job creation:
   writes `segment.created` journal/progress events.
 - `POST /jobs` creates a queued job, writes a `job.created` journal event, writes a
   `job.queued` progress event, and emits a live SSE notification.
+- `POST /jobs/{job_id}/start|complete|fail|cancel` changes durable job status and
+  writes journal/progress/SSE events for every transition.
 
 ## Development Contract
 

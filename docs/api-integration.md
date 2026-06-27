@@ -212,6 +212,36 @@ New jobs start as `queued`. Job creation persists:
 - a `job.queued` progress event
 - a live SSE notification for connected clients
 
+Transition jobs through the durable lifecycle:
+
+```bash
+curl --request POST --header "Authorization: Bearer <token>" \
+  http://localhost:8000/jobs/<job_id>/start
+
+curl --request POST --header "Authorization: Bearer <token>" \
+  http://localhost:8000/jobs/<job_id>/complete
+
+curl --request POST http://localhost:8000/jobs/<job_id>/fail \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"error":"OCR failed"}'
+
+curl --request POST --header "Authorization: Bearer <token>" \
+  http://localhost:8000/jobs/<job_id>/cancel
+```
+
+Allowed transitions:
+
+| From | To |
+| --- | --- |
+| `queued` | `running`, `cancelled` |
+| `running` | `succeeded`, `failed`, `cancelled` |
+| `succeeded` | terminal |
+| `failed` | terminal |
+| `cancelled` | terminal |
+
+Each transition writes a journal event, a progress event, and a live SSE update.
+
 List jobs:
 
 ```bash

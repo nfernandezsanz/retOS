@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
@@ -46,6 +46,82 @@ class JobRead(BaseModel):
             created_at=job.created_at,
             updated_at=job.updated_at,
         )
+
+
+class JobTransitionRequest(BaseModel):
+    error: str | None = Field(default=None, max_length=4000)
+
+
+TRANSITIONS: dict[JobStatus, tuple[JobStatus, ...]] = {
+    "queued": ("running", "cancelled"),
+    "running": ("succeeded", "failed", "cancelled"),
+    "succeeded": (),
+    "failed": (),
+    "cancelled": (),
+}
+
+
+def validate_transition(current: JobStatus, target: JobStatus) -> None:
+    if target not in TRANSITIONS[current]:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot transition job from {current} to {target}",
+        )
+
+
+async def transition_job(
+    *,
+    job_id: str,
+    target: JobStatus,
+    actor: str,
+    uow: UnitOfWorkDep,
+    error: str | None = None,
+) -> JobRead:
+    now = datetime.now(UTC)
+    async with uow:
+        current = await uow.jobs.get(job_id)
+        if current is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        validate_transition(current.status, target)
+        job = await uow.jobs.update_status(
+            job_id=job_id,
+            status=target,
+            started_at=now if target == "running" else None,
+            completed_at=now if target in ("succeeded", "failed", "cancelled") else None,
+            error=error if target == "failed" else None,
+        )
+        if job is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        event_type = f"job.{target}"
+        await uow.journal_events.add(
+            actor=actor,
+            event_type=event_type,
+            entity_type="job",
+            entity_id=job.id,
+            payload={
+                "from_status": current.status,
+                "to_status": target,
+                "error": job.error,
+            },
+        )
+        await uow.progress_events.add(
+            job_id=job.id,
+            event_type=event_type,
+            message=f"Job {job.kind} is {target}",
+            payload={"status": target, "error": job.error},
+        )
+        await uow.commit()
+
+    progress_store.append(
+        f"job.{target}",
+        {
+            "job_id": job.id,
+            "kind": job.kind,
+            "status": job.status,
+            "error": job.error,
+        },
+    )
+    return JobRead.from_job(job)
 
 
 @router.post("", response_model=JobRead, status_code=status.HTTP_201_CREATED)
@@ -135,3 +211,46 @@ async def get_job(
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     return JobRead.from_job(job)
+
+
+@router.post("/{job_id}/start", response_model=JobRead)
+async def start_job(
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    job_id: Annotated[str, Path(min_length=1)],
+) -> JobRead:
+    return await transition_job(job_id=job_id, target="running", actor=actor, uow=uow)
+
+
+@router.post("/{job_id}/complete", response_model=JobRead)
+async def complete_job(
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    job_id: Annotated[str, Path(min_length=1)],
+) -> JobRead:
+    return await transition_job(job_id=job_id, target="succeeded", actor=actor, uow=uow)
+
+
+@router.post("/{job_id}/fail", response_model=JobRead)
+async def fail_job(
+    payload: JobTransitionRequest,
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    job_id: Annotated[str, Path(min_length=1)],
+) -> JobRead:
+    return await transition_job(
+        job_id=job_id,
+        target="failed",
+        actor=actor,
+        uow=uow,
+        error=payload.error or "Job failed",
+    )
+
+
+@router.post("/{job_id}/cancel", response_model=JobRead)
+async def cancel_job(
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    job_id: Annotated[str, Path(min_length=1)],
+) -> JobRead:
+    return await transition_job(job_id=job_id, target="cancelled", actor=actor, uow=uow)
