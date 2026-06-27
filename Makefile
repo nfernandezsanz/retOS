@@ -62,7 +62,7 @@ docker-config:
 	docker compose --env-file .env.example config
 
 docker-build:
-	docker compose build
+	docker compose build api web
 
 docker-smoke:
 	scripts/run_docker_smoke.sh

@@ -1,10 +1,10 @@
 # Docker Images And Compose
 
-RetOS is built as two application images plus managed service images:
+RetOS is built as one shared backend image, one web image, and managed service images:
 
 | Image | Dockerfile | Purpose |
 | --- | --- | --- |
-| `retos-api` / `retos-worker` | `backend/Dockerfile` | FastAPI API and Celery worker. The same image runs different roles through the entrypoint. |
+| `retos-backend` | `backend/Dockerfile` | Shared backend runtime for both FastAPI API and Celery worker. Different roles are selected through the entrypoint command. |
 | `retos-web` | `frontend/Dockerfile` | React static assets served by Nginx. |
 | `postgres:18-bookworm` | upstream | Durable catalog, jobs, journals, ledgers, and manifests. |
 | `rabbitmq:4-management` | upstream | Celery broker. |
@@ -19,8 +19,10 @@ docker compose build
 Build only application images:
 
 ```bash
-docker compose build api worker web
+docker compose build api web
 ```
+
+The `worker` service intentionally does not have its own build. It runs the exact same `retos-backend` image built by the `api` service with `command: ["worker"]`.
 
 ## Smoke Test
 
