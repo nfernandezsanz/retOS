@@ -681,6 +681,104 @@ button:focus-visible {
   font-weight: 700;
 }
 
+.audit-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.audit-toolbar label {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.audit-toolbar select {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.audit-toolbar select:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.job-ledger {
+  display: grid;
+  gap: 12px;
+}
+
+.job-row {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.job-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.job-row-main div {
+  min-width: 0;
+}
+
+.job-row-main strong,
+.job-row-main span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.job-row-main div > span {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.job-row-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.job-row-grid div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.job-row-grid span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.job-row-grid strong,
+.payload-summary {
+  overflow-wrap: anywhere;
+}
+
+.payload-summary {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .provider-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -803,6 +901,8 @@ button:focus-visible {
   .domain-toolbar,
   .source-form,
   .text-ingestion-form,
+  .audit-toolbar,
+  .job-row-grid,
   .admin-grid,
   .provider-summary {
     grid-template-columns: 1fr;

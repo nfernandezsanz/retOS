@@ -53,7 +53,14 @@ type JobRead = {
   id: string;
   kind: string;
   status: string;
+  domain_id: string | null;
+  source_id: string | null;
   payload: Record<string, unknown>;
+  error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type DomainRead = {
@@ -203,7 +210,7 @@ async function loadSources(token: string, domainId: string): Promise<SourceRead[
 }
 
 async function loadJobs(token: string): Promise<JobRead[]> {
-  return requestJson<JobRead[]>("/jobs?limit=6", {
+  return requestJson<JobRead[]>("/jobs?limit=12", {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -332,6 +339,27 @@ function slugify(value: string): string {
     .slice(0, 80);
 }
 
+function formatDateTime(value: string | null): string {
+  if (!value) {
+    return "Not recorded";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function summarizePayload(payload: Record<string, unknown>): string {
+  const entries = Object.entries(payload).filter(([, value]) => value !== null && value !== "");
+  if (entries.length === 0) {
+    return "No payload";
+  }
+  return entries
+    .slice(0, 4)
+    .map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`)
+    .join(" | ");
+}
+
 function App() {
   const [email, setEmail] = useState("admin@retos.dev");
   const [password, setPassword] = useState("");
@@ -368,6 +396,7 @@ function App() {
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
   const [liveError, setLiveError] = useState<string | null>(null);
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
+  const [jobFilter, setJobFilter] = useState("all");
   const liveAbortRef = useRef<AbortController | null>(null);
 
   const activeProviderLabel = useMemo(() => {
@@ -403,6 +432,14 @@ function App() {
     { label: "Active jobs", value: activeJobs.toString(), icon: Activity },
     { label: "Provider", value: activeProviderLabel, icon: Bot },
   ];
+
+  const filteredJobs = useMemo(
+    () =>
+      jobFilter === "all"
+        ? queuedJobs
+        : queuedJobs.filter((job) => job.status === jobFilter || job.kind === jobFilter),
+    [jobFilter, queuedJobs],
+  );
 
   useEffect(() => {
     return () => {
@@ -1245,16 +1282,78 @@ function App() {
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Audit</p>
-                <h2>Evidence ledger</h2>
+                <h2>Jobs and evidence ledger</h2>
               </div>
-              <span className="status-pill">No runs yet</span>
+              <span className="status-pill">{queuedJobs.length} recent jobs</span>
             </div>
-            <div className="empty-state">
-              <LockKeyhole aria-hidden="true" />
-              <p>
-                Agent runs will appear here with tool calls, cited segments, answer hashes, and
-                budget usage.
-              </p>
+            <div className="audit-toolbar">
+              <label>
+                <span>Filter jobs</span>
+                <select value={jobFilter} onChange={(event) => setJobFilter(event.target.value)}>
+                  <option value="all">All jobs</option>
+                  <option value="queued">Queued</option>
+                  <option value="running">Running</option>
+                  <option value="succeeded">Succeeded</option>
+                  <option value="failed">Failed</option>
+                  <option value="ingest.source">Ingestion</option>
+                  <option value="index.domain">Indexing</option>
+                  <option value="agent.query">Agent queries</option>
+                </select>
+              </label>
+              <button
+                className="ghost-action"
+                disabled={isLoadingWorkspace}
+                type="button"
+                onClick={() => void refreshWorkspace()}
+              >
+                <RefreshCw aria-hidden="true" />
+                Refresh jobs
+              </button>
+            </div>
+            <div className="job-ledger" aria-label="Recent jobs">
+              {filteredJobs.map((job) => (
+                <article className="job-row" key={job.id}>
+                  <div className="job-row-main">
+                    <span className={`badge ${job.status === "failed" ? "warning" : "muted"}`}>
+                      {job.status}
+                    </span>
+                    <div>
+                      <strong>{job.kind}</strong>
+                      <span>{job.id}</span>
+                    </div>
+                  </div>
+                  <div className="job-row-grid">
+                    <div>
+                      <span>Domain</span>
+                      <strong>{job.domain_id ?? "none"}</strong>
+                    </div>
+                    <div>
+                      <span>Source</span>
+                      <strong>{job.source_id ?? "none"}</strong>
+                    </div>
+                    <div>
+                      <span>Created</span>
+                      <strong>{formatDateTime(job.created_at)}</strong>
+                    </div>
+                    <div>
+                      <span>Completed</span>
+                      <strong>{formatDateTime(job.completed_at)}</strong>
+                    </div>
+                  </div>
+                  {job.error ? (
+                    <p className="inline-error" role="alert">
+                      {job.error}
+                    </p>
+                  ) : null}
+                  <p className="payload-summary">{summarizePayload(job.payload)}</p>
+                </article>
+              ))}
+              {filteredJobs.length === 0 ? (
+                <div className="empty-state compact">
+                  <LockKeyhole aria-hidden="true" />
+                  <p>No jobs match this filter yet.</p>
+                </div>
+              ) : null}
             </div>
           </article>
         </section>

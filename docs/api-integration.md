@@ -390,7 +390,7 @@ Current console calls:
 - `POST /sources/{source_id}/scan`
 - `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
-- `GET /jobs?limit=6`
+- `GET /jobs?limit=12`
 
 The UI treats the provider catalog as read-only operational status:
 
@@ -401,11 +401,11 @@ The UI treats the provider catalog as read-only operational status:
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text ingestions, queue source scans, rebuild the
-BM25 index, read recent jobs, and send queries against the selected domain. Query
-execution uses `run_inline=true` so the UI can render the answer and citations
-immediately. Worker-backed query jobs are already available through the API by omitting
-`run_inline`; the live progress panel reads the same SSE stream that ingestion, indexing,
-and agent jobs write to.
+BM25 index, read recent jobs, filter the job ledger by status/kind, and send queries
+against the selected domain. Query execution uses `run_inline=true` so the UI can render
+the answer and citations immediately. Worker-backed query jobs are already available
+through the API by omitting `run_inline`; the live progress panel reads the same SSE
+stream that ingestion, indexing, and agent jobs write to.
 
 ## Progress Events
 

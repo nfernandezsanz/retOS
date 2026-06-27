@@ -1,5 +1,21 @@
 import { expect, type Page, test } from "@playwright/test";
 
+function jobFixture(id: string, kind: string, status: string, payload = {}) {
+  return {
+    id,
+    kind,
+    status,
+    domain_id: "domain-123",
+    source_id: null,
+    payload,
+    error: null,
+    started_at: null,
+    completed_at: status === "succeeded" ? "2026-06-27T00:01:00Z" : null,
+    created_at: "2026-06-27T00:00:00Z",
+    updated_at: "2026-06-27T00:00:00Z",
+  };
+}
+
 async function mockProviderApi(page: Page) {
   const domains = [
     {
@@ -37,14 +53,7 @@ async function mockProviderApi(page: Page) {
       updated_at: "2026-06-27T00:00:00Z",
     },
   ];
-  const jobs = [
-    {
-      id: "job-seed-1",
-      kind: "ingest.source",
-      status: "succeeded",
-      payload: {},
-    },
-  ];
+  const jobs = [jobFixture("job-seed-1", "ingest.source", "succeeded")];
 
   await page.route("http://localhost:8000/auth/login", async (route) => {
     await route.fulfill({
@@ -119,7 +128,7 @@ async function mockProviderApi(page: Page) {
       json: documents.filter((document) => document.domain_id === domainId),
     });
   });
-  await page.route("http://localhost:8000/jobs?limit=6", async (route) => {
+  await page.route(/http:\/\/localhost:8000\/jobs\?limit=\d+/, async (route) => {
     await route.fulfill({
       contentType: "application/json",
       json: jobs,
@@ -152,24 +161,16 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route(/http:\/\/localhost:8000\/sources\/[^/]+\/scan/, async (route) => {
+    const job = jobFixture("job-scan-1", "ingest.source", "queued", { ingestion_kind: "source_scan" });
+    jobs.unshift(job);
     await route.fulfill({
       contentType: "application/json",
       status: 202,
-      json: {
-        id: "job-scan-1",
-        kind: "ingest.source",
-        status: "queued",
-        payload: {},
-      },
+      json: job,
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/index\/rebuild/, async (route) => {
-    jobs.unshift({
-      id: "job-index-1",
-      kind: "index.domain",
-      status: "queued",
-      payload: {},
-    });
+    jobs.unshift(jobFixture("job-index-1", "index.domain", "queued", { requested_at: "now" }));
     await route.fulfill({
       contentType: "application/json",
       status: 202,
@@ -191,12 +192,7 @@ async function mockProviderApi(page: Page) {
       created_at: "2026-06-27T00:00:00Z",
       updated_at: "2026-06-27T00:00:00Z",
     });
-    jobs.unshift({
-      id: "job-text-1",
-      kind: "ingest.source",
-      status: "queued",
-      payload: {},
-    });
+    jobs.unshift(jobFixture("job-text-1", "ingest.source", "queued", { title: "Policy Note" }));
     await route.fulfill({
       contentType: "application/json",
       status: 202,
@@ -208,10 +204,7 @@ async function mockProviderApi(page: Page) {
       contentType: "application/json",
       json: {
         job: {
-          id: "job-query-1",
-          kind: "agent.query",
-          status: "succeeded",
-          payload: {},
+          ...jobFixture("job-query-1", "agent.query", "succeeded"),
         },
         result: {
           answer:
@@ -313,6 +306,12 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Queue text ingestion" }).click();
   await expect(page.getByLabel("Queued jobs").getByText("ingest.source queued")).toBeVisible();
   await expect(page.getByLabel("Domain documents").getByText("Policy Note")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Jobs and evidence ledger" })).toBeVisible();
+  await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
+  await expect(page.getByText("title: Policy Note")).toBeVisible();
+
+  await page.getByLabel("Filter jobs").selectOption("index.domain");
+  await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();
 
   await page.getByRole("button", { name: "Connect live updates" }).click();
   await expect(page.getByLabel("Live progress events").getByText("system.ready")).toBeVisible();
