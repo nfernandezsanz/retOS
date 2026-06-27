@@ -10,7 +10,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
 | Backend coverage | 94.87% line/branch coverage on the current scaffold. |
-| Stability | Green foundation: format, PEP 8, typecheck, tests, API smoke, frontend build, and browser smoke are enforced. |
+| Stability | Green foundation: format, PEP 8, typecheck, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
 | Next milestone | Phase 1: core domain persistence, jobs, journals, progress events, and admin persistence. |
@@ -24,7 +24,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Docker Compose for Postgres, RabbitMQ, Ollama, API, worker, and web services.
 - Planning, ADRs, and architecture assets for the open source implementation path.
 - Test and coverage defaults that avoid paid LLM calls.
-- CI jobs that validate backend format, PEP 8, types, tests, API smoke, frontend build, and browser smoke.
+- CI jobs that validate backend format, PEP 8, types, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke.
 
 ## Development Model
 
@@ -149,6 +149,7 @@ make frontend-test
 make frontend-e2e
 docker compose --env-file .env.example config
 docker compose --dry-run build
+make docker-smoke
 ```
 
 ## Quality Gates
@@ -166,6 +167,7 @@ Every meaningful change should pass these gates:
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
+| Docker stack smoke | `make docker-smoke` | Builds images, starts Postgres/RabbitMQ/API/worker/web, waits for healthchecks, and hits API + web over HTTP. |
 
 ## Security Defaults
 

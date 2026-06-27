@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck api-smoke check frontend-install frontend-test frontend-e2e integration docker-build docker-up docker-down
+.PHONY: help install format format-check test lint typecheck api-smoke check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -18,7 +18,9 @@ help:
 	@printf "  make frontend-test    Run frontend checks\n"
 	@printf "  make frontend-e2e     Run browser smoke tests against the UI\n"
 	@printf "  make integration      Run API and frontend smoke tests\n"
+	@printf "  make docker-config    Validate Docker Compose configuration\n"
 	@printf "  make docker-build     Build Docker images\n"
+	@printf "  make docker-smoke     Build and smoke the Docker stack\n"
 	@printf "  make docker-up        Start the full local stack\n"
 	@printf "  make docker-down      Stop the local stack\n"
 
@@ -56,8 +58,14 @@ frontend-e2e:
 
 integration: api-smoke frontend-e2e
 
+docker-config:
+	docker compose --env-file .env.example config
+
 docker-build:
 	docker compose build
+
+docker-smoke:
+	scripts/run_docker_smoke.sh
 
 docker-up:
 	docker compose up --build

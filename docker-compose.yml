@@ -78,7 +78,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - retos_postgres:/var/lib/postgresql/data
+      - retos_postgres:/var/lib/postgresql
 
   rabbitmq:
     image: rabbitmq:4-management

@@ -56,3 +56,12 @@ jobs:
         run: cd frontend && npx playwright install --with-deps chromium
       - name: Browser smoke
         run: cd frontend && npm run e2e
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Compose config
+        run: docker compose --env-file .env.example config
+      - name: Docker stack smoke
+        run: scripts/run_docker_smoke.sh

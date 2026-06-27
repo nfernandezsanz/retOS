@@ -10,6 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONFAULTHANDLER=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive \
     RETOS_STORAGE_ROOT=/var/lib/retos/storage \
     RETOS_INDEX_ROOT=/var/lib/retos/index
 

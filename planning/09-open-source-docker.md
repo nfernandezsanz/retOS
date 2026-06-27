@@ -40,5 +40,6 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Frontend builds.
 - Compose config validates.
 - Docker images build.
+- Docker stack smoke starts core services and hits API/web endpoints.
 - No secrets are baked into images.
 - Migrations work from an empty database.

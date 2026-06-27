@@ -19,6 +19,7 @@ Reality-check commands:
 make api-smoke
 make frontend-e2e
 make integration
+make docker-smoke
 ```
 
 ## Test Layers
@@ -59,6 +60,7 @@ The project should never rely only on isolated unit tests. Every implementation 
 | Browser smoke | Any user-visible UI, route, status, timeline, or evidence behavior changes. |
 | Compose config | Docker, env, worker, service, or port changes. |
 | Docker build/dry-run | Dockerfile, dependency, or image-role changes. |
+| Docker stack smoke | Compose services, healthchecks, ports, volumes, Dockerfile runtime, or entrypoints change. |
 | Evals smoke | Retrieval, agent, citation, or answer behavior changes. |
 
 ## Initial Eval Types

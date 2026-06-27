@@ -22,6 +22,16 @@ Build only application images:
 docker compose build api worker web
 ```
 
+## Smoke Test
+
+Run the same Docker smoke used by CI:
+
+```bash
+make docker-smoke
+```
+
+The smoke test uses a temporary Compose project, builds the app images, starts Postgres, RabbitMQ, API, worker, and web, waits for healthchecks, hits the API and web over HTTP, then removes its temporary containers and volumes.
+
 ## Run
 
 ```bash
@@ -66,6 +76,7 @@ The image defaults to the `api` role.
 - `.dockerignore` excludes secrets, local volumes, virtualenvs, caches, tests, planning docs, and generated frontend assets.
 - RabbitMQ carries lightweight job messages only. Documents and artifacts belong in Postgres-backed metadata and storage volumes.
 - Development passwords in `.env.example` must be changed for anything beyond local use.
+- `postgres:18-bookworm` stores data under a major-version-aware directory, so the volume is mounted at `/var/lib/postgresql`, not `/var/lib/postgresql/data`.
 
 ## Local Limitation
 
