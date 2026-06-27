@@ -54,6 +54,47 @@ async function mockProviderApi(page: Page) {
     },
   ];
   const jobs = [jobFixture("job-seed-1", "ingest.source", "succeeded")];
+  const journalEvents = [
+    {
+      id: "journal-seed-1",
+      occurred_at: "2026-06-27T00:00:00Z",
+      actor: "admin@retos.dev",
+      event_type: "job.created",
+      entity_type: "job",
+      entity_id: "job-seed-1",
+      payload: { kind: "ingest.source", status: "succeeded" },
+    },
+  ];
+  const progressEvents = [
+    {
+      id: "progress-seed-1",
+      job_id: "job-seed-1",
+      occurred_at: "2026-06-27T00:00:00Z",
+      event_type: "job.queued",
+      message: "Queued ingest.source",
+      payload: { status: "queued" },
+    },
+  ];
+
+  function recordAudit(job: ReturnType<typeof jobFixture>) {
+    journalEvents.unshift({
+      id: `journal-${job.id}`,
+      occurred_at: "2026-06-27T00:01:00Z",
+      actor: "admin@retos.dev",
+      event_type: "job.created",
+      entity_type: "job",
+      entity_id: job.id,
+      payload: { kind: job.kind, status: job.status },
+    });
+    progressEvents.unshift({
+      id: `progress-${job.id}`,
+      job_id: job.id,
+      occurred_at: "2026-06-27T00:01:00Z",
+      event_type: "job.queued",
+      message: `Queued ${job.kind}`,
+      payload: { status: job.status },
+    });
+  }
 
   await page.route("http://localhost:8000/auth/login", async (route) => {
     await route.fulfill({
@@ -134,6 +175,18 @@ async function mockProviderApi(page: Page) {
       json: jobs,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/audit\/journal-events\?limit=\d+/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: journalEvents,
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/audit\/progress-events\?limit=\d+/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: progressEvents,
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/sources/, async (route) => {
     const domainId = new URL(route.request().url()).pathname.split("/")[2];
     if (route.request().method() === "POST") {
@@ -163,6 +216,7 @@ async function mockProviderApi(page: Page) {
   await page.route(/http:\/\/localhost:8000\/sources\/[^/]+\/scan/, async (route) => {
     const job = jobFixture("job-scan-1", "ingest.source", "queued", { ingestion_kind: "source_scan" });
     jobs.unshift(job);
+    recordAudit(job);
     await route.fulfill({
       contentType: "application/json",
       status: 202,
@@ -170,11 +224,13 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/index\/rebuild/, async (route) => {
-    jobs.unshift(jobFixture("job-index-1", "index.domain", "queued", { requested_at: "now" }));
+    const job = jobFixture("job-index-1", "index.domain", "queued", { requested_at: "now" });
+    jobs.unshift(job);
+    recordAudit(job);
     await route.fulfill({
       contentType: "application/json",
       status: 202,
-      json: jobs[0],
+      json: job,
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/ingestions\/text/, async (route) => {
@@ -192,11 +248,13 @@ async function mockProviderApi(page: Page) {
       created_at: "2026-06-27T00:00:00Z",
       updated_at: "2026-06-27T00:00:00Z",
     });
-    jobs.unshift(jobFixture("job-text-1", "ingest.source", "queued", { title: "Policy Note" }));
+    const job = jobFixture("job-text-1", "ingest.source", "queued", { title: "Policy Note" });
+    jobs.unshift(job);
+    recordAudit(job);
     await route.fulfill({
       contentType: "application/json",
       status: 202,
-      json: jobs[0],
+      json: job,
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/queries/, async (route) => {
@@ -309,6 +367,12 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Jobs and evidence ledger" })).toBeVisible();
   await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
   await expect(page.getByText("title: Policy Note")).toBeVisible();
+  await page.getByRole("button", { name: "Refresh audit" }).click();
+  await expect(page.getByLabel("Journal events").getByText("job.created")).toBeVisible();
+  await expect(page.getByLabel("Journal events").getByText("job-text-1")).toBeVisible();
+  await expect(
+    page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),
+  ).toBeVisible();
 
   await page.getByLabel("Filter jobs").selectOption("index.domain");
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();

@@ -391,6 +391,8 @@ Current console calls:
 - `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
 - `GET /jobs?limit=12`
+- `GET /audit/journal-events?limit=20`
+- `GET /audit/progress-events?limit=20`
 
 The UI treats the provider catalog as read-only operational status:
 
@@ -401,11 +403,67 @@ The UI treats the provider catalog as read-only operational status:
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text ingestions, queue source scans, rebuild the
-BM25 index, read recent jobs, filter the job ledger by status/kind, and send queries
-against the selected domain. Query execution uses `run_inline=true` so the UI can render
-the answer and citations immediately. Worker-backed query jobs are already available
-through the API by omitting `run_inline`; the live progress panel reads the same SSE
-stream that ingestion, indexing, and agent jobs write to.
+BM25 index, read recent jobs, read persisted audit/progress events, filter the job ledger
+by status/kind, and send queries against the selected domain. Query execution uses
+`run_inline=true` so the UI can render the answer and citations immediately.
+Worker-backed query jobs are already available through the API by omitting `run_inline`;
+the live progress panel reads the same SSE stream that ingestion, indexing, and agent
+jobs write to.
+
+## Audit Events
+
+Recent journal events:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  "http://localhost:8000/audit/journal-events?limit=20"
+```
+
+Recent persisted progress events:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  "http://localhost:8000/audit/progress-events?limit=20"
+```
+
+Both endpoints require an admin token and accept `limit` from `1` to `200`. Results are
+ordered newest first.
+
+Journal event shape:
+
+```json
+{
+  "id": "<event_id>",
+  "occurred_at": "2026-06-27T00:00:00Z",
+  "actor": "admin@retos.dev",
+  "event_type": "job.created",
+  "entity_type": "job",
+  "entity_id": "<job_id>",
+  "payload": {
+    "kind": "index.domain",
+    "status": "queued"
+  }
+}
+```
+
+Progress event shape:
+
+```json
+{
+  "id": "<event_id>",
+  "job_id": "<job_id>",
+  "occurred_at": "2026-06-27T00:00:00Z",
+  "event_type": "job.queued",
+  "message": "Queued index.domain",
+  "payload": {
+    "status": "queued"
+  }
+}
+```
+
+The React audit panel uses these endpoints to show durable journal/progress evidence next
+to the job ledger. SSE remains the live stream; `/audit/*` is the reloadable persisted
+record.
 
 ## Progress Events
 

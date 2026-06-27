@@ -46,9 +46,12 @@ The UI is a working console, not a landing page. It must make background process
   streaming, parses SSE frames, and renders a compact live progress ledger.
 - The audit panel renders recent jobs with status/kind filtering, identifiers, timestamps,
   error state, and payload summaries.
+- The audit panel reads `/audit/journal-events?limit=20` and
+  `/audit/progress-events?limit=20` to render durable journal/progress records beside the
+  live SSE stream.
 - Browser smoke tests mock the API contract and verify provider, domain creation,
   document/source inventory, text ingestion, scan/index queueing, job/audit filtering,
-  query, and live progress flows.
+  persisted audit events, query, and live progress flows.
 
 ## Processing UI
 

@@ -8,21 +8,35 @@ RetOS must be able to answer:
 2. Which evidence or data caused it.
 3. How to verify or reproduce it.
 
-## Journal Event
+## Current Journal Event Contract
+
+The implemented durable event table and API expose:
 
 | Field | Purpose |
 | --- | --- |
-| `id` | Ordered event identifier. |
-| `created_at` | UTC timestamp. |
-| `trace_id` | Correlation with OpenTelemetry. |
-| `actor_type` | `user`, `system`, `agent`, or `worker`. |
+| `id` | Event identifier. |
+| `occurred_at` | UTC timestamp. |
+| `actor` | Admin email, worker, or system actor string. |
 | `event_type` | Stable event name. |
-| `subject_type` | Domain, document, job, run, etc. |
-| `subject_id` | Subject identifier. |
-| `payload_json` | Minimal metadata without secrets. |
-| `payload_hash` | Canonical payload hash. |
-| `prev_hash` | Previous event hash. |
-| `event_hash` | Current event hash. |
+| `entity_type` | Domain, document, job, run, etc. |
+| `entity_id` | Entity identifier. |
+| `payload` | Minimal metadata without secrets. |
+
+Current read endpoints:
+
+- `GET /audit/journal-events?limit=20`
+- `GET /audit/progress-events?limit=20`
+
+Both require an admin bearer token and return newest events first.
+
+## Future Hardening
+
+The next audit hardening pass should add:
+
+- `trace_id` correlation with OpenTelemetry.
+- Canonical payload hashes.
+- `prev_hash` plus `event_hash` chain validation.
+- Export endpoints for offline review.
 
 ## Base Events
 

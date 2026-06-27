@@ -126,6 +126,25 @@ type ProgressEvent = {
   data: Record<string, string | number | boolean | null>;
 };
 
+type JournalEventRead = {
+  id: string;
+  occurred_at: string;
+  actor: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  payload: Record<string, unknown>;
+};
+
+type ProgressEventRead = {
+  id: string;
+  job_id: string | null;
+  occurred_at: string;
+  event_type: string;
+  message: string;
+  payload: Record<string, unknown>;
+};
+
 type LiveStatus = "disconnected" | "connecting" | "connected";
 
 const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
@@ -211,6 +230,22 @@ async function loadSources(token: string, domainId: string): Promise<SourceRead[
 
 async function loadJobs(token: string): Promise<JobRead[]> {
   return requestJson<JobRead[]>("/jobs?limit=12", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function loadJournalEvents(token: string): Promise<JournalEventRead[]> {
+  return requestJson<JournalEventRead[]>("/audit/journal-events?limit=20", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function loadAuditProgressEvents(token: string): Promise<ProgressEventRead[]> {
+  return requestJson<ProgressEventRead[]>("/audit/progress-events?limit=20", {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -397,6 +432,10 @@ function App() {
   const [liveError, setLiveError] = useState<string | null>(null);
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
   const [jobFilter, setJobFilter] = useState("all");
+  const [journalEvents, setJournalEvents] = useState<JournalEventRead[]>([]);
+  const [auditProgressEvents, setAuditProgressEvents] = useState<ProgressEventRead[]>([]);
+  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
   const liveAbortRef = useRef<AbortController | null>(null);
 
   const activeProviderLabel = useMemo(() => {
@@ -484,6 +523,26 @@ function App() {
     }
   }
 
+  async function refreshAudit(accessToken?: string) {
+    setIsLoadingAudit(true);
+    setAuditError(null);
+    try {
+      const adminToken = accessToken ?? (await getAdminToken());
+      const [nextJournalEvents, nextProgressEvents, nextJobs] = await Promise.all([
+        loadJournalEvents(adminToken),
+        loadAuditProgressEvents(adminToken),
+        loadJobs(adminToken),
+      ]);
+      setJournalEvents(nextJournalEvents);
+      setAuditProgressEvents(nextProgressEvents);
+      setQueuedJobs(nextJobs);
+    } catch (error) {
+      setAuditError(error instanceof Error ? error.message : "Audit refresh failed");
+    } finally {
+      setIsLoadingAudit(false);
+    }
+  }
+
   async function handleProviderLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoadingProvider(true);
@@ -495,6 +554,7 @@ function App() {
       const nextCatalog = await loadProviderCatalog(accessToken);
       setCatalog(nextCatalog);
       await refreshWorkspace(accessToken);
+      await refreshAudit(accessToken);
       setPassword("");
     } catch (error) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -778,6 +838,9 @@ function App() {
     setLiveError(null);
     setProgressEvents([]);
     setQueuedJobs([]);
+    setJournalEvents([]);
+    setAuditProgressEvents([]);
+    setAuditError(null);
     setTextTitle("");
     setTextBody("");
     setTextSourceId("");
@@ -1302,14 +1365,19 @@ function App() {
               </label>
               <button
                 className="ghost-action"
-                disabled={isLoadingWorkspace}
+                disabled={isLoadingAudit}
                 type="button"
-                onClick={() => void refreshWorkspace()}
+                onClick={() => void refreshAudit()}
               >
                 <RefreshCw aria-hidden="true" />
-                Refresh jobs
+                {isLoadingAudit ? "Refreshing audit" : "Refresh audit"}
               </button>
             </div>
+            {auditError ? (
+              <p className="inline-error" role="alert">
+                {auditError}
+              </p>
+            ) : null}
             <div className="job-ledger" aria-label="Recent jobs">
               {filteredJobs.map((job) => (
                 <article className="job-row" key={job.id}>
@@ -1354,6 +1422,64 @@ function App() {
                   <p>No jobs match this filter yet.</p>
                 </div>
               ) : null}
+            </div>
+            <div className="audit-event-grid">
+              <section className="audit-event-panel" aria-label="Journal events">
+                <div className="section-heading compact">
+                  <h3>Journal events</h3>
+                  <span className="badge muted">{journalEvents.length}</span>
+                </div>
+                <div className="audit-event-list">
+                  {journalEvents.map((event) => (
+                    <article className="audit-event-row" key={event.id}>
+                      <div>
+                        <strong>{event.event_type}</strong>
+                        <span>
+                          {event.entity_type} {event.entity_id}
+                        </span>
+                      </div>
+                      <div>
+                        <span>{event.actor}</span>
+                        <span>{formatDateTime(event.occurred_at)}</span>
+                      </div>
+                      <p className="payload-summary">{summarizePayload(event.payload)}</p>
+                    </article>
+                  ))}
+                  {journalEvents.length === 0 ? (
+                    <div className="empty-state compact">
+                      <LockKeyhole aria-hidden="true" />
+                      <p>No journal events have been loaded yet.</p>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+              <section className="audit-event-panel" aria-label="Persisted progress events">
+                <div className="section-heading compact">
+                  <h3>Persisted progress</h3>
+                  <span className="badge muted">{auditProgressEvents.length}</span>
+                </div>
+                <div className="audit-event-list">
+                  {auditProgressEvents.map((event) => (
+                    <article className="audit-event-row" key={event.id}>
+                      <div>
+                        <strong>{event.event_type}</strong>
+                        <span>{event.message}</span>
+                      </div>
+                      <div>
+                        <span>{event.job_id ?? "system"}</span>
+                        <span>{formatDateTime(event.occurred_at)}</span>
+                      </div>
+                      <p className="payload-summary">{summarizePayload(event.payload)}</p>
+                    </article>
+                  ))}
+                  {auditProgressEvents.length === 0 ? (
+                    <div className="empty-state compact">
+                      <Activity aria-hidden="true" />
+                      <p>No persisted progress events have been loaded yet.</p>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
             </div>
           </article>
         </section>

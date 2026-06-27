@@ -413,6 +413,43 @@ def main() -> None:
             )
             require(any(item["id"] == job["id"] for item in listed_jobs.json()), "job missing")
 
+            journal_events = client.get(
+                "/audit/journal-events",
+                headers=auth_headers,
+                params={"limit": 20},
+            )
+            require(
+                journal_events.status_code == 200,
+                f"journal events failed: {journal_events.status_code} {journal_events.text}",
+            )
+            journal_body = journal_events.json()
+            require(
+                any(
+                    item["event_type"] == "job.created" and item["entity_id"] == job["id"]
+                    for item in journal_body
+                ),
+                "created job missing from journal events",
+            )
+
+            persisted_progress_events = client.get(
+                "/audit/progress-events",
+                headers=auth_headers,
+                params={"limit": 20},
+            )
+            require(
+                persisted_progress_events.status_code == 200,
+                "persisted progress events failed: "
+                f"{persisted_progress_events.status_code} {persisted_progress_events.text}",
+            )
+            progress_body = persisted_progress_events.json()
+            require(
+                any(
+                    item["event_type"] == "job.queued" and item["job_id"] == job["id"]
+                    for item in progress_body
+                ),
+                "created job missing from persisted progress events",
+            )
+
             stream_timeout = httpx.Timeout(10, read=3)
             with client.stream(
                 "GET",

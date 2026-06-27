@@ -573,6 +573,14 @@ class JournalRepository:
         await self._session.flush()
         return journal_event_from_record(record)
 
+    async def list(self, *, limit: int = 100) -> list[JournalEvent]:
+        result = await self._session.scalars(
+            select(JournalEventRecord)
+            .order_by(JournalEventRecord.occurred_at.desc(), JournalEventRecord.id.desc())
+            .limit(limit)
+        )
+        return [journal_event_from_record(record) for record in result]
+
 
 class ProgressEventRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -596,3 +604,11 @@ class ProgressEventRepository:
         self._session.add(record)
         await self._session.flush()
         return progress_event_from_record(record)
+
+    async def list(self, *, limit: int = 100) -> list[ProgressEvent]:
+        result = await self._session.scalars(
+            select(ProgressEventRecord)
+            .order_by(ProgressEventRecord.occurred_at.desc(), ProgressEventRecord.id.desc())
+            .limit(limit)
+        )
+        return [progress_event_from_record(record) for record in result]
