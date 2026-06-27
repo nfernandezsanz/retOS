@@ -4,15 +4,25 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from retos.domain.documents import Document, DocumentVersion, Domain, Source, SourceKind
+from retos.domain.documents import (
+    Artifact,
+    Document,
+    DocumentVersion,
+    Domain,
+    Segment,
+    Source,
+    SourceKind,
+)
 from retos.domain.jobs import Job, JobKind, JobStatus, JournalEvent, ProgressEvent
 from retos.persistence.models import (
+    ArtifactRecord,
     DocumentRecord,
     DocumentVersionRecord,
     DomainRecord,
     JobRecord,
     JournalEventRecord,
     ProgressEventRecord,
+    SegmentRecord,
     SourceRecord,
 )
 
@@ -62,6 +72,31 @@ def document_version_from_record(record: DocumentVersionRecord) -> DocumentVersi
         source_uri=record.source_uri,
         content_hash=record.content_hash,
         size_bytes=record.size_bytes,
+        created_at=record.created_at,
+    )
+
+
+def artifact_from_record(record: ArtifactRecord) -> Artifact:
+    return Artifact(
+        id=record.id,
+        document_version_id=record.document_version_id,
+        kind=record.kind,
+        uri=record.uri,
+        sha256=record.sha256,
+        size_bytes=record.size_bytes,
+        created_at=record.created_at,
+    )
+
+
+def segment_from_record(record: SegmentRecord) -> Segment:
+    return Segment(
+        id=record.id,
+        document_version_id=record.document_version_id,
+        ordinal=record.ordinal,
+        text=record.text,
+        anchor=record.anchor,
+        token_count=record.token_count,
+        content_hash=record.content_hash,
         created_at=record.created_at,
     )
 
@@ -262,6 +297,108 @@ class DocumentRepository:
             .order_by(DocumentVersionRecord.version)
         )
         return [document_version_from_record(record) for record in result]
+
+    async def get_version(self, version_id: str) -> DocumentVersion | None:
+        record = await self._session.get(DocumentVersionRecord, version_id)
+        if record is None:
+            return None
+        return document_version_from_record(record)
+
+    async def add_artifact(
+        self,
+        *,
+        document_version_id: str,
+        kind: str,
+        uri: str,
+        sha256: str,
+        size_bytes: int,
+    ) -> Artifact:
+        record = ArtifactRecord(
+            id=str(uuid4()),
+            document_version_id=document_version_id,
+            kind=kind,
+            uri=uri,
+            sha256=sha256,
+            size_bytes=size_bytes,
+        )
+        self._session.add(record)
+        await self._session.flush()
+        return artifact_from_record(record)
+
+    async def get_artifact_by_version_kind_uri(
+        self,
+        *,
+        document_version_id: str,
+        kind: str,
+        uri: str,
+    ) -> Artifact | None:
+        result = await self._session.scalars(
+            select(ArtifactRecord).where(
+                ArtifactRecord.document_version_id == document_version_id,
+                ArtifactRecord.kind == kind,
+                ArtifactRecord.uri == uri,
+            )
+        )
+        record = result.one_or_none()
+        if record is None:
+            return None
+        return artifact_from_record(record)
+
+    async def list_artifacts(self, document_version_id: str) -> list[Artifact]:
+        result = await self._session.scalars(
+            select(ArtifactRecord)
+            .where(ArtifactRecord.document_version_id == document_version_id)
+            .order_by(ArtifactRecord.kind, ArtifactRecord.created_at, ArtifactRecord.id)
+        )
+        return [artifact_from_record(record) for record in result]
+
+    async def add_segment(
+        self,
+        *,
+        document_version_id: str,
+        ordinal: int,
+        text: str,
+        anchor: str | None,
+        token_count: int,
+        content_hash: str,
+    ) -> Segment:
+        record = SegmentRecord(
+            id=str(uuid4()),
+            document_version_id=document_version_id,
+            ordinal=ordinal,
+            text=text,
+            anchor=anchor,
+            token_count=token_count,
+            content_hash=content_hash,
+        )
+        self._session.add(record)
+        await self._session.flush()
+        return segment_from_record(record)
+
+    async def get_segment_by_version_ordinal(
+        self,
+        *,
+        document_version_id: str,
+        ordinal: int,
+    ) -> Segment | None:
+        result = await self._session.scalars(
+            select(SegmentRecord).where(
+                SegmentRecord.document_version_id == document_version_id,
+                SegmentRecord.ordinal == ordinal,
+            )
+        )
+        record = result.one_or_none()
+        if record is None:
+            return None
+        return segment_from_record(record)
+
+    async def list_segments(self, document_version_id: str) -> list[Segment]:
+        result = await self._session.scalars(
+            select(SegmentRecord)
+            .where(SegmentRecord.document_version_id == document_version_id)
+            .order_by(SegmentRecord.ordinal)
+        )
+        return [segment_from_record(record) for record in result]
 
 
 class JobRepository:

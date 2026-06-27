@@ -130,6 +130,52 @@ def main() -> None:
             f"document versions failed: {listed_versions.status_code} {listed_versions.text}",
         )
         require(listed_versions.json()[0]["version"] == 1, "missing initial document version")
+        version_id = listed_versions.json()[0]["id"]
+
+        created_artifact = client.post(
+            f"/document-versions/{version_id}/artifacts",
+            headers=auth_headers,
+            json={
+                "kind": "raw_text",
+                "uri": "storage://smoke/document/raw.txt",
+                "sha256": "sha256:00000002",
+                "size_bytes": 42,
+            },
+        )
+        require(
+            created_artifact.status_code == 201,
+            f"artifact create failed: {created_artifact.status_code} {created_artifact.text}",
+        )
+
+        created_segment = client.post(
+            f"/document-versions/{version_id}/segments",
+            headers=auth_headers,
+            json={
+                "ordinal": 0,
+                "text": "Smoke segment text for search readiness.",
+                "anchor": "page=1",
+                "token_count": 7,
+                "content_hash": "sha256:00000003",
+            },
+        )
+        require(
+            created_segment.status_code == 201,
+            f"segment create failed: {created_segment.status_code} {created_segment.text}",
+        )
+
+        listed_artifacts = client.get(
+            f"/document-versions/{version_id}/artifacts",
+            headers=auth_headers,
+        )
+        require(listed_artifacts.status_code == 200, "artifact list failed")
+        require(listed_artifacts.json()[0]["kind"] == "raw_text", "missing raw_text artifact")
+
+        listed_segments = client.get(
+            f"/document-versions/{version_id}/segments",
+            headers=auth_headers,
+        )
+        require(listed_segments.status_code == 200, "segment list failed")
+        require(listed_segments.json()[0]["ordinal"] == 0, "missing first segment")
 
         created_job = client.post(
             "/jobs",
@@ -181,7 +227,11 @@ def main() -> None:
             require(lines, "progress stream did not emit any lines")
             require(
                 any(
-                    "system.ready" in line or "document.created" in line or "job.queued" in line
+                    "system.ready" in line
+                    or "document.created" in line
+                    or "artifact.created" in line
+                    or "segment.created" in line
+                    or "job.queued" in line
                     for line in lines
                 ),
                 "missing expected progress event",

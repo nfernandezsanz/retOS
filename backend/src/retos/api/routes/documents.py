@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
 from retos.api.routes.events import progress_store
-from retos.domain.documents import Document, DocumentVersion
+from retos.domain.documents import Artifact, Document, DocumentVersion, Segment
 
 router = APIRouter(tags=["documents"])
 
@@ -15,6 +15,7 @@ Hash = Annotated[
     str, Field(min_length=8, max_length=135, pattern=r"^(sha256:)?[a-fA-F0-9]{8,128}$")
 ]
 Title = Annotated[str, Field(min_length=1, max_length=255)]
+ArtifactKind = Annotated[str, Field(min_length=1, max_length=48, pattern=r"^[a-z0-9][a-z0-9._-]*$")]
 
 
 class DocumentCreate(BaseModel):
@@ -72,6 +73,67 @@ class DocumentVersionRead(BaseModel):
             content_hash=version.content_hash,
             size_bytes=version.size_bytes,
             created_at=version.created_at,
+        )
+
+
+class ArtifactCreate(BaseModel):
+    kind: ArtifactKind
+    uri: str = Field(min_length=1, max_length=4000)
+    sha256: Hash
+    size_bytes: int = Field(ge=0)
+
+
+class ArtifactRead(BaseModel):
+    id: str
+    document_version_id: str
+    kind: str
+    uri: str
+    sha256: str
+    size_bytes: int
+    created_at: datetime
+
+    @classmethod
+    def from_artifact(cls, artifact: Artifact) -> ArtifactRead:
+        return cls(
+            id=artifact.id,
+            document_version_id=artifact.document_version_id,
+            kind=artifact.kind,
+            uri=artifact.uri,
+            sha256=artifact.sha256,
+            size_bytes=artifact.size_bytes,
+            created_at=artifact.created_at,
+        )
+
+
+class SegmentCreate(BaseModel):
+    ordinal: int = Field(ge=0)
+    text: str = Field(min_length=1, max_length=100_000)
+    anchor: str | None = Field(default=None, max_length=255)
+    token_count: int = Field(ge=0)
+    content_hash: Hash
+
+
+class SegmentRead(BaseModel):
+    id: str
+    document_version_id: str
+    ordinal: int
+    text: str
+    anchor: str | None
+    token_count: int
+    content_hash: str
+    created_at: datetime
+
+    @classmethod
+    def from_segment(cls, segment: Segment) -> SegmentRead:
+        return cls(
+            id=segment.id,
+            document_version_id=segment.document_version_id,
+            ordinal=segment.ordinal,
+            text=segment.text,
+            anchor=segment.anchor,
+            token_count=segment.token_count,
+            content_hash=segment.content_hash,
+            created_at=segment.created_at,
         )
 
 
@@ -192,3 +254,177 @@ async def list_document_versions(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
         versions = await uow.documents.list_versions(document_id)
     return [DocumentVersionRead.from_version(version) for version in versions]
+
+
+@router.post(
+    "/document-versions/{version_id}/artifacts",
+    response_model=ArtifactRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_artifact(
+    payload: ArtifactCreate,
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    version_id: Annotated[str, Path(min_length=1)],
+) -> ArtifactRead:
+    async with uow:
+        version = await uow.documents.get_version(version_id)
+        if version is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document version not found",
+            )
+        existing = await uow.documents.get_artifact_by_version_kind_uri(
+            document_version_id=version_id,
+            kind=payload.kind,
+            uri=payload.uri,
+        )
+        if existing is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Artifact already exists for document version",
+            )
+        artifact = await uow.documents.add_artifact(
+            document_version_id=version_id,
+            kind=payload.kind,
+            uri=payload.uri,
+            sha256=payload.sha256,
+            size_bytes=payload.size_bytes,
+        )
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="artifact.created",
+            entity_type="artifact",
+            entity_id=artifact.id,
+            payload={
+                "document_id": version.document_id,
+                "document_version_id": version_id,
+                "kind": artifact.kind,
+                "uri": artifact.uri,
+            },
+        )
+        await uow.progress_events.add(
+            job_id=None,
+            event_type="artifact.created",
+            message=f"Registered {artifact.kind} artifact",
+            payload={"artifact_id": artifact.id, "document_version_id": version_id},
+        )
+        try:
+            await uow.commit()
+        except IntegrityError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Artifact already exists for document version",
+            ) from exc
+
+    progress_store.append(
+        "artifact.created",
+        {"artifact_id": artifact.id, "document_version_id": version_id, "kind": artifact.kind},
+    )
+    return ArtifactRead.from_artifact(artifact)
+
+
+@router.get("/document-versions/{version_id}/artifacts", response_model=list[ArtifactRead])
+async def list_artifacts(
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    version_id: Annotated[str, Path(min_length=1)],
+) -> list[ArtifactRead]:
+    async with uow:
+        version = await uow.documents.get_version(version_id)
+        if version is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document version not found",
+            )
+        artifacts = await uow.documents.list_artifacts(version_id)
+    return [ArtifactRead.from_artifact(artifact) for artifact in artifacts]
+
+
+@router.post(
+    "/document-versions/{version_id}/segments",
+    response_model=SegmentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_segment(
+    payload: SegmentCreate,
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    version_id: Annotated[str, Path(min_length=1)],
+) -> SegmentRead:
+    async with uow:
+        version = await uow.documents.get_version(version_id)
+        if version is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document version not found",
+            )
+        existing = await uow.documents.get_segment_by_version_ordinal(
+            document_version_id=version_id,
+            ordinal=payload.ordinal,
+        )
+        if existing is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Segment ordinal already exists for document version",
+            )
+        segment = await uow.documents.add_segment(
+            document_version_id=version_id,
+            ordinal=payload.ordinal,
+            text=payload.text,
+            anchor=payload.anchor,
+            token_count=payload.token_count,
+            content_hash=payload.content_hash,
+        )
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="segment.created",
+            entity_type="segment",
+            entity_id=segment.id,
+            payload={
+                "document_id": version.document_id,
+                "document_version_id": version_id,
+                "ordinal": segment.ordinal,
+                "content_hash": segment.content_hash,
+            },
+        )
+        await uow.progress_events.add(
+            job_id=None,
+            event_type="segment.created",
+            message=f"Registered segment {segment.ordinal}",
+            payload={"segment_id": segment.id, "document_version_id": version_id},
+        )
+        try:
+            await uow.commit()
+        except IntegrityError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Segment ordinal already exists for document version",
+            ) from exc
+
+    progress_store.append(
+        "segment.created",
+        {
+            "segment_id": segment.id,
+            "document_version_id": version_id,
+            "ordinal": segment.ordinal,
+        },
+    )
+    return SegmentRead.from_segment(segment)
+
+
+@router.get("/document-versions/{version_id}/segments", response_model=list[SegmentRead])
+async def list_segments(
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    version_id: Annotated[str, Path(min_length=1)],
+) -> list[SegmentRead]:
+    async with uow:
+        version = await uow.documents.get_version(version_id)
+        if version is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document version not found",
+            )
+        segments = await uow.documents.list_segments(version_id)
+    return [SegmentRead.from_segment(segment) for segment in segments]

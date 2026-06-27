@@ -52,3 +52,26 @@ class DocumentVersion:
     content_hash: str
     size_bytes: int
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class Artifact:
+    id: str
+    document_version_id: str
+    kind: str
+    uri: str
+    sha256: str
+    size_bytes: int
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class Segment:
+    id: str
+    document_version_id: str
+    ordinal: int
+    text: str
+    anchor: str | None
+    token_count: int
+    content_hash: str
+    created_at: datetime

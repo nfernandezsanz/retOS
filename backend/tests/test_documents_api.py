@@ -56,15 +56,43 @@ def create_domain_and_source(
     return domain_id, source_response.json()["id"]
 
 
-def count_document_side_effects(db_path: Path) -> tuple[int, int, int]:
+def count_document_side_effects(db_path: Path) -> tuple[int, int, int, int, int]:
     connection = sqlite3.connect(db_path)
     try:
         versions = connection.execute("select count(*) from document_versions").fetchone()[0]
+        artifacts = connection.execute("select count(*) from artifacts").fetchone()[0]
+        segments = connection.execute("select count(*) from segments").fetchone()[0]
         journals = connection.execute("select count(*) from journal_events").fetchone()[0]
         progress = connection.execute("select count(*) from progress_events").fetchone()[0]
-        return int(versions), int(journals), int(progress)
+        return int(versions), int(artifacts), int(segments), int(journals), int(progress)
     finally:
         connection.close()
+
+
+def create_document(
+    client: TestClient,
+    headers: dict[str, str],
+    domain_id: str,
+    source_id: str,
+    *,
+    content_hash: str = "sha256:abc12345",
+) -> tuple[str, str]:
+    created = client.post(
+        f"/domains/{domain_id}/documents",
+        json={
+            "source_id": source_id,
+            "external_id": "fixture-001",
+            "title": "Fixture Document",
+            "content_hash": content_hash,
+            "source_uri": "upload://documents-domain/fixture.txt",
+            "size_bytes": 128,
+            "metadata": {"language": "en"},
+        },
+        headers=headers,
+    )
+    document_id = created.json()["id"]
+    versions = client.get(f"/documents/{document_id}/versions", headers=headers)
+    return document_id, versions.json()[0]["id"]
 
 
 def test_documents_require_admin_token(documents_client: TestClient) -> None:
@@ -125,7 +153,158 @@ def test_create_list_get_and_list_document_versions(
     assert versions.json()[0]["version"] == 1
     assert versions.json()[0]["size_bytes"] == 128
 
-    assert count_document_side_effects(documents_db_path) == (1, 1, 1)
+    assert count_document_side_effects(documents_db_path) == (1, 0, 0, 1, 1)
+
+
+def test_create_artifact_and_segment_for_document_version(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+    documents_db_path: Path,
+) -> None:
+    domain_id, source_id = create_domain_and_source(documents_client, documents_admin_headers)
+    _, version_id = create_document(
+        documents_client,
+        documents_admin_headers,
+        domain_id,
+        source_id,
+    )
+
+    artifact_response = documents_client.post(
+        f"/document-versions/{version_id}/artifacts",
+        json={
+            "kind": "raw_text",
+            "uri": "storage://documents/fixture/raw.txt",
+            "sha256": "sha256:11111111",
+            "size_bytes": 64,
+        },
+        headers=documents_admin_headers,
+    )
+    assert artifact_response.status_code == 201
+    artifact = artifact_response.json()
+    assert artifact["document_version_id"] == version_id
+    assert artifact["kind"] == "raw_text"
+
+    segment_response = documents_client.post(
+        f"/document-versions/{version_id}/segments",
+        json={
+            "ordinal": 0,
+            "text": "This is a searchable fixture segment.",
+            "anchor": "page=1",
+            "token_count": 7,
+            "content_hash": "sha256:22222222",
+        },
+        headers=documents_admin_headers,
+    )
+    assert segment_response.status_code == 201
+    segment = segment_response.json()
+    assert segment["document_version_id"] == version_id
+    assert segment["ordinal"] == 0
+    assert segment["anchor"] == "page=1"
+
+    artifacts = documents_client.get(
+        f"/document-versions/{version_id}/artifacts",
+        headers=documents_admin_headers,
+    )
+    assert artifacts.status_code == 200
+    assert [item["id"] for item in artifacts.json()] == [artifact["id"]]
+
+    segments = documents_client.get(
+        f"/document-versions/{version_id}/segments",
+        headers=documents_admin_headers,
+    )
+    assert segments.status_code == 200
+    assert [item["id"] for item in segments.json()] == [segment["id"]]
+
+    assert count_document_side_effects(documents_db_path) == (1, 1, 1, 3, 3)
+
+
+def test_create_artifact_rejects_duplicate_kind_and_uri(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+) -> None:
+    domain_id, source_id = create_domain_and_source(documents_client, documents_admin_headers)
+    _, version_id = create_document(
+        documents_client,
+        documents_admin_headers,
+        domain_id,
+        source_id,
+    )
+    payload = {
+        "kind": "ocr_text",
+        "uri": "storage://documents/fixture/ocr.txt",
+        "sha256": "sha256:33333333",
+        "size_bytes": 12,
+    }
+
+    first = documents_client.post(
+        f"/document-versions/{version_id}/artifacts",
+        json=payload,
+        headers=documents_admin_headers,
+    )
+    second = documents_client.post(
+        f"/document-versions/{version_id}/artifacts",
+        json=payload,
+        headers=documents_admin_headers,
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 409
+
+
+def test_create_segment_rejects_duplicate_ordinal(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+) -> None:
+    domain_id, source_id = create_domain_and_source(documents_client, documents_admin_headers)
+    _, version_id = create_document(
+        documents_client,
+        documents_admin_headers,
+        domain_id,
+        source_id,
+    )
+    payload = {
+        "ordinal": 3,
+        "text": "Repeated ordinal.",
+        "token_count": 2,
+        "content_hash": "sha256:44444444",
+    }
+
+    first = documents_client.post(
+        f"/document-versions/{version_id}/segments",
+        json=payload,
+        headers=documents_admin_headers,
+    )
+    second = documents_client.post(
+        f"/document-versions/{version_id}/segments",
+        json=payload,
+        headers=documents_admin_headers,
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 409
+
+
+def test_artifacts_and_segments_require_existing_version(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+) -> None:
+    artifact = documents_client.post(
+        "/document-versions/missing/artifacts",
+        json={
+            "kind": "raw_text",
+            "uri": "storage://missing",
+            "sha256": "sha256:55555555",
+            "size_bytes": 1,
+        },
+        headers=documents_admin_headers,
+    )
+    segment = documents_client.get(
+        "/document-versions/missing/segments",
+        headers=documents_admin_headers,
+    )
+
+    assert artifact.status_code == 404
+    assert segment.status_code == 404
 
 
 def test_create_document_rejects_duplicate_hash_within_domain(

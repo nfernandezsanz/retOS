@@ -110,6 +110,62 @@ Document creation persists:
 - a `document.created` progress event
 - a live SSE notification for connected clients
 
+## Artifacts
+
+Artifacts are derived files for a document version: raw text, OCR text, page images,
+manifests, or other rebuildable outputs.
+
+Create an artifact:
+
+```bash
+curl --request POST http://localhost:8000/document-versions/<version_id>/artifacts \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "kind":"raw_text",
+    "uri":"storage://documents/fixture/raw.txt",
+    "sha256":"sha256:11111111",
+    "size_bytes":64
+  }'
+```
+
+List artifacts:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  http://localhost:8000/document-versions/<version_id>/artifacts
+```
+
+Artifacts are unique per `(document_version_id, kind, uri)`.
+
+## Segments
+
+Segments are searchable chunks for BM25/vector retrieval and citation anchoring.
+
+Create a segment:
+
+```bash
+curl --request POST http://localhost:8000/document-versions/<version_id>/segments \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "ordinal":0,
+    "text":"This is a searchable fixture segment.",
+    "anchor":"page=1",
+    "token_count":7,
+    "content_hash":"sha256:22222222"
+  }'
+```
+
+List segments:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  http://localhost:8000/document-versions/<version_id>/segments
+```
+
+Segments are ordered by `ordinal` and are unique per document version.
+
 ## Progress Events
 
 Long-running workflows expose progress through Server-Sent Events:

@@ -35,7 +35,7 @@ Run the same Docker smoke used by CI:
 make docker-smoke
 ```
 
-The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, waits for healthchecks, hits health, auth, domain/source/document CRUD, job creation/listing, SSE, and web over HTTP, then removes its temporary containers and volumes.
+The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, waits for healthchecks, hits health, auth, domain/source/document/artifact/segment CRUD, job creation/listing, SSE, and web over HTTP, then removes its temporary containers and volumes.
 
 ## Run
 

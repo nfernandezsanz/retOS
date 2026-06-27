@@ -19,6 +19,8 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/domains/{domain_id}/sources" in route_paths
     assert "/domains/{domain_id}/documents" in route_paths
     assert "/documents/{document_id}/versions" in route_paths
+    assert "/document-versions/{version_id}/artifacts" in route_paths
+    assert "/document-versions/{version_id}/segments" in route_paths
     assert "/jobs" in route_paths
     assert "/events/progress" in route_paths
 

@@ -46,6 +46,10 @@ The first API-backed workflows are document registration and job creation:
 
 - `POST /domains/{domain_id}/documents` creates a document, writes version `1`,
   writes `document.created` journal/progress events, and emits a live SSE notification.
+- `POST /document-versions/{version_id}/artifacts` creates a rebuildable artifact and
+  writes `artifact.created` journal/progress events.
+- `POST /document-versions/{version_id}/segments` creates a searchable/citable segment and
+  writes `segment.created` journal/progress events.
 - `POST /jobs` creates a queued job, writes a `job.created` journal event, writes a
   `job.queued` progress event, and emits a live SSE notification.
 
