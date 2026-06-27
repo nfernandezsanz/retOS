@@ -368,7 +368,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
   await expect(page.getByText("title: Policy Note")).toBeVisible();
   await page.getByRole("button", { name: "Refresh audit" }).click();
-  await expect(page.getByLabel("Journal events").getByText("job.created")).toBeVisible();
+  await expect(page.getByLabel("Journal events").getByText("job.created").first()).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("job-text-1")).toBeVisible();
   await expect(
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),
