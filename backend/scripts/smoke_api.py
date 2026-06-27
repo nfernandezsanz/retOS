@@ -235,6 +235,59 @@ def main() -> None:
         require(listed_segments.status_code == 200, "segment list failed")
         require(listed_segments.json()[0]["ordinal"] == 0, "missing first segment")
 
+        search_before_index = client.get(
+            f"/domains/{domain_id}/search",
+            headers=auth_headers,
+            params={"q": "readiness"},
+        )
+        require(
+            search_before_index.status_code == 409,
+            f"search should require an index first: {search_before_index.status_code}",
+        )
+
+        rebuild_index = client.post(
+            f"/domains/{domain_id}/index/rebuild",
+            headers=auth_headers,
+            json={"run_inline": not expect_worker},
+        )
+        require(
+            rebuild_index.status_code == 202,
+            f"index rebuild failed: {rebuild_index.status_code} {rebuild_index.text}",
+        )
+        index_job = rebuild_index.json()
+        require(index_job["kind"] == "index.domain", "invalid index job kind")
+
+        if expect_worker:
+            deadline = time.monotonic() + 60
+            while time.monotonic() < deadline:
+                fetched = client.get(f"/jobs/{index_job['id']}", headers=auth_headers)
+                require(
+                    fetched.status_code == 200,
+                    f"index job fetch failed: {fetched.status_code} {fetched.text}",
+                )
+                index_job = fetched.json()
+                if index_job["status"] in {"succeeded", "failed", "cancelled"}:
+                    break
+                time.sleep(1)
+        require(index_job["status"] == "succeeded", f"index job did not succeed: {index_job}")
+
+        search_response = client.get(
+            f"/domains/{domain_id}/search",
+            headers=auth_headers,
+            params={"q": "search readiness", "limit": 5},
+        )
+        require(
+            search_response.status_code == 200,
+            f"search failed: {search_response.status_code} {search_response.text}",
+        )
+        search_hits = search_response.json()["hits"]
+        require(search_hits, "search returned no hits")
+        require(
+            search_hits[0]["document_id"] == document["id"],
+            "search did not return the expected document",
+        )
+        require(search_hits[0]["anchor"] == "page=1", "search did not preserve anchors")
+
         created_job = client.post(
             "/jobs",
             headers=auth_headers,
@@ -305,6 +358,8 @@ def main() -> None:
                     or "segment.created" in line
                     or "ingestion.queued" in line
                     or "ingestion.completed" in line
+                    or "index.queued" in line
+                    or "index.completed" in line
                     or "job.queued" in line
                     or "job.running" in line
                     or "job.succeeded" in line

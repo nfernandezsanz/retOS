@@ -61,6 +61,10 @@ The first API-backed workflows are document registration and job creation:
   worker materializes the text as a document, initial version, `raw_text` artifact, and
   deterministic segments, then writes `document.ingested`, `job.succeeded` or `job.failed`,
   and ingestion progress events.
+- `POST /domains/{domain_id}/index/rebuild` queues an `index.domain` job. The worker reads
+  persisted segments and rebuilds a Tantivy BM25 projection under `RETOS_INDEX_ROOT`. The
+  index remains disposable; persisted segments and document metadata are the canonical
+  source.
 
 ## Development Contract
 

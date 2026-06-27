@@ -28,6 +28,7 @@ from retos.persistence.models import (
     SegmentRecord,
     SourceRecord,
 )
+from retos.search.index import IndexedSegment
 
 
 def admin_user_from_record(record: AdminUserRecord) -> AdminUser:
@@ -444,6 +445,38 @@ class DocumentRepository:
             .order_by(SegmentRecord.ordinal)
         )
         return [segment_from_record(record) for record in result]
+
+    async def list_indexable_segments(self, domain_id: str) -> list[IndexedSegment]:
+        result = await self._session.execute(
+            select(
+                SegmentRecord.id,
+                SegmentRecord.document_version_id,
+                SegmentRecord.ordinal,
+                SegmentRecord.text,
+                SegmentRecord.anchor,
+                DocumentRecord.id,
+                DocumentRecord.title,
+            )
+            .join(
+                DocumentVersionRecord,
+                SegmentRecord.document_version_id == DocumentVersionRecord.id,
+            )
+            .join(DocumentRecord, DocumentVersionRecord.document_id == DocumentRecord.id)
+            .where(DocumentRecord.domain_id == domain_id)
+            .order_by(DocumentRecord.created_at, DocumentRecord.id, SegmentRecord.ordinal)
+        )
+        return [
+            IndexedSegment(
+                segment_id=row[0],
+                document_version_id=row[1],
+                ordinal=row[2],
+                text=row[3],
+                anchor=row[4],
+                document_id=row[5],
+                title=row[6],
+            )
+            for row in result.all()
+        ]
 
 
 class JobRepository:

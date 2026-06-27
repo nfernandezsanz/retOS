@@ -200,6 +200,51 @@ Local API smoke runs with `RETOS_ENV=test`, so it verifies queuing without requi
 broker. Docker smoke runs RabbitMQ and the worker and waits for the ingestion job to
 finish.
 
+## BM25 Search
+
+Rebuild the local Tantivy BM25 projection for a domain:
+
+```bash
+curl --request POST http://localhost:8000/domains/<domain_id>/index/rebuild \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"run_inline":false}'
+```
+
+The response is a durable `index.domain` job. In `RETOS_ENV=test`, or when
+`run_inline=true`, the rebuild happens in the request so integration tests do not need
+RabbitMQ. In normal Docker/runtime mode, the API queues the job and the worker rebuilds
+the index under `RETOS_INDEX_ROOT`.
+
+Search a built index:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  "http://localhost:8000/domains/<domain_id>/search?q=search%20terms&limit=10"
+```
+
+Search hits include stable citation data:
+
+```json
+{
+  "query": "search terms",
+  "hits": [
+    {
+      "segment_id": "<segment_id>",
+      "document_id": "<document_id>",
+      "document_version_id": "<version_id>",
+      "title": "Fixture Document",
+      "text": "Matching segment text",
+      "anchor": "page=1",
+      "ordinal": 0,
+      "score": 1.23
+    }
+  ]
+}
+```
+
+If the index has not been built, search returns `409 Conflict`.
+
 ## Progress Events
 
 Long-running workflows expose progress through Server-Sent Events:

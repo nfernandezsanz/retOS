@@ -6,6 +6,8 @@ port="${RETOS_SMOKE_PORT:-8000}"
 base_url="${RETOS_SMOKE_BASE_URL:-http://${host}:${port}}"
 log_file="${TMPDIR:-/tmp}/retos-api-smoke.log"
 db_file="${TMPDIR:-/tmp}/retos-api-smoke-$RANDOM.db"
+index_dir="${TMPDIR:-/tmp}/retos-api-smoke-index-$RANDOM"
+storage_dir="${TMPDIR:-/tmp}/retos-api-smoke-storage-$RANDOM"
 python_bin="${PYTHON:-python}"
 
 if [[ -z "${PYTHON:-}" && -x "../.venv/bin/python" ]]; then
@@ -20,6 +22,8 @@ export RETOS_BOOTSTRAP_ADMIN_EMAIL="${RETOS_BOOTSTRAP_ADMIN_EMAIL:-admin@retos.d
 export RETOS_BOOTSTRAP_ADMIN_PASSWORD="${RETOS_BOOTSTRAP_ADMIN_PASSWORD:-test-admin-password}"
 export RETOS_DATABASE_URL="${RETOS_DATABASE_URL:-sqlite+aiosqlite:///${db_file}}"
 export RETOS_DATABASE_CREATE_ALL="${RETOS_DATABASE_CREATE_ALL:-true}"
+export RETOS_INDEX_ROOT="${RETOS_INDEX_ROOT:-${index_dir}}"
+export RETOS_STORAGE_ROOT="${RETOS_STORAGE_ROOT:-${storage_dir}}"
 
 "${python_bin}" -m uvicorn retos.main:app --host "${host}" --port "${port}" >"${log_file}" 2>&1 &
 server_pid="$!"
@@ -28,6 +32,7 @@ cleanup() {
   kill "${server_pid}" >/dev/null 2>&1 || true
   wait "${server_pid}" >/dev/null 2>&1 || true
   rm -f "${db_file}"
+  rm -rf "${index_dir}" "${storage_dir}"
 }
 trap cleanup EXIT
 
