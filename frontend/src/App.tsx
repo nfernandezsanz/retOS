@@ -150,9 +150,15 @@ type EvalReport = {
   cases: EvalCaseResult[];
 };
 
+type EvalReportPaths = {
+  json: string;
+  markdown: string;
+};
+
 type EvalRunResponse = {
   job: JobRead;
   report: EvalReport;
+  report_paths: EvalReportPaths | null;
 };
 
 type EvalRunRead = {
@@ -381,6 +387,24 @@ async function runSmokeEval(token: string): Promise<EvalRunResponse> {
   });
 }
 
+async function runSquadEval(
+  token: string,
+  payload: {
+    dataset_path: string;
+    max_cases: number;
+    write_report: boolean;
+    report_stem: string | null;
+  },
+): Promise<EvalRunResponse> {
+  return requestJson<EvalRunResponse>("/evals/squad", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 async function loadEvalRuns(token: string): Promise<EvalRunRead[]> {
   return requestJson<EvalRunRead[]>("/evals/runs?limit=6", {
     headers: {
@@ -397,6 +421,21 @@ function providerLabel(name: ProviderName): string {
     return "Fake";
   }
   return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function reportPathsFromPayload(payload: Record<string, unknown>): EvalReportPaths | null {
+  const candidate = payload.report_paths;
+  if (!candidate || typeof candidate !== "object") {
+    return null;
+  }
+  const paths = candidate as Record<string, unknown>;
+  if (typeof paths.json !== "string" || typeof paths.markdown !== "string") {
+    return null;
+  }
+  return {
+    json: paths.json,
+    markdown: paths.markdown,
+  };
 }
 
 function parseSseFrames(buffer: string): { frames: string[]; rest: string } {
@@ -491,8 +530,14 @@ function App() {
   const [queryError, setQueryError] = useState<string | null>(null);
   const [evalReport, setEvalReport] = useState<EvalReport | null>(null);
   const [evalJob, setEvalJob] = useState<JobRead | null>(null);
+  const [evalReportPaths, setEvalReportPaths] = useState<EvalReportPaths | null>(null);
   const [evalRuns, setEvalRuns] = useState<EvalRunRead[]>([]);
   const [isRunningEval, setIsRunningEval] = useState(false);
+  const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
+  const [squadDatasetPath, setSquadDatasetPath] = useState("dev-v2.0.json");
+  const [squadMaxCases, setSquadMaxCases] = useState("50");
+  const [squadWriteReport, setSquadWriteReport] = useState(true);
+  const [squadReportStem, setSquadReportStem] = useState("squad-v2-dev-50");
   const [evalError, setEvalError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
   const [liveError, setLiveError] = useState<string | null>(null);
@@ -545,6 +590,7 @@ function App() {
         : queuedJobs.filter((job) => job.status === jobFilter || job.kind === jobFilter),
     [jobFilter, queuedJobs],
   );
+  const isAnyEvalRunning = isRunningEval || isRunningSquadEval;
 
   useEffect(() => {
     return () => {
@@ -618,6 +664,9 @@ function App() {
       const latestWithReport = runs.find((run) => run.report !== null);
       setEvalJob(runs[0]?.job ?? null);
       setEvalReport(latestWithReport?.report ?? null);
+      setEvalReportPaths(
+        latestWithReport ? reportPathsFromPayload(latestWithReport.job.payload) : null,
+      );
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Eval history refresh failed");
     }
@@ -843,17 +892,7 @@ function App() {
     try {
       const accessToken = await getAdminToken();
       const response = await runSmokeEval(accessToken);
-      setEvalJob(response.job);
-      setEvalReport(response.report);
-      setEvalRuns((current) =>
-        [
-          { job: response.job, report: response.report },
-          ...current.filter((run) => run.job.id !== response.job.id),
-        ].slice(0, 6),
-      );
-      setQueuedJobs((current) =>
-        [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(0, 12),
-      );
+      applyEvalResponse(response);
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
@@ -861,6 +900,51 @@ function App() {
     } finally {
       setIsRunningEval(false);
     }
+  }
+
+  async function handleRunSquadEval(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsRunningSquadEval(true);
+    setEvalError(null);
+    try {
+      const datasetPath = squadDatasetPath.trim();
+      const parsedMaxCases = Number.parseInt(squadMaxCases, 10);
+      if (!datasetPath) {
+        throw new Error("SQuAD dataset path is required");
+      }
+      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+        throw new Error("SQuAD max cases must be between 1 and 1000");
+      }
+      const accessToken = await getAdminToken();
+      const response = await runSquadEval(accessToken, {
+        dataset_path: datasetPath,
+        max_cases: parsedMaxCases,
+        write_report: squadWriteReport,
+        report_stem: squadReportStem.trim() || null,
+      });
+      applyEvalResponse(response);
+      await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "SQuAD eval failed");
+    } finally {
+      setIsRunningSquadEval(false);
+    }
+  }
+
+  function applyEvalResponse(response: EvalRunResponse) {
+    setEvalJob(response.job);
+    setEvalReport(response.report);
+    setEvalReportPaths(response.report_paths ?? reportPathsFromPayload(response.job.payload));
+    setEvalRuns((current) =>
+      [
+        { job: response.job, report: response.report },
+        ...current.filter((run) => run.job.id !== response.job.id),
+      ].slice(0, 6),
+    );
+    setQueuedJobs((current) =>
+      [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(0, 12),
+    );
   }
 
   async function handleConnectLiveUpdates() {
@@ -938,6 +1022,7 @@ function App() {
     setQueryJob(null);
     setEvalReport(null);
     setEvalJob(null);
+    setEvalReportPaths(null);
     setEvalRuns([]);
     setEvalError(null);
     setDomains([]);
@@ -1369,7 +1454,7 @@ function App() {
             <div className="eval-toolbar">
               <button
                 className="secondary-action"
-                disabled={isRunningEval}
+                disabled={isAnyEvalRunning}
                 type="button"
                 onClick={() => void handleRunSmokeEval()}
               >
@@ -1385,6 +1470,56 @@ function App() {
                 </div>
               ) : null}
             </div>
+            <form className="eval-dataset-form" onSubmit={(event) => void handleRunSquadEval(event)}>
+              <label className="span-two">
+                SQuAD dataset path
+                <input
+                  aria-label="SQuAD dataset path"
+                  value={squadDatasetPath}
+                  onChange={(event) => setSquadDatasetPath(event.target.value)}
+                  placeholder="dev-v2.0.json"
+                />
+              </label>
+              <label>
+                Max cases
+                <input
+                  aria-label="SQuAD max cases"
+                  inputMode="numeric"
+                  min="1"
+                  max="1000"
+                  type="number"
+                  value={squadMaxCases}
+                  onChange={(event) => setSquadMaxCases(event.target.value)}
+                />
+              </label>
+              <label>
+                Report stem
+                <input
+                  aria-label="SQuAD report stem"
+                  disabled={!squadWriteReport}
+                  value={squadReportStem}
+                  onChange={(event) => setSquadReportStem(event.target.value)}
+                  placeholder="squad-v2-dev-50"
+                />
+              </label>
+              <label className="checkbox-field">
+                <input
+                  aria-label="Write SQuAD reports"
+                  checked={squadWriteReport}
+                  type="checkbox"
+                  onChange={(event) => setSquadWriteReport(event.target.checked)}
+                />
+                <span>Write reports</span>
+              </label>
+              <button
+                className="secondary-action"
+                disabled={isAnyEvalRunning}
+                type="submit"
+              >
+                <FileSearch aria-hidden="true" />
+                {isRunningSquadEval ? "Running SQuAD eval" : "Run SQuAD eval"}
+              </button>
+            </form>
             {evalError ? (
               <p className="inline-error" role="alert">
                 {evalError}
@@ -1420,6 +1555,18 @@ function App() {
                       </article>
                     ))}
                   </div>
+                  {evalReportPaths ? (
+                    <div className="eval-report-paths" aria-label="Eval report paths">
+                      <div>
+                        <span>JSON report</span>
+                        <strong>{evalReportPaths.json}</strong>
+                      </div>
+                      <div>
+                        <span>Markdown report</span>
+                        <strong>{evalReportPaths.markdown}</strong>
+                      </div>
+                    </div>
+                  ) : null}
                 </>
               ) : (
                 <div className="empty-state compact">

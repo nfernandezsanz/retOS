@@ -349,6 +349,7 @@ h2 {
 .text-ingestion-form input,
 .text-ingestion-form select,
 .text-ingestion-form textarea,
+.eval-dataset-form input,
 .provider-login input {
   min-height: 140px;
   width: 100%;
@@ -374,6 +375,7 @@ h2 {
 .source-form select,
 .text-ingestion-form input,
 .text-ingestion-form select,
+.eval-dataset-form input,
 .query-box.compact-field input {
   min-height: 44px;
 }
@@ -387,6 +389,7 @@ h2 {
 .text-ingestion-form input:focus-visible,
 .text-ingestion-form select:focus-visible,
 .text-ingestion-form textarea:focus-visible,
+.eval-dataset-form input:focus-visible,
 .provider-login input:focus-visible,
 button:focus-visible {
   outline: 3px solid #93c5fd;
@@ -400,7 +403,8 @@ button:focus-visible {
 
 .domain-form,
 .source-form,
-.text-ingestion-form {
+.text-ingestion-form,
+.eval-dataset-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -409,7 +413,8 @@ button:focus-visible {
 .domain-form label,
 .domain-toolbar label,
 .source-form label,
-.text-ingestion-form label {
+.text-ingestion-form label,
+.eval-dataset-form label {
   display: grid;
   gap: 8px;
   color: #334155;
@@ -418,13 +423,15 @@ button:focus-visible {
 
 .domain-form .span-two,
 .source-form .span-two,
-.text-ingestion-form .span-two {
+.text-ingestion-form .span-two,
+.eval-dataset-form .span-two {
   grid-column: 1 / -1;
 }
 
 .domain-form .secondary-action,
 .source-form .secondary-action,
-.text-ingestion-form .secondary-action {
+.text-ingestion-form .secondary-action,
+.eval-dataset-form .secondary-action {
   grid-column: 1 / -1;
 }
 
@@ -748,6 +755,36 @@ button:focus-visible {
   margin-top: 0;
 }
 
+.eval-dataset-form {
+  margin-bottom: 14px;
+  border-top: 1px solid #dbe3ef;
+  padding-top: 14px;
+}
+
+.eval-dataset-form input:disabled {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.checkbox-field {
+  align-content: end;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 44px;
+}
+
+.checkbox-field input {
+  width: 22px;
+  min-height: 22px;
+  align-self: center;
+  justify-self: center;
+  accent-color: #2563eb;
+}
+
+.checkbox-field span {
+  align-self: center;
+}
+
 .eval-result {
   display: grid;
   gap: 14px;
@@ -807,6 +844,33 @@ button:focus-visible {
 
 .eval-case-row strong,
 .eval-case-row span {
+  overflow-wrap: anywhere;
+}
+
+.eval-report-paths {
+  display: grid;
+  gap: 10px;
+}
+
+.eval-report-paths div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.eval-report-paths span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.eval-report-paths strong {
+  color: #0f172a;
   overflow-wrap: anywhere;
 }
 
@@ -1087,6 +1151,7 @@ button:focus-visible {
   .domain-toolbar,
   .source-form,
   .text-ingestion-form,
+  .eval-dataset-form,
   .audit-toolbar,
   .audit-event-grid,
   .eval-toolbar,

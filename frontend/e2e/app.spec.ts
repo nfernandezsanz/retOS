@@ -128,6 +128,23 @@ async function mockProviderApi(page: Page) {
       },
     ],
   };
+  const squadReport = {
+    ...evalReport,
+    suite_name: "squad-v2",
+    case_count: 2,
+    cases: [
+      {
+        ...evalReport.cases[0],
+        case_id: "squad-mars-red-planet",
+        question: "Why is Mars called the Red Planet?",
+      },
+      {
+        ...evalReport.cases[2],
+        case_id: "squad-mars-ocean-depth",
+        question: "How deep are the oceans on Mars today?",
+      },
+    ],
+  };
   const evalRuns: { job: ReturnType<typeof jobFixture>; report: typeof evalReport | null }[] = [];
 
   function recordAudit(job: ReturnType<typeof jobFixture>) {
@@ -349,6 +366,26 @@ async function mockProviderApi(page: Page) {
       json: { job, report: evalReport },
     });
   });
+  await page.route("http://localhost:8000/evals/squad", async (route) => {
+    const reportPaths = {
+      json: "/var/lib/retos/evals/reports/ui-squad.json",
+      markdown: "/var/lib/retos/evals/reports/ui-squad.md",
+    };
+    const job = jobFixture("job-eval-squad-1", "eval.run", "succeeded", {
+      dataset_path: "/var/lib/retos/evals/datasets/ui-squad.json",
+      max_cases: 2,
+      report_paths: reportPaths,
+      result: squadReport,
+    });
+    jobs.unshift(job);
+    evalRuns.unshift({ job, report: squadReport });
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: { job, report: squadReport, report_paths: reportPaths },
+    });
+  });
   await page.route("http://localhost:8000/evals/runs?limit=6", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -452,6 +489,16 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.locator("#evals").getByText("eval.run succeeded")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("3 cases")).toBeVisible();
+
+  await page.getByLabel("SQuAD dataset path").fill("ui-squad.json");
+  await page.getByLabel("SQuAD max cases").fill("2");
+  await page.getByLabel("SQuAD report stem").fill("ui-squad");
+  await page.getByRole("button", { name: "Run SQuAD eval" }).click();
+  await expect(page.getByLabel("Eval cases").getByText("squad-mars-red-planet")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("squad-v2")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("2 cases")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-squad.json")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-squad.md")).toBeVisible();
 
   await page.getByLabel("Filter jobs").selectOption("index.domain");
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();

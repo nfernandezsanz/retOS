@@ -92,7 +92,9 @@ Current metrics:
 
 The smoke suite is included in `make check` and GitHub Actions. API smoke also
 creates a tiny SQuAD 2.0 fixture, posts it to `/evals/squad`, verifies the durable
-`eval.run` response, and checks that JSON/Markdown reports were written.
+`eval.run` response, and checks that JSON/Markdown reports were written. Browser
+smoke exercises the React SQuAD controls with a mocked API response and verifies
+visible suite history plus report paths.
 
 ## Public Dataset Candidates
 

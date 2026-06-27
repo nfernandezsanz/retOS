@@ -87,8 +87,9 @@ curl "http://localhost:8000/evals/runs?limit=6" \
   --header "Authorization: Bearer <token>"
 ```
 
-The React console uses these endpoints in the `Local evals` panel to show metrics,
-per-case status, and a newest-first run history.
+The React console uses these endpoints in the `Local evals` panel to run smoke and
+SQuAD evals, show metrics, per-case status, exported report paths, and a newest-first
+run history.
 
 Dataset-backed SQuAD evals are also available through the admin API:
 
@@ -158,4 +159,4 @@ Adapter guarantees:
 ## Next Implementation Step
 
 Add Natural Questions or HotpotQA adapters for larger retrieval and multi-hop coverage,
-then surface dataset-backed runs in the React console.
+then compare eval runs across suites and datasets in the React console.

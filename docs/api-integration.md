@@ -527,7 +527,7 @@ The UI treats the provider catalog as read-only operational status:
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text ingestions, queue source scans, rebuild the
-BM25 index, run local smoke evals, read recent jobs, read persisted audit/progress
+BM25 index, run local smoke/SQuAD evals, read recent jobs, read persisted audit/progress
 events, filter the job ledger by status/kind, and send queries against the selected
 domain. Query execution uses `run_inline=true` so the UI can render the answer and
 citations immediately.
