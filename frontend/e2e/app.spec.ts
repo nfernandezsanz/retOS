@@ -49,6 +49,7 @@ async function mockProviderApi(page: Page) {
       metadata: {},
       source_uri: "memory://smoke-doc",
       size_bytes: 128,
+      archived_at: null,
       created_at: "2026-06-27T00:00:00Z",
       updated_at: "2026-06-27T00:00:00Z",
     },
@@ -235,9 +236,90 @@ async function mockProviderApi(page: Page) {
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/documents/, async (route) => {
     const domainId = new URL(route.request().url()).pathname.split("/")[2];
+    const includeArchived = new URL(route.request().url()).searchParams.get("include_archived") === "true";
     await route.fulfill({
       contentType: "application/json",
-      json: documents.filter((document) => document.domain_id === domainId),
+      json: documents.filter(
+        (document) => document.domain_id === domainId && (includeArchived || !document.archived_at),
+      ),
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/documents\/[^/]+$/, async (route) => {
+    const documentId = new URL(route.request().url()).pathname.split("/")[2];
+    const index = documents.findIndex((document) => document.id === documentId);
+    if (index === -1) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        json: { detail: "Document not found" },
+      });
+      return;
+    }
+
+    if (route.request().method() === "PATCH") {
+      const payload = (await route.request().postDataJSON()) as { title?: string };
+      documents[index] = {
+        ...documents[index],
+        title: payload.title ?? documents[index].title,
+        updated_at: "2026-06-27T00:03:00Z",
+      };
+      journalEvents.unshift({
+        id: `journal-document-updated-${documentId}`,
+        occurred_at: "2026-06-27T00:03:00Z",
+        actor: "admin@retos.dev",
+        event_type: "document.updated",
+        entity_type: "document",
+        entity_id: documentId,
+        payload: { domain_id: documents[index].domain_id, title_changed: true },
+      });
+      progressEvents.unshift({
+        id: `progress-document-updated-${documentId}`,
+        job_id: null,
+        occurred_at: "2026-06-27T00:03:00Z",
+        event_type: "document.updated",
+        message: `Updated document ${documents[index].title}`,
+        payload: { document_id: documentId, domain_id: documents[index].domain_id },
+      });
+      await route.fulfill({
+        contentType: "application/json",
+        json: documents[index],
+      });
+      return;
+    }
+
+    if (route.request().method() === "DELETE") {
+      documents[index] = {
+        ...documents[index],
+        archived_at: "2026-06-27T00:04:00Z",
+        updated_at: "2026-06-27T00:04:00Z",
+      };
+      journalEvents.unshift({
+        id: `journal-document-archived-${documentId}`,
+        occurred_at: "2026-06-27T00:04:00Z",
+        actor: "admin@retos.dev",
+        event_type: "document.archived",
+        entity_type: "document",
+        entity_id: documentId,
+        payload: { domain_id: documents[index].domain_id },
+      });
+      progressEvents.unshift({
+        id: `progress-document-archived-${documentId}`,
+        job_id: null,
+        occurred_at: "2026-06-27T00:04:00Z",
+        event_type: "document.archived",
+        message: `Archived document ${documents[index].title}`,
+        payload: { document_id: documentId, domain_id: documents[index].domain_id },
+      });
+      await route.fulfill({
+        contentType: "application/json",
+        json: documents[index],
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: documents[index],
     });
   });
   await page.route(/http:\/\/localhost:8000\/jobs\?limit=\d+/, async (route) => {
@@ -332,6 +414,7 @@ async function mockProviderApi(page: Page) {
       metadata: {},
       source_uri: "inline://policy-research/policy-note",
       size_bytes: 256,
+      archived_at: null,
       created_at: "2026-06-27T00:00:00Z",
       updated_at: "2026-06-27T00:00:00Z",
     });
@@ -356,6 +439,7 @@ async function mockProviderApi(page: Page) {
       metadata: { ingestion: { kind: "file_upload" } },
       source_uri: "storage://uploads/domain-456/uploaded-fixture.txt",
       size_bytes: 512,
+      archived_at: null,
       created_at: "2026-06-27T00:00:00Z",
       updated_at: "2026-06-27T00:00:00Z",
     });
@@ -518,6 +602,12 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Queue upload" }).click();
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture")).toBeVisible();
   await expect(page.getByLabel("Recent jobs").getByText("job-upload-1")).toBeVisible();
+  await page.getByRole("button", { name: "Edit Uploaded Fixture" }).click();
+  await page.getByLabel("Document title for Uploaded Fixture").fill("Uploaded Fixture Reviewed");
+  await page.getByRole("button", { name: "Save Uploaded Fixture" }).click();
+  await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
+  await page.getByRole("button", { name: "Archive Uploaded Fixture Reviewed" }).click();
+  await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeHidden();
 
   await page.getByPlaceholder("Research note", { exact: true }).fill("Policy Note");
   await page
@@ -531,6 +621,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("title: Policy Note")).toBeVisible();
   await page.getByRole("button", { name: "Refresh audit" }).click();
   await expect(page.getByLabel("Journal events").getByText("job.created").first()).toBeVisible();
+  await expect(page.getByLabel("Journal events").getByText("document.archived")).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("job-text-1")).toBeVisible();
   await expect(
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),

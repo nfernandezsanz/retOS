@@ -15,6 +15,7 @@ from retos.domain.documents import (
     Segment,
     Source,
     SourceKind,
+    utc_now,
 )
 from retos.domain.jobs import Job, JobKind, JobStatus, JournalEvent, ProgressEvent
 from retos.persistence.models import (
@@ -75,6 +76,7 @@ def document_from_record(record: DocumentRecord) -> Document:
         title=record.title,
         content_hash=record.content_hash,
         metadata=record.metadata_,
+        archived_at=record.archived_at,
         created_at=record.created_at,
         updated_at=record.updated_at,
     )
@@ -328,14 +330,51 @@ class DocumentRepository:
             return None
         return document_from_record(record)
 
-    async def list_for_domain(self, domain_id: str, *, limit: int = 100) -> list[Document]:
+    async def list_for_domain(
+        self,
+        domain_id: str,
+        *,
+        limit: int = 100,
+        include_archived: bool = False,
+    ) -> list[Document]:
+        statement = select(DocumentRecord).where(DocumentRecord.domain_id == domain_id)
+        if not include_archived:
+            statement = statement.where(DocumentRecord.archived_at.is_(None))
         result = await self._session.scalars(
-            select(DocumentRecord)
-            .where(DocumentRecord.domain_id == domain_id)
-            .order_by(DocumentRecord.created_at.desc(), DocumentRecord.id.desc())
-            .limit(limit)
+            statement.order_by(DocumentRecord.created_at.desc(), DocumentRecord.id.desc()).limit(
+                limit
+            )
         )
         return [document_from_record(record) for record in result]
+
+    async def update(
+        self,
+        document_id: str,
+        *,
+        title: str | None = None,
+        metadata: dict[str, object] | None = None,
+    ) -> Document | None:
+        record = await self._session.get(DocumentRecord, document_id)
+        if record is None:
+            return None
+        if title is not None:
+            record.title = title
+        if metadata is not None:
+            record.metadata_ = metadata
+        record.updated_at = utc_now()
+        await self._session.flush()
+        return document_from_record(record)
+
+    async def archive(self, document_id: str) -> Document | None:
+        record = await self._session.get(DocumentRecord, document_id)
+        if record is None:
+            return None
+        if record.archived_at is None:
+            now = utc_now()
+            record.archived_at = now
+            record.updated_at = now
+            await self._session.flush()
+        return document_from_record(record)
 
     async def list_versions(self, document_id: str) -> list[DocumentVersion]:
         result = await self._session.scalars(
@@ -463,7 +502,10 @@ class DocumentRepository:
                 SegmentRecord.document_version_id == DocumentVersionRecord.id,
             )
             .join(DocumentRecord, DocumentVersionRecord.document_id == DocumentRecord.id)
-            .where(DocumentRecord.domain_id == domain_id)
+            .where(
+                DocumentRecord.domain_id == domain_id,
+                DocumentRecord.archived_at.is_(None),
+            )
             .order_by(DocumentRecord.created_at, DocumentRecord.id, SegmentRecord.ordinal)
         )
         return [

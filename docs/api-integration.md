@@ -94,10 +94,38 @@ curl --header "Authorization: Bearer <token>" \
   "http://localhost:8000/domains/<domain_id>/documents?limit=100"
 ```
 
+Archived documents are hidden by default. Include them explicitly when auditing a
+retired corpus item:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  "http://localhost:8000/domains/<domain_id>/documents?include_archived=true"
+```
+
 Read one document:
 
 ```bash
 curl --header "Authorization: Bearer <token>" http://localhost:8000/documents/<document_id>
+```
+
+Update mutable document metadata:
+
+```bash
+curl --request PATCH http://localhost:8000/documents/<document_id> \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "title":"Reviewed Fixture Document",
+    "metadata":{"language":"en","reviewed":true}
+  }'
+```
+
+Archive a document without deleting its versions, artifacts, segments, or audit trail:
+
+```bash
+curl --request DELETE \
+  --header "Authorization: Bearer <token>" \
+  http://localhost:8000/documents/<document_id>
 ```
 
 List immutable versions:
@@ -114,6 +142,12 @@ Document creation persists:
 - a `document.created` journal event
 - a `document.created` progress event
 - a live SSE notification for connected clients
+
+Document title/metadata updates persist `document.updated` journal/progress events and
+emit live SSE notifications. Archive operations set `archived_at`, persist
+`document.archived` journal/progress events, emit SSE notifications, hide the document
+from default lists, and exclude it from future BM25 rebuilds. The underlying versions,
+artifacts, and segments remain available for audit and historical reads.
 
 The console reads this list after a domain is selected and uses it as the visible
 document inventory for the active research workspace.
@@ -540,6 +574,8 @@ Current console calls:
 - `GET /domains`
 - `POST /domains`
 - `GET /domains/{domain_id}/documents`
+- `PATCH /documents/{document_id}`
+- `DELETE /documents/{document_id}`
 - `GET /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/ingestions/text`

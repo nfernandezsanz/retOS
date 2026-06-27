@@ -39,6 +39,7 @@ class Document:
     title: str
     content_hash: str
     metadata: dict[str, Any]
+    archived_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

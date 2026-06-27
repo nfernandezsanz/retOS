@@ -104,6 +104,11 @@ class DocumentRecord(TimestampMixin, Base):
     metadata_: Mapped[dict[str, Any]] = mapped_column(
         "metadata", JSON, default=dict, nullable=False
     )
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        index=True,
+        nullable=True,
+    )
 
     domain: Mapped[DomainRecord] = relationship(back_populates="documents")
     source: Mapped[SourceRecord | None] = relationship(back_populates="documents")

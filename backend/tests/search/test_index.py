@@ -40,7 +40,7 @@ def search_admin_headers(search_client: TestClient) -> dict[str, str]:
 def create_search_fixture(
     client: TestClient,
     headers: dict[str, str],
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     domain_response = client.post(
         "/domains",
         json={"slug": "search-domain", "name": "Search Domain"},
@@ -64,8 +64,9 @@ def create_search_fixture(
         },
         headers=headers,
     )
+    document_id = document_response.json()["id"]
     version_response = client.get(
-        f"/documents/{document_response.json()['id']}/versions",
+        f"/documents/{document_id}/versions",
         headers=headers,
     )
     version_id = version_response.json()[0]["id"]
@@ -86,7 +87,7 @@ def create_search_fixture(
             },
             headers=headers,
         )
-    return domain_id, version_id
+    return domain_id, document_id, version_id
 
 
 def test_tantivy_search_index_rebuilds_and_queries(tmp_path: Path) -> None:
@@ -149,7 +150,7 @@ def test_search_requires_existing_index(
     search_client: TestClient,
     search_admin_headers: dict[str, str],
 ) -> None:
-    domain_id, _ = create_search_fixture(search_client, search_admin_headers)
+    domain_id, _, _ = create_search_fixture(search_client, search_admin_headers)
 
     response = search_client.get(
         f"/domains/{domain_id}/search",
@@ -165,7 +166,7 @@ def test_rebuild_index_and_search_domain_inline(
     search_client: TestClient,
     search_admin_headers: dict[str, str],
 ) -> None:
-    domain_id, _ = create_search_fixture(search_client, search_admin_headers)
+    domain_id, _, _ = create_search_fixture(search_client, search_admin_headers)
 
     rebuild = search_client.post(
         f"/domains/{domain_id}/index/rebuild",
@@ -190,6 +191,31 @@ def test_rebuild_index_and_search_domain_inline(
     assert "Apollo guidance" in body["hits"][0]["text"]
 
 
+def test_rebuild_index_excludes_archived_documents(
+    search_client: TestClient,
+    search_admin_headers: dict[str, str],
+) -> None:
+    domain_id, document_id, _ = create_search_fixture(search_client, search_admin_headers)
+
+    archived = search_client.delete(f"/documents/{document_id}", headers=search_admin_headers)
+    rebuild = search_client.post(
+        f"/domains/{domain_id}/index/rebuild",
+        json={"run_inline": True},
+        headers=search_admin_headers,
+    )
+    response = search_client.get(
+        f"/domains/{domain_id}/search",
+        params={"q": "apollo guidance", "limit": 5},
+        headers=search_admin_headers,
+    )
+
+    assert archived.status_code == 200
+    assert rebuild.status_code == 202
+    assert rebuild.json()["status"] == "succeeded"
+    assert response.status_code == 200
+    assert response.json()["hits"] == []
+
+
 def test_rebuild_index_rejects_missing_domain(
     search_client: TestClient,
     search_admin_headers: dict[str, str],
@@ -208,7 +234,7 @@ async def test_fail_index_job_marks_job_failed(
     search_client: TestClient,
     search_admin_headers: dict[str, str],
 ) -> None:
-    domain_id, _ = create_search_fixture(search_client, search_admin_headers)
+    domain_id, _, _ = create_search_fixture(search_client, search_admin_headers)
     created_job = search_client.post(
         "/jobs",
         headers=search_admin_headers,

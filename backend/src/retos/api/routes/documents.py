@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import IntegrityError
 
 from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
@@ -28,6 +30,17 @@ class DocumentCreate(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class DocumentUpdate(BaseModel):
+    title: Title | None = None
+    metadata: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def require_update(self) -> DocumentUpdate:
+        if self.title is None and self.metadata is None:
+            raise ValueError("At least one document field must be provided")
+        return self
+
+
 class DocumentRead(BaseModel):
     id: str
     domain_id: str
@@ -36,6 +49,7 @@ class DocumentRead(BaseModel):
     title: str
     content_hash: str
     metadata: dict[str, Any]
+    archived_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -49,6 +63,7 @@ class DocumentRead(BaseModel):
             title=document.title,
             content_hash=document.content_hash,
             metadata=document.metadata,
+            archived_at=document.archived_at,
             created_at=document.created_at,
             updated_at=document.updated_at,
         )
@@ -220,12 +235,17 @@ async def list_documents(
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    include_archived: bool = False,
 ) -> list[DocumentRead]:
     async with uow:
         domain = await uow.domains.get(domain_id)
         if domain is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
-        documents = await uow.documents.list_for_domain(domain_id, limit=limit)
+        documents = await uow.documents.list_for_domain(
+            domain_id,
+            limit=limit,
+            include_archived=include_archived,
+        )
     return [DocumentRead.from_document(document) for document in documents]
 
 
@@ -239,6 +259,101 @@ async def get_document(
         document = await uow.documents.get(document_id)
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    return DocumentRead.from_document(document)
+
+
+@router.patch("/documents/{document_id}", response_model=DocumentRead)
+async def update_document(
+    payload: DocumentUpdate,
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    document_id: Annotated[str, Path(min_length=1)],
+) -> DocumentRead:
+    async with uow:
+        existing = await uow.documents.get(document_id)
+        if existing is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        document = await uow.documents.update(
+            document_id,
+            title=payload.title,
+            metadata=payload.metadata,
+        )
+        assert document is not None
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="document.updated",
+            entity_type="document",
+            entity_id=document.id,
+            payload={
+                "domain_id": document.domain_id,
+                "title_changed": payload.title is not None,
+                "metadata_changed": payload.metadata is not None,
+                "archived": document.archived_at is not None,
+            },
+        )
+        await uow.progress_events.add(
+            job_id=None,
+            event_type="document.updated",
+            message=f"Updated document {document.title}",
+            payload={"document_id": document.id, "domain_id": document.domain_id},
+        )
+        await uow.commit()
+
+    progress_store.append(
+        "document.updated",
+        {
+            "document_id": document.id,
+            "domain_id": document.domain_id,
+            "title": document.title,
+        },
+    )
+    return DocumentRead.from_document(document)
+
+
+@router.delete("/documents/{document_id}", response_model=DocumentRead)
+async def archive_document(
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    document_id: Annotated[str, Path(min_length=1)],
+) -> DocumentRead:
+    async with uow:
+        existing = await uow.documents.get(document_id)
+        if existing is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        if existing.archived_at is not None:
+            return DocumentRead.from_document(existing)
+        document = await uow.documents.archive(document_id)
+        assert document is not None
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="document.archived",
+            entity_type="document",
+            entity_id=document.id,
+            payload={
+                "domain_id": document.domain_id,
+                "source_id": document.source_id,
+                "content_hash": document.content_hash,
+                "archived_at": (
+                    document.archived_at.isoformat() if document.archived_at is not None else None
+                ),
+            },
+        )
+        await uow.progress_events.add(
+            job_id=None,
+            event_type="document.archived",
+            message=f"Archived document {document.title}",
+            payload={"document_id": document.id, "domain_id": document.domain_id},
+        )
+        await uow.commit()
+
+    progress_store.append(
+        "document.archived",
+        {
+            "document_id": document.id,
+            "domain_id": document.domain_id,
+            "title": document.title,
+        },
+    )
     return DocumentRead.from_document(document)
 
 

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
+  Archive,
   Bot,
+  Check,
   CheckCircle2,
   Database,
   CircleStop,
@@ -11,11 +13,13 @@ import {
   KeyRound,
   Link2,
   LockKeyhole,
+  Pencil,
   Play,
   RefreshCw,
   Send,
   ServerCog,
   ShieldAlert,
+  X,
 } from "lucide-react";
 import "./styles.css";
 
@@ -81,8 +85,9 @@ type DocumentRead = {
   title: string;
   content_hash: string;
   metadata: Record<string, unknown>;
-  source_uri: string | null;
-  size_bytes: number | null;
+  source_uri?: string | null;
+  size_bytes?: number | null;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -269,6 +274,29 @@ async function createDomain(
 
 async function loadDocuments(token: string, domainId: string): Promise<DocumentRead[]> {
   return requestJson<DocumentRead[]>(`/domains/${domainId}/documents`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function updateDocument(
+  token: string,
+  documentId: string,
+  payload: { title: string },
+): Promise<DocumentRead> {
+  return requestJson<DocumentRead>(`/documents/${documentId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function archiveDocument(token: string, documentId: string): Promise<DocumentRead> {
+  return requestJson<DocumentRead>(`/documents/${documentId}`, {
+    method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -585,6 +613,10 @@ function App() {
   const [sources, setSources] = useState<SourceRead[]>([]);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+  const [documentEditTitle, setDocumentEditTitle] = useState("");
+  const [isUpdatingDocument, setIsUpdatingDocument] = useState(false);
+  const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null);
   const [isCreatingDomain, setIsCreatingDomain] = useState(false);
   const [isCreatingSource, setIsCreatingSource] = useState(false);
   const [sourceName, setSourceName] = useState("");
@@ -881,6 +913,62 @@ function App() {
       setWorkspaceError(error instanceof Error ? error.message : "Source creation failed");
     } finally {
       setIsCreatingSource(false);
+    }
+  }
+
+  function handleStartDocumentEdit(document: DocumentRead) {
+    setEditingDocumentId(document.id);
+    setDocumentEditTitle(document.title);
+    setWorkspaceError(null);
+  }
+
+  function handleCancelDocumentEdit() {
+    setEditingDocumentId(null);
+    setDocumentEditTitle("");
+  }
+
+  async function handleUpdateDocument(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWorkspaceError(null);
+    setIsUpdatingDocument(true);
+    try {
+      if (!editingDocumentId) {
+        throw new Error("Choose a document before updating it");
+      }
+      const title = documentEditTitle.trim();
+      if (!title) {
+        throw new Error("Document title is required");
+      }
+      const accessToken = await getAdminToken();
+      const updated = await updateDocument(accessToken, editingDocumentId, { title });
+      setDocuments((current) =>
+        current.map((document) => (document.id === updated.id ? updated : document)),
+      );
+      setEditingDocumentId(null);
+      setDocumentEditTitle("");
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Document update failed");
+    } finally {
+      setIsUpdatingDocument(false);
+    }
+  }
+
+  async function handleArchiveDocument(documentId: string) {
+    setWorkspaceError(null);
+    setArchivingDocumentId(documentId);
+    try {
+      const accessToken = await getAdminToken();
+      const archived = await archiveDocument(accessToken, documentId);
+      setDocuments((current) => current.filter((document) => document.id !== archived.id));
+      if (editingDocumentId === documentId) {
+        handleCancelDocumentEdit();
+      }
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Document archive failed");
+    } finally {
+      setArchivingDocumentId(null);
     }
   }
 
@@ -1181,6 +1269,9 @@ function App() {
     setDomains([]);
     setSelectedDomainId("");
     setDocuments([]);
+    setEditingDocumentId(null);
+    setDocumentEditTitle("");
+    setArchivingDocumentId(null);
     setSources([]);
     setWorkspaceError(null);
     setLiveStatus("disconnected");
@@ -1319,15 +1410,79 @@ function App() {
               </p>
             ) : null}
             <div className="document-list" aria-label="Domain documents">
-              {documents.map((document) => (
-                <article className="document-row" key={document.id}>
-                  <div>
-                    <strong>{document.title}</strong>
-                    <span>{document.source_uri ?? document.external_id ?? document.id}</span>
-                  </div>
-                  <span className="badge muted">{document.content_hash.slice(0, 10)}</span>
-                </article>
-              ))}
+              {documents.map((document) => {
+                const isEditing = editingDocumentId === document.id;
+                const isArchiving = archivingDocumentId === document.id;
+                return (
+                  <article className="document-row" key={document.id}>
+                    <div className="document-summary">
+                      {isEditing ? (
+                        <form className="document-edit-form" onSubmit={handleUpdateDocument}>
+                          <label>
+                            <span>Document title</span>
+                            <input
+                              aria-label={`Document title for ${document.title}`}
+                              value={documentEditTitle}
+                              onChange={(event) => setDocumentEditTitle(event.target.value)}
+                            />
+                          </label>
+                          <div className="document-actions">
+                            <button
+                              className="icon-button"
+                              disabled={isUpdatingDocument}
+                              title="Save document title"
+                              type="submit"
+                              aria-label={`Save ${document.title}`}
+                            >
+                              <Check aria-hidden="true" />
+                            </button>
+                            <button
+                              className="icon-button"
+                              disabled={isUpdatingDocument}
+                              title="Cancel document edit"
+                              type="button"
+                              aria-label={`Cancel editing ${document.title}`}
+                              onClick={handleCancelDocumentEdit}
+                            >
+                              <X aria-hidden="true" />
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <strong>{document.title}</strong>
+                          <span>{document.source_uri ?? document.external_id ?? document.id}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="document-meta">
+                      <span className="badge muted">{document.content_hash.slice(0, 10)}</span>
+                      <div className="document-actions">
+                        <button
+                          className="icon-button"
+                          disabled={isEditing || isArchiving}
+                          title="Edit document title"
+                          type="button"
+                          aria-label={`Edit ${document.title}`}
+                          onClick={() => handleStartDocumentEdit(document)}
+                        >
+                          <Pencil aria-hidden="true" />
+                        </button>
+                        <button
+                          className="icon-button danger"
+                          disabled={isEditing || isArchiving}
+                          title="Archive document"
+                          type="button"
+                          aria-label={`Archive ${document.title}`}
+                          onClick={() => void handleArchiveDocument(document.id)}
+                        >
+                          {isArchiving ? <RefreshCw aria-hidden="true" /> : <Archive aria-hidden="true" />}
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
               {selectedDomain && documents.length === 0 ? (
                 <div className="empty-state compact">
                   <FileSearch aria-hidden="true" />

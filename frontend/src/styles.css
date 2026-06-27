@@ -477,9 +477,9 @@ button:focus-visible {
 }
 
 .document-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
@@ -487,20 +487,60 @@ button:focus-visible {
   padding: 12px;
 }
 
-.document-row div {
+.document-summary {
   min-width: 0;
 }
 
-.document-row strong,
-.document-row span {
+.document-summary strong,
+.document-summary span {
   display: block;
   overflow-wrap: anywhere;
 }
 
-.document-row div > span {
+.document-summary > span {
   color: #64748b;
   font-size: 13px;
   margin-top: 4px;
+}
+
+.document-meta,
+.document-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.document-meta {
+  justify-content: flex-end;
+}
+
+.document-actions {
+  flex: 0 0 auto;
+}
+
+.document-edit-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.document-edit-form label {
+  min-width: 0;
+}
+
+.document-edit-form label > span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.icon-button.danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fff7f7;
 }
 
 .source-workspace {
@@ -1197,6 +1237,8 @@ button:focus-visible {
   }
 
   .provider-row,
+  .document-row,
+  .document-edit-form,
   .source-row,
   .eval-case-row,
   .eval-case-row > div:first-child,
@@ -1212,6 +1254,10 @@ button:focus-visible {
   .section-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .document-meta {
+    justify-content: space-between;
   }
 
   .live-toolbar .secondary-action,

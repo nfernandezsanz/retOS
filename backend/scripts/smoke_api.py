@@ -457,6 +457,53 @@ def main() -> None:
                 "agent answer did not include grounded evidence",
             )
 
+            updated_document = client.patch(
+                f"/documents/{document['id']}",
+                headers=auth_headers,
+                json={
+                    "title": "Smoke Document Reviewed",
+                    "metadata": {"fixture": True, "reviewed": True},
+                },
+            )
+            require(
+                updated_document.status_code == 200,
+                f"document update failed: {updated_document.status_code} {updated_document.text}",
+            )
+            require(
+                updated_document.json()["title"] == "Smoke Document Reviewed",
+                "document update did not persist title",
+            )
+
+            archived_document = client.delete(
+                f"/documents/{document['id']}",
+                headers=auth_headers,
+            )
+            require(
+                archived_document.status_code == 200,
+                "document archive failed: "
+                f"{archived_document.status_code} {archived_document.text}",
+            )
+            require(
+                archived_document.json()["archived_at"] is not None,
+                "document archive did not set archived_at",
+            )
+            active_documents = client.get(f"/domains/{domain_id}/documents", headers=auth_headers)
+            require(active_documents.status_code == 200, "active document list failed")
+            require(
+                all(item["id"] != document["id"] for item in active_documents.json()),
+                "archived document remained in active list",
+            )
+            archived_documents = client.get(
+                f"/domains/{domain_id}/documents",
+                headers=auth_headers,
+                params={"include_archived": "true"},
+            )
+            require(archived_documents.status_code == 200, "archived document list failed")
+            require(
+                any(item["id"] == document["id"] for item in archived_documents.json()),
+                "archived document missing from include_archived list",
+            )
+
             eval_smoke = client.post("/evals/smoke", headers=auth_headers)
             require(
                 eval_smoke.status_code == 202,

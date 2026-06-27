@@ -69,6 +69,19 @@ def count_document_side_effects(db_path: Path) -> tuple[int, int, int, int, int]
         connection.close()
 
 
+def count_events(db_path: Path, table: str, event_type: str) -> int:
+    queries = {
+        "journal_events": "select count(*) from journal_events where event_type = ?",
+        "progress_events": "select count(*) from progress_events where event_type = ?",
+    }
+    connection = sqlite3.connect(db_path)
+    try:
+        row = connection.execute(queries[table], (event_type,)).fetchone()
+        return int(row[0])
+    finally:
+        connection.close()
+
+
 def create_document(
     client: TestClient,
     headers: dict[str, str],
@@ -130,6 +143,7 @@ def test_create_list_get_and_list_document_versions(
     assert document["title"] == "Fixture Document"
     assert document["content_hash"] == "sha256:abc12345"
     assert document["metadata"] == {"language": "en"}
+    assert document["archived_at"] is None
 
     listed = documents_client.get(
         f"/domains/{domain_id}/documents",
@@ -154,6 +168,125 @@ def test_create_list_get_and_list_document_versions(
     assert versions.json()[0]["size_bytes"] == 128
 
     assert count_document_side_effects(documents_db_path) == (1, 0, 0, 1, 1)
+
+
+def test_update_document_title_and_metadata_is_audited(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+    documents_db_path: Path,
+) -> None:
+    domain_id, source_id = create_domain_and_source(documents_client, documents_admin_headers)
+    document_id, _ = create_document(
+        documents_client,
+        documents_admin_headers,
+        domain_id,
+        source_id,
+    )
+
+    updated = documents_client.patch(
+        f"/documents/{document_id}",
+        json={
+            "title": "Reviewed Fixture Document",
+            "metadata": {"language": "en", "reviewed": True},
+        },
+        headers=documents_admin_headers,
+    )
+
+    assert updated.status_code == 200
+    payload = updated.json()
+    assert payload["id"] == document_id
+    assert payload["title"] == "Reviewed Fixture Document"
+    assert payload["metadata"] == {"language": "en", "reviewed": True}
+    assert payload["archived_at"] is None
+
+    fetched = documents_client.get(f"/documents/{document_id}", headers=documents_admin_headers)
+    assert fetched.status_code == 200
+    assert fetched.json()["title"] == "Reviewed Fixture Document"
+    assert count_events(documents_db_path, "journal_events", "document.updated") == 1
+    assert count_events(documents_db_path, "progress_events", "document.updated") == 1
+
+
+def test_update_document_rejects_empty_patch(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+) -> None:
+    domain_id, source_id = create_domain_and_source(documents_client, documents_admin_headers)
+    document_id, _ = create_document(
+        documents_client,
+        documents_admin_headers,
+        domain_id,
+        source_id,
+    )
+
+    response = documents_client.patch(
+        f"/documents/{document_id}",
+        json={},
+        headers=documents_admin_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_archive_document_hides_default_list_and_preserves_audit(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+    documents_db_path: Path,
+) -> None:
+    domain_id, source_id = create_domain_and_source(documents_client, documents_admin_headers)
+    document_id, _ = create_document(
+        documents_client,
+        documents_admin_headers,
+        domain_id,
+        source_id,
+    )
+
+    archived = documents_client.delete(
+        f"/documents/{document_id}",
+        headers=documents_admin_headers,
+    )
+
+    assert archived.status_code == 200
+    archived_document = archived.json()
+    assert archived_document["id"] == document_id
+    assert archived_document["archived_at"] is not None
+
+    default_list = documents_client.get(
+        f"/domains/{domain_id}/documents",
+        headers=documents_admin_headers,
+    )
+    assert default_list.status_code == 200
+    assert default_list.json() == []
+
+    archived_list = documents_client.get(
+        f"/domains/{domain_id}/documents?include_archived=true",
+        headers=documents_admin_headers,
+    )
+    assert archived_list.status_code == 200
+    assert [item["id"] for item in archived_list.json()] == [document_id]
+
+    second_archive = documents_client.delete(
+        f"/documents/{document_id}",
+        headers=documents_admin_headers,
+    )
+    assert second_archive.status_code == 200
+    assert second_archive.json()["archived_at"] is not None
+    assert count_events(documents_db_path, "journal_events", "document.archived") == 1
+    assert count_events(documents_db_path, "progress_events", "document.archived") == 1
+
+
+def test_update_and_archive_require_existing_document(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+) -> None:
+    updated = documents_client.patch(
+        "/documents/missing",
+        json={"title": "Missing"},
+        headers=documents_admin_headers,
+    )
+    archived = documents_client.delete("/documents/missing", headers=documents_admin_headers)
+
+    assert updated.status_code == 404
+    assert archived.status_code == 404
 
 
 def test_create_artifact_and_segment_for_document_version(

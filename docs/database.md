@@ -49,6 +49,12 @@ The first API-backed workflows are document registration and job creation:
   when it is configured and no user exists yet for that email.
 - `POST /domains/{domain_id}/documents` creates a document, writes version `1`,
   writes `document.created` journal/progress events, and emits a live SSE notification.
+- `PATCH /documents/{document_id}` updates mutable document title/metadata fields,
+  writes `document.updated` journal/progress events, and emits a live SSE notification.
+- `DELETE /documents/{document_id}` soft-archives the document by setting `archived_at`,
+  writes `document.archived` journal/progress events, and emits a live SSE notification.
+  Default document lists and BM25 rebuilds ignore archived documents; historical reads can
+  still include them for audit.
 - `POST /document-versions/{version_id}/artifacts` creates a rebuildable artifact and
   writes `artifact.created` journal/progress events.
 - `POST /document-versions/{version_id}/segments` creates a searchable/citable segment and
