@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck api-smoke check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -12,6 +12,8 @@ help:
 	@printf "  make test             Run backend tests with coverage gate\n"
 	@printf "  make lint             Run backend lint checks\n"
 	@printf "  make typecheck        Run backend type checks\n"
+	@printf "  make db-upgrade       Apply Alembic migrations\n"
+	@printf "  make db-downgrade     Roll back the latest Alembic migration\n"
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
 	@printf "  make check            Run backend format/lint/typecheck/tests\n"
 	@printf "  make frontend-install Install frontend dependencies\n"
@@ -41,6 +43,12 @@ lint:
 
 typecheck:
 	cd backend && "$(BACKEND_PYTHON)" -m mypy src
+
+db-upgrade:
+	cd backend && "$(BACKEND_PYTHON)" -m alembic upgrade head
+
+db-downgrade:
+	cd backend && "$(BACKEND_PYTHON)" -m alembic downgrade -1
 
 api-smoke:
 	cd backend && PYTHON="$(BACKEND_PYTHON)" scripts/run_api_smoke.sh

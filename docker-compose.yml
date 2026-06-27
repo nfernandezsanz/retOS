@@ -16,6 +16,18 @@ x-app-volumes: &app-volumes
   - retos_index:/var/lib/retos/index
 
 services:
+  migrate:
+    image: *backend-image
+    command: ["migrate"]
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     image: *backend-image
     build: *backend-build
@@ -37,6 +49,8 @@ services:
       timeout: 5s
       retries: 10
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       rabbitmq:
@@ -52,6 +66,8 @@ services:
         required: false
     environment: *app-env
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       rabbitmq:

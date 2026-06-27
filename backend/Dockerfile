@@ -29,6 +29,8 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN python -m pip install --upgrade pip \
     && python -m pip install -r /app/backend/requirements.txt
 
+COPY backend/alembic.ini /app/backend/alembic.ini
+COPY backend/alembic /app/backend/alembic
 COPY backend/src /app/backend/src
 COPY infra/docker/backend-entrypoint.sh /usr/local/bin/retos-backend
 RUN chmod +x /usr/local/bin/retos-backend \

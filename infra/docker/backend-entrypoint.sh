@@ -10,6 +10,10 @@ case "$role" in
   worker)
     exec celery -A retos.worker.celery_app worker --loglevel=INFO
     ;;
+  migrate)
+    cd /app/backend
+    exec alembic upgrade head
+    ;;
   *)
     exec "$@"
     ;;

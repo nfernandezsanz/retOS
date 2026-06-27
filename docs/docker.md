@@ -24,6 +24,9 @@ docker compose build api web
 
 The `worker` service intentionally does not have its own build. It runs the exact same `retos-backend` image built by the `api` service with `command: ["worker"]`.
 
+The `migrate` service also uses `retos-backend` and runs `command: ["migrate"]`.
+It applies `alembic upgrade head` before API and worker start.
+
 ## Smoke Test
 
 Run the same Docker smoke used by CI:
@@ -32,7 +35,7 @@ Run the same Docker smoke used by CI:
 make docker-smoke
 ```
 
-The smoke test uses a temporary Compose project, builds the app images, starts Postgres, RabbitMQ, API, worker, and web, waits for healthchecks, hits the API and web over HTTP, then removes its temporary containers and volumes.
+The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, waits for healthchecks, hits health, auth, domain/source CRUD, SSE, and web over HTTP, then removes its temporary containers and volumes.
 
 ## Run
 
@@ -67,9 +70,22 @@ The backend image uses `infra/docker/backend-entrypoint.sh`.
 ```bash
 docker compose run --rm api api
 docker compose run --rm worker worker
+docker compose run --rm migrate migrate
 ```
 
 The image defaults to the `api` role.
+
+## Database Migrations
+
+Compose runs migrations automatically through the one-shot `migrate` service. For local
+development outside Docker:
+
+```bash
+make db-upgrade
+make db-downgrade
+```
+
+See [database.md](database.md) for schema and migration details.
 
 ## Security Notes
 
