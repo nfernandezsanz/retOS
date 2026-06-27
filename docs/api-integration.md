@@ -418,6 +418,52 @@ The run writes:
 - `eval.queued`, `job.running`, `eval.completed`, and `job.succeeded` journal events
 - live SSE progress events for connected clients
 
+Run an opt-in SQuAD 2.0 eval from a mounted local dataset file:
+
+```bash
+curl --request POST http://localhost:8000/evals/squad \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "dataset_path":"dev-v2.0.json",
+    "max_cases":50,
+    "write_report":true,
+    "report_stem":"squad-v2-dev-50"
+  }'
+```
+
+The request uses the same response shape as `/evals/smoke` and adds `report_paths`
+when filesystem export is enabled:
+
+```json
+{
+  "job": {
+    "id": "<job_id>",
+    "kind": "eval.run",
+    "status": "succeeded"
+  },
+  "report": {
+    "suite_name": "squad-v2",
+    "passed": true,
+    "case_count": 50
+  },
+  "report_paths": {
+    "json": "/var/lib/retos/evals/reports/squad-v2-dev-50.json",
+    "markdown": "/var/lib/retos/evals/reports/squad-v2-dev-50.md"
+  }
+}
+```
+
+Security and runtime notes:
+
+- `dataset_path` must resolve inside `RETOS_EVAL_DATASET_ROOT`; traversal and
+  absolute paths outside that root return `422`.
+- Missing dataset files return `404` before any job is created.
+- Adapter or schema errors return `422` and mark the created eval job failed.
+- Reports are written under `RETOS_EVAL_REPORT_ROOT`; clients receive paths for
+  later audit/export workflows.
+- API smoke creates a tiny SQuAD fixture and verifies this endpoint over HTTP.
+
 List recent persisted eval runs:
 
 ```bash
@@ -467,6 +513,7 @@ Current console calls:
 - `POST /domains/{domain_id}/queries`
 - `GET /evals/runs?limit=6`
 - `POST /evals/smoke`
+- `POST /evals/squad`
 - `GET /jobs?limit=12`
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`

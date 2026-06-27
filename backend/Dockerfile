@@ -12,7 +12,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     DEBIAN_FRONTEND=noninteractive \
     RETOS_STORAGE_ROOT=/var/lib/retos/storage \
-    RETOS_INDEX_ROOT=/var/lib/retos/index
+    RETOS_INDEX_ROOT=/var/lib/retos/index \
+    RETOS_EVAL_DATASET_ROOT=/var/lib/retos/evals/datasets \
+    RETOS_EVAL_REPORT_ROOT=/var/lib/retos/evals/reports
 
 WORKDIR /app
 
@@ -36,7 +38,7 @@ COPY infra/docker/backend-entrypoint.sh /usr/local/bin/retos-backend
 RUN chmod +x /usr/local/bin/retos-backend \
     && groupadd --system --gid "${APP_GID}" retos \
     && useradd --system --uid "${APP_UID}" --gid retos --home-dir /nonexistent retos \
-    && mkdir -p /var/lib/retos/storage /var/lib/retos/index \
+    && mkdir -p /var/lib/retos/storage /var/lib/retos/index /var/lib/retos/evals/datasets /var/lib/retos/evals/reports \
     && chown -R retos:retos /app /var/lib/retos
 
 ENV PYTHONPATH=/app/backend/src

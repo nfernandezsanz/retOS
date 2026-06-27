@@ -90,13 +90,15 @@ Current metrics:
 - Abstention when evidence is missing.
 - Citation budget compliance.
 
-The smoke suite is included in `make check` and GitHub Actions.
+The smoke suite is included in `make check` and GitHub Actions. API smoke also
+creates a tiny SQuAD 2.0 fixture, posts it to `/evals/squad`, verifies the durable
+`eval.run` response, and checks that JSON/Markdown reports were written.
 
 ## Public Dataset Candidates
 
 | Dataset | Fit |
 | --- | --- |
-| SQuAD 2.0 | Implemented as an opt-in local adapter for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
+| SQuAD 2.0 | Implemented as an opt-in local adapter and admin API run for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
 | Natural Questions | Real user questions with Wikipedia evidence for open-domain retrieval pressure. |
 | HotpotQA | Multi-hop retrieval and supporting-fact evaluation for explainability. |
 

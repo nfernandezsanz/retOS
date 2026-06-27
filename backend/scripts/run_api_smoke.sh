@@ -8,6 +8,8 @@ log_file="${TMPDIR:-/tmp}/retos-api-smoke.log"
 db_file="${TMPDIR:-/tmp}/retos-api-smoke-$RANDOM.db"
 index_dir="${TMPDIR:-/tmp}/retos-api-smoke-index-$RANDOM"
 storage_dir="${TMPDIR:-/tmp}/retos-api-smoke-storage-$RANDOM"
+eval_dataset_dir="${TMPDIR:-/tmp}/retos-api-smoke-eval-datasets-$RANDOM"
+eval_report_dir="${TMPDIR:-/tmp}/retos-api-smoke-eval-reports-$RANDOM"
 python_bin="${PYTHON:-python}"
 
 if [[ -z "${PYTHON:-}" && -x "../.venv/bin/python" ]]; then
@@ -24,6 +26,8 @@ export RETOS_DATABASE_URL="${RETOS_DATABASE_URL:-sqlite+aiosqlite:///${db_file}}
 export RETOS_DATABASE_CREATE_ALL="${RETOS_DATABASE_CREATE_ALL:-true}"
 export RETOS_INDEX_ROOT="${RETOS_INDEX_ROOT:-${index_dir}}"
 export RETOS_STORAGE_ROOT="${RETOS_STORAGE_ROOT:-${storage_dir}}"
+export RETOS_EVAL_DATASET_ROOT="${RETOS_EVAL_DATASET_ROOT:-${eval_dataset_dir}}"
+export RETOS_EVAL_REPORT_ROOT="${RETOS_EVAL_REPORT_ROOT:-${eval_report_dir}}"
 
 "${python_bin}" -m uvicorn retos.main:app --host "${host}" --port "${port}" >"${log_file}" 2>&1 &
 server_pid="$!"
@@ -32,7 +36,7 @@ cleanup() {
   kill "${server_pid}" >/dev/null 2>&1 || true
   wait "${server_pid}" >/dev/null 2>&1 || true
   rm -f "${db_file}"
-  rm -rf "${index_dir}" "${storage_dir}"
+  rm -rf "${index_dir}" "${storage_dir}" "${eval_dataset_dir}" "${eval_report_dir}"
 }
 trap cleanup EXIT
 

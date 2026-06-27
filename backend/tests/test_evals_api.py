@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -16,6 +17,8 @@ def evals_client(settings: Settings, tmp_path: Path) -> Iterator[TestClient]:
             "database_url": f"sqlite+aiosqlite:///{tmp_path / 'retos-evals.db'}",
             "database_create_all": True,
             "index_root": str(tmp_path / "index"),
+            "eval_dataset_root": str(tmp_path / "evals" / "datasets"),
+            "eval_report_root": str(tmp_path / "evals" / "reports"),
         }
     )
     with TestClient(create_app(local_settings)) as test_client:
@@ -32,8 +35,66 @@ def evals_admin_headers(evals_client: TestClient) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
+@pytest.fixture
+def squad_dataset_root(tmp_path: Path) -> Path:
+    return tmp_path / "evals" / "datasets"
+
+
+@pytest.fixture
+def squad_report_root(tmp_path: Path) -> Path:
+    return tmp_path / "evals" / "reports"
+
+
+def write_squad_api_fixture(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "version": "v2.0",
+                "data": [
+                    {
+                        "title": "Solar System",
+                        "paragraphs": [
+                            {
+                                "context": (
+                                    "Mars is called the Red Planet because iron oxide dust "
+                                    "covers much of its surface."
+                                ),
+                                "qas": [
+                                    {
+                                        "id": "mars-red-planet",
+                                        "question": "Why is Mars called the Red Planet?",
+                                        "answers": [
+                                            {"text": "iron oxide dust", "answer_start": 39}
+                                        ],
+                                        "is_impossible": False,
+                                    },
+                                    {
+                                        "id": "mars-ocean-depth",
+                                        "question": "How deep are the oceans on Mars today?",
+                                        "answers": [],
+                                        "is_impossible": True,
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_smoke_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post("/evals/smoke")
+
+    assert response.status_code == 401
+
+
+def test_squad_eval_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.post("/evals/squad", json={"dataset_path": "fixture.json"})
 
     assert response.status_code == 401
 
@@ -94,6 +155,94 @@ def test_smoke_eval_runs_and_persists_auditable_job(
     assert eval_runs.json()[0]["job"]["id"] == job_id
     assert eval_runs.json()[0]["report"]["passed"] is True
     assert eval_runs.json()[0]["report"]["case_count"] == 3
+
+
+def test_squad_eval_runs_and_exports_report(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    squad_report_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "tiny-squad.json")
+
+    response = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "tiny-squad.json",
+            "max_cases": 2,
+            "write_report": True,
+            "report_stem": "nightly/squad v2",
+        },
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job"]["kind"] == "eval.run"
+    assert body["job"]["status"] == "succeeded"
+    assert body["report"]["suite_name"] == "squad-v2"
+    assert body["report"]["passed"] is True
+    assert body["report"]["case_count"] == 2
+    assert body["report_paths"] == {
+        "json": str(squad_report_root / "nightly-squad-v2.json"),
+        "markdown": str(squad_report_root / "nightly-squad-v2.md"),
+    }
+    assert (squad_report_root / "nightly-squad-v2.json").exists()
+    assert (squad_report_root / "nightly-squad-v2.md").exists()
+    assert body["job"]["payload"]["dataset_path"] == str(squad_dataset_root / "tiny-squad.json")
+    assert body["job"]["payload"]["max_cases"] == 2
+    assert body["job"]["payload"]["report_paths"] == body["report_paths"]
+    assert body["job"]["payload"]["result"]["case_count"] == 2
+
+    eval_runs = evals_client.get("/evals/runs", headers=evals_admin_headers)
+    assert eval_runs.status_code == 200
+    assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
+    assert eval_runs.json()[0]["report"]["suite_name"] == "squad-v2"
+
+
+def test_squad_eval_accepts_absolute_dataset_path_inside_root(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    dataset_path = write_squad_api_fixture(squad_dataset_root / "absolute-squad.json")
+
+    response = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={"dataset_path": str(dataset_path), "max_cases": 1},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["report"]["case_count"] == 1
+
+
+def test_squad_eval_rejects_dataset_path_escape(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> None:
+    response = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={"dataset_path": "../outside.json"},
+    )
+
+    assert response.status_code == 422
+    assert "RETOS_EVAL_DATASET_ROOT" in response.json()["detail"]
+
+
+def test_squad_eval_rejects_missing_dataset(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> None:
+    response = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={"dataset_path": "missing.json"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Eval dataset file not found"
 
 
 def test_eval_runs_lists_recent_reports_first(

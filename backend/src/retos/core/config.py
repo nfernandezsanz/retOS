@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     )
     storage_root: str = "/var/lib/retos/storage"
     index_root: str = "/var/lib/retos/index"
+    eval_dataset_root: str = "/var/lib/retos/evals/datasets"
+    eval_report_root: str = "/var/lib/retos/evals/reports"
     provider: str = "local"
     model: str = "ollama:gemma4"
     ollama_model: str = "gemma4"

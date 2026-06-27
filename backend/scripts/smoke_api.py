@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sys
@@ -57,12 +58,60 @@ def prepare_scan_source() -> tuple[str, Path | None]:
     return root.as_uri(), root
 
 
+def prepare_squad_dataset() -> Path:
+    dataset_root = Path(os.environ["RETOS_EVAL_DATASET_ROOT"])
+    dataset_root.mkdir(parents=True, exist_ok=True)
+    dataset_path = dataset_root / "smoke-squad.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "version": "v2.0",
+                "data": [
+                    {
+                        "title": "Solar System",
+                        "paragraphs": [
+                            {
+                                "context": (
+                                    "Mars is called the Red Planet because iron oxide dust "
+                                    "covers much of its surface."
+                                ),
+                                "qas": [
+                                    {
+                                        "id": "mars-red-planet",
+                                        "question": "Why is Mars called the Red Planet?",
+                                        "answers": [
+                                            {"text": "iron oxide dust", "answer_start": 39}
+                                        ],
+                                        "is_impossible": False,
+                                    },
+                                    {
+                                        "id": "mars-ocean-depth",
+                                        "question": "How deep are the oceans on Mars today?",
+                                        "answers": [],
+                                        "is_impossible": True,
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return dataset_path
+
+
 def main() -> None:
     base_url = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     admin_email = os.environ.get("RETOS_BOOTSTRAP_ADMIN_EMAIL", "admin@retos.dev")
     admin_password = os.environ.get("RETOS_BOOTSTRAP_ADMIN_PASSWORD", "test-admin-password")
     expect_worker = os.environ.get("RETOS_EXPECT_WORKER", "0") == "1"
+    prepare_squad = os.environ.get("RETOS_SMOKE_PREPARE_SQUAD_DATASET", "1") == "1"
+    check_report_files = os.environ.get("RETOS_SMOKE_CHECK_REPORT_FILES", "1") == "1"
     scan_source_uri, temp_scan_root = prepare_scan_source()
+    if prepare_squad:
+        prepare_squad_dataset()
 
     try:
         with httpx.Client(base_url=base_url, timeout=10) as client:
@@ -382,6 +431,36 @@ def main() -> None:
             require(eval_body["report"]["passed"] is True, "eval report did not pass")
             require(eval_body["report"]["case_count"] == 3, "unexpected eval case count")
 
+            squad_eval = client.post(
+                "/evals/squad",
+                headers=auth_headers,
+                json={
+                    "dataset_path": "smoke-squad.json",
+                    "max_cases": 2,
+                    "write_report": True,
+                    "report_stem": "api-smoke-squad",
+                },
+            )
+            require(
+                squad_eval.status_code == 202,
+                f"SQuAD eval failed: {squad_eval.status_code} {squad_eval.text}",
+            )
+            squad_body = squad_eval.json()
+            require(squad_body["job"]["kind"] == "eval.run", "invalid SQuAD eval job kind")
+            require(squad_body["job"]["status"] == "succeeded", "SQuAD eval did not succeed")
+            require(squad_body["report"]["suite_name"] == "squad-v2", "invalid SQuAD suite")
+            require(squad_body["report"]["case_count"] == 2, "unexpected SQuAD case count")
+            require(squad_body["report_paths"], "SQuAD eval did not return report paths")
+            if check_report_files:
+                require(
+                    Path(squad_body["report_paths"]["json"]).exists(),
+                    "SQuAD JSON report was not written",
+                )
+                require(
+                    Path(squad_body["report_paths"]["markdown"]).exists(),
+                    "SQuAD Markdown report was not written",
+                )
+
             eval_runs = client.get("/evals/runs", headers=auth_headers)
             require(
                 eval_runs.status_code == 200,
@@ -389,8 +468,8 @@ def main() -> None:
             )
             latest_eval_run = eval_runs.json()[0]
             require(
-                latest_eval_run["job"]["id"] == eval_body["job"]["id"],
-                "latest eval run did not match smoke eval",
+                latest_eval_run["job"]["id"] == squad_body["job"]["id"],
+                "latest eval run did not match SQuAD eval",
             )
             require(
                 latest_eval_run["report"]["passed"] is True,

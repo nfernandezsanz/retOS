@@ -90,6 +90,25 @@ curl "http://localhost:8000/evals/runs?limit=6" \
 The React console uses these endpoints in the `Local evals` panel to show metrics,
 per-case status, and a newest-first run history.
 
+Dataset-backed SQuAD evals are also available through the admin API:
+
+```bash
+curl --request POST http://localhost:8000/evals/squad \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "dataset_path":"dev-v2.0.json",
+    "max_cases":50,
+    "write_report":true,
+    "report_stem":"squad-v2-dev-50"
+  }'
+```
+
+`dataset_path` may be relative or absolute, but it must resolve inside
+`RETOS_EVAL_DATASET_ROOT`. Reports are written only when `write_report=true`, and
+always land under `RETOS_EVAL_REPORT_ROOT` as both JSON and Markdown. This keeps
+benchmark inputs and generated reports mounted, auditable, and outside the source tree.
+
 ## Public Dataset Roadmap
 
 Do not vendor large benchmark datasets into this repository. Add adapters that download
@@ -121,6 +140,8 @@ Adapter guarantees:
 - No paid model calls.
 - `--max-cases` bounds runtime for local experiments.
 - `--report-dir` writes reproducible JSON and Markdown report artifacts.
+- `POST /evals/squad` can run the same adapter through the admin API and persist
+  report paths in the durable eval job payload.
 - Invalid or non-v2 dataset files fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.
 
@@ -137,4 +158,4 @@ Adapter guarantees:
 ## Next Implementation Step
 
 Add Natural Questions or HotpotQA adapters for larger retrieval and multi-hop coverage,
-then expose dataset-backed report creation through the admin API.
+then surface dataset-backed runs in the React console.

@@ -18,10 +18,14 @@ x-app-env: &app-env
   RETOS_ANTHROPIC_MODEL: ${RETOS_ANTHROPIC_MODEL:-claude-sonnet-4-5}
   RETOS_GOOGLE_MODEL: ${RETOS_GOOGLE_MODEL:-gemini-2.5-flash}
   RETOS_OPENROUTER_MODEL: ${RETOS_OPENROUTER_MODEL:-openai/gpt-5-mini}
+  RETOS_EVAL_DATASET_ROOT: /var/lib/retos/evals/datasets
+  RETOS_EVAL_REPORT_ROOT: /var/lib/retos/evals/reports
 
 x-app-volumes: &app-volumes
   - retos_storage:/var/lib/retos/storage
   - retos_index:/var/lib/retos/index
+  - retos_eval_datasets:/var/lib/retos/evals/datasets
+  - retos_eval_reports:/var/lib/retos/evals/reports
 
 services:
   migrate:
@@ -145,4 +149,6 @@ volumes:
   retos_rabbitmq:
   retos_storage:
   retos_index:
+  retos_eval_datasets:
+  retos_eval_reports:
   retos_ollama:

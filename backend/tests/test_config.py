@@ -76,3 +76,10 @@ def test_local_provider_requires_model_name() -> None:
 
     with pytest.raises(ValueError, match="OLLAMA_MODEL"):
         settings.validate_runtime_security()
+
+
+def test_eval_roots_have_docker_defaults() -> None:
+    settings = Settings()
+
+    assert settings.eval_dataset_root == "/var/lib/retos/evals/datasets"
+    assert settings.eval_report_root == "/var/lib/retos/evals/reports"
