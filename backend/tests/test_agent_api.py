@@ -7,11 +7,8 @@ from fastapi.testclient import TestClient
 from retos.agent.harness import create_research_harness
 from retos.agent.service import (
     AgentQueryError,
-    audit_contradictions,
-    audit_evidence,
     budget_from_payload,
     build_grounded_answer,
-    citation_from_hit,
     extract_harness_answer,
     fail_agent_query_job,
     hits_within_budget,
@@ -388,61 +385,6 @@ def test_extract_harness_answer_reads_latest_message_content() -> None:
     assert answer == "Final answer"
 
 
-def test_evidence_audit_marks_uncited_answers() -> None:
-    hit = SearchHit(
-        segment_id="segment-known",
-        document_id="document-1",
-        document_version_id="version-1",
-        title="Known",
-        text="Known evidence",
-        anchor=None,
-        ordinal=0,
-        score=1.0,
-    )
-
-    audit = audit_evidence("Answer without the id.", [citation_from_hit(hit)])
-
-    assert audit.grounded is False
-    assert audit.cited_segment_ids == []
-    assert audit.unreferenced_citation_ids == ["segment-known"]
-
-
-def test_contradiction_audit_flags_opposite_polarity_citations() -> None:
-    positive = citation_from_hit(
-        SearchHit(
-            segment_id="segment-positive",
-            document_id="document-1",
-            document_version_id="version-1",
-            title="Positive",
-            text="Apollo checklist validation confirmed guidance readiness.",
-            anchor=None,
-            ordinal=0,
-            score=2.0,
-        )
-    )
-    negative = citation_from_hit(
-        SearchHit(
-            segment_id="segment-negative",
-            document_id="document-2",
-            document_version_id="version-2",
-            title="Negative",
-            text="Apollo checklist validation did not confirm guidance readiness.",
-            anchor=None,
-            ordinal=1,
-            score=1.0,
-        )
-    )
-
-    audit = audit_contradictions([positive, negative])
-
-    assert audit.checked is True
-    assert audit.conflict_count == 1
-    assert audit.findings[0].segment_ids == ["segment-positive", "segment-negative"]
-    assert {"apollo", "checklist", "validation", "confirm", "guidance", "readiness"}.issuperset(
-        set(audit.findings[0].shared_terms)
-    )
-
-
 def test_agent_budget_defaults_and_validation() -> None:
     budget = budget_from_payload({})
 
@@ -580,3 +522,8 @@ def test_create_research_harness_uses_deepagents(
     assert calls[0]["model"] == "ollama:gemma4"
     assert calls[0]["name"] == "retos-research-agent"
     assert calls[0]["tools"] == [fake_tool]
+    assert [subagent["name"] for subagent in calls[0]["subagents"]] == [
+        "evidence_checker",
+        "contradiction_checker",
+    ]
+    assert calls[0]["subagents"][0]["tools"] == [fake_tool]

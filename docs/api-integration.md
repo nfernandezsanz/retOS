@@ -518,6 +518,11 @@ citations. It flags citation pairs with opposite polarity markers and overlappin
 domain terms so operators can review conflicting evidence. It is intentionally
 conservative and does not replace deeper named subagent review.
 
+When `RETOS_AGENT_RUNTIME=deepagents`, the harness registers named
+`evidence_checker` and `contradiction_checker` subagents. They receive the same
+controlled `search_corpus` and `read_citation` tools as the main agent, and the
+post-answer deterministic audits still run before results are persisted.
+
 `RETOS_AGENT_RUNTIME=deterministic` is the default for CI, Docker smoke, and local
 development without downloaded model weights. It performs the controlled corpus search
 and produces a deterministic grounded answer. `RETOS_AGENT_RUNTIME=deepagents` enables

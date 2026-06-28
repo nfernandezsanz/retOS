@@ -82,5 +82,7 @@ Deep Agents filesystem and shell built-ins for the local `ollama:gemma4` profile
 remains the default so CI, Docker smoke, and local development do not require downloaded
 model weights or paid provider calls. The post-answer evidence audit appends a final
 ledger when the model does not explicitly cite returned segment ids. The contradiction
-audit flags opposite-polarity citation pairs for operator review. Named subagent
-execution remains a future runtime slice.
+audit flags opposite-polarity citation pairs for operator review. The Deep Agents
+harness now registers named `evidence_checker` and `contradiction_checker` subagents
+with the same controlled RetOS corpus tools. `source_mapper` and `table_inspector`
+remain future runtime slices.

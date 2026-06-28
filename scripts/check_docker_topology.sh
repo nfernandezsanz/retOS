@@ -16,6 +16,7 @@ docker compose --file "${compose_file}" --env-file "${env_file}" config --format
 python3 - "${config_file}" <<'PY'
 import json
 import sys
+from pathlib import Path
 
 with open(sys.argv[1], encoding="utf-8") as handle:
     config = json.load(handle)
@@ -40,6 +41,24 @@ if unexpected_builds:
         f"Unexpected build on: {', '.join(unexpected_builds)}"
     )
 
+api_build = services["api"].get("build")
+if not api_build:
+    raise SystemExit("The api service must define the shared backend image build.")
+
+expected_context = str(Path.cwd())
+actual_context = str(Path(api_build.get("context", "")).resolve())
+if actual_context != expected_context:
+    raise SystemExit(
+        "The shared backend build must use the repository root as context: "
+        f"expected {expected_context}, got {actual_context}"
+    )
+
+if api_build.get("dockerfile") != "backend/Dockerfile":
+    raise SystemExit(
+        "The shared backend build must use backend/Dockerfile, got "
+        f"{api_build.get('dockerfile')}"
+    )
+
 commands = {role: services[role].get("command") for role in backend_roles}
 expected_commands = {
     "api": ["api"],
@@ -52,6 +71,6 @@ if commands != expected_commands:
 
 print(
     "Docker topology OK: api, worker, and migrate share "
-    f"{images['api']} with role-specific commands."
+    f"{images['api']} from backend/Dockerfile with role-specific commands."
 )
 PY
