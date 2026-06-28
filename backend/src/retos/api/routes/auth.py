@@ -23,9 +23,10 @@ async def login(
     settings: SettingsDep,
     uow: UnitOfWorkDep,
 ) -> TokenResponse:
+    email = str(payload.email).lower()
     password = payload.password.get_secret_value()
     async with uow:
-        admin = await uow.admin_users.get_by_email(str(payload.email))
+        admin = await uow.admin_users.get_by_email(email)
 
     if admin is None or not admin.is_active or not verify_password(password, admin.password_hash):
         raise HTTPException(

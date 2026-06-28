@@ -147,6 +147,15 @@ async function mockProviderApi(page: Page) {
     ],
   };
   const evalRuns: { job: ReturnType<typeof jobFixture>; report: typeof evalReport | null }[] = [];
+  const adminUsers = [
+    {
+      id: "admin-user-1",
+      email: "admin@retos.dev",
+      is_active: true,
+      created_at: "2026-06-27T00:00:00Z",
+      updated_at: "2026-06-27T00:00:00Z",
+    },
+  ];
   const evalComparison = {
     baseline: {
       job_id: "job-eval-1",
@@ -193,10 +202,76 @@ async function mockProviderApi(page: Page) {
     });
   }
 
+  function recordAdminAudit(adminUserId: string, eventType: string, email: string) {
+    journalEvents.unshift({
+      id: `journal-${eventType}-${adminUserId}`,
+      occurred_at: "2026-06-27T00:01:00Z",
+      actor: "admin@retos.dev",
+      event_type: eventType,
+      entity_type: "admin_user",
+      entity_id: adminUserId,
+      payload: { email },
+    });
+  }
+
   await page.route("http://localhost:8000/auth/login", async (route) => {
     await route.fulfill({
       contentType: "application/json",
       json: { access_token: "test-token", token_type: "bearer" },
+    });
+  });
+  await page.route("http://localhost:8000/admin/users", async (route) => {
+    if (route.request().method() === "POST") {
+      const payload = route.request().postDataJSON() as { email: string; password: string };
+      const created = {
+        id: "admin-user-2",
+        email: payload.email.toLowerCase(),
+        is_active: true,
+        created_at: "2026-06-27T00:02:00Z",
+        updated_at: "2026-06-27T00:02:00Z",
+      };
+      adminUsers.push(created);
+      recordAdminAudit(created.id, "admin_user.created", created.email);
+      await route.fulfill({
+        contentType: "application/json",
+        status: 201,
+        json: created,
+      });
+      return;
+    }
+    await route.fulfill({
+      contentType: "application/json",
+      json: adminUsers,
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/admin\/users\/[^/]+\/status/, async (route) => {
+    const adminUserId = new URL(route.request().url()).pathname.split("/")[3];
+    const payload = route.request().postDataJSON() as { is_active: boolean };
+    const target = adminUsers.find((user) => user.id === adminUserId);
+    if (!target) {
+      await route.fulfill({ contentType: "application/json", status: 404, json: { detail: "missing" } });
+      return;
+    }
+    target.is_active = payload.is_active;
+    target.updated_at = "2026-06-27T00:03:00Z";
+    recordAdminAudit(target.id, "admin_user.status_updated", target.email);
+    await route.fulfill({
+      contentType: "application/json",
+      json: target,
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/admin\/users\/[^/]+\/password/, async (route) => {
+    const adminUserId = new URL(route.request().url()).pathname.split("/")[3];
+    const target = adminUsers.find((user) => user.id === adminUserId);
+    if (!target) {
+      await route.fulfill({ contentType: "application/json", status: 404, json: { detail: "missing" } });
+      return;
+    }
+    target.updated_at = "2026-06-27T00:04:00Z";
+    recordAdminAudit(target.id, "admin_user.password_reset", target.email);
+    await route.fulfill({
+      contentType: "application/json",
+      json: target,
     });
   });
   await page.route("http://localhost:8000/llm/providers", async (route) => {
@@ -670,13 +745,27 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Local evals" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
 
-  await page.getByLabel("Password").fill("retos-dev-admin-change-me");
+  await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
 
   await expect(page.getByText("ollama:gemma4")).toBeVisible();
   await expect(page.getByText("Ollama local runtime")).toBeVisible();
   await expect(page.getByText("OpenAI")).toBeVisible();
   await expect(page.getByText("Blocked")).toBeVisible();
+  await expect(page.getByLabel("Admin users").getByText("admin@retos.dev")).toBeVisible();
+  await page.getByLabel("New admin email").fill("ui-admin@retos.dev");
+  await page.getByLabel("New admin password").fill("ui-admin-password");
+  await page.getByRole("button", { name: "Create admin" }).click();
+  const uiAdminRow = page
+    .getByLabel("Admin users")
+    .locator(".admin-user-row")
+    .filter({ hasText: "ui-admin@retos.dev" });
+  await expect(uiAdminRow.getByText("ui-admin@retos.dev", { exact: true })).toBeVisible();
+  await uiAdminRow.getByPlaceholder("New password").fill("ui-admin-password-2");
+  await uiAdminRow.getByRole("button", { name: "Reset" }).click();
+  await expect(page.getByText("Updated password for ui-admin@retos.dev")).toBeVisible();
+  await uiAdminRow.getByRole("button", { name: "Deactivate" }).click();
+  await expect(uiAdminRow.getByText("inactive")).toBeVisible();
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
   await expect(page.getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();
@@ -792,7 +881,7 @@ test("keeps provider controls usable on mobile", async ({ page }) => {
   await page.reload();
 
   await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
-  await page.getByLabel("Password").fill("retos-dev-admin-change-me");
+  await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
 
   await expect(page.getByText("Ollama local runtime")).toBeVisible();

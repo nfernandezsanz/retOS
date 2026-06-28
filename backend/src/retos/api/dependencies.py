@@ -24,9 +24,17 @@ SessionFactoryDep = Annotated[SessionFactory, Depends(get_session_factory)]
 BearerDep = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
 
 
-def require_admin(
+def get_unit_of_work(factory: SessionFactoryDep) -> SQLAlchemyUnitOfWork:
+    return SQLAlchemyUnitOfWork(factory)
+
+
+UnitOfWorkDep = Annotated[SQLAlchemyUnitOfWork, Depends(get_unit_of_work)]
+
+
+async def require_admin(
     credentials: BearerDep,
     settings: SettingsDep,
+    uow: UnitOfWorkDep,
 ) -> str:
     if credentials is None:
         raise HTTPException(
@@ -44,14 +52,15 @@ def require_admin(
         ) from exc
     if "admin" not in claims.roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
+    async with uow:
+        admin = await uow.admin_users.get_by_email(claims.subject)
+    if admin is None or not admin.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Admin account is inactive",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return claims.subject
 
 
 AdminSubjectDep = Annotated[str, Depends(require_admin)]
-
-
-def get_unit_of_work(factory: SessionFactoryDep) -> SQLAlchemyUnitOfWork:
-    return SQLAlchemyUnitOfWork(factory)
-
-
-UnitOfWorkDep = Annotated[SQLAlchemyUnitOfWork, Depends(get_unit_of_work)]

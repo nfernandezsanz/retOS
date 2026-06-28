@@ -137,6 +137,59 @@ def main() -> None:
             require(isinstance(token, str) and token, "missing access token")
             auth_headers = {"Authorization": f"Bearer {token}"}
 
+            admin_users = client.get("/admin/users", headers=auth_headers)
+            require(
+                admin_users.status_code == 200,
+                f"admin user list failed: {admin_users.status_code} {admin_users.text}",
+            )
+            require(
+                any(user["email"] == admin_email.lower() for user in admin_users.json()),
+                "bootstrap admin missing from admin user list",
+            )
+            smoke_admin = client.post(
+                "/admin/users",
+                headers=auth_headers,
+                json={
+                    "email": "smoke-admin@retos.dev",
+                    "password": "smoke-admin-password",
+                },
+            )
+            require(
+                smoke_admin.status_code == 201,
+                f"admin user create failed: {smoke_admin.status_code} {smoke_admin.text}",
+            )
+            smoke_admin_body = smoke_admin.json()
+            smoke_admin_login = client.post(
+                "/auth/login",
+                json={
+                    "email": "smoke-admin@retos.dev",
+                    "password": "smoke-admin-password",
+                },
+            )
+            require(
+                smoke_admin_login.status_code == 200,
+                "created admin login failed: "
+                f"{smoke_admin_login.status_code} {smoke_admin_login.text}",
+            )
+            disabled_smoke_admin = client.patch(
+                f"/admin/users/{smoke_admin_body['id']}/status",
+                headers=auth_headers,
+                json={"is_active": False},
+            )
+            require(
+                disabled_smoke_admin.status_code == 200,
+                "admin user disable failed: "
+                f"{disabled_smoke_admin.status_code} {disabled_smoke_admin.text}",
+            )
+            disabled_login = client.post(
+                "/auth/login",
+                json={
+                    "email": "smoke-admin@retos.dev",
+                    "password": "smoke-admin-password",
+                },
+            )
+            require(disabled_login.status_code == 401, "disabled admin login should fail")
+
             provider_catalog = client.get("/llm/providers", headers=auth_headers)
             require(
                 provider_catalog.status_code == 200,

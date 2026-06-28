@@ -22,6 +22,9 @@ import {
   Send,
   ServerCog,
   ShieldAlert,
+  Power,
+  UserPlus,
+  Users,
   X,
 } from "lucide-react";
 import "./styles.css";
@@ -50,6 +53,14 @@ type ActiveProvider = {
 type ProviderCatalog = {
   active: ActiveProvider;
   providers: ProviderProfile[];
+};
+
+type AdminUserRead = {
+  id: string;
+  email: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 type TokenResponse = {
@@ -294,6 +305,55 @@ async function loadProviderCatalog(token: string): Promise<ProviderCatalog> {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  });
+}
+
+async function loadAdminUsers(token: string): Promise<AdminUserRead[]> {
+  return requestJson<AdminUserRead[]>("/admin/users", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function createAdminUser(
+  token: string,
+  payload: { email: string; password: string },
+): Promise<AdminUserRead> {
+  return requestJson<AdminUserRead>("/admin/users", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function updateAdminUserStatus(
+  token: string,
+  adminUserId: string,
+  isActive: boolean,
+): Promise<AdminUserRead> {
+  return requestJson<AdminUserRead>(`/admin/users/${adminUserId}/status`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ is_active: isActive }),
+  });
+}
+
+async function resetAdminUserPassword(
+  token: string,
+  adminUserId: string,
+  password: string,
+): Promise<AdminUserRead> {
+  return requestJson<AdminUserRead>(`/admin/users/${adminUserId}/password`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ password }),
   });
 }
 
@@ -702,6 +762,14 @@ function App() {
   const [password, setPassword] = useState("");
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY) ?? "");
   const [catalog, setCatalog] = useState<ProviderCatalog | null>(null);
+  const [adminUsers, setAdminUsers] = useState<AdminUserRead[]>([]);
+  const [adminUserEmail, setAdminUserEmail] = useState("");
+  const [adminUserPassword, setAdminUserPassword] = useState("");
+  const [adminPasswordResets, setAdminPasswordResets] = useState<Record<string, string>>({});
+  const [isCreatingAdminUser, setIsCreatingAdminUser] = useState(false);
+  const [savingAdminUserId, setSavingAdminUserId] = useState<string | null>(null);
+  const [adminUserError, setAdminUserError] = useState<string | null>(null);
+  const [adminUserMessage, setAdminUserMessage] = useState<string | null>(null);
   const [isLoadingProvider, setIsLoadingProvider] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [domains, setDomains] = useState<DomainRead[]>([]);
@@ -913,6 +981,16 @@ function App() {
     }
   }
 
+  async function refreshAdminUsers(accessToken?: string) {
+    setAdminUserError(null);
+    try {
+      const adminToken = accessToken ?? (await getAdminToken());
+      setAdminUsers(await loadAdminUsers(adminToken));
+    } catch (error) {
+      setAdminUserError(error instanceof Error ? error.message : "Admin users refresh failed");
+    }
+  }
+
   async function handleProviderLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoadingProvider(true);
@@ -923,6 +1001,7 @@ function App() {
       setToken(accessToken);
       const nextCatalog = await loadProviderCatalog(accessToken);
       setCatalog(nextCatalog);
+      await refreshAdminUsers(accessToken);
       await refreshWorkspace(accessToken);
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
@@ -934,6 +1013,83 @@ function App() {
       setProviderError(error instanceof Error ? error.message : "Provider catalog failed");
     } finally {
       setIsLoadingProvider(false);
+    }
+  }
+
+  async function handleCreateAdminUser(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsCreatingAdminUser(true);
+    setAdminUserError(null);
+    setAdminUserMessage(null);
+    try {
+      const nextEmail = adminUserEmail.trim();
+      if (!nextEmail) {
+        throw new Error("Admin email is required");
+      }
+      if (adminUserPassword.length < 12) {
+        throw new Error("Admin password must be at least 12 characters");
+      }
+      const accessToken = await getAdminToken();
+      const created = await createAdminUser(accessToken, {
+        email: nextEmail,
+        password: adminUserPassword,
+      });
+      setAdminUsers((current) => [...current.filter((user) => user.id !== created.id), created]);
+      setAdminUserEmail("");
+      setAdminUserPassword("");
+      setAdminUserMessage(`Created ${created.email}`);
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setAdminUserError(error instanceof Error ? error.message : "Admin user create failed");
+    } finally {
+      setIsCreatingAdminUser(false);
+    }
+  }
+
+  async function handleUpdateAdminUserStatus(user: AdminUserRead) {
+    setSavingAdminUserId(user.id);
+    setAdminUserError(null);
+    setAdminUserMessage(null);
+    try {
+      const accessToken = await getAdminToken();
+      const updated = await updateAdminUserStatus(accessToken, user.id, !user.is_active);
+      setAdminUsers((current) =>
+        current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
+      );
+      setAdminUserMessage(`${updated.email} is now ${updated.is_active ? "active" : "inactive"}`);
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setAdminUserError(error instanceof Error ? error.message : "Admin status update failed");
+    } finally {
+      setSavingAdminUserId(null);
+    }
+  }
+
+  async function handleResetAdminPassword(
+    event: React.FormEvent<HTMLFormElement>,
+    user: AdminUserRead,
+  ) {
+    event.preventDefault();
+    setSavingAdminUserId(user.id);
+    setAdminUserError(null);
+    setAdminUserMessage(null);
+    try {
+      const nextPassword = adminPasswordResets[user.id] ?? "";
+      if (nextPassword.length < 12) {
+        throw new Error("Admin password must be at least 12 characters");
+      }
+      const accessToken = await getAdminToken();
+      const updated = await resetAdminUserPassword(accessToken, user.id, nextPassword);
+      setAdminUsers((current) =>
+        current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
+      );
+      setAdminPasswordResets((current) => ({ ...current, [user.id]: "" }));
+      setAdminUserMessage(`Updated password for ${updated.email}`);
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setAdminUserError(error instanceof Error ? error.message : "Admin password reset failed");
+    } finally {
+      setSavingAdminUserId(null);
     }
   }
 
@@ -1464,6 +1620,13 @@ function App() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setToken("");
     setCatalog(null);
+    setAdminUsers([]);
+    setAdminUserEmail("");
+    setAdminUserPassword("");
+    setAdminPasswordResets({});
+    setAdminUserError(null);
+    setAdminUserMessage(null);
+    setSavingAdminUserId(null);
     setProviderError(null);
     setQueryResult(null);
     setQueryJob(null);
@@ -2412,6 +2575,113 @@ function App() {
                 </div>
               ) : null}
             </div>
+
+            <section className="admin-users" aria-label="Admin users">
+              <div className="section-heading">
+                <h3>Admin users</h3>
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label="Refresh admin users"
+                  onClick={() => void refreshAdminUsers()}
+                >
+                  <RefreshCw aria-hidden="true" />
+                </button>
+              </div>
+              <form className="admin-user-form" onSubmit={(event) => void handleCreateAdminUser(event)}>
+                <label>
+                  <span>Email</span>
+                  <input
+                    aria-label="New admin email"
+                    autoComplete="off"
+                    type="email"
+                    value={adminUserEmail}
+                    onChange={(event) => setAdminUserEmail(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Password</span>
+                  <input
+                    aria-label="New admin password"
+                    autoComplete="new-password"
+                    type="password"
+                    value={adminUserPassword}
+                    onChange={(event) => setAdminUserPassword(event.target.value)}
+                  />
+                </label>
+                <button
+                  className="secondary-action"
+                  disabled={isCreatingAdminUser || !token}
+                  type="submit"
+                >
+                  <UserPlus aria-hidden="true" />
+                  {isCreatingAdminUser ? "Creating admin" : "Create admin"}
+                </button>
+              </form>
+              {adminUserError ? (
+                <p className="inline-error" role="alert">
+                  {adminUserError}
+                </p>
+              ) : null}
+              {adminUserMessage ? (
+                <p className="inline-success compact-success" role="status">
+                  {adminUserMessage}
+                </p>
+              ) : null}
+              <div className="admin-user-list">
+                {adminUsers.map((user) => (
+                  <article className="admin-user-row" key={user.id}>
+                    <div>
+                      <span className={user.is_active ? "badge success" : "badge muted"}>
+                        {user.is_active ? "active" : "inactive"}
+                      </span>
+                      <strong>{user.email}</strong>
+                      <span>{formatDateTime(user.updated_at)}</span>
+                    </div>
+                    <div className="admin-user-actions">
+                      <button
+                        className="ghost-action"
+                        disabled={savingAdminUserId === user.id || user.email === email.trim().toLowerCase()}
+                        type="button"
+                        onClick={() => void handleUpdateAdminUserStatus(user)}
+                      >
+                        <Power aria-hidden="true" />
+                        {user.is_active ? "Deactivate" : "Activate"}
+                      </button>
+                      <form onSubmit={(event) => void handleResetAdminPassword(event, user)}>
+                        <input
+                          aria-label={`New password for ${user.email}`}
+                          autoComplete="new-password"
+                          placeholder="New password"
+                          type="password"
+                          value={adminPasswordResets[user.id] ?? ""}
+                          onChange={(event) =>
+                            setAdminPasswordResets((current) => ({
+                              ...current,
+                              [user.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <button
+                          className="ghost-action"
+                          disabled={savingAdminUserId === user.id}
+                          type="submit"
+                        >
+                          <KeyRound aria-hidden="true" />
+                          Reset
+                        </button>
+                      </form>
+                    </div>
+                  </article>
+                ))}
+                {adminUsers.length === 0 ? (
+                  <div className="empty-state compact">
+                    <Users aria-hidden="true" />
+                    <p>Connect an admin session to manage local admin accounts.</p>
+                  </div>
+                ) : null}
+              </div>
+            </section>
           </article>
 
           <article className="panel wide" id="audit">

@@ -20,6 +20,50 @@ Use the returned token as:
 Authorization: Bearer <token>
 ```
 
+Admin bearer tokens are checked against the persisted `admin_users` row on each
+management request. If an admin account is deactivated, existing tokens for that
+account stop working.
+
+## Admin Users
+
+List local admin accounts:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  http://localhost:8000/admin/users
+```
+
+Create an admin account:
+
+```bash
+curl --request POST http://localhost:8000/admin/users \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"email":"ops@retos.dev","password":"change-me-with-12-plus-chars"}'
+```
+
+Activate or deactivate an account:
+
+```bash
+curl --request PATCH http://localhost:8000/admin/users/<admin_user_id>/status \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"is_active":false}'
+```
+
+Reset an admin password:
+
+```bash
+curl --request POST http://localhost:8000/admin/users/<admin_user_id>/password \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"password":"new-password-with-12-plus-chars"}'
+```
+
+The API never returns password hashes. It prevents self-deactivation, requires at
+least one active admin, and writes `admin_user.created`,
+`admin_user.status_updated`, and `admin_user.password_reset` journal events.
+
 ## Domains
 
 Create a domain:
@@ -628,6 +672,10 @@ the workspace endpoints.
 Current console calls:
 
 - `POST /auth/login`
+- `GET /admin/users`
+- `POST /admin/users`
+- `PATCH /admin/users/{admin_user_id}/status`
+- `POST /admin/users/{admin_user_id}/password`
 - `GET /llm/providers`
 - `GET /domains`
 - `POST /domains`
@@ -651,12 +699,15 @@ Current console calls:
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`
 
-The UI treats the provider catalog as read-only operational status:
+The UI treats the provider catalog as read-only operational status and admin users as
+audited local accounts:
 
 - `active.can_call=true` means the selected profile is ready to call.
 - `paid=true` means the UI must show a cost warning before future query execution.
 - `enabled=false` plus `reason` explains whether configuration or cost opt-in is missing.
 - API keys are never returned to the browser.
+- Admin passwords are write-only; the browser can create accounts and submit resets,
+  but only receives account metadata and active/inactive state.
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source

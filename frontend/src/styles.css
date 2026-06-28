@@ -1326,6 +1326,89 @@ button:focus-visible {
   justify-content: flex-end;
 }
 
+.admin-users {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border-top: 1px solid #dbe3ef;
+  padding-top: 18px;
+}
+
+.admin-user-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(160px, 0.5fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.admin-user-form label {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.admin-user-form input,
+.admin-user-actions input {
+  min-height: 44px;
+  width: 100%;
+}
+
+.admin-user-form .secondary-action {
+  margin-top: 0;
+}
+
+.compact-success {
+  margin-bottom: 0;
+}
+
+.admin-user-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-user-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.admin-user-row > div:first-child {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.admin-user-row strong,
+.admin-user-row span {
+  overflow-wrap: anywhere;
+}
+
+.admin-user-actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-user-actions form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-user-actions .ghost-action {
+  min-width: 128px;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -1393,6 +1476,7 @@ button:focus-visible {
   .source-form,
   .file-upload-form,
   .text-ingestion-form,
+  .admin-user-form,
   .eval-dataset-form,
   .audit-toolbar,
   .audit-event-grid,
@@ -1407,6 +1491,10 @@ button:focus-visible {
   }
 
   .provider-row,
+  .admin-user-row,
+  .admin-user-row > div:first-child,
+  .admin-user-actions,
+  .admin-user-actions form,
   .document-row,
   .document-edit-form,
   .history-change,

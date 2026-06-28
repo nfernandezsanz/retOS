@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from retos.api.routes import (
+    admin_users,
     agent,
     audit,
     auth,
@@ -66,6 +67,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(admin_users.router)
     app.include_router(domains.router)
     app.include_router(documents.router)
     app.include_router(ingestions.router)

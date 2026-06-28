@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import cast
 from uuid import uuid4
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from retos.domain.admin import AdminUser
@@ -219,6 +219,42 @@ class AdminUserRepository:
         record = result.one_or_none()
         if record is None:
             return None
+        return admin_user_from_record(record)
+
+    async def get(self, admin_user_id: str) -> AdminUser | None:
+        record = await self._session.get(AdminUserRecord, admin_user_id)
+        if record is None:
+            return None
+        return admin_user_from_record(record)
+
+    async def list(self, *, limit: int = 100) -> builtins.list[AdminUser]:
+        result = await self._session.scalars(
+            select(AdminUserRecord)
+            .order_by(AdminUserRecord.created_at.asc(), AdminUserRecord.email.asc())
+            .limit(limit)
+        )
+        return [admin_user_from_record(record) for record in result]
+
+    async def count_active(self) -> int:
+        result = await self._session.scalar(
+            select(func.count()).select_from(AdminUserRecord).where(AdminUserRecord.is_active)
+        )
+        return int(result or 0)
+
+    async def update_active(self, *, admin_user_id: str, is_active: bool) -> AdminUser | None:
+        record = await self._session.get(AdminUserRecord, admin_user_id)
+        if record is None:
+            return None
+        record.is_active = is_active
+        await self._session.flush()
+        return admin_user_from_record(record)
+
+    async def update_password(self, *, admin_user_id: str, password_hash: str) -> AdminUser | None:
+        record = await self._session.get(AdminUserRecord, admin_user_id)
+        if record is None:
+            return None
+        record.password_hash = password_hash
+        await self._session.flush()
         return admin_user_from_record(record)
 
 
