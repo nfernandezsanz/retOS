@@ -3,9 +3,12 @@ from fastapi.testclient import TestClient
 
 from retos.api.routes.events import (
     InMemoryProgressStore,
+    ProgressEvent,
     event_stream,
+    live_event_visible_to_actor,
     parse_last_event_id,
     persisted_event_id,
+    persisted_replay_events,
 )
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
@@ -52,7 +55,12 @@ async def test_event_stream_yields_progress_event(client: TestClient) -> None:
             self.calls += 1
             return self.calls > 1
 
-    stream = event_stream(Request(), None, SQLAlchemyUnitOfWork(client.app.state.session_factory))  # type: ignore[arg-type]
+    stream = event_stream(
+        Request(),  # type: ignore[arg-type]
+        "admin@retos.dev",
+        None,
+        SQLAlchemyUnitOfWork(client.app.state.session_factory),
+    )
     event = await anext(stream)
 
     assert event["event"] == "system.ready"
@@ -92,6 +100,7 @@ async def test_event_stream_replays_persisted_progress_events(client: TestClient
 
     stream = event_stream(
         Request(),  # type: ignore[arg-type]
+        "admin@retos.dev",
         None,
         SQLAlchemyUnitOfWork(client.app.state.session_factory),
     )
@@ -99,6 +108,235 @@ async def test_event_stream_replays_persisted_progress_events(client: TestClient
 
     assert any(event["id"].startswith("progress:") for event in events)
     assert any(event["event"] == "job.queued" and job_id in event["data"] for event in events)
+
+
+@pytest.mark.asyncio
+async def test_event_stream_replay_is_scoped_for_viewer(client: TestClient) -> None:
+    login = client.post(
+        "/auth/login",
+        json={"email": "admin@retos.dev", "password": "test-admin-password"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    granted_domain = client.post(
+        "/domains",
+        headers=headers,
+        json={"slug": "events-granted", "name": "Events Granted"},
+    )
+    hidden_domain = client.post(
+        "/domains",
+        headers=headers,
+        json={"slug": "events-hidden", "name": "Events Hidden"},
+    )
+    granted_job = client.post(
+        "/jobs",
+        headers=headers,
+        json={
+            "kind": "index.domain",
+            "domain_id": granted_domain.json()["id"],
+            "payload": {"reason": "events-granted"},
+        },
+    )
+    hidden_job = client.post(
+        "/jobs",
+        headers=headers,
+        json={
+            "kind": "index.domain",
+            "domain_id": hidden_domain.json()["id"],
+            "payload": {"reason": "events-hidden"},
+        },
+    )
+    viewer = client.post(
+        "/admin/users",
+        headers=headers,
+        json={
+            "email": "events-viewer@retos.dev",
+            "password": "events-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    grant = client.post(
+        f"/admin/users/{viewer.json()['id']}/domain-grants",
+        headers=headers,
+        json={"domain_id": granted_domain.json()["id"]},
+    )
+    assert grant.status_code == 201
+
+    class Request:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def is_disconnected(self) -> bool:
+            self.calls += 1
+            return self.calls > 4
+
+    stream = event_stream(
+        Request(),  # type: ignore[arg-type]
+        "events-viewer@retos.dev",
+        None,
+        SQLAlchemyUnitOfWork(client.app.state.session_factory),
+    )
+    events = [await anext(stream) for _ in range(2)]
+    payloads = [event["data"] for event in events]
+
+    assert any(granted_job.json()["id"] in payload for payload in payloads)
+    assert all(hidden_job.json()["id"] not in payload for payload in payloads)
+
+
+@pytest.mark.asyncio
+async def test_persisted_replay_honors_viewer_progress_cursor(client: TestClient) -> None:
+    login = client.post(
+        "/auth/login",
+        json={"email": "admin@retos.dev", "password": "test-admin-password"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    domain = client.post(
+        "/domains",
+        headers=headers,
+        json={"slug": "events-cursor", "name": "Events Cursor"},
+    )
+    viewer = client.post(
+        "/admin/users",
+        headers=headers,
+        json={
+            "email": "cursor-viewer@retos.dev",
+            "password": "cursor-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    grant = client.post(
+        f"/admin/users/{viewer.json()['id']}/domain-grants",
+        headers=headers,
+        json={"domain_id": domain.json()["id"]},
+    )
+    first_job = client.post(
+        "/jobs",
+        headers=headers,
+        json={
+            "kind": "index.domain",
+            "domain_id": domain.json()["id"],
+            "payload": {"order": 1},
+        },
+    )
+    second_job = client.post(
+        "/jobs",
+        headers=headers,
+        json={
+            "kind": "index.domain",
+            "domain_id": domain.json()["id"],
+            "payload": {"order": 2},
+        },
+    )
+    assert grant.status_code == 201
+
+    async with SQLAlchemyUnitOfWork(client.app.state.session_factory) as uow:
+        visible = await uow.progress_events.list_chronological_for_domain_ids(
+            domain_ids={domain.json()["id"]},
+            limit=10,
+        )
+    replayed = await persisted_replay_events(
+        uow=SQLAlchemyUnitOfWork(client.app.state.session_factory),
+        actor="cursor-viewer@retos.dev",
+        last_event_id=f"progress:{visible[0].id}",
+    )
+
+    payloads = [event.model_dump_json() for event in replayed]
+    assert any(second_job.json()["id"] in payload for payload in payloads)
+    assert all(first_job.json()["id"] not in payload for payload in payloads)
+
+
+@pytest.mark.asyncio
+async def test_live_event_visibility_is_domain_scoped(client: TestClient) -> None:
+    login = client.post(
+        "/auth/login",
+        json={"email": "admin@retos.dev", "password": "test-admin-password"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    granted_domain = client.post(
+        "/domains",
+        headers=headers,
+        json={"slug": "live-granted", "name": "Live Granted"},
+    )
+    hidden_domain = client.post(
+        "/domains",
+        headers=headers,
+        json={"slug": "live-hidden", "name": "Live Hidden"},
+    )
+    viewer = client.post(
+        "/admin/users",
+        headers=headers,
+        json={
+            "email": "live-viewer@retos.dev",
+            "password": "live-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    grant = client.post(
+        f"/admin/users/{viewer.json()['id']}/domain-grants",
+        headers=headers,
+        json={"domain_id": granted_domain.json()["id"]},
+    )
+    granted_job = client.post(
+        "/jobs",
+        headers=headers,
+        json={
+            "kind": "index.domain",
+            "domain_id": granted_domain.json()["id"],
+            "payload": {"reason": "granted"},
+        },
+    )
+    hidden_job = client.post(
+        "/jobs",
+        headers=headers,
+        json={
+            "kind": "index.domain",
+            "domain_id": hidden_domain.json()["id"],
+            "payload": {"reason": "hidden"},
+        },
+    )
+    assert grant.status_code == 201
+    uow = SQLAlchemyUnitOfWork(client.app.state.session_factory)
+
+    assert await live_event_visible_to_actor(
+        item=ProgressEvent(id="live:1", event="system.ready", data={}),
+        actor="live-viewer@retos.dev",
+        uow=uow,
+    )
+    assert await live_event_visible_to_actor(
+        item=ProgressEvent(
+            id="live:2",
+            event="job.queued",
+            data={"domain_id": granted_domain.json()["id"]},
+        ),
+        actor="live-viewer@retos.dev",
+        uow=uow,
+    )
+    assert await live_event_visible_to_actor(
+        item=ProgressEvent(
+            id="live:3",
+            event="job.queued",
+            data={"job_id": granted_job.json()["id"]},
+        ),
+        actor="live-viewer@retos.dev",
+        uow=uow,
+    )
+    assert not await live_event_visible_to_actor(
+        item=ProgressEvent(
+            id="live:4",
+            event="job.queued",
+            data={"domain_id": hidden_domain.json()["id"]},
+        ),
+        actor="live-viewer@retos.dev",
+        uow=uow,
+    )
+    assert not await live_event_visible_to_actor(
+        item=ProgressEvent(
+            id="live:5",
+            event="job.queued",
+            data={"job_id": hidden_job.json()["id"]},
+        ),
+        actor="live-viewer@retos.dev",
+        uow=uow,
+    )
 
 
 @pytest.mark.asyncio
@@ -115,6 +353,7 @@ async def test_event_stream_continues_live_events_after_progress_cursor(
 
     stream = event_stream(
         Request(),  # type: ignore[arg-type]
+        "admin@retos.dev",
         "progress:missing-progress-event",
         SQLAlchemyUnitOfWork(client.app.state.session_factory),
     )
@@ -163,6 +402,7 @@ async def test_progress_event_repository_lists_chronological_and_after(
 
     async with SQLAlchemyUnitOfWork(client.app.state.session_factory) as uow:
         chronological = await uow.progress_events.list_chronological(limit=10)
+        scoped_empty = await uow.progress_events.list_for_domain_ids(domain_ids=set(), limit=10)
         after_first = await uow.progress_events.list_after(
             event_id=chronological[0].id,
             limit=10,
@@ -174,5 +414,6 @@ async def test_progress_event_repository_lists_chronological_and_after(
 
     assert chronological[0].occurred_at <= chronological[-1].occurred_at
     assert any(event.job_id == first_job.json()["id"] for event in chronological)
+    assert scoped_empty == []
     assert any(event.job_id == second_job.json()["id"] for event in after_first)
     assert len(after_missing) == 2

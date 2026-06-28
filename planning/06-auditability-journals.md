@@ -27,9 +27,10 @@ Current read endpoints:
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`
 
-Both require an authenticated bearer token. `admin` and `viewer` accounts can read the
-audit ledger, while audit-producing mutations remain admin-only. Results return newest
-events first.
+Both require an authenticated bearer token. `admin` accounts can read the full local
+ledger. `viewer` accounts can read only events tied to their granted domains through
+event payload `domain_id`, domain entity IDs, or job-to-domain relationships. Audit-
+producing mutations remain admin-only. Results return newest events first.
 
 ## Future Hardening
 

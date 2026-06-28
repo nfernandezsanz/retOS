@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from retos.api.dependencies import UnitOfWorkDep, ViewerSubjectDep
+from retos.api.dependencies import UnitOfWorkDep, ViewerSubjectDep, visible_domain_ids_for_actor
 from retos.domain.jobs import JournalEvent, ProgressEvent
 
 router = APIRouter(prefix="/audit", tags=["audit"])
@@ -63,35 +63,60 @@ class AuditExportRead(BaseModel):
 
 @router.get("/journal-events", response_model=list[JournalEventRead])
 async def list_journal_events(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[JournalEventRead]:
     async with uow:
-        events = await uow.journal_events.list(limit=limit)
+        visible_domain_ids = await visible_domain_ids_for_actor(actor=actor, uow=uow)
+        if visible_domain_ids is None:
+            events = await uow.journal_events.list(limit=limit)
+        else:
+            events = await uow.journal_events.list_for_domain_ids(
+                domain_ids=visible_domain_ids,
+                limit=limit,
+            )
     return [JournalEventRead.from_event(event) for event in events]
 
 
 @router.get("/progress-events", response_model=list[ProgressEventRead])
 async def list_progress_events(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[ProgressEventRead]:
     async with uow:
-        events = await uow.progress_events.list(limit=limit)
+        visible_domain_ids = await visible_domain_ids_for_actor(actor=actor, uow=uow)
+        if visible_domain_ids is None:
+            events = await uow.progress_events.list(limit=limit)
+        else:
+            events = await uow.progress_events.list_for_domain_ids(
+                domain_ids=visible_domain_ids,
+                limit=limit,
+            )
     return [ProgressEventRead.from_event(event) for event in events]
 
 
 @router.get("/export", response_model=AuditExportRead)
 async def export_audit_events(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=1000)] = 200,
 ) -> JSONResponse:
     async with uow:
-        journal_events = await uow.journal_events.list(limit=limit)
-        progress_events = await uow.progress_events.list(limit=limit)
+        visible_domain_ids = await visible_domain_ids_for_actor(actor=actor, uow=uow)
+        if visible_domain_ids is None:
+            journal_events = await uow.journal_events.list(limit=limit)
+            progress_events = await uow.progress_events.list(limit=limit)
+        else:
+            journal_events = await uow.journal_events.list_for_domain_ids(
+                domain_ids=visible_domain_ids,
+                limit=limit,
+            )
+            progress_events = await uow.progress_events.list_for_domain_ids(
+                domain_ids=visible_domain_ids,
+                limit=limit,
+            )
 
     payload = AuditExportRead(
         schema_version="retos.audit-export.v1",

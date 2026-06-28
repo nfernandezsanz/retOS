@@ -1,6 +1,6 @@
 import builtins
 from datetime import datetime
-from typing import cast
+from typing import Any, cast
 from uuid import uuid4
 
 from sqlalchemy import and_, func, or_, select
@@ -169,6 +169,35 @@ def progress_event_from_record(record: ProgressEventRecord) -> ProgressEvent:
         message=record.message,
         payload=record.payload,
     )
+
+
+def payload_domain_id(payload: dict[str, Any]) -> str | None:
+    value = payload.get("domain_id")
+    return value if isinstance(value, str) and value else None
+
+
+def journal_record_visible_to_domains(
+    record: JournalEventRecord,
+    domain_ids: set[str],
+    job_domains: dict[str, str | None],
+) -> bool:
+    if record.entity_type == "domain" and record.entity_id in domain_ids:
+        return True
+    domain_id = payload_domain_id(record.payload)
+    if domain_id in domain_ids:
+        return True
+    return record.entity_type == "job" and job_domains.get(record.entity_id) in domain_ids
+
+
+def progress_record_visible_to_domains(
+    record: ProgressEventRecord,
+    domain_ids: set[str],
+    job_domains: dict[str, str | None],
+) -> bool:
+    domain_id = payload_domain_id(record.payload)
+    if domain_id in domain_ids:
+        return True
+    return record.job_id is not None and job_domains.get(record.job_id) in domain_ids
 
 
 class DomainRepository:
@@ -801,6 +830,39 @@ class JournalRepository:
         )
         return [journal_event_from_record(record) for record in result]
 
+    async def list_for_domain_ids(
+        self,
+        *,
+        domain_ids: set[str],
+        limit: int = 100,
+    ) -> builtins.list[JournalEvent]:
+        if not domain_ids:
+            return []
+        window = min(max(limit * 20, limit), 1000)
+        result = await self._session.scalars(
+            select(JournalEventRecord)
+            .order_by(JournalEventRecord.occurred_at.desc(), JournalEventRecord.id.desc())
+            .limit(window)
+        )
+        records = result.all()
+        job_ids = [
+            record.entity_id
+            for record in records
+            if record.entity_type == "job" and record.entity_id
+        ]
+        job_domains: dict[str, str | None] = {}
+        if job_ids:
+            job_result = await self._session.scalars(
+                select(JobRecord).where(JobRecord.id.in_(job_ids))
+            )
+            job_domains = {record.id: record.domain_id for record in job_result}
+        visible = [
+            journal_event_from_record(record)
+            for record in records
+            if journal_record_visible_to_domains(record, domain_ids, job_domains)
+        ]
+        return visible[:limit]
+
     async def list_for_entity(
         self,
         *,
@@ -851,6 +913,44 @@ class ProgressEventRepository:
         )
         return [progress_event_from_record(record) for record in result]
 
+    async def list_for_domain_ids(
+        self,
+        *,
+        domain_ids: set[str],
+        limit: int = 100,
+    ) -> builtins.list[ProgressEvent]:
+        if not domain_ids:
+            return []
+        window = min(max(limit * 20, limit), 1000)
+        result = await self._session.scalars(
+            select(ProgressEventRecord)
+            .order_by(ProgressEventRecord.occurred_at.desc(), ProgressEventRecord.id.desc())
+            .limit(window)
+        )
+        records = result.all()
+        job_ids = [record.job_id for record in records if record.job_id is not None]
+        job_domains: dict[str, str | None] = {}
+        if job_ids:
+            job_result = await self._session.scalars(
+                select(JobRecord).where(JobRecord.id.in_(job_ids))
+            )
+            job_domains = {record.id: record.domain_id for record in job_result}
+        visible = [
+            progress_event_from_record(record)
+            for record in records
+            if progress_record_visible_to_domains(record, domain_ids, job_domains)
+        ]
+        return visible[:limit]
+
+    async def list_chronological_for_domain_ids(
+        self,
+        *,
+        domain_ids: set[str],
+        limit: int = 100,
+    ) -> builtins.list[ProgressEvent]:
+        visible = await self.list_for_domain_ids(domain_ids=domain_ids, limit=limit)
+        return builtins.list(reversed(visible))
+
     async def list_chronological(self, *, limit: int = 100) -> builtins.list[ProgressEvent]:
         result = await self._session.scalars(
             select(ProgressEventRecord)
@@ -883,3 +983,48 @@ class ProgressEventRepository:
             .limit(limit)
         )
         return [progress_event_from_record(record) for record in result]
+
+    async def list_after_for_domain_ids(
+        self,
+        *,
+        event_id: str,
+        domain_ids: set[str],
+        limit: int = 100,
+    ) -> builtins.list[ProgressEvent]:
+        if not domain_ids:
+            return []
+        target = await self._session.get(ProgressEventRecord, event_id)
+        if target is None:
+            return await self.list_chronological_for_domain_ids(
+                domain_ids=domain_ids,
+                limit=limit,
+            )
+        window = min(max(limit * 20, limit), 1000)
+        result = await self._session.scalars(
+            select(ProgressEventRecord)
+            .where(
+                or_(
+                    ProgressEventRecord.occurred_at > target.occurred_at,
+                    and_(
+                        ProgressEventRecord.occurred_at == target.occurred_at,
+                        ProgressEventRecord.id > target.id,
+                    ),
+                )
+            )
+            .order_by(ProgressEventRecord.occurred_at.asc(), ProgressEventRecord.id.asc())
+            .limit(window)
+        )
+        records = result.all()
+        job_ids = [record.job_id for record in records if record.job_id is not None]
+        job_domains: dict[str, str | None] = {}
+        if job_ids:
+            job_result = await self._session.scalars(
+                select(JobRecord).where(JobRecord.id.in_(job_ids))
+            )
+            job_domains = {record.id: record.domain_id for record in job_result}
+        visible = [
+            progress_event_from_record(record)
+            for record in records
+            if progress_record_visible_to_domains(record, domain_ids, job_domains)
+        ]
+        return visible[:limit]

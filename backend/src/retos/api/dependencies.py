@@ -105,5 +105,19 @@ async def ensure_domain_access(*, actor: str, domain_id: str, uow: SQLAlchemyUni
         )
 
 
+async def visible_domain_ids_for_actor(
+    *,
+    actor: str,
+    uow: SQLAlchemyUnitOfWork,
+) -> set[str] | None:
+    admin = await uow.admin_users.get_by_email(actor)
+    if admin is None:
+        return set()
+    if "admin" in admin.roles:
+        return None
+    grants = await uow.admin_users.list_domain_grants(admin.id)
+    return {grant.domain_id for grant in grants}
+
+
 ViewerSubjectDep = Annotated[str, Depends(require_viewer)]
 AdminSubjectDep = Annotated[str, Depends(require_admin)]

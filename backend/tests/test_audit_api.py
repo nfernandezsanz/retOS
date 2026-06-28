@@ -55,6 +55,36 @@ def create_index_job(client: TestClient, headers: dict[str, str], domain_id: str
     return response.json()["id"]
 
 
+def create_viewer_with_grant(
+    client: TestClient,
+    headers: dict[str, str],
+    *,
+    domain_id: str,
+) -> dict[str, str]:
+    created = client.post(
+        "/admin/users",
+        headers=headers,
+        json={
+            "email": "audit-viewer@retos.dev",
+            "password": "audit-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    assert created.status_code == 201
+    grant = client.post(
+        f"/admin/users/{created.json()['id']}/domain-grants",
+        headers=headers,
+        json={"domain_id": domain_id},
+    )
+    assert grant.status_code == 201
+    login = client.post(
+        "/auth/login",
+        json={"email": "audit-viewer@retos.dev", "password": "audit-viewer-password"},
+    )
+    assert login.status_code == 200
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
 @pytest.mark.parametrize(
     "path",
     ["/audit/journal-events", "/audit/progress-events", "/audit/export"],
@@ -147,6 +177,36 @@ def test_exports_audit_snapshot_with_download_headers(
         event["event_type"] == "job.queued" and event["job_id"] == job_id
         for event in body["progress_events"]
     )
+
+
+def test_viewer_audit_is_scoped_to_granted_domains(
+    audit_client: TestClient,
+    audit_admin_headers: dict[str, str],
+) -> None:
+    granted_domain_id = create_domain(audit_client, audit_admin_headers, "audit-granted")
+    hidden_domain_id = create_domain(audit_client, audit_admin_headers, "audit-hidden")
+    granted_job_id = create_index_job(audit_client, audit_admin_headers, granted_domain_id)
+    hidden_job_id = create_index_job(audit_client, audit_admin_headers, hidden_domain_id)
+    viewer_headers = create_viewer_with_grant(
+        audit_client,
+        audit_admin_headers,
+        domain_id=granted_domain_id,
+    )
+
+    journal_response = audit_client.get("/audit/journal-events?limit=20", headers=viewer_headers)
+    progress_response = audit_client.get("/audit/progress-events?limit=20", headers=viewer_headers)
+    export_response = audit_client.get("/audit/export?limit=20", headers=viewer_headers)
+
+    assert journal_response.status_code == 200
+    assert progress_response.status_code == 200
+    assert export_response.status_code == 200
+    assert any(event["entity_id"] == granted_job_id for event in journal_response.json())
+    assert all(event["entity_id"] != hidden_job_id for event in journal_response.json())
+    assert any(event["job_id"] == granted_job_id for event in progress_response.json())
+    assert all(event["job_id"] != hidden_job_id for event in progress_response.json())
+    exported = export_response.json()
+    assert any(event["entity_id"] == granted_job_id for event in exported["journal_events"])
+    assert all(event["entity_id"] != hidden_job_id for event in exported["journal_events"])
 
 
 def test_audit_export_limit_is_validated(

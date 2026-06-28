@@ -6,7 +6,7 @@ from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from retos.api.dependencies import UnitOfWorkDep, ViewerSubjectDep
+from retos.api.dependencies import UnitOfWorkDep, ViewerSubjectDep, visible_domain_ids_for_actor
 from retos.domain.jobs import ProgressEvent as PersistedProgressEvent
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
@@ -99,11 +99,24 @@ def persisted_to_stream_event(event: PersistedProgressEvent) -> ProgressEvent:
 async def persisted_replay_events(
     *,
     uow: SQLAlchemyUnitOfWork,
+    actor: str,
     last_event_id: str | None,
 ) -> list[ProgressEvent]:
     async with uow:
+        visible_domain_ids = await visible_domain_ids_for_actor(actor=actor, uow=uow)
         persisted_id = persisted_event_id(last_event_id)
-        if persisted_id is not None:
+        if visible_domain_ids is not None and persisted_id is not None:
+            events = await uow.progress_events.list_after_for_domain_ids(
+                event_id=persisted_id,
+                domain_ids=visible_domain_ids,
+                limit=PERSISTED_REPLAY_LIMIT,
+            )
+        elif visible_domain_ids is not None:
+            events = await uow.progress_events.list_chronological_for_domain_ids(
+                domain_ids=visible_domain_ids,
+                limit=PERSISTED_REPLAY_LIMIT,
+            )
+        elif persisted_id is not None:
             events = await uow.progress_events.list_after(
                 event_id=persisted_id,
                 limit=PERSISTED_REPLAY_LIMIT,
@@ -113,12 +126,35 @@ async def persisted_replay_events(
     return [persisted_to_stream_event(event) for event in events]
 
 
+async def live_event_visible_to_actor(
+    *,
+    item: ProgressEvent,
+    actor: str,
+    uow: SQLAlchemyUnitOfWork,
+) -> bool:
+    if item.event == "system.ready":
+        return True
+    async with uow:
+        visible_domain_ids = await visible_domain_ids_for_actor(actor=actor, uow=uow)
+        if visible_domain_ids is None:
+            return True
+        domain_id = item.data.get("domain_id")
+        if isinstance(domain_id, str) and domain_id in visible_domain_ids:
+            return True
+        job_id = item.data.get("job_id")
+        if isinstance(job_id, str):
+            job = await uow.jobs.get(job_id)
+            return job is not None and job.domain_id in visible_domain_ids
+    return False
+
+
 async def event_stream(
     request: Request,
+    actor: str,
     last_event_id: str | None,
     uow: SQLAlchemyUnitOfWork,
 ) -> AsyncIterator[dict[str, str]]:
-    replayed = await persisted_replay_events(uow=uow, last_event_id=last_event_id)
+    replayed = await persisted_replay_events(uow=uow, actor=actor, last_event_id=last_event_id)
     for item in replayed:
         if await request.is_disconnected():
             return
@@ -132,6 +168,8 @@ async def event_stream(
     while not await request.is_disconnected():
         for item in progress_store.since(next_id):
             next_id = item.id
+            if not await live_event_visible_to_actor(item=item, actor=actor, uow=uow):
+                continue
             yield {
                 "id": str(item.id),
                 "event": item.event,
@@ -143,12 +181,12 @@ async def event_stream(
 @router.get("/progress")
 async def progress_events(
     request: Request,
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
 ) -> EventSourceResponse:
     return EventSourceResponse(
-        event_stream(request, parse_last_event_id(last_event_id), uow),
+        event_stream(request, actor, parse_last_event_id(last_event_id), uow),
         ping=15,
         headers={"Cache-Control": "no-store"},
     )

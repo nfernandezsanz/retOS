@@ -29,7 +29,7 @@ Roles are intentionally small:
 | Role | Allowed |
 | --- | --- |
 | `admin` | Full local administration: account management, domain/source/document mutations, ingestion, indexing, agent queries, eval execution, job transitions, job retry, and all read-only operations. |
-| `viewer` | Read-only operational visibility. Domain-scoped resources require explicit domain grants. Provider catalog, audit journal/progress/export, SSE progress, and eval run history/comparison remain global observability surfaces. |
+| `viewer` | Read-only operational visibility. Domain-scoped resources, audit journal/progress/export, and persisted SSE replay require explicit domain grants. Provider catalog and eval run history/comparison remain global observability surfaces. |
 
 Endpoints that mutate state, spend compute, enqueue work, or change account security
 require an `admin` token. Viewer-safe endpoints use the same `Authorization` header but
@@ -910,11 +910,13 @@ curl --header "Authorization: Bearer <token>" \
 ```
 
 Both endpoints require a bearer token and accept `limit` from `1` to `200`. Results are
-ordered newest first.
+ordered newest first. Admin tokens read the full local ledger; viewer tokens read only
+events tied to granted domains through event payload `domain_id`, domain entity IDs, or
+job-to-domain relationships.
 
-The export endpoint requires a bearer token, accepts `limit` from `1` to `1000`, returns
-`Content-Disposition: attachment; filename="retos-audit-export.json"`, and sets
-`Cache-Control: no-store`.
+The export endpoint follows the same admin/viewer visibility rules, accepts `limit` from
+`1` to `1000`, returns `Content-Disposition: attachment;
+filename="retos-audit-export.json"`, and sets `Cache-Control: no-store`.
 
 Journal event shape:
 
@@ -991,6 +993,8 @@ On connect, the API replays recent persisted progress events before live memory 
 When `Last-Event-ID` is a `progress:*` cursor, the replay starts after that persisted
 row. The React console tracks the latest `progress:*` id separately and sends it on the
 next authenticated fetch reconnect.
+Viewer tokens receive only persisted and live progress events tied to their granted
+domains. Admin tokens receive the full local stream.
 
 ## Jobs
 
