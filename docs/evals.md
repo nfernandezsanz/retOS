@@ -92,6 +92,12 @@ PYTHONPATH=src python scripts/run_eval_smoke.py \
 HotpotQA and Natural Questions use the same report flags with `--suite hotpotqa` and
 `--suite natural-questions`.
 
+Dataset-backed JSON and Markdown reports include a `metadata` block with the adapter,
+resolved dataset path, requested `max_cases`, and execution source. Built-in smoke
+reports identify their fixture source. The API persists the same metadata under the
+eval job payload and journal/progress events so comparison and audit reviews can trace a
+metric back to the exact dataset input without opening the original command transcript.
+
 ## What The Smoke Suite Measures
 
 The built-in suite creates a temporary Tantivy index and evaluates fixture cases for:
@@ -141,9 +147,9 @@ curl "http://localhost:8000/evals/runs?limit=6" \
 
 The React console uses these endpoints in the `Local evals` panel to run smoke,
 SQuAD, HotpotQA, and Natural Questions evals, show metrics, per-case status, exported
-report paths, and a newest-first run history. Each history row can rerun the persisted
-suite when its stored payload still contains the dataset and threshold settings needed
-for a faithful repeat:
+report paths, dataset provenance metadata, and a newest-first run history. Each history
+row can rerun the persisted suite when its stored payload still contains the dataset and
+threshold settings needed for a faithful repeat:
 
 ```bash
 curl --request POST "http://localhost:8000/evals/runs/<job_id>/rerun" \

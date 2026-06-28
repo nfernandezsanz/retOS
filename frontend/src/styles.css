@@ -1053,6 +1053,36 @@ button:focus-visible {
   font-size: 24px;
 }
 
+.eval-metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.eval-metadata div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.eval-metadata span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.eval-metadata strong {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .eval-case-list {
   display: grid;
   gap: 10px;

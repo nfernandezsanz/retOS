@@ -301,6 +301,7 @@ type EvalReport = {
   suite_name: string;
   passed: boolean;
   case_count: number;
+  metadata?: Record<string, unknown>;
   metrics: EvalMetrics;
   cases: EvalCaseResult[];
 };
@@ -1087,6 +1088,12 @@ function formatHistoryValue(value: unknown): string {
   }
   const rendered = typeof value === "object" ? JSON.stringify(value) : String(value);
   return rendered.length > 160 ? `${rendered.slice(0, 157)}...` : rendered;
+}
+
+function evalMetadataEntries(report: EvalReport): [string, string][] {
+  return Object.entries(report.metadata ?? {})
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .map(([key, value]) => [key.replaceAll("_", " "), formatHistoryValue(value)]);
 }
 
 function formatScore(value: number): string {
@@ -3251,6 +3258,16 @@ function App() {
                       </article>
                     ))}
                   </div>
+                  {evalMetadataEntries(evalReport).length > 0 ? (
+                    <div className="eval-metadata" aria-label="Eval metadata">
+                      {evalMetadataEntries(evalReport).map(([name, value]) => (
+                        <div key={name}>
+                          <span>{name}</span>
+                          <strong>{value}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="eval-case-list" aria-label="Eval cases">
                     {evalReport.cases.map((evalCase) => (
                       <article className="eval-case-row" key={evalCase.case_id}>

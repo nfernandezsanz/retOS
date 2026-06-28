@@ -168,7 +168,10 @@ def build_report(
     dataset_format: str,
 ) -> EvalSuiteReport | OCRQualityReport:
     if suite == "smoke":
-        return run_smoke_eval_suite(index_root=index_root)
+        return run_smoke_eval_suite(
+            index_root=index_root,
+            metadata={"source": "built-in", "dataset": "retos-smoke-fixtures"},
+        )
     if suite == "ocr-smoke":
         return run_ocr_quality_suite(work_dir=index_root / "ocr")
     if suite == "ocr-benchmark":
@@ -213,6 +216,12 @@ def build_report(
         index_root=index_root,
         suite_name=suite_name,
         cases=cases,
+        metadata={
+            "adapter": suite_name,
+            "dataset_path": str(dataset_path),
+            "max_cases": max_cases if max_cases is not None else "all",
+            "source": "local-file",
+        },
     )
 
 

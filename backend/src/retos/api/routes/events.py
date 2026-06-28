@@ -36,7 +36,7 @@ class InMemoryProgressStore:
             )
         ]
 
-    def append(self, event: str, data: dict[str, str | int | float | bool | None]) -> ProgressEvent:
+    def append(self, event: str, data: dict[str, Any]) -> ProgressEvent:
         item = ProgressEvent(
             id=f"{LIVE_EVENT_PREFIX}{len(self._events) + 1}", event=event, data=data
         )

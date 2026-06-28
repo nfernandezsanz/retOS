@@ -21,7 +21,29 @@ def test_smoke_eval_suite_passes_with_local_index(tmp_path: Path) -> None:
     assert report.abstention == 1.0
     assert report.budget_compliance == 1.0
     assert report.to_dict()["metrics"]["retrieval_recall"] == 1.0
+    assert report.to_dict()["metadata"] == {}
     assert "Eval Report: retos-smoke" in report.to_markdown()
+
+
+def test_eval_report_includes_metadata_in_json_and_markdown(tmp_path: Path) -> None:
+    report = run_smoke_eval_suite(
+        index_root=tmp_path,
+        metadata={
+            "dataset_path": "/datasets/squad.json",
+            "adapter": "squad-v2",
+        },
+    )
+
+    payload = report.to_dict()
+    markdown = report.to_markdown()
+
+    assert payload["metadata"] == {
+        "dataset_path": "/datasets/squad.json",
+        "adapter": "squad-v2",
+    }
+    assert "| Metadata | Value |" in markdown
+    assert "| adapter | squad-v2 |" in markdown
+    assert "| dataset_path | /datasets/squad.json |" in markdown
 
 
 def test_smoke_eval_cases_are_immutable_fixtures() -> None:

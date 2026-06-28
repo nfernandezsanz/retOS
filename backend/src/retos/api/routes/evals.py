@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
@@ -37,6 +38,7 @@ class EvalReportRead(BaseModel):
     suite_name: str
     passed: bool
     case_count: int
+    metadata: dict[str, Any] = Field(default_factory=dict)
     metrics: dict[str, float]
     cases: list[dict[str, Any]]
 
@@ -325,7 +327,10 @@ async def run_smoke_eval_plan(
         payload=rerun_payload(rerun_from_job_id),
     )
     try:
-        report = run_smoke_eval_suite(index_root=Path(settings.index_root) / "evals")
+        report = with_eval_metadata(
+            run_smoke_eval_suite(index_root=Path(settings.index_root) / "evals"),
+            {"source": "built-in", "dataset": "retos-smoke-fixtures"},
+        )
     except Exception as exc:
         await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
         raise HTTPException(
@@ -634,10 +639,18 @@ async def run_dataset_evals(
         cases = load_cases(dataset_path)
         if not cases:
             raise DatasetAdapterError(f"{suite_label} dataset produced no eval cases")
-        report = run_smoke_eval_suite(
-            index_root=Path(settings.index_root) / "evals" / index_namespace,
-            suite_name=suite_name,
-            cases=cases,
+        report = with_eval_metadata(
+            run_smoke_eval_suite(
+                index_root=Path(settings.index_root) / "evals" / index_namespace,
+                suite_name=suite_name,
+                cases=cases,
+            ),
+            {
+                "adapter": suite_name,
+                "dataset_path": str(dataset_path),
+                "max_cases": request.max_cases,
+                "source": "api",
+            },
         )
     except DatasetAdapterError as exc:
         await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
@@ -692,6 +705,13 @@ async def run_dataset_evals(
         report=EvalReportRead.from_report(report),
         report_paths=report_paths,
     )
+
+
+def with_eval_metadata(
+    report: EvalSuiteReport,
+    metadata: dict[str, Any],
+) -> EvalSuiteReport:
+    return replace(report, metadata={**report.metadata, **metadata})
 
 
 def resolve_dataset_path(dataset_root: str, dataset_path: str) -> Path:
@@ -1074,6 +1094,7 @@ async def complete_eval_job(
                 "passed": report.passed,
                 "case_count": report.case_count,
                 "metrics": report_payload["metrics"],
+                "metadata": report_payload.get("metadata", {}),
             },
         )
         await uow.journal_events.add(
@@ -1091,6 +1112,7 @@ async def complete_eval_job(
                 "suite_name": report.suite_name,
                 "passed": report.passed,
                 "case_count": report.case_count,
+                "metadata": report_payload.get("metadata", {}),
             },
         )
         await uow.commit()
@@ -1102,6 +1124,7 @@ async def complete_eval_job(
             "suite_name": report.suite_name,
             "passed": report.passed,
             "case_count": report.case_count,
+            "metadata": report_payload.get("metadata", {}),
         },
     )
     return completed

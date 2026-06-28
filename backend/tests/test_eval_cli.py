@@ -128,6 +128,8 @@ def test_eval_cli_runs_squad_suite_from_local_file(tmp_path: Path, capsys) -> No
     assert exit_code == 0
     assert '"suite_name": "squad-v2"' in captured.out
     assert '"case_count": 2' in captured.out
+    assert '"adapter": "squad-v2"' in captured.out
+    assert f'"dataset_path": "{dataset_path}"' in captured.out
 
 
 def test_eval_cli_runs_hotpotqa_suite_from_local_file(tmp_path: Path, capsys) -> None:
@@ -192,7 +194,11 @@ def test_eval_cli_writes_json_and_markdown_reports(tmp_path: Path, capsys) -> No
     assert json_report.exists()
     assert markdown_report.exists()
     assert json.loads(json_report.read_text(encoding="utf-8"))["suite_name"] == "squad-v2"
-    assert "# Eval Report: squad-v2" in markdown_report.read_text(encoding="utf-8")
+    report_payload = json.loads(json_report.read_text(encoding="utf-8"))
+    assert report_payload["metadata"]["adapter"] == "squad-v2"
+    markdown = markdown_report.read_text(encoding="utf-8")
+    assert "# Eval Report: squad-v2" in markdown
+    assert "| adapter | squad-v2 |" in markdown
 
 
 def test_eval_cli_uses_suite_name_as_default_report_stem(tmp_path: Path) -> None:

@@ -87,6 +87,10 @@ async function mockProviderApi(page: Page) {
     suite_name: "retos-smoke",
     passed: true,
     case_count: 3,
+    metadata: {
+      source: "built-in",
+      dataset: "retos-smoke-fixtures",
+    },
     metrics: {
       retrieval_recall: 1,
       citation_validity: 1,
@@ -140,6 +144,12 @@ async function mockProviderApi(page: Page) {
     ...evalReport,
     suite_name: "squad-v2",
     case_count: 2,
+    metadata: {
+      adapter: "squad-v2",
+      dataset_path: "/evals/datasets/ui-squad.json",
+      max_cases: 2,
+      source: "api",
+    },
     cases: [
       {
         ...evalReport.cases[0],
@@ -1270,6 +1280,8 @@ test("loads the operational console", async ({ page }) => {
 
   await page.getByRole("button", { name: "Run eval smoke" }).click();
   await expect(page.getByLabel("Eval metrics").getByText("retrieval recall")).toBeVisible();
+  await expect(page.getByLabel("Eval metadata").getByText("built-in")).toBeVisible();
+  await expect(page.getByLabel("Eval metadata").getByText("retos-smoke-fixtures")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("apollo-guidance")).toBeVisible();
   await expect(page.locator("#evals").getByText("eval.run succeeded")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toBeVisible();
@@ -1281,6 +1293,8 @@ test("loads the operational console", async ({ page }) => {
   await page.getByLabel("SQuAD max cases").fill("2");
   await page.getByLabel("SQuAD report stem").fill("ui-squad");
   await page.getByRole("button", { name: "Run SQuAD eval" }).click();
+  await expect(page.getByLabel("Eval metadata").getByText("squad-v2")).toBeVisible();
+  await expect(page.getByLabel("Eval metadata").getByText("/evals/datasets/ui-squad.json")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("squad-mars-red-planet")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("squad-v2")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("2 cases")).toBeVisible();

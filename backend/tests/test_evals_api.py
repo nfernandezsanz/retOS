@@ -295,6 +295,10 @@ def test_smoke_eval_runs_and_persists_auditable_job(
     assert body["job"]["status"] == "succeeded"
     assert body["job"]["payload"]["result"]["passed"] is True
     assert body["report"]["suite_name"] == "retos-smoke"
+    assert body["report"]["metadata"] == {
+        "dataset": "retos-smoke-fixtures",
+        "source": "built-in",
+    }
     assert body["report"]["passed"] is True
     assert body["report"]["case_count"] == 3
     assert body["report"]["metrics"] == {
@@ -319,12 +323,16 @@ def test_smoke_eval_runs_and_persists_auditable_job(
     assert any(job["id"] == job_id and job["kind"] == "eval.run" for job in jobs.json())
     assert journals.status_code == 200
     assert any(
-        event["event_type"] == "eval.completed" and event["entity_id"] == job_id
+        event["event_type"] == "eval.completed"
+        and event["entity_id"] == job_id
+        and event["payload"]["metadata"]["dataset"] == "retos-smoke-fixtures"
         for event in journals.json()
     )
     assert progress_events.status_code == 200
     assert any(
-        event["event_type"] == "eval.completed" and event["job_id"] == job_id
+        event["event_type"] == "eval.completed"
+        and event["job_id"] == job_id
+        and event["payload"]["metadata"]["source"] == "built-in"
         for event in progress_events.json()
     )
 
@@ -382,6 +390,12 @@ def test_squad_eval_runs_and_exports_report(
     assert body["job"]["kind"] == "eval.run"
     assert body["job"]["status"] == "succeeded"
     assert body["report"]["suite_name"] == "squad-v2"
+    assert body["report"]["metadata"] == {
+        "adapter": "squad-v2",
+        "dataset_path": str(squad_dataset_root / "tiny-squad.json"),
+        "max_cases": 2,
+        "source": "api",
+    }
     assert body["report"]["passed"] is True
     assert body["report"]["case_count"] == 2
     assert body["report_paths"] == {
@@ -394,6 +408,10 @@ def test_squad_eval_runs_and_exports_report(
     assert body["job"]["payload"]["max_cases"] == 2
     assert body["job"]["payload"]["report_paths"] == body["report_paths"]
     assert body["job"]["payload"]["result"]["case_count"] == 2
+    assert body["job"]["payload"]["result"]["metadata"]["adapter"] == "squad-v2"
+    assert json.loads((squad_report_root / "nightly-squad-v2.json").read_text())["metadata"][
+        "dataset_path"
+    ] == str(squad_dataset_root / "tiny-squad.json")
 
     eval_runs = evals_client.get("/evals/runs", headers=evals_admin_headers)
     assert eval_runs.status_code == 200

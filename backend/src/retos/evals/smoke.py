@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -54,12 +54,14 @@ class EvalSuiteReport:
     abstention: float
     budget_compliance: float
     cases: tuple[EvalCaseResult, ...]
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "suite_name": self.suite_name,
             "passed": self.passed,
             "case_count": self.case_count,
+            "metadata": self.metadata,
             "metrics": {
                 "retrieval_recall": self.retrieval_recall,
                 "citation_validity": self.citation_validity,
@@ -102,6 +104,18 @@ class EvalSuiteReport:
             "| Case | Status | Failures |",
             "| --- | --- | --- |",
         ]
+        if self.metadata:
+            lines[-2:] = [
+                "| Metadata | Value |",
+                "| --- | --- |",
+                *(
+                    f"| {markdown_cell(key)} | {markdown_cell(value)} |"
+                    for key, value in sorted(self.metadata.items())
+                ),
+                "",
+                "| Case | Status | Failures |",
+                "| --- | --- | --- |",
+            ]
         for case in self.cases:
             failures = ", ".join(case.failures) if case.failures else "-"
             lines.append(f"| {case.case_id} | {'PASS' if case.passed else 'FAIL'} | {failures} |")
@@ -257,6 +271,7 @@ def run_smoke_eval_suite(
     index_root: str | Path,
     suite_name: str = "retos-smoke",
     cases: tuple[EvalCase, ...] | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> EvalSuiteReport:
     index = TantivySearchIndex(index_root)
     eval_cases = cases or smoke_eval_cases()
@@ -279,4 +294,10 @@ def run_smoke_eval_suite(
         abstention=ratio(case.abstention for case in results),
         budget_compliance=ratio(case.budget_compliance for case in results),
         cases=tuple(results),
+        metadata=metadata or {},
     )
+
+
+def markdown_cell(value: object) -> str:
+    text = str(value).replace("\n", " ").replace("|", "\\|")
+    return text if text else "-"

@@ -969,6 +969,12 @@ Worker-backed query jobs are already available through the API by omitting `run_
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.
 
+Eval report responses include optional `metadata` with source and dataset provenance.
+Dataset-backed runs record the adapter, resolved dataset path, `max_cases`, and API/CLI
+source. The React console renders these values next to eval metrics, and the backend
+copies them into the persisted job result plus eval journal/progress payloads for audit
+reviews.
+
 ## Audit Events
 
 Recent journal events:

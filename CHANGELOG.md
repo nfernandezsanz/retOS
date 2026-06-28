@@ -32,6 +32,8 @@ tag in GitHub.
   cross-document evidence and bridge terms.
 - React query results now show multi-hop audit status, document breadth, warnings, and
   bridge terms.
+- Eval reports now include dataset/source provenance metadata in JSON, Markdown, API
+  responses, persisted job payloads, journal/progress events, and the React eval panel.
 
 ### Changed
 
