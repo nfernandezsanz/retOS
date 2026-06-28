@@ -24,8 +24,8 @@ production pilot.
 1. Confirm the candidate commit and the latest successful GitHub Actions run with
    `make ci-status-check`; then reconcile the release note under `docs/releases/`.
 2. Run the local validation commands in `docs/release-process.md`.
-3. Review `docs/operations.md` for upgrade, backup, restore, rollback, and security
-   defaults.
+3. Review `docs/operations.md` and `SECURITY.md` for upgrade, backup, restore, rollback,
+   security defaults, reporting, and target-environment review.
 4. Review `docs/docker.md` and the Compose output to confirm API, worker, and migrate use
    one backend image.
 5. Inspect `planning/04-process-tracker.md` for current phase status and residual risks.
@@ -49,6 +49,7 @@ docker compose --dry-run build
 make release-check
 make production-preflight
 make dependency-audit
+make security-policy-check
 make ci-status-check
 make release-notes-check
 make versioned-release-notes-check
@@ -79,6 +80,7 @@ auditor a stable local entry point:
 | Static release guardrails | `make release-check` | Required docs, Docker topology, image metadata source, image size budgets, workflow contract, release notes, audit pack, branding assets, safe defaults, and a dry-run of the published evidence verifier. |
 | Production preflight | `make production-preflight` | Local evidence, branding, release docs, and external promotion blockers are aligned. |
 | Dependency advisories | `make dependency-audit` | Python runtime and frontend lockfile dependency advisory checks pass without paid providers. |
+| Security policy | `make security-policy-check` | Security reporting, secure defaults, human review scope, and operational links are aligned. |
 | Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, and docker jobs for the current commit. |
 
 ## External Promotion Evidence
@@ -93,7 +95,7 @@ production promotion:
 | SBOM/provenance | GitHub Actions build attestations requested by the release workflow. |
 | Cosign signature verification | `make release-evidence-check` / `scripts/check_published_release_evidence.sh` run with the workflow summary's backend and web digests. |
 | Broader calibration or accepted pilot scope | Additional public-slice trend evidence, or an explicit human acceptance of the bounded 200-record/40-case pilot scope. |
-| Human security review | Target-environment review of auth, secrets, CORS, exposed ports, backups, provider keys, and rollback ownership. |
+| Human security review | `SECURITY.md` target-environment review of auth, secrets, CORS, exposed ports, backups, provider keys, and rollback ownership. |
 
 ## Promotion Blockers
 
@@ -114,6 +116,7 @@ These items must be closed before a final production release:
 - [ ] `make ci-status-check` passes for the current `HEAD`.
 - [ ] `make check` passes with no paid providers.
 - [ ] `make dependency-audit` reports no known Python runtime advisories and no high-severity Node advisories.
+- [ ] `make security-policy-check` passes.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test` and `make frontend-e2e` pass.
 - [ ] `make docker-smoke` passes with API, worker, migrate, web, Postgres, RabbitMQ, and Ollama services.
@@ -134,6 +137,7 @@ These items must be closed before a final production release:
 | --- | --- |
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
 | Dependency advisory evidence | `scripts/check_dependency_audit.sh`, `make dependency-audit` |
+| Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |
 | Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check` |
 | Release procedure | `docs/release-process.md` |
 | Operations runbooks | `docs/operations.md` |

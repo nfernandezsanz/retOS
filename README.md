@@ -144,6 +144,7 @@ docker compose --profile models run --rm ollama-pull
 
 More Docker details are in [docs/docker.md](docs/docker.md).
 Operations, release, upgrade, backup, and restore details are in [docs/operations.md](docs/operations.md).
+Security reporting, secure defaults, and human production review guidance are in [SECURITY.md](SECURITY.md).
 Release candidate checklist and note templates are in [docs/release-process.md](docs/release-process.md).
 Production readiness evidence, blockers, and auditor checklist live in [docs/production-readiness.md](docs/production-readiness.md).
 Project changes are tracked in [CHANGELOG.md](CHANGELOG.md).
@@ -226,6 +227,7 @@ Every meaningful change should pass these gates:
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.44%). |
 | Dependency audit | `make dependency-audit` | Runs `pip-audit` against backend runtime requirements and `npm audit --audit-level=high` against the frontend lockfile. |
+| Security policy | `make security-policy-check` | Validates security reporting, secure defaults, human production review guidance, and links from operational docs. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | Agent multi-hop eval | `make eval-agent-multihop` | Runs deterministic query-plan, multi-hop audit, evidence-route, citation, grounding, and budget scorers without network or paid providers. |
 | Dataset fetch | `make eval-fetch-dataset PROFILE=squad-dev-v2` | Opt-in download or local sampling of bounded public dataset samples under `evals/datasets`; records the effective `source_url`, supports retryable mirrors, and never runs in CI by default. |

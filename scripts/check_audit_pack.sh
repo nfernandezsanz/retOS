@@ -22,6 +22,8 @@ paths = {
     "ci": Path(".github/workflows/ci.yml"),
     "ci_status_script": Path("scripts/check_ci_status.sh"),
     "dependency_audit_script": Path("scripts/check_dependency_audit.sh"),
+    "security_policy_script": Path("scripts/check_security_policy.sh"),
+    "security_policy": Path("SECURITY.md"),
 }
 
 for name, path in paths.items():
@@ -54,6 +56,7 @@ for phrase in (
     "make brand-check",
     "make docker-smoke",
     "make dependency-audit",
+    "make security-policy-check",
     "make ci-status-check",
     "make production-preflight",
     "make release-evidence-check",
@@ -62,6 +65,7 @@ for phrase in (
     "scripts/check_published_release_evidence.sh",
     "scripts/check_branding_assets.sh",
     "scripts/check_dependency_audit.sh",
+    "scripts/check_security_policy.sh",
     "scripts/check_ci_status.sh",
     "pip-audit",
     "npm audit --audit-level=high",
@@ -75,6 +79,7 @@ for phrase in (
     "RETOS_OLLAMA_MODEL=gemma4",
     "/audit/export",
     "Branding assets",
+    "SECURITY.md",
 ):
     require(phrase in audit_pack, f"docs/production-readiness.md missing evidence phrase: {phrase}")
 

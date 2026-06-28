@@ -9,6 +9,7 @@ required_files=(
   "docs/evals.md"
   "docs/database.md"
   "CONTRIBUTING.md"
+  "SECURITY.md"
   "LICENSE"
   "CHANGELOG.md"
   "docs/releases/README.md"
@@ -36,6 +37,7 @@ scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
 scripts/check_audit_pack.sh >/dev/null
 scripts/check_branding_assets.sh >/dev/null
+scripts/check_security_policy.sh >/dev/null
 RETOS_RELEASE_EVIDENCE_DRY_RUN=1 \
   VERSION=2026.06.28-alpha.1 \
   BACKEND_DIGEST=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
