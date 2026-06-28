@@ -72,6 +72,10 @@ traces and operator tooling for full-ledger verification reports.
 - `eval.completed`
 - `eval.failed`
 
+Eval reruns must keep `rerun_from_job_id` in the new job payload and in the new
+`eval.queued`/`eval.started` journal and progress payloads so repeated runs can be
+traced back to the source report without depending on UI state.
+
 ## Evidence Ledger
 
 Every document-grounded answer must include:

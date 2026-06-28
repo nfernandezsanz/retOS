@@ -941,8 +941,9 @@ Admins may rerun any persisted runnable eval. Viewers may rerun dataset-backed e
 only when the original run has a `domain_id` they can access; global and built-in reruns
 remain admin-only. The endpoint creates a new `eval.run` job using the original run's
 persisted suite, dataset path, case limit, report settings, OCR thresholds, and OCR page
-limit when present. The new job stores `rerun_from_job_id` in `job.payload` for audit
-traceability. Dataset-backed reruns preserve the original `domain_id`. Runs with
+limit when present. The new job stores `rerun_from_job_id` in `job.payload` and includes
+that origin in the new `eval.queued`/`eval.started` journal and progress payloads for
+audit traceability. Dataset-backed reruns preserve the original `domain_id`. Runs with
 missing dataset payloads or unknown suites return `422` instead of attempting a partial
 rerun.
 

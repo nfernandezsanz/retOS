@@ -1559,6 +1559,11 @@ async def queue_eval_job(
         "requested_at": requested_at.isoformat(),
         **(payload or {}),
     }
+    event_payload = eval_event_payload(
+        suite_name=suite_name,
+        domain_id=domain_id,
+        payload=payload,
+    )
     async with uow:
         job = await uow.jobs.add(
             kind="eval.run",
@@ -1572,13 +1577,13 @@ async def queue_eval_job(
             event_type="eval.queued",
             entity_type="job",
             entity_id=job.id,
-            payload={"suite_name": suite_name, "domain_id": domain_id},
+            payload=event_payload,
         )
         await uow.progress_events.add(
             job_id=job.id,
             event_type="eval.queued",
             message=queued_message,
-            payload={"suite_name": suite_name, "domain_id": domain_id},
+            payload=event_payload,
         )
         running = await uow.jobs.update_status(
             job_id=job.id,
@@ -1602,7 +1607,7 @@ async def queue_eval_job(
             job_id=job.id,
             event_type="eval.started",
             message=started_message,
-            payload={"suite_name": suite_name, "domain_id": domain_id},
+            payload=event_payload,
         )
         await uow.commit()
 
@@ -1611,6 +1616,22 @@ async def queue_eval_job(
         {"job_id": job.id, "suite_name": suite_name, "domain_id": domain_id},
     )
     return job
+
+
+def eval_event_payload(
+    *,
+    suite_name: str,
+    domain_id: str | None,
+    payload: dict[str, Any] | None,
+) -> dict[str, object]:
+    event_payload: dict[str, object] = {
+        "suite_name": suite_name,
+        "domain_id": domain_id,
+    }
+    rerun_from_job_id = (payload or {}).get("rerun_from_job_id")
+    if isinstance(rerun_from_job_id, str) and rerun_from_job_id.strip():
+        event_payload["rerun_from_job_id"] = rerun_from_job_id
+    return event_payload
 
 
 async def complete_eval_job(

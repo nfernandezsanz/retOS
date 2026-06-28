@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -428,6 +429,7 @@ def test_smoke_eval_runs_and_persists_auditable_job(
 def test_smoke_eval_rerun_creates_new_job_with_origin(
     evals_client: TestClient,
     evals_admin_headers: dict[str, str],
+    tmp_path: Path,
 ) -> None:
     original = evals_client.post("/evals/smoke", headers=evals_admin_headers)
     assert original.status_code == 202
@@ -446,6 +448,21 @@ def test_smoke_eval_rerun_creates_new_job_with_origin(
     assert body["job"]["payload"]["suite_name"] == "retos-smoke"
     assert body["job"]["payload"]["rerun_from_job_id"] == original_job_id
     assert body["report"]["suite_name"] == "retos-smoke"
+
+    connection = sqlite3.connect(tmp_path / "retos-evals.db")
+    try:
+        journal_payload = connection.execute(
+            "select payload from journal_events where entity_id = ? and event_type = 'eval.queued'",
+            (body["job"]["id"],),
+        ).fetchone()[0]
+        progress_payload = connection.execute(
+            "select payload from progress_events where job_id = ? and event_type = 'eval.started'",
+            (body["job"]["id"],),
+        ).fetchone()[0]
+    finally:
+        connection.close()
+    assert json.loads(journal_payload)["rerun_from_job_id"] == original_job_id
+    assert json.loads(progress_payload)["rerun_from_job_id"] == original_job_id
 
 
 def test_agent_multihop_eval_runs_and_persists_auditable_job(

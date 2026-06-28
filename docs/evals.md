@@ -200,9 +200,10 @@ curl --request POST "http://localhost:8000/evals/runs/<job_id>/rerun" \
   --header "Authorization: Bearer <token>"
 ```
 
-Reruns create a new `eval.run` job and store `rerun_from_job_id` in the new payload,
-so auditors can link the repeated execution to the original report. The console can
-also compare the latest two reported runs through:
+Reruns create a new `eval.run` job, store `rerun_from_job_id` in the new payload, and
+include that origin in the new queued/started journal and progress events so auditors can
+link the repeated execution to the original report. The console can also compare the
+latest two reported runs through:
 
 ```bash
 curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&candidate_job_id=<new_job_id>" \
