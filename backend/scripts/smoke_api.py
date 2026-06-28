@@ -969,6 +969,34 @@ def main() -> None:
                 latest_eval_run["report"]["passed"] is True,
                 "latest eval run report did not pass",
             )
+            eval_rerun = client.post(
+                f"/evals/runs/{latest_eval_body['job']['id']}/rerun",
+                headers=auth_headers,
+            )
+            require(
+                eval_rerun.status_code == 202,
+                f"eval rerun failed: {eval_rerun.status_code} {eval_rerun.text}",
+            )
+            eval_rerun_body = eval_rerun.json()
+            require(
+                eval_rerun_body["job"]["id"] != latest_eval_body["job"]["id"],
+                "eval rerun reused the original job id",
+            )
+            require(
+                eval_rerun_body["job"]["payload"]["rerun_from_job_id"]
+                == latest_eval_body["job"]["id"],
+                "eval rerun did not persist origin job id",
+            )
+            eval_runs_after_rerun = client.get("/evals/runs", headers=auth_headers)
+            require(
+                eval_runs_after_rerun.status_code == 200,
+                "eval runs after rerun failed: "
+                f"{eval_runs_after_rerun.status_code} {eval_runs_after_rerun.text}",
+            )
+            require(
+                eval_runs_after_rerun.json()[0]["job"]["id"] == eval_rerun_body["job"]["id"],
+                "latest eval run did not match rerun job",
+            )
             eval_comparison = client.get(
                 "/evals/runs/compare",
                 headers=auth_headers,

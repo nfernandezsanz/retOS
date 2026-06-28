@@ -839,6 +839,15 @@ async function compareEvalRuns(
   });
 }
 
+async function rerunEval(token: string, jobId: string): Promise<EvalRunResponse> {
+  return requestJson<EvalRunResponse>(`/evals/runs/${jobId}/rerun`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 function providerLabel(name: ProviderName): string {
   if (name === "local") {
     return "Ollama";
@@ -1042,6 +1051,7 @@ function App() {
   const [isRunningNaturalQuestionsEval, setIsRunningNaturalQuestionsEval] = useState(false);
   const [isRunningOcrBenchmarkEval, setIsRunningOcrBenchmarkEval] = useState(false);
   const [isComparingEvals, setIsComparingEvals] = useState(false);
+  const [rerunningEvalJobId, setRerunningEvalJobId] = useState<string | null>(null);
   const [squadDatasetPath, setSquadDatasetPath] = useState("dev-v2.0.json");
   const [squadMaxCases, setSquadMaxCases] = useState("50");
   const [squadWriteReport, setSquadWriteReport] = useState(true);
@@ -1148,7 +1158,8 @@ function App() {
     isRunningSquadEval ||
     isRunningHotpotQAEval ||
     isRunningNaturalQuestionsEval ||
-    isRunningOcrBenchmarkEval;
+    isRunningOcrBenchmarkEval ||
+    rerunningEvalJobId !== null;
   const comparableEvalRuns = evalRuns.filter((run) => run.report !== null);
 
   useEffect(() => {
@@ -1979,6 +1990,22 @@ function App() {
       setEvalError(error instanceof Error ? error.message : "Eval comparison failed");
     } finally {
       setIsComparingEvals(false);
+    }
+  }
+
+  async function handleRerunEval(jobId: string) {
+    setRerunningEvalJobId(jobId);
+    setEvalError(null);
+    try {
+      const accessToken = await getAdminToken();
+      const response = await rerunEval(accessToken, jobId);
+      applyEvalResponse(response);
+      await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "Eval rerun failed");
+    } finally {
+      setRerunningEvalJobId(null);
     }
   }
 
@@ -3130,6 +3157,7 @@ function App() {
                       metrics.length > 0
                         ? formatScore(metrics.reduce((total, value) => total + value, 0) / metrics.length)
                         : "No report";
+                    const isRerunning = rerunningEvalJobId === run.job.id;
                     return (
                       <article className="eval-run-row" key={run.job.id}>
                         <div>
@@ -3142,6 +3170,16 @@ function App() {
                         <div className="provider-badges">
                           <span className="badge muted">{run.report?.case_count ?? 0} cases</span>
                           <span className="badge muted">{averageScore}</span>
+                          <button
+                            className="secondary-action compact-action"
+                            type="button"
+                            disabled={isAnyEvalRunning}
+                            aria-label={`Rerun ${run.report?.suite_name ?? run.job.id}`}
+                            onClick={() => void handleRerunEval(run.job.id)}
+                          >
+                            <RefreshCw aria-hidden="true" />
+                            {isRerunning ? "Rerunning" : "Rerun"}
+                          </button>
                         </div>
                       </article>
                     );

@@ -141,8 +141,18 @@ curl "http://localhost:8000/evals/runs?limit=6" \
 
 The React console uses these endpoints in the `Local evals` panel to run smoke,
 SQuAD, HotpotQA, and Natural Questions evals, show metrics, per-case status, exported
-report paths, and a newest-first run history. It can also compare the latest two
-reported runs through:
+report paths, and a newest-first run history. Each history row can rerun the persisted
+suite when its stored payload still contains the dataset and threshold settings needed
+for a faithful repeat:
+
+```bash
+curl --request POST "http://localhost:8000/evals/runs/<job_id>/rerun" \
+  --header "Authorization: Bearer <token>"
+```
+
+Reruns create a new `eval.run` job and store `rerun_from_job_id` in the new payload,
+so auditors can link the repeated execution to the original report. The console can
+also compare the latest two reported runs through:
 
 ```bash
 curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&candidate_job_id=<new_job_id>" \
@@ -255,7 +265,7 @@ Adapter guarantees:
 - `--max-cases` bounds runtime for local experiments.
 - `--report-dir` writes reproducible JSON and Markdown report artifacts.
 - `POST /evals/squad` can run the same adapter through the admin API and persist
-  report paths in the durable eval job payload.
+  report paths and rerunnable dataset settings in the durable eval job payload.
 - Invalid or non-v2 dataset files fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.
 
@@ -282,7 +292,7 @@ Adapter guarantees:
 - No paid model calls.
 - `--max-cases` bounds runtime for local experiments.
 - `POST /evals/hotpotqa` can run the same adapter through the admin API and persist
-  report paths in the durable eval job payload.
+  report paths and rerunnable dataset settings in the durable eval job payload.
 - Missing supporting contexts and malformed `context` or `supporting_facts` entries
   fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.
@@ -309,7 +319,7 @@ Adapter guarantees:
 - No paid model calls.
 - `--max-cases` bounds runtime for local experiments.
 - `POST /evals/natural-questions` can run the same adapter through the admin API and
-  persist report paths in the durable eval job payload.
+  persist report paths and rerunnable dataset settings in the durable eval job payload.
 - Malformed JSONL lines, missing annotations, invalid token spans, and missing document
   text fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.

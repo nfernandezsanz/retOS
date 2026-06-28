@@ -168,6 +168,7 @@ def test_viewer_cannot_mutate_operational_state(client: TestClient) -> None:
             {"json": {"question": "What is in the corpus?", "run_inline": False}},
         ),
         ("post", "/evals/smoke", {}),
+        ("post", "/evals/runs/job-eval-1/rerun", {}),
         ("get", "/admin/users", {}),
     ]
 

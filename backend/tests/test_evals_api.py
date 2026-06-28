@@ -1,12 +1,20 @@
 import json
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from retos.api.app import create_app
+from retos.api.routes.evals import (
+    HotpotQAEvalRequest,
+    OCRBenchmarkEvalRequest,
+    rerun_plan_from_eval_job,
+)
 from retos.core.config import Settings
+from retos.domain.jobs import Job
 from retos.evals.ocr import OCRCaseResult, OCRQualityReport
 from retos.evals.smoke import EvalCaseResult, EvalSuiteReport
 
@@ -170,6 +178,23 @@ def write_natural_questions_api_fixture(path: Path) -> Path:
     return path
 
 
+def eval_job(payload: dict[str, object]) -> Job:
+    now = datetime.now(UTC)
+    return Job(
+        id="job-fixture",
+        kind="eval.run",
+        status="succeeded",
+        domain_id=None,
+        source_id=None,
+        payload=payload,
+        error=None,
+        started_at=now,
+        completed_at=now,
+        created_at=now,
+        updated_at=now,
+    )
+
+
 def test_smoke_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post("/evals/smoke")
 
@@ -221,6 +246,12 @@ def test_eval_run_compare_requires_admin_token(evals_client: TestClient) -> None
     assert response.status_code == 401
 
 
+def test_eval_rerun_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.post("/evals/runs/job-eval-1/rerun")
+
+    assert response.status_code == 401
+
+
 def test_eval_history_requires_admin_role(
     evals_client: TestClient,
     evals_viewer_headers: dict[str, str],
@@ -236,6 +267,10 @@ def test_eval_history_requires_admin_role(
     assert runs.json()["detail"] == "Admin role required"
     assert comparison.status_code == 403
     assert comparison.json()["detail"] == "Admin role required"
+
+    rerun = evals_client.post("/evals/runs/job-eval-1/rerun", headers=evals_viewer_headers)
+    assert rerun.status_code == 403
+    assert rerun.json()["detail"] == "Admin role required"
 
 
 def test_smoke_eval_runs_and_persists_auditable_job(
@@ -290,6 +325,29 @@ def test_smoke_eval_runs_and_persists_auditable_job(
     assert eval_runs.json()[0]["report"]["case_count"] == 3
 
 
+def test_smoke_eval_rerun_creates_new_job_with_origin(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> None:
+    original = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert original.status_code == 202
+    original_job_id = original.json()["job"]["id"]
+
+    rerun = evals_client.post(
+        f"/evals/runs/{original_job_id}/rerun",
+        headers=evals_admin_headers,
+    )
+
+    assert rerun.status_code == 202
+    body = rerun.json()
+    assert body["job"]["id"] != original_job_id
+    assert body["job"]["kind"] == "eval.run"
+    assert body["job"]["status"] == "succeeded"
+    assert body["job"]["payload"]["suite_name"] == "retos-smoke"
+    assert body["job"]["payload"]["rerun_from_job_id"] == original_job_id
+    assert body["report"]["suite_name"] == "retos-smoke"
+
+
 def test_squad_eval_runs_and_exports_report(
     evals_client: TestClient,
     evals_admin_headers: dict[str, str],
@@ -331,6 +389,45 @@ def test_squad_eval_runs_and_exports_report(
     assert eval_runs.status_code == 200
     assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
     assert eval_runs.json()[0]["report"]["suite_name"] == "squad-v2"
+
+
+def test_squad_eval_rerun_reuses_persisted_dataset_payload(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    squad_report_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "rerun-squad.json")
+    original = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "rerun-squad.json",
+            "max_cases": 2,
+            "write_report": True,
+            "report_stem": "reruns/squad",
+        },
+    )
+    assert original.status_code == 202
+    original_job_id = original.json()["job"]["id"]
+
+    rerun = evals_client.post(
+        f"/evals/runs/{original_job_id}/rerun",
+        headers=evals_admin_headers,
+    )
+
+    assert rerun.status_code == 202
+    body = rerun.json()
+    assert body["job"]["id"] != original_job_id
+    assert body["job"]["payload"]["dataset_path"] == str(squad_dataset_root / "rerun-squad.json")
+    assert body["job"]["payload"]["max_cases"] == 2
+    assert body["job"]["payload"]["write_report"] is True
+    assert body["job"]["payload"]["report_stem"] == "reruns/squad"
+    assert body["job"]["payload"]["rerun_from_job_id"] == original_job_id
+    assert body["report_paths"] == {
+        "json": str(squad_report_root / "reruns-squad.json"),
+        "markdown": str(squad_report_root / "reruns-squad.md"),
+    }
 
 
 def test_hotpotqa_eval_runs_and_exports_report(
@@ -504,6 +601,83 @@ def test_ocr_benchmark_eval_runs_and_exports_report(
     assert eval_runs.status_code == 200
     assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
     assert eval_runs.json()[0]["report"]["suite_name"] == "ocr-manifest"
+
+
+def test_ocr_benchmark_rerun_reuses_threshold_payload(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dataset_dir = squad_dataset_root / "ocr-rerun"
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    (dataset_dir / "receipt.pdf").write_bytes(b"%PDF-1.7\n%%EOF\n")
+    (dataset_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "case_id": "receipt-rerun",
+                        "input_path": "receipt.pdf",
+                        "expected_text": "Receipt total 42",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_ocr_suite(**kwargs: object) -> OCRQualityReport:
+        calls.append(kwargs)
+        return OCRQualityReport(
+            suite_name="ocr-manifest",
+            passed=True,
+            case_count=1,
+            character_error_rate=0.0,
+            word_error_rate=0.0,
+            key_value_recall=None,
+            cases=(
+                OCRCaseResult(
+                    case_id="receipt-rerun",
+                    expected_text="Receipt total 42",
+                    actual_text="Receipt total 42",
+                    character_error_rate=0.0,
+                    word_error_rate=0.0,
+                    key_value_recall=None,
+                    passed=True,
+                    failures=(),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr("retos.api.routes.evals.run_ocr_quality_suite", fake_ocr_suite)
+    original = evals_client.post(
+        "/evals/ocr-benchmark",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "ocr-rerun/manifest.json",
+            "dataset_format": "manifest",
+            "max_cases": 1,
+            "max_character_error_rate": 0.12,
+            "max_word_error_rate": 0.22,
+            "max_pages": 3,
+        },
+    )
+    assert original.status_code == 202
+    original_job_id = original.json()["job"]["id"]
+
+    rerun = evals_client.post(
+        f"/evals/runs/{original_job_id}/rerun",
+        headers=evals_admin_headers,
+    )
+
+    assert rerun.status_code == 202
+    assert len(calls) == 2
+    assert calls[1]["max_character_error_rate"] == 0.12
+    assert calls[1]["max_word_error_rate"] == 0.22
+    assert calls[1]["max_pages"] == 3
+    assert rerun.json()["job"]["payload"]["rerun_from_job_id"] == original_job_id
 
 
 def test_squad_eval_accepts_absolute_dataset_path_inside_root(
@@ -706,6 +880,102 @@ def test_eval_run_compare_rejects_missing_or_unreported_runs(
     assert missing.json()["detail"] == "Eval run not found"
     assert malformed.status_code == 409
     assert malformed.json()["detail"] == "Eval run does not have a comparable report"
+
+
+def test_eval_rerun_rejects_missing_or_unrunnable_payloads(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> None:
+    missing = evals_client.post("/evals/runs/missing/rerun", headers=evals_admin_headers)
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "Eval run not found"
+
+    without_dataset = evals_client.post(
+        "/jobs",
+        headers=evals_admin_headers,
+        json={"kind": "eval.run", "payload": {"suite_name": "squad-v2"}},
+    )
+    assert without_dataset.status_code == 201
+    no_dataset_rerun = evals_client.post(
+        f"/evals/runs/{without_dataset.json()['id']}/rerun",
+        headers=evals_admin_headers,
+    )
+    assert no_dataset_rerun.status_code == 422
+    assert no_dataset_rerun.json()["detail"] == "Eval run cannot be rerun without dataset_path"
+
+    unknown_suite = evals_client.post(
+        "/jobs",
+        headers=evals_admin_headers,
+        json={"kind": "eval.run", "payload": {"suite_name": "unknown-eval"}},
+    )
+    assert unknown_suite.status_code == 201
+    unknown_rerun = evals_client.post(
+        f"/evals/runs/{unknown_suite.json()['id']}/rerun",
+        headers=evals_admin_headers,
+    )
+    assert unknown_rerun.status_code == 422
+    assert unknown_rerun.json()["detail"] == "Eval suite unknown-eval cannot be rerun"
+
+
+def test_eval_rerun_plan_recovers_legacy_dataset_payload() -> None:
+    plan = rerun_plan_from_eval_job(
+        eval_job(
+            {
+                "suite_name": "hotpotqa",
+                "dataset_path": "legacy-hotpot.json",
+                "max_cases": "7",
+                "report_paths": {"json": "legacy.json", "markdown": "legacy.md"},
+            }
+        )
+    )
+
+    assert plan.suite_name == "hotpotqa"
+    assert isinstance(plan.request, HotpotQAEvalRequest)
+    assert plan.request.dataset_path == "legacy-hotpot.json"
+    assert plan.request.max_cases == 7
+    assert plan.request.write_report is True
+    assert plan.request.report_stem is None
+
+
+def test_eval_rerun_plan_recovers_legacy_ocr_payload_defaults() -> None:
+    plan = rerun_plan_from_eval_job(
+        eval_job(
+            {
+                "suite_name": "ocr-manifest",
+                "dataset_path": "legacy-ocr/manifest.json",
+                "max_cases": True,
+                "write_report": "yes",
+                "max_character_error_rate": "0.11",
+                "max_word_error_rate": "not-a-float",
+                "max_pages": "3",
+            }
+        )
+    )
+
+    assert plan.suite_name == "ocr-manifest"
+    assert isinstance(plan.request, OCRBenchmarkEvalRequest)
+    assert plan.request.dataset_format == "manifest"
+    assert plan.request.max_cases == 50
+    assert plan.request.write_report is False
+    assert plan.request.max_character_error_rate == 0.11
+    assert plan.request.max_word_error_rate == 0.35
+    assert plan.request.max_pages == 3
+
+
+def test_eval_rerun_plan_rejects_invalid_legacy_payload() -> None:
+    with pytest.raises(HTTPException) as exc:
+        rerun_plan_from_eval_job(
+            eval_job(
+                {
+                    "suite_name": "ocr-custom",
+                    "dataset_path": "legacy-ocr/manifest.json",
+                    "dataset_format": "custom",
+                }
+            )
+        )
+
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "Eval run payload cannot be rerun"
 
 
 def test_eval_runs_tolerates_malformed_report_payload(

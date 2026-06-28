@@ -1161,6 +1161,10 @@ button:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.eval-run-row .compact-action {
+  min-width: 112px;
+}
+
 .job-ledger {
   display: grid;
   gap: 12px;

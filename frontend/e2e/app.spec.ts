@@ -201,6 +201,7 @@ async function mockProviderApi(page: Page) {
     job: ReturnType<typeof jobFixture>;
     report: Record<string, unknown> | null;
   }[] = [];
+  let evalRerunCount = 0;
   const adminUsers = [
     {
       id: "admin-user-1",
@@ -961,6 +962,33 @@ async function mockProviderApi(page: Page) {
       json: evalRuns,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/evals\/runs\/([^/]+)\/rerun/, async (route) => {
+    const match = route.request().url().match(/\/evals\/runs\/([^/]+)\/rerun$/);
+    const originalJobId = match ? decodeURIComponent(match[1]) : "";
+    const original = evalRuns.find((run) => run.job.id === originalJobId);
+    if (!original) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        json: { detail: "Eval run not found" },
+      });
+      return;
+    }
+    evalRerunCount += 1;
+    const reportPaths = original.job.payload.report_paths ?? null;
+    const job = jobFixture(`job-eval-rerun-${evalRerunCount}`, "eval.run", "succeeded", {
+      ...original.job.payload,
+      rerun_from_job_id: original.job.id,
+    });
+    jobs.unshift(job);
+    evalRuns.unshift({ job, report: original.report });
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: { job, report: original.report, report_paths: reportPaths },
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/evals\/runs\/compare.*/, async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -1164,6 +1192,10 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval run history").getByText("ocr-manifest")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-ocr-benchmark.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-ocr-benchmark.md")).toBeVisible();
+
+  await page.getByRole("button", { name: "Rerun ocr-manifest" }).click();
+  await expect(page.getByLabel("Recent jobs").getByText("job-eval-rerun-1")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("ocr-manifest")).toHaveCount(2);
 
   await page.getByRole("button", { name: "Compare latest" }).click();
   await expect(page.getByLabel("Eval comparison").getByText("retos-smoke")).toBeVisible();

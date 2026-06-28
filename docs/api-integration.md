@@ -670,6 +670,8 @@ The run writes:
 - `eval.queued`, `eval.started`, and `eval.completed` progress events
 - `eval.queued`, `job.running`, `eval.completed`, and `job.succeeded` journal events
 - live SSE progress events for connected clients
+- enough runnable request payload to repeat the eval from the run history when the
+  original suite supports reruns
 
 Run an opt-in SQuAD 2.0 eval from a mounted local dataset file:
 
@@ -787,6 +789,20 @@ runs that failed before a report was produced:
 ]
 ```
 
+Rerun a persisted eval run:
+
+```bash
+curl --request POST "http://localhost:8000/evals/runs/<job_id>/rerun" \
+  --header "Authorization: Bearer <token>"
+```
+
+The endpoint requires an admin token and creates a new `eval.run` job using the
+original run's persisted suite, dataset path, case limit, report settings, OCR
+thresholds, and OCR page limit when present. The new job stores
+`rerun_from_job_id` in `job.payload` for audit traceability. Runs with missing
+dataset payloads or unknown suites return `422` instead of attempting a partial
+rerun.
+
 Compare two persisted eval runs:
 
 ```bash
@@ -856,6 +872,7 @@ Current console calls:
 - `POST /domains/{domain_id}/queries`
 - `GET /evals/runs?limit=6`
 - `GET /evals/runs/compare?baseline_job_id=...&candidate_job_id=...`
+- `POST /evals/runs/{job_id}/rerun`
 - `POST /evals/smoke`
 - `POST /evals/squad`
 - `POST /evals/hotpotqa`
@@ -1074,7 +1091,9 @@ journal/progress events, and dispatches the matching Celery task outside
 `RETOS_ENV=test`. The generic retry endpoint supports worker-backed `ingest.source`,
 `index.domain`, and `agent.query` jobs only when their payload contains enough data for
 the worker to repeat the operation. It rejects active jobs, completed jobs, `eval.run`
-jobs, and manual jobs without a runnable payload.
+jobs, and manual jobs without a runnable payload. Eval runs use
+`POST /evals/runs/{job_id}/rerun` because they execute through the eval harness and
+persist eval-specific runnable settings.
 
 List jobs:
 
