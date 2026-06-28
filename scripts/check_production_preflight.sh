@@ -40,7 +40,11 @@ for command in (
     "make frontend-test",
     "make frontend-e2e",
     "make docker-smoke",
+    "make release-check",
     "make dependency-audit",
+    "make security-policy-check",
+    "make ignore-hygiene-check",
+    "make auditor-static-check",
     "make ci-status-check",
     "make production-preflight",
 ):

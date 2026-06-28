@@ -32,6 +32,7 @@ Paste or link the output for each gate:
 - `make docker-smoke`
 - `make release-check`
 - `make production-preflight`
+- `make auditor-static-check`
 - `make release-evidence-check`
 
 ## Release Provenance
