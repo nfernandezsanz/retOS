@@ -289,6 +289,35 @@ def main() -> None:
             )
             require(disabled_login.status_code == 401, "disabled admin login should fail")
 
+            smoke_viewer = client.post(
+                "/admin/users",
+                headers=auth_headers,
+                json={
+                    "email": "smoke-viewer@retos.dev",
+                    "password": "smoke-viewer-password",
+                    "roles": ["viewer"],
+                },
+            )
+            require(
+                smoke_viewer.status_code == 201,
+                f"viewer user create failed: {smoke_viewer.status_code} {smoke_viewer.text}",
+            )
+            smoke_viewer_login = client.post(
+                "/auth/login",
+                json={
+                    "email": "smoke-viewer@retos.dev",
+                    "password": "smoke-viewer-password",
+                },
+            )
+            require(
+                smoke_viewer_login.status_code == 200,
+                "created viewer login failed: "
+                f"{smoke_viewer_login.status_code} {smoke_viewer_login.text}",
+            )
+            viewer_headers = {
+                "Authorization": f"Bearer {smoke_viewer_login.json()['access_token']}"
+            }
+
             provider_catalog = client.get("/llm/providers", headers=auth_headers)
             require(
                 provider_catalog.status_code == 200,
@@ -346,6 +375,40 @@ def main() -> None:
             )
             require(listed_sources.json()[0]["uri"] == scan_source_uri, "source missing")
             source_id = listed_sources.json()[0]["id"]
+
+            viewer_provider_catalog = client.get("/llm/providers", headers=viewer_headers)
+            require(
+                viewer_provider_catalog.status_code == 200,
+                "viewer provider catalog failed: "
+                f"{viewer_provider_catalog.status_code} {viewer_provider_catalog.text}",
+            )
+            viewer_domains = client.get("/domains", headers=viewer_headers)
+            require(
+                viewer_domains.status_code == 200,
+                f"viewer domain list failed: {viewer_domains.status_code} {viewer_domains.text}",
+            )
+            viewer_sources = client.get(
+                f"/domains/{domain_id}/sources",
+                headers=viewer_headers,
+            )
+            require(
+                viewer_sources.status_code == 200,
+                f"viewer source list failed: {viewer_sources.status_code} {viewer_sources.text}",
+            )
+            viewer_admin_list = client.get("/admin/users", headers=viewer_headers)
+            require(
+                viewer_admin_list.status_code == 403,
+                f"viewer admin list should fail: {viewer_admin_list.status_code}",
+            )
+            viewer_domain_create = client.post(
+                "/domains",
+                headers=viewer_headers,
+                json={"slug": "viewer-write", "name": "Viewer Write"},
+            )
+            require(
+                viewer_domain_create.status_code == 403,
+                f"viewer domain create should fail: {viewer_domain_create.status_code}",
+            )
 
             scan_source = client.post(
                 f"/sources/{source_id}/scan",

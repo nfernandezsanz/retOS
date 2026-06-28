@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import IntegrityError
 
-from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
+from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep, ViewerSubjectDep
 from retos.api.routes.events import progress_store
 from retos.domain.documents import Artifact, Document, DocumentVersion, Segment
 from retos.domain.jobs import JournalEvent
@@ -278,7 +278,7 @@ async def create_document(
 
 @router.get("/domains/{domain_id}/documents", response_model=list[DocumentRead])
 async def list_documents(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
@@ -298,7 +298,7 @@ async def list_documents(
 
 @router.get("/documents/{document_id}", response_model=DocumentRead)
 async def get_document(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     document_id: Annotated[str, Path(min_length=1)],
 ) -> DocumentRead:
@@ -311,7 +311,7 @@ async def get_document(
 
 @router.get("/documents/{document_id}/history", response_model=DocumentHistoryRead)
 async def get_document_history(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     document_id: Annotated[str, Path(min_length=1)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
@@ -518,7 +518,7 @@ async def restore_document(
 
 @router.get("/documents/{document_id}/versions", response_model=list[DocumentVersionRead])
 async def list_document_versions(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     document_id: Annotated[str, Path(min_length=1)],
 ) -> list[DocumentVersionRead]:
@@ -600,7 +600,7 @@ async def create_artifact(
 
 @router.get("/document-versions/{version_id}/artifacts", response_model=list[ArtifactRead])
 async def list_artifacts(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     version_id: Annotated[str, Path(min_length=1)],
 ) -> list[ArtifactRead]:
@@ -689,7 +689,7 @@ async def create_segment(
 
 @router.get("/document-versions/{version_id}/segments", response_model=list[SegmentRead])
 async def list_segments(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     version_id: Annotated[str, Path(min_length=1)],
 ) -> list[SegmentRead]:

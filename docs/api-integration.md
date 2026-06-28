@@ -2,11 +2,11 @@
 
 This guide documents the stable integration surface currently available to the React console, browser smoke tests, and external clients.
 
-## Authentication
+## Authentication And Authorization
 
-All management endpoints require an admin bearer token. The default local admin is
-persisted in `admin_users` during application startup when the bootstrap environment
-variables are configured.
+Operational endpoints require a bearer token from a persisted local account. The default
+local admin is persisted in `admin_users` during application startup when the bootstrap
+environment variables are configured.
 
 ```bash
 curl --request POST http://localhost:8000/auth/login \
@@ -20,9 +20,20 @@ Use the returned token as:
 Authorization: Bearer <token>
 ```
 
-Admin bearer tokens are checked against the persisted `admin_users` row on each
-management request. If an admin account is deactivated or loses the persisted `admin`
-role, existing tokens for that account stop working.
+Bearer tokens are checked against the persisted `admin_users` row on each protected
+request. If an account is deactivated or its persisted roles no longer cover the token
+roles, existing tokens for that account stop working.
+
+Roles are intentionally small:
+
+| Role | Allowed |
+| --- | --- |
+| `admin` | Full local administration: account management, domain/source/document mutations, ingestion, indexing, agent queries, eval execution, job transitions, job retry, and all read-only operations. |
+| `viewer` | Read-only operational visibility: provider catalog, domains, sources, documents, document history, versions, artifacts, segments, jobs, audit journal/progress/export, SSE progress, search, and eval run history/comparison. |
+
+Endpoints that mutate state, spend compute, enqueue work, or change account security
+require an `admin` token. Viewer-safe endpoints use the same `Authorization` header but
+accept either an `admin` or `viewer` token.
 
 ## Admin Users
 
@@ -547,7 +558,7 @@ RETOS_AGENT_RUNTIME=deepagents docker compose up --build
 
 ## LLM Providers
 
-Provider discovery is admin-only and safe to call from the UI. It does not return API
+Provider discovery is viewer-safe and safe to call from the UI. It does not return API
 keys and does not perform paid model calls.
 
 ```bash
@@ -873,10 +884,10 @@ curl --header "Authorization: Bearer <token>" \
   "http://localhost:8000/audit/export?limit=200"
 ```
 
-Both endpoints require an admin token and accept `limit` from `1` to `200`. Results are
+Both endpoints require a bearer token and accept `limit` from `1` to `200`. Results are
 ordered newest first.
 
-The export endpoint requires an admin token, accepts `limit` from `1` to `1000`, returns
+The export endpoint requires a bearer token, accepts `limit` from `1` to `1000`, returns
 `Content-Disposition: attachment; filename="retos-audit-export.json"`, and sets
 `Cache-Control: no-store`.
 

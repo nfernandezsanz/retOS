@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Path, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
-from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
+from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep, ViewerSubjectDep
 from retos.domain.documents import Domain, Source, SourceKind
 
 router = APIRouter(prefix="/domains", tags=["domains"])
@@ -97,7 +97,7 @@ async def create_domain(
 
 
 @router.get("", response_model=list[DomainRead])
-async def list_domains(_: AdminSubjectDep, uow: UnitOfWorkDep) -> list[DomainRead]:
+async def list_domains(_: ViewerSubjectDep, uow: UnitOfWorkDep) -> list[DomainRead]:
     async with uow:
         domains = await uow.domains.list()
     return [DomainRead.from_domain(domain) for domain in domains]
@@ -105,7 +105,7 @@ async def list_domains(_: AdminSubjectDep, uow: UnitOfWorkDep) -> list[DomainRea
 
 @router.get("/{domain_id}", response_model=DomainRead)
 async def get_domain(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],
 ) -> DomainRead:
@@ -155,7 +155,7 @@ async def create_source(
 
 @router.get("/{domain_id}/sources", response_model=list[SourceRead])
 async def list_sources(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],
 ) -> list[SourceRead]:

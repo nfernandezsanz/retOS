@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from retos.api.dependencies import AdminSubjectDep, SettingsDep
+from retos.api.dependencies import SettingsDep, ViewerSubjectDep
 from retos.llm.providers import (
     ActiveProvider,
     ProviderProfile,
@@ -19,7 +19,7 @@ class ProviderCatalogResponse(BaseModel):
 
 @router.get("/providers", response_model=ProviderCatalogResponse)
 async def providers(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     settings: SettingsDep,
 ) -> ProviderCatalogResponse:
     return ProviderCatalogResponse(

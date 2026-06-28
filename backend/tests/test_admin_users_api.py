@@ -29,7 +29,7 @@ def test_admin_users_reject_non_admin_role(client: TestClient, settings: Setting
     response = client.get("/admin/users", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Admin role required"
+    assert response.json()["detail"] == "Token roles are no longer valid"
 
 
 def test_admin_users_list_bootstrap_admin(client: TestClient) -> None:

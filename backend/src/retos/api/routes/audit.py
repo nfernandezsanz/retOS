@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
+from retos.api.dependencies import UnitOfWorkDep, ViewerSubjectDep
 from retos.domain.jobs import JournalEvent, ProgressEvent
 
 router = APIRouter(prefix="/audit", tags=["audit"])
@@ -63,7 +63,7 @@ class AuditExportRead(BaseModel):
 
 @router.get("/journal-events", response_model=list[JournalEventRead])
 async def list_journal_events(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[JournalEventRead]:
@@ -74,7 +74,7 @@ async def list_journal_events(
 
 @router.get("/progress-events", response_model=list[ProgressEventRead])
 async def list_progress_events(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[ProgressEventRead]:
@@ -85,7 +85,7 @@ async def list_progress_events(
 
 @router.get("/export", response_model=AuditExportRead)
 async def export_audit_events(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=1000)] = 200,
 ) -> JSONResponse:

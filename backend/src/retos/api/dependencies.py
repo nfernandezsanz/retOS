@@ -1,7 +1,8 @@
-from typing import Annotated, cast
+from typing import Annotated, Literal, cast
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
 
 from retos.core.config import Settings
 from retos.core.security import TokenError, decode_access_token
@@ -30,12 +31,24 @@ def get_unit_of_work(factory: SessionFactoryDep) -> SQLAlchemyUnitOfWork:
 
 UnitOfWorkDep = Annotated[SQLAlchemyUnitOfWork, Depends(get_unit_of_work)]
 
+Role = Literal["admin", "viewer"]
+ROLE_ORDER: dict[Role, int] = {"viewer": 0, "admin": 1}
 
-async def require_admin(
+
+class AuthPrincipal(BaseModel):
+    subject: str
+    roles: tuple[str, ...]
+
+    def has_role(self, required: Role) -> bool:
+        required_rank = ROLE_ORDER[required]
+        return any(ROLE_ORDER.get(cast(Role, role), -1) >= required_rank for role in self.roles)
+
+
+async def require_principal(
     credentials: BearerDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
-) -> str:
+) -> AuthPrincipal:
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -50,8 +63,7 @@ async def require_admin(
             detail=str(exc),
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
-    if "admin" not in claims.roles:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
+
     async with uow:
         admin = await uow.admin_users.get_by_email(claims.subject)
     if admin is None or not admin.is_active:
@@ -60,9 +72,29 @@ async def require_admin(
             detail="Admin account is inactive",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if "admin" not in admin.roles:
+    persisted_roles = tuple(admin.roles)
+    if not set(claims.roles).issubset(set(persisted_roles)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token roles are no longer valid",
+        )
+    return AuthPrincipal(subject=claims.subject, roles=persisted_roles)
+
+
+async def require_viewer(principal: Annotated[AuthPrincipal, Depends(require_principal)]) -> str:
+    if not principal.has_role("viewer"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Viewer role required",
+        )
+    return principal.subject
+
+
+async def require_admin(principal: Annotated[AuthPrincipal, Depends(require_principal)]) -> str:
+    if not principal.has_role("admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
-    return claims.subject
+    return principal.subject
 
 
+ViewerSubjectDep = Annotated[str, Depends(require_viewer)]
 AdminSubjectDep = Annotated[str, Depends(require_admin)]

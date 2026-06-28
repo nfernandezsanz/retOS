@@ -4,7 +4,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 
-from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep
+from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep, ViewerSubjectDep
 from retos.api.routes.events import progress_store
 from retos.domain.jobs import Job, JobKind, JobStatus
 from retos.jobs.tasks import (
@@ -345,7 +345,7 @@ async def create_job(
 
 @router.get("", response_model=list[JobRead])
 async def list_jobs(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[JobRead]:
@@ -356,7 +356,7 @@ async def list_jobs(
 
 @router.get("/{job_id}", response_model=JobRead)
 async def get_job(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     job_id: Annotated[str, Path(min_length=1)],
 ) -> JobRead:

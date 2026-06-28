@@ -6,7 +6,7 @@ from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
+from retos.api.dependencies import UnitOfWorkDep, ViewerSubjectDep
 from retos.domain.jobs import ProgressEvent as PersistedProgressEvent
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
@@ -143,7 +143,7 @@ async def event_stream(
 @router.get("/progress")
 async def progress_events(
     request: Request,
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
 ) -> EventSourceResponse:

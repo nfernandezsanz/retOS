@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 
-from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep
+from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep, ViewerSubjectDep
 from retos.api.routes.events import progress_store
 from retos.api.routes.jobs import JobRead
 from retos.domain.jobs import Job
@@ -111,7 +111,7 @@ async def rebuild_index(
 
 @router.get("/domains/{domain_id}/search", response_model=SearchResponse)
 async def search_domain(
-    _: AdminSubjectDep,
+    _: ViewerSubjectDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],

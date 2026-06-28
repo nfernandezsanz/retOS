@@ -53,6 +53,8 @@ The first API-backed workflows are document registration and job creation:
   `POST /admin/users/{admin_user_id}/password` manage local admin accounts without
   returning password hashes. Status and role changes are enforced by the auth dependency
   on every management request, and account mutations write `admin_user.*` journal events.
+- Read-only operational endpoints can accept `viewer` accounts, but state-changing
+  endpoints and account management require a persisted active `admin` role.
 - `POST /domains/{domain_id}/documents` creates a document, writes version `1`,
   writes `document.created` journal/progress events, and emits a live SSE notification.
 - `PATCH /documents/{document_id}` updates mutable document title/metadata fields,
