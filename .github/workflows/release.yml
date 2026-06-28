@@ -99,7 +99,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check release readiness
-        run: make release-check
+        run: |
+          make release-check
+          make production-preflight
 
       - name: Build and push backend image
         id: build-backend

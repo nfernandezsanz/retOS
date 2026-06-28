@@ -23,6 +23,8 @@ audit_pack = Path("docs/production-readiness.md").read_text(encoding="utf-8")
 branding = Path("docs/branding.md").read_text(encoding="utf-8")
 release_note = Path("docs/releases/2026.06.28-alpha.1.md").read_text(encoding="utf-8")
 tracker = Path("planning/04-process-tracker.md").read_text(encoding="utf-8")
+ci = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+release_workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
 
 for heading in (
     "## Machine-Verified Preflight",
@@ -71,6 +73,14 @@ require(
 require(
     "Final release promotion still requires" in tracker,
     "process tracker must keep final release blockers visible",
+)
+require(
+    "check_production_preflight.sh" in ci,
+    "CI must run the production preflight guard",
+)
+require(
+    "make production-preflight" in release_workflow,
+    "release workflow must run the production preflight before publishing",
 )
 
 print("Production preflight OK: local evidence, branding, release docs, and external blockers are aligned.")

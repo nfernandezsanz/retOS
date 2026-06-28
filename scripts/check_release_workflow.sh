@@ -50,6 +50,7 @@ required_workflow_phrases = (
     "pytest",
     "npm run check",
     "make release-check",
+    "make production-preflight",
 )
 
 for phrase in required_workflow_phrases:

@@ -58,8 +58,8 @@ make docker-smoke
 5. Confirm GitHub Actions is green for the release commit with `make ci-status-check`.
 6. Push a `v<version>` tag or run `.github/workflows/release.yml` manually to publish
    `retos-backend` and `retos-web` to GHCR with SBOM, provenance, and Cosign signatures.
-   The workflow reruns backend format/lint/type/test/eval-smoke and frontend checks before
-   any image is pushed.
+   The workflow reruns backend format/lint/type/test/eval-smoke, frontend checks,
+   release readiness, and production preflight before any image is pushed.
 7. Attach validation evidence to the GitHub release notes:
 
 | Evidence | Required |
