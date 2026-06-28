@@ -9,15 +9,17 @@ from retos.agent.service import (
     AgentQueryError,
     budget_from_payload,
     build_grounded_answer,
+    expand_neighbor_context,
     extract_harness_answer,
     fail_agent_query_job,
     hits_within_budget,
+    invoke_deepagents_harness,
     run_agent_query,
 )
 from retos.api.app import create_app
 from retos.api.routes.agent import enqueue_agent_query
 from retos.core.config import Settings
-from retos.domain.documents import utc_now
+from retos.domain.documents import Segment, utc_now
 from retos.domain.jobs import Job
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 from retos.search.index import SearchHit, TantivySearchIndex
@@ -599,6 +601,65 @@ def test_extract_harness_answer_reads_latest_message_content() -> None:
     assert answer == "Final answer"
 
 
+def test_extract_harness_answer_reads_object_content() -> None:
+    class Output:
+        content = "Object answer"
+
+    assert extract_harness_answer(Output()) == "Object answer"
+
+
+class FakeHarnessToolbox:
+    def search_corpus(self) -> None:
+        return None
+
+    def read_citation(self) -> None:
+        return None
+
+    def map_sources(self) -> None:
+        return None
+
+    def inspect_evidence_table(self) -> None:
+        return None
+
+
+def test_invoke_deepagents_harness_rejects_missing_invoke(
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "retos.agent.service.create_research_harness",
+        lambda **_: object(),
+    )
+
+    with pytest.raises(AgentQueryError, match="does not expose invoke"):
+        invoke_deepagents_harness(
+            settings=settings,
+            toolbox=FakeHarnessToolbox(),  # type: ignore[arg-type]
+            prompt="Question?",
+        )
+
+
+def test_invoke_deepagents_harness_rejects_empty_answer(
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class EmptyHarness:
+        def invoke(self, *_: object, **__: object) -> object:
+            return {"messages": [{"role": "assistant", "content": "   "}]}
+
+    monkeypatch.setattr(
+        "retos.agent.service.create_research_harness",
+        lambda **_: EmptyHarness(),
+    )
+
+    with pytest.raises(AgentQueryError, match="empty answer"):
+        invoke_deepagents_harness(
+            settings=settings,
+            toolbox=FakeHarnessToolbox(),  # type: ignore[arg-type]
+            prompt="Question?",
+        )
+
+
 def test_agent_budget_defaults_and_validation() -> None:
     budget = budget_from_payload({})
 
@@ -606,12 +667,19 @@ def test_agent_budget_defaults_and_validation() -> None:
     assert budget.max_citations == 5
     assert budget.max_evidence_tokens == 16_000
     assert budget.max_runtime_seconds == 120
+    string_budget = budget_from_payload(
+        {"budget": {"max_searches": "2", "max_runtime_seconds": "30"}}
+    )
+    assert string_budget.max_searches == 2
+    assert string_budget.max_runtime_seconds == 30
     with pytest.raises(AgentQueryError, match="budget must be an object"):
         budget_from_payload({"budget": "invalid"})
     with pytest.raises(AgentQueryError, match="max_searches"):
         budget_from_payload({"budget": {"max_searches": True}})
     with pytest.raises(AgentQueryError, match="max_citations"):
         budget_from_payload({"budget": {"max_citations": "many"}})
+    with pytest.raises(AgentQueryError, match="max_runtime_seconds"):
+        budget_from_payload({"budget": {"max_runtime_seconds": 0}})
 
 
 def test_hits_within_budget_caps_citations_and_evidence() -> None:
@@ -652,6 +720,127 @@ def test_hits_within_budget_caps_citations_and_evidence() -> None:
     assert [hit.segment_id for hit in hits_within_budget(hits, budget)] == ["s1", "s2"]
     tiny_budget = budget_from_payload({"budget": {"max_evidence_tokens": 1}})
     assert hits_within_budget(hits, tiny_budget) == []
+
+
+@pytest.mark.asyncio
+async def test_expand_neighbor_context_returns_empty_without_hits() -> None:
+    class UnusedDocuments:
+        async def list_segments(self, document_version_id: str) -> list[Segment]:
+            raise AssertionError(f"unexpected lookup for {document_version_id}")
+
+    class FakeUnitOfWork:
+        documents = UnusedDocuments()
+
+    assert (
+        await expand_neighbor_context(
+            uow=FakeUnitOfWork(),  # type: ignore[arg-type]
+            hits=[],
+            max_evidence_tokens=100,
+        )
+        == []
+    )
+
+
+@pytest.mark.asyncio
+async def test_expand_neighbor_context_skips_when_budget_is_exhausted() -> None:
+    class UnusedDocuments:
+        async def list_segments(self, document_version_id: str) -> list[Segment]:
+            raise AssertionError(f"unexpected lookup for {document_version_id}")
+
+    class FakeUnitOfWork:
+        documents = UnusedDocuments()
+
+    hit = SearchHit(
+        segment_id="s1",
+        document_id="d1",
+        document_version_id="v1",
+        title="One",
+        text="one two three",
+        anchor=None,
+        ordinal=1,
+        score=3.0,
+    )
+
+    assert (
+        await expand_neighbor_context(
+            uow=FakeUnitOfWork(),  # type: ignore[arg-type]
+            hits=[hit],
+            max_evidence_tokens=3,
+        )
+        == []
+    )
+
+
+@pytest.mark.asyncio
+async def test_expand_neighbor_context_reuses_segments_and_skips_large_neighbors() -> None:
+    now = utc_now()
+    segments = [
+        Segment(
+            id="s0",
+            document_version_id="v1",
+            ordinal=0,
+            text="previous context",
+            anchor="paragraph=0",
+            token_count=2,
+            content_hash="sha256:s0",
+            created_at=now,
+        ),
+        Segment(
+            id="s1",
+            document_version_id="v1",
+            ordinal=1,
+            text="selected evidence",
+            anchor="paragraph=1",
+            token_count=2,
+            content_hash="sha256:s1",
+            created_at=now,
+        ),
+        Segment(
+            id="s2",
+            document_version_id="v1",
+            ordinal=2,
+            text="this neighbor is far too large for the remaining evidence token budget",
+            anchor="paragraph=2",
+            token_count=12,
+            content_hash="sha256:s2",
+            created_at=now,
+        ),
+    ]
+
+    class FakeDocuments:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        async def list_segments(self, document_version_id: str) -> list[Segment]:
+            self.calls.append(document_version_id)
+            return segments
+
+    class FakeUnitOfWork:
+        def __init__(self) -> None:
+            self.documents = FakeDocuments()
+
+    uow = FakeUnitOfWork()
+    hit = SearchHit(
+        segment_id="s1",
+        document_id="d1",
+        document_version_id="v1",
+        title="One",
+        text="selected evidence",
+        anchor="paragraph=1",
+        ordinal=1,
+        score=3.0,
+    )
+
+    context = await expand_neighbor_context(
+        uow=uow,  # type: ignore[arg-type]
+        hits=[hit, hit],
+        max_evidence_tokens=7,
+    )
+
+    assert uow.documents.calls == ["v1"]
+    assert [item.segment_id for item in context] == ["s0"]
+    assert context[0].source_segment_id == "s1"
+    assert context[0].distance == 1
 
 
 @pytest.mark.asyncio
