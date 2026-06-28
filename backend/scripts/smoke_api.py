@@ -525,6 +525,27 @@ def main() -> None:
                 any(item["id"] == document["id"] for item in restored_documents.json()),
                 "restored document missing from active list",
             )
+            document_history = client.get(
+                f"/documents/{document['id']}/history",
+                headers=auth_headers,
+            )
+            require(
+                document_history.status_code == 200,
+                f"document history failed: {document_history.status_code} {document_history.text}",
+            )
+            history_events = document_history.json()["events"]
+            require(
+                [event["event_type"] for event in history_events][-3:]
+                == ["document.updated", "document.archived", "document.restored"],
+                "document history did not include update/archive/restore events",
+            )
+            require(
+                any(
+                    change["field"] == "title" and change["after"] == "Smoke Document Reviewed"
+                    for change in history_events[-3]["changes"]
+                ),
+                "document history did not include title diff",
+            )
 
             eval_smoke = client.post("/evals/smoke", headers=auth_headers)
             require(

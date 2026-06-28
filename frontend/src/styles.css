@@ -492,6 +492,65 @@ button:focus-visible {
   border-color: #fed7aa;
 }
 
+.document-history {
+  display: grid;
+  gap: 10px;
+  grid-column: 1 / -1;
+  border-top: 1px solid #dbe3ef;
+  padding-top: 12px;
+}
+
+.history-event {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.history-event strong,
+.history-event span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.history-event div > span {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.history-changes {
+  display: grid;
+  gap: 6px;
+}
+
+.history-change {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.6fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.history-change span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.history-change code {
+  min-height: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  padding: 5px 7px;
+}
+
 .document-summary {
   min-width: 0;
 }
@@ -1260,6 +1319,7 @@ button:focus-visible {
   .provider-row,
   .document-row,
   .document-edit-form,
+  .history-change,
   .source-row,
   .eval-case-row,
   .eval-case-row > div:first-child,

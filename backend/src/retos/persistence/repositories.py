@@ -643,6 +643,24 @@ class JournalRepository:
         )
         return [journal_event_from_record(record) for record in result]
 
+    async def list_for_entity(
+        self,
+        *,
+        entity_type: str,
+        entity_id: str,
+        limit: int = 100,
+    ) -> builtins.list[JournalEvent]:
+        result = await self._session.scalars(
+            select(JournalEventRecord)
+            .where(
+                JournalEventRecord.entity_type == entity_type,
+                JournalEventRecord.entity_id == entity_id,
+            )
+            .order_by(JournalEventRecord.occurred_at.desc(), JournalEventRecord.id.desc())
+            .limit(limit)
+        )
+        return [journal_event_from_record(record) for record in result]
+
 
 class ProgressEventRepository:
     def __init__(self, session: AsyncSession) -> None:

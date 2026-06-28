@@ -58,6 +58,9 @@ The first API-backed workflows are document registration and job creation:
 - `POST /documents/{document_id}/restore` clears `archived_at`, writes
   `document.restored` journal/progress events, emits a live SSE notification, and returns
   the document to active lists and future index rebuilds.
+- `GET /documents/{document_id}/history` reads the document's append-only journal events
+  and returns chronological field-level changes for title, metadata, archive, and restore
+  events that include diff payloads.
 - `POST /document-versions/{version_id}/artifacts` creates a rebuildable artifact and
   writes `artifact.created` journal/progress events.
 - `POST /document-versions/{version_id}/segments` creates a searchable/citable segment and

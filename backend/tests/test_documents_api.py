@@ -314,6 +314,65 @@ def test_restore_document_returns_to_active_list_and_preserves_audit(
     assert count_events(documents_db_path, "progress_events", "document.restored") == 1
 
 
+def test_document_history_returns_auditable_field_diffs(
+    documents_client: TestClient,
+    documents_admin_headers: dict[str, str],
+) -> None:
+    domain_id, source_id = create_domain_and_source(documents_client, documents_admin_headers)
+    document_id, _ = create_document(
+        documents_client,
+        documents_admin_headers,
+        domain_id,
+        source_id,
+    )
+    documents_client.patch(
+        f"/documents/{document_id}",
+        json={
+            "title": "Reviewed Fixture Document",
+            "metadata": {"language": "en", "reviewed": True},
+        },
+        headers=documents_admin_headers,
+    )
+    documents_client.delete(f"/documents/{document_id}", headers=documents_admin_headers)
+    documents_client.post(f"/documents/{document_id}/restore", headers=documents_admin_headers)
+
+    history = documents_client.get(
+        f"/documents/{document_id}/history",
+        headers=documents_admin_headers,
+    )
+
+    assert history.status_code == 200
+    body = history.json()
+    assert body["document"]["id"] == document_id
+    assert [event["event_type"] for event in body["events"]] == [
+        "document.created",
+        "document.updated",
+        "document.archived",
+        "document.restored",
+    ]
+    update_changes = body["events"][1]["changes"]
+    assert update_changes == [
+        {
+            "field": "title",
+            "before": "Fixture Document",
+            "after": "Reviewed Fixture Document",
+        },
+        {
+            "field": "metadata",
+            "before": {"language": "en"},
+            "after": {"language": "en", "reviewed": True},
+        },
+    ]
+    archive_changes = body["events"][2]["changes"]
+    restore_changes = body["events"][3]["changes"]
+    assert archive_changes[0]["field"] == "archived_at"
+    assert archive_changes[0]["before"] is None
+    assert archive_changes[0]["after"] is not None
+    assert restore_changes[0]["field"] == "archived_at"
+    assert restore_changes[0]["before"] is not None
+    assert restore_changes[0]["after"] is None
+
+
 def test_update_archive_and_restore_require_existing_document(
     documents_client: TestClient,
     documents_admin_headers: dict[str, str],
@@ -328,10 +387,12 @@ def test_update_archive_and_restore_require_existing_document(
         "/documents/missing/restore",
         headers=documents_admin_headers,
     )
+    history = documents_client.get("/documents/missing/history", headers=documents_admin_headers)
 
     assert updated.status_code == 404
     assert archived.status_code == 404
     assert restored.status_code == 404
+    assert history.status_code == 404
 
 
 def test_create_artifact_and_segment_for_document_version(

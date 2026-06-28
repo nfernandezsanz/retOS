@@ -268,7 +268,10 @@ async function mockProviderApi(page: Page) {
       event_type: "document.restored",
       entity_type: "document",
       entity_id: documentId,
-      payload: { domain_id: documents[index].domain_id },
+      payload: {
+        domain_id: documents[index].domain_id,
+        changes: [{ field: "archived_at", before: "2026-06-27T00:04:00Z", after: null }],
+      },
     });
     progressEvents.unshift({
       id: `progress-document-restored-${documentId}`,
@@ -281,6 +284,42 @@ async function mockProviderApi(page: Page) {
     await route.fulfill({
       contentType: "application/json",
       json: documents[index],
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/documents\/[^/]+\/history$/, async (route) => {
+    const documentId = new URL(route.request().url()).pathname.split("/")[2];
+    const document = documents.find((item) => item.id === documentId);
+    if (!document) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        json: { detail: "Document not found" },
+      });
+      return;
+    }
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        document,
+        events: journalEvents
+          .filter((event) => event.entity_type === "document" && event.entity_id === documentId)
+          .reverse()
+          .map((event) => ({
+            id: event.id,
+            occurred_at: event.occurred_at,
+            actor: event.actor,
+            event_type: event.event_type,
+            changes:
+              event.event_type === "document.updated"
+                ? [{ field: "title", before: "Uploaded Fixture", after: "Uploaded Fixture Reviewed" }]
+                : event.event_type === "document.archived"
+                  ? [{ field: "archived_at", before: null, after: "2026-06-27T00:04:00Z" }]
+                  : event.event_type === "document.restored"
+                    ? [{ field: "archived_at", before: "2026-06-27T00:04:00Z", after: null }]
+                    : [],
+            payload: event.payload,
+          })),
+      },
     });
   });
   await page.route(/http:\/\/localhost:8000\/documents\/[^/]+$/, async (route) => {
@@ -309,7 +348,11 @@ async function mockProviderApi(page: Page) {
         event_type: "document.updated",
         entity_type: "document",
         entity_id: documentId,
-        payload: { domain_id: documents[index].domain_id, title_changed: true },
+        payload: {
+          domain_id: documents[index].domain_id,
+          title_changed: true,
+          changes: [{ field: "title", before: "Uploaded Fixture", after: documents[index].title }],
+        },
       });
       progressEvents.unshift({
         id: `progress-document-updated-${documentId}`,
@@ -339,7 +382,10 @@ async function mockProviderApi(page: Page) {
         event_type: "document.archived",
         entity_type: "document",
         entity_id: documentId,
-        payload: { domain_id: documents[index].domain_id },
+        payload: {
+          domain_id: documents[index].domain_id,
+          changes: [{ field: "archived_at", before: null, after: "2026-06-27T00:04:00Z" }],
+        },
       });
       progressEvents.unshift({
         id: `progress-document-archived-${documentId}`,
@@ -651,6 +697,10 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
   await page.getByRole("button", { name: "Restore Uploaded Fixture Reviewed" }).click();
   await expect(page.getByRole("button", { name: "Archive Uploaded Fixture Reviewed" })).toBeVisible();
+  await page.getByRole("button", { name: "History Uploaded Fixture Reviewed" }).click();
+  await expect(page.getByLabel("History for Uploaded Fixture Reviewed").getByText("document.updated")).toBeVisible();
+  await expect(page.getByLabel("History for Uploaded Fixture Reviewed").getByText("Uploaded Fixture Reviewed")).toBeVisible();
+  await page.getByRole("button", { name: "History Uploaded Fixture Reviewed" }).click();
   await page.getByLabel("Show archived").uncheck();
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
 

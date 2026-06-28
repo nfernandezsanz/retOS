@@ -11,6 +11,7 @@ import {
   RotateCcw,
   FolderPlus,
   FileSearch,
+  History,
   KeyRound,
   Link2,
   LockKeyhole,
@@ -179,6 +180,26 @@ type ProgressEvent = {
   data: Record<string, unknown>;
 };
 
+type DocumentChangeRead = {
+  field: string;
+  before: unknown;
+  after: unknown;
+};
+
+type DocumentHistoryEventRead = {
+  id: string;
+  occurred_at: string;
+  actor: string;
+  event_type: string;
+  changes: DocumentChangeRead[];
+  payload: Record<string, unknown>;
+};
+
+type DocumentHistoryRead = {
+  document: DocumentRead;
+  events: DocumentHistoryEventRead[];
+};
+
 type JournalEventRead = {
   id: string;
   occurred_at: string;
@@ -312,6 +333,14 @@ async function archiveDocument(token: string, documentId: string): Promise<Docum
 async function restoreDocument(token: string, documentId: string): Promise<DocumentRead> {
   return requestJson<DocumentRead>(`/documents/${documentId}/restore`, {
     method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function loadDocumentHistory(token: string, documentId: string): Promise<DocumentHistoryRead> {
+  return requestJson<DocumentHistoryRead>(`/documents/${documentId}/history`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -611,6 +640,14 @@ function summarizePayload(payload: Record<string, unknown>): string {
     .join(" | ");
 }
 
+function formatHistoryValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "null";
+  }
+  const rendered = typeof value === "object" ? JSON.stringify(value) : String(value);
+  return rendered.length > 160 ? `${rendered.slice(0, 157)}...` : rendered;
+}
+
 function formatScore(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
@@ -634,6 +671,9 @@ function App() {
   const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null);
   const [restoringDocumentId, setRestoringDocumentId] = useState<string | null>(null);
   const [showArchivedDocuments, setShowArchivedDocuments] = useState(false);
+  const [historyDocumentId, setHistoryDocumentId] = useState<string | null>(null);
+  const [documentHistory, setDocumentHistory] = useState<DocumentHistoryRead | null>(null);
+  const [isLoadingDocumentHistory, setIsLoadingDocumentHistory] = useState(false);
   const [isCreatingDomain, setIsCreatingDomain] = useState(false);
   const [isCreatingSource, setIsCreatingSource] = useState(false);
   const [sourceName, setSourceName] = useState("");
@@ -855,6 +895,7 @@ function App() {
     setWorkspaceError(null);
     setTextSourceId("");
     handleCancelDocumentEdit();
+    clearDocumentHistory();
     if (!nextDomainId) {
       setDocuments([]);
       setSources([]);
@@ -945,6 +986,11 @@ function App() {
     setDocumentEditTitle("");
   }
 
+  function clearDocumentHistory() {
+    setHistoryDocumentId(null);
+    setDocumentHistory(null);
+  }
+
   async function handleUpdateDocument(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setWorkspaceError(null);
@@ -964,6 +1010,9 @@ function App() {
       );
       setEditingDocumentId(null);
       setDocumentEditTitle("");
+      if (historyDocumentId === updated.id) {
+        setDocumentHistory(await loadDocumentHistory(accessToken, updated.id));
+      }
       await refreshAudit(accessToken);
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Document update failed");
@@ -986,6 +1035,9 @@ function App() {
       if (editingDocumentId === documentId) {
         handleCancelDocumentEdit();
       }
+      if (historyDocumentId === archived.id) {
+        setDocumentHistory(await loadDocumentHistory(accessToken, archived.id));
+      }
       await refreshAudit(accessToken);
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Document archive failed");
@@ -1003,6 +1055,9 @@ function App() {
       setDocuments((current) =>
         current.map((document) => (document.id === restored.id ? restored : document)),
       );
+      if (historyDocumentId === restored.id) {
+        setDocumentHistory(await loadDocumentHistory(accessToken, restored.id));
+      }
       await refreshAudit(accessToken);
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Document restore failed");
@@ -1032,6 +1087,26 @@ function App() {
       setWorkspaceError(error instanceof Error ? error.message : "Document refresh failed");
     } finally {
       setIsLoadingWorkspace(false);
+    }
+  }
+
+  async function handleDocumentHistory(documentId: string) {
+    if (historyDocumentId === documentId) {
+      clearDocumentHistory();
+      return;
+    }
+    setWorkspaceError(null);
+    setHistoryDocumentId(documentId);
+    setDocumentHistory(null);
+    setIsLoadingDocumentHistory(true);
+    try {
+      const accessToken = await getAdminToken();
+      setDocumentHistory(await loadDocumentHistory(accessToken, documentId));
+    } catch (error) {
+      clearDocumentHistory();
+      setWorkspaceError(error instanceof Error ? error.message : "Document history failed");
+    } finally {
+      setIsLoadingDocumentHistory(false);
     }
   }
 
@@ -1337,6 +1412,7 @@ function App() {
     setArchivingDocumentId(null);
     setRestoringDocumentId(null);
     setShowArchivedDocuments(false);
+    clearDocumentHistory();
     setSources([]);
     setWorkspaceError(null);
     setLiveStatus("disconnected");
@@ -1489,6 +1565,7 @@ function App() {
                 const isArchived = document.archived_at !== null;
                 const isArchiving = archivingDocumentId === document.id;
                 const isRestoring = restoringDocumentId === document.id;
+                const isHistoryOpen = historyDocumentId === document.id;
                 return (
                   <article className={`document-row${isArchived ? " archived" : ""}`} key={document.id}>
                     <div className="document-summary">
@@ -1545,6 +1622,20 @@ function App() {
                         >
                           <Pencil aria-hidden="true" />
                         </button>
+                        <button
+                          className="icon-button"
+                          disabled={isEditing || isLoadingDocumentHistory}
+                          title="View document history"
+                          type="button"
+                          aria-label={`History ${document.title}`}
+                          onClick={() => void handleDocumentHistory(document.id)}
+                        >
+                          {isHistoryOpen && isLoadingDocumentHistory ? (
+                            <RefreshCw aria-hidden="true" />
+                          ) : (
+                            <History aria-hidden="true" />
+                          )}
+                        </button>
                         {isArchived ? (
                           <button
                             className="icon-button"
@@ -1570,6 +1661,39 @@ function App() {
                         )}
                       </div>
                     </div>
+                    {isHistoryOpen ? (
+                      <section className="document-history" aria-label={`History for ${document.title}`}>
+                        {!documentHistory || isLoadingDocumentHistory ? (
+                          <p className="payload-summary">Loading document history</p>
+                        ) : documentHistory.events.length > 0 ? (
+                          documentHistory.events.map((event) => (
+                            <article className="history-event" key={event.id}>
+                              <div>
+                                <strong>{event.event_type}</strong>
+                                <span>
+                                  {formatDateTime(event.occurred_at)} by {event.actor}
+                                </span>
+                              </div>
+                              {event.changes.length > 0 ? (
+                                <div className="history-changes">
+                                  {event.changes.map((change) => (
+                                    <div className="history-change" key={`${event.id}-${change.field}`}>
+                                      <span>{change.field}</span>
+                                      <code>{formatHistoryValue(change.before)}</code>
+                                      <code>{formatHistoryValue(change.after)}</code>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="payload-summary">{summarizePayload(event.payload)}</p>
+                              )}
+                            </article>
+                          ))
+                        ) : (
+                          <p className="payload-summary">No document journal events recorded.</p>
+                        )}
+                      </section>
+                    ) : null}
                   </article>
                 );
               })}

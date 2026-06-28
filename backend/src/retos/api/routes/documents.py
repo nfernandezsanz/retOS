@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
 from retos.api.routes.events import progress_store
 from retos.domain.documents import Artifact, Document, DocumentVersion, Segment
+from retos.domain.jobs import JournalEvent
 
 router = APIRouter(tags=["documents"])
 
@@ -67,6 +68,47 @@ class DocumentRead(BaseModel):
             created_at=document.created_at,
             updated_at=document.updated_at,
         )
+
+
+class DocumentChangeRead(BaseModel):
+    field: str
+    before: Any
+    after: Any
+
+
+class DocumentHistoryEventRead(BaseModel):
+    id: str
+    occurred_at: datetime
+    actor: str
+    event_type: str
+    changes: list[DocumentChangeRead]
+    payload: dict[str, Any]
+
+    @classmethod
+    def from_event(cls, event: JournalEvent) -> DocumentHistoryEventRead:
+        raw_changes = event.payload.get("changes", [])
+        changes = raw_changes if isinstance(raw_changes, list) else []
+        return cls(
+            id=event.id,
+            occurred_at=event.occurred_at,
+            actor=event.actor,
+            event_type=event.event_type,
+            changes=[
+                DocumentChangeRead(
+                    field=str(change.get("field", "")),
+                    before=change.get("before"),
+                    after=change.get("after"),
+                )
+                for change in changes
+                if isinstance(change, dict)
+            ],
+            payload=event.payload,
+        )
+
+
+class DocumentHistoryRead(BaseModel):
+    document: DocumentRead
+    events: list[DocumentHistoryEventRead]
 
 
 class DocumentVersionRead(BaseModel):
@@ -206,6 +248,11 @@ async def create_document(
                 "source_id": payload.source_id,
                 "version_id": version.id,
                 "content_hash": document.content_hash,
+                "snapshot": {
+                    "title": document.title,
+                    "metadata": document.metadata,
+                    "archived_at": None,
+                },
             },
         )
         await uow.progress_events.add(
@@ -262,6 +309,28 @@ async def get_document(
     return DocumentRead.from_document(document)
 
 
+@router.get("/documents/{document_id}/history", response_model=DocumentHistoryRead)
+async def get_document_history(
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    document_id: Annotated[str, Path(min_length=1)],
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+) -> DocumentHistoryRead:
+    async with uow:
+        document = await uow.documents.get(document_id)
+        if document is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        events: list[JournalEvent] = await uow.journal_events.list_for_entity(
+            entity_type="document",
+            entity_id=document_id,
+            limit=limit,
+        )
+    return DocumentHistoryRead(
+        document=DocumentRead.from_document(document),
+        events=[DocumentHistoryEventRead.from_event(event) for event in reversed(events)],
+    )
+
+
 @router.patch("/documents/{document_id}", response_model=DocumentRead)
 async def update_document(
     payload: DocumentUpdate,
@@ -289,6 +358,30 @@ async def update_document(
                 "title_changed": payload.title is not None,
                 "metadata_changed": payload.metadata is not None,
                 "archived": document.archived_at is not None,
+                "changes": [
+                    *(
+                        [
+                            {
+                                "field": "title",
+                                "before": existing.title,
+                                "after": document.title,
+                            }
+                        ]
+                        if payload.title is not None
+                        else []
+                    ),
+                    *(
+                        [
+                            {
+                                "field": "metadata",
+                                "before": existing.metadata,
+                                "after": document.metadata,
+                            }
+                        ]
+                        if payload.metadata is not None
+                        else []
+                    ),
+                ],
             },
         )
         await uow.progress_events.add(
@@ -336,6 +429,17 @@ async def archive_document(
                 "archived_at": (
                     document.archived_at.isoformat() if document.archived_at is not None else None
                 ),
+                "changes": [
+                    {
+                        "field": "archived_at",
+                        "before": None,
+                        "after": (
+                            document.archived_at.isoformat()
+                            if document.archived_at is not None
+                            else None
+                        ),
+                    }
+                ],
             },
         )
         await uow.progress_events.add(
@@ -380,6 +484,17 @@ async def restore_document(
                 "domain_id": document.domain_id,
                 "source_id": document.source_id,
                 "content_hash": document.content_hash,
+                "changes": [
+                    {
+                        "field": "archived_at",
+                        "before": (
+                            existing.archived_at.isoformat()
+                            if existing.archived_at is not None
+                            else None
+                        ),
+                        "after": None,
+                    }
+                ],
             },
         )
         await uow.progress_events.add(

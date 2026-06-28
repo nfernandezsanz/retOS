@@ -136,6 +136,13 @@ curl --request POST \
   http://localhost:8000/documents/<document_id>/restore
 ```
 
+Read a chronological document history with auditable field-level changes:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  "http://localhost:8000/documents/<document_id>/history?limit=100"
+```
+
 List immutable versions:
 
 ```bash
@@ -159,6 +166,9 @@ artifacts, and segments remain available for audit and historical reads.
 Restore operations clear `archived_at`, persist `document.restored` journal/progress
 events, emit SSE notifications, and return the document to active lists and future index
 rebuilds.
+Document history reads the append-only journal for the document and surfaces `changes`
+entries for title, metadata, archive, and restore events recorded after this contract was
+introduced.
 
 The console reads this list after a domain is selected and uses it as the visible
 document inventory for the active research workspace.
@@ -588,6 +598,7 @@ Current console calls:
 - `PATCH /documents/{document_id}`
 - `DELETE /documents/{document_id}`
 - `POST /documents/{document_id}/restore`
+- `GET /documents/{document_id}/history`
 - `GET /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/ingestions/text`

@@ -36,9 +36,9 @@ The UI is a working console, not a landing page. It must make background process
   corpus.
 - The document inventory supports inline title updates through `PATCH
   /documents/{document_id}`, soft archive through `DELETE /documents/{document_id}`, an
-  archived visibility toggle, and restore through `POST /documents/{document_id}/restore`;
-  these actions refresh durable audit/progress records and keep active/archived state
-  explicit.
+  archived visibility toggle, restore through `POST /documents/{document_id}/restore`,
+  and field history through `GET /documents/{document_id}/history`; these actions refresh
+  durable audit/progress records and keep active/archived state explicit.
 - The workspace reads and creates sources through `/domains/{domain_id}/sources`, queues
   mounted source scans through `/sources/{source_id}/scan`, and queues BM25 rebuilds
   through `/domains/{domain_id}/index/rebuild`.
@@ -66,7 +66,7 @@ The UI is a working console, not a landing page. It must make background process
   returned `eval.run` job, metric scorecards, per-case pass/failure rows, and a compact
   newest-first run history.
 - Browser smoke tests mock the API contract and verify provider, domain creation,
-  document/source inventory, document edit/archive/restore, file upload, text ingestion,
+  document/source inventory, document edit/archive/restore/history, file upload, text ingestion,
   scan/index queueing, job/audit filtering, persisted audit events, audit export, eval
   smoke execution, eval run history, query, and live progress flows.
 
