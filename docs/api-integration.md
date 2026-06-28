@@ -490,7 +490,9 @@ events, and emits SSE progress. If the domain index has not been built, the API 
 `409 Conflict` and marks the job failed.
 
 Agent budgets are persisted in the queued job payload and echoed in the final result
-usage. The current deterministic runtime performs one controlled BM25 search, caps
+usage. The current deterministic runtime uses controlled RetOS corpus tools instead of
+host filesystem access: `search_corpus` performs one bounded BM25 search and
+`read_citation` can read only citations returned by that search. The runtime caps
 citations with `max_citations`, caps retained evidence with `max_evidence_tokens`, and
 records `search_count`, `citation_count`, `evidence_tokens`, `runtime_ms`, and
 `within_budget` for audit and UI display.

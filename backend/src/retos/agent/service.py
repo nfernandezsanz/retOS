@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from retos.agent.tools import (
+    CorpusToolError,
+    create_corpus_toolbox,
+    select_hits_within_evidence_budget,
+    token_count,
+)
 from retos.api.routes.events import progress_store
 from retos.core.config import Settings
 from retos.llm.providers import active_provider
@@ -152,22 +158,12 @@ def budget_to_payload(budget: AgentBudget) -> dict[str, int]:
     }
 
 
-def token_count(value: str) -> int:
-    return len(value.split())
-
-
 def hits_within_budget(hits: list[SearchHit], budget: AgentBudget) -> list[SearchHit]:
-    selected: list[SearchHit] = []
-    evidence_tokens = 0
-    for hit in hits[: budget.max_citations]:
-        next_tokens = token_count(hit.text)
-        if selected and evidence_tokens + next_tokens > budget.max_evidence_tokens:
-            break
-        if not selected and next_tokens > budget.max_evidence_tokens:
-            break
-        selected.append(hit)
-        evidence_tokens += next_tokens
-    return selected
+    return select_hits_within_evidence_budget(
+        hits,
+        max_citations=budget.max_citations,
+        max_evidence_tokens=budget.max_evidence_tokens,
+    )
 
 
 def usage_to_payload(usage: AgentBudgetUsage) -> dict[str, object]:
@@ -269,15 +265,20 @@ async def run_agent_query(
             },
         )
 
+        toolbox = create_corpus_toolbox(
+            index=index,
+            domain_id=domain.id,
+            max_searches=budget.max_searches,
+            max_citations=budget.max_citations,
+            max_evidence_tokens=budget.max_evidence_tokens,
+        )
         try:
-            raw_hits = index.search_domain(
-                domain.id,
-                question,
-                limit=min(limit, budget.max_citations),
-            )
-        except SearchIndexMissingError as exc:
+            toolbox.search_corpus(question, limit=min(limit, budget.max_citations))
+        except CorpusToolError as exc:
+            if not isinstance(exc.__cause__, SearchIndexMissingError):
+                raise AgentQueryError(str(exc)) from exc
             raise AgentQueryError("Search index has not been built for this domain") from exc
-        hits = hits_within_budget(raw_hits, budget)
+        hits = toolbox.selected_hits
         runtime_ms = int((datetime.now(UTC) - started_at).total_seconds() * 1000)
         usage = AgentBudgetUsage(
             search_count=1,

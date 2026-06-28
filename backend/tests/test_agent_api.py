@@ -405,15 +405,30 @@ def test_create_research_harness_uses_deepagents(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[dict[str, object]] = []
+    registered: list[tuple[str, object]] = []
 
     def fake_create_deep_agent(**kwargs: object) -> object:
         calls.append(kwargs)
         return {"graph": "fake"}
 
-    monkeypatch.setattr("retos.agent.harness.create_deep_agent", fake_create_deep_agent)
+    def fake_register_harness_profile(model: str, profile: object) -> None:
+        registered.append((model, profile))
 
-    harness = create_research_harness(settings=settings, tools=[])
+    monkeypatch.setattr("retos.agent.harness.create_deep_agent", fake_create_deep_agent)
+    monkeypatch.setattr(
+        "retos.agent.harness.register_harness_profile",
+        fake_register_harness_profile,
+    )
+
+    def fake_tool() -> str:
+        return "ok"
+
+    harness = create_research_harness(settings=settings, tools=[fake_tool])
 
     assert harness == {"graph": "fake"}
+    assert registered[0][0] == "ollama:gemma4"
+    assert "execute" in registered[0][1].excluded_tools
+    assert "read_file" in registered[0][1].excluded_tools
     assert calls[0]["model"] == "ollama:gemma4"
     assert calls[0]["name"] == "retos-research-agent"
+    assert calls[0]["tools"] == [fake_tool]
