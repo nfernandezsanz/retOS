@@ -917,6 +917,7 @@ async function runSquadEval(
     max_cases: number;
     write_report: boolean;
     report_stem: string | null;
+    domain_id: string | null;
   },
 ): Promise<EvalRunResponse> {
   return requestJson<EvalRunResponse>("/evals/squad", {
@@ -935,6 +936,7 @@ async function runHotpotQAEval(
     max_cases: number;
     write_report: boolean;
     report_stem: string | null;
+    domain_id: string | null;
   },
 ): Promise<EvalRunResponse> {
   return requestJson<EvalRunResponse>("/evals/hotpotqa", {
@@ -953,6 +955,7 @@ async function runNaturalQuestionsEval(
     max_cases: number;
     write_report: boolean;
     report_stem: string | null;
+    domain_id: string | null;
   },
 ): Promise<EvalRunResponse> {
   return requestJson<EvalRunResponse>("/evals/natural-questions", {
@@ -972,6 +975,7 @@ async function runOcrBenchmarkEval(
     max_cases: number;
     write_report: boolean;
     report_stem: string | null;
+    domain_id: string | null;
   },
 ): Promise<EvalRunResponse> {
   return requestJson<EvalRunResponse>("/evals/ocr-benchmark", {
@@ -983,16 +987,24 @@ async function runOcrBenchmarkEval(
   });
 }
 
-async function loadEvalRuns(token: string): Promise<EvalRunRead[]> {
-  return requestJson<EvalRunRead[]>("/evals/runs?limit=6", {
+async function loadEvalRuns(token: string, domainId?: string): Promise<EvalRunRead[]> {
+  const query = new URLSearchParams({ limit: "6" });
+  if (domainId) {
+    query.set("domain_id", domainId);
+  }
+  return requestJson<EvalRunRead[]>(`/evals/runs?${query.toString()}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 }
 
-async function loadEvalTrends(token: string): Promise<EvalSuiteTrend[]> {
-  return requestJson<EvalSuiteTrend[]>("/evals/runs/trends?limit=60", {
+async function loadEvalTrends(token: string, domainId?: string): Promise<EvalSuiteTrend[]> {
+  const query = new URLSearchParams({ limit: "60" });
+  if (domainId) {
+    query.set("domain_id", domainId);
+  }
+  return requestJson<EvalSuiteTrend[]>(`/evals/runs/trends?${query.toString()}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -1246,6 +1258,7 @@ function App() {
   const [evalReport, setEvalReport] = useState<EvalReport | null>(null);
   const [evalJob, setEvalJob] = useState<JobRead | null>(null);
   const [evalReportPaths, setEvalReportPaths] = useState<EvalReportPaths | null>(null);
+  const [evalDomainId, setEvalDomainId] = useState("");
   const [evalRuns, setEvalRuns] = useState<EvalRunRead[]>([]);
   const [evalTrends, setEvalTrends] = useState<EvalSuiteTrend[]>([]);
   const [evalComparison, setEvalComparison] = useState<EvalRunComparison | null>(null);
@@ -1371,6 +1384,12 @@ function App() {
     isRunningRegressionGate ||
     rerunningEvalJobId !== null;
   const comparableEvalRuns = evalRuns.filter((run) => run.report !== null);
+  const selectedEvalDomain = useMemo(
+    () => domains.find((domain) => domain.id === evalDomainId) ?? null,
+    [domains, evalDomainId],
+  );
+  const evalScopeLabel = selectedEvalDomain ? selectedEvalDomain.name : "All evals";
+  const evalDatasetScopeLabel = selectedEvalDomain ? selectedEvalDomain.name : "Global";
 
   useEffect(() => {
     return () => {
@@ -1385,6 +1404,9 @@ function App() {
       const adminToken = accessToken ?? (await getAdminToken());
       const nextDomains = await loadDomains(adminToken);
       setDomains(nextDomains);
+      if (evalDomainId && !nextDomains.some((domain) => domain.id === evalDomainId)) {
+        setEvalDomainId("");
+      }
 
       const nextSelectedDomainId =
         preferredDomainId && nextDomains.some((domain) => domain.id === preferredDomainId)
@@ -1502,13 +1524,13 @@ function App() {
     }
   }
 
-  async function refreshEvalRuns(accessToken?: string) {
+  async function refreshEvalRuns(accessToken?: string, domainId = evalDomainId) {
     setEvalError(null);
     try {
       const adminToken = accessToken ?? (await getAdminToken());
       const [runs, trends] = await Promise.all([
-        loadEvalRuns(adminToken),
-        loadEvalTrends(adminToken),
+        loadEvalRuns(adminToken, domainId),
+        loadEvalTrends(adminToken, domainId),
       ]);
       setEvalRuns(runs);
       setEvalTrends(trends);
@@ -1523,6 +1545,11 @@ function App() {
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Eval history refresh failed");
     }
+  }
+
+  async function handleEvalDomainChange(domainId: string) {
+    setEvalDomainId(domainId);
+    await refreshEvalRuns(undefined, domainId);
   }
 
   async function refreshAdminUsers(accessToken?: string) {
@@ -2110,6 +2137,7 @@ function App() {
         max_cases: parsedMaxCases,
         write_report: squadWriteReport,
         report_stem: squadReportStem.trim() || null,
+        domain_id: evalDomainId || null,
       });
       applyEvalResponse(response);
       await refreshAudit(accessToken);
@@ -2140,6 +2168,7 @@ function App() {
         max_cases: parsedMaxCases,
         write_report: hotpotqaWriteReport,
         report_stem: hotpotqaReportStem.trim() || null,
+        domain_id: evalDomainId || null,
       });
       applyEvalResponse(response);
       await refreshAudit(accessToken);
@@ -2170,6 +2199,7 @@ function App() {
         max_cases: parsedMaxCases,
         write_report: naturalQuestionsWriteReport,
         report_stem: naturalQuestionsReportStem.trim() || null,
+        domain_id: evalDomainId || null,
       });
       applyEvalResponse(response);
       await refreshAudit(accessToken);
@@ -2201,6 +2231,7 @@ function App() {
         max_cases: parsedMaxCases,
         write_report: ocrBenchmarkWriteReport,
         report_stem: ocrBenchmarkReportStem.trim() || null,
+        domain_id: evalDomainId || null,
       });
       applyEvalResponse(response);
       await refreshAudit(accessToken);
@@ -2272,12 +2303,14 @@ function App() {
     setEvalReportPaths(response.report_paths ?? reportPathsFromPayload(response.job.payload));
     setEvalComparison(null);
     setEvalRegressionGate(null);
-    setEvalRuns((current) =>
-      [
-        { job: response.job, report: response.report },
-        ...current.filter((run) => run.job.id !== response.job.id),
-      ].slice(0, 6),
-    );
+    setEvalRuns((current) => {
+      const matchesScope = !evalDomainId || response.job.domain_id === evalDomainId;
+      const nextRuns = current.filter((run) => run.job.id !== response.job.id);
+      const scopedRuns = matchesScope
+        ? [{ job: response.job, report: response.report }, ...nextRuns]
+        : nextRuns;
+      return scopedRuns.slice(0, 6);
+    });
     setQueuedJobs((current) =>
       [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(
         0,
@@ -3193,6 +3226,27 @@ function App() {
                   </strong>
                 </div>
               ) : null}
+              <label className="eval-scope-control">
+                <span>Eval scope</span>
+                <select
+                  aria-label="Eval domain scope"
+                  value={evalDomainId}
+                  onChange={(event) => void handleEvalDomainChange(event.target.value)}
+                >
+                  <option value="">All evals</option>
+                  {domains.map((domain) => (
+                    <option key={domain.id} value={domain.id}>
+                      {domain.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="eval-scope-note" aria-label="Active eval scope">
+              <span>Dataset evals save under</span>
+              <strong>{evalDatasetScopeLabel}</strong>
+              <span>and history, trends, comparison, and regression gate show</span>
+              <strong>{evalScopeLabel}</strong>
             </div>
             <form className="eval-dataset-form" onSubmit={(event) => void handleRunSquadEval(event)}>
               <label className="span-two">
@@ -3641,6 +3695,11 @@ function App() {
                           <span>{formatDateTime(run.job.completed_at ?? run.job.updated_at)}</span>
                         </div>
                         <div className="provider-badges">
+                          <span className="badge muted">
+                            {run.job.domain_id
+                              ? domainById.get(run.job.domain_id)?.name ?? "Domain scoped"
+                              : "Global"}
+                          </span>
                           <span className="badge muted">{run.report?.case_count ?? 0} cases</span>
                           <span className="badge muted">{averageScore}</span>
                           <button

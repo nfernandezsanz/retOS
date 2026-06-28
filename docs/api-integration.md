@@ -999,8 +999,8 @@ Current console calls:
 - `POST /sources/{source_id}/scan`
 - `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
-- `GET /evals/runs?limit=6`
-- `GET /evals/runs/trends?limit=60`
+- `GET /evals/runs?limit=6[&domain_id=...]`
+- `GET /evals/runs/trends?limit=60[&domain_id=...]`
 - `GET /evals/runs/compare?baseline_job_id=...&candidate_job_id=...`
 - `GET /evals/runs/regression-gate?baseline_job_id=...&candidate_job_id=...`
 - `POST /evals/runs/{job_id}/rerun`
@@ -1029,12 +1029,13 @@ audited local accounts:
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source
 scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/Natural
-Questions/OCR benchmark evals, read recent jobs, inspect a selected job's full payload/error/progress
-detail, read persisted audit/progress events, group progress by job, filter the job
-ledger by status/kind, and send queries against the selected domain. Query execution
-uses `run_inline=true` so the UI can render the answer, citations, query plan, evidence
-route, multi-hop audit, neighbor context, provider metadata, budget usage, evidence
-audit, and contradiction audit immediately.
+Questions/OCR benchmark evals, choose an eval domain scope for dataset-backed runs and
+filtered history/trends, read recent jobs, inspect a selected job's full
+payload/error/progress detail, read persisted audit/progress events, group progress by
+job, filter the job ledger by status/kind, and send queries against the selected domain.
+Query execution uses `run_inline=true` so the UI can render the answer, citations, query
+plan, evidence route, multi-hop audit, neighbor context, provider metadata, budget usage,
+evidence audit, and contradiction audit immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.
@@ -1043,7 +1044,11 @@ Eval report responses include optional `metadata` with source and dataset proven
 Dataset-backed runs record the adapter, resolved dataset path, `max_cases`, and API/CLI
 source. The React console renders these values next to eval metrics, and the backend
 copies them into the persisted job result plus eval journal/progress payloads for audit
-reviews.
+reviews. In the `Local evals` panel, the `Eval scope` selector sends `domain_id` for
+dataset-backed SQuAD, HotpotQA, Natural Questions, and OCR benchmark requests. Selecting
+a domain also adds `domain_id` to run-history and trend requests, so comparison and
+regression-gate actions operate on same-scope rows only. Leaving the selector on
+`All evals` saves new dataset runs as global evals and reads unfiltered history.
 
 ## Audit Events
 

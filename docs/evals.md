@@ -180,10 +180,13 @@ curl "http://localhost:8000/evals/runs?limit=6" \
 ```
 
 The React console uses these endpoints in the `Local evals` panel to run smoke,
-agent multi-hop, SQuAD, HotpotQA, and Natural Questions evals, show metrics, per-case
-status, exported report paths, dataset provenance metadata, and a newest-first run
-history. Each history
-row can rerun the persisted suite when its stored payload still contains the dataset and
+agent multi-hop, SQuAD, HotpotQA, Natural Questions, and OCR benchmark evals, show
+metrics, per-case status, exported report paths, dataset provenance metadata, and a
+newest-first run history. The `Eval scope` selector keeps dataset-backed requests and
+history/trends auditable: `All evals` saves new dataset runs as global runs and reads
+unfiltered history, while selecting a domain sends `domain_id` and filters history,
+trends, comparison, and regression-gate inputs to that domain. Each history row can
+rerun the persisted suite when its stored payload still contains the dataset and
 threshold settings needed for a faithful repeat:
 
 ```bash
@@ -307,7 +310,9 @@ benchmark inputs and generated reports mounted, auditable, and outside the sourc
 `domain_id` is optional for dataset-backed evals. When set, RetOS validates the domain,
 stores it on the durable eval job and audit/progress payloads, supports domain-filtered
 history/trends, preserves the scope on reruns, and prevents comparison or regression-gate
-checks across mixed global/domain scopes.
+checks across mixed global/domain scopes. The React console exposes the same contract
+through `Eval scope`, and each run-history row shows whether the persisted report is
+global or domain-owned.
 
 ## Public Dataset Roadmap
 

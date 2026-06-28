@@ -1,11 +1,17 @@
 import { expect, type Page, test } from "@playwright/test";
 
-function jobFixture(id: string, kind: string, status: string, payload = {}) {
+function jobFixture(
+  id: string,
+  kind: string,
+  status: string,
+  payload: Record<string, unknown> = {},
+  domainId: string | null = "domain-123",
+) {
   return {
     id,
     kind,
     status,
-    domain_id: "domain-123",
+    domain_id: domainId,
     source_id: null,
     payload,
     error: null,
@@ -301,9 +307,14 @@ async function mockProviderApi(page: Page) {
     })),
   };
 
-  function buildEvalTrends() {
+  function evalRunsForRequestUrl(url: string) {
+    const domainId = new URL(url).searchParams.get("domain_id");
+    return domainId ? evalRuns.filter((run) => run.job.domain_id === domainId) : evalRuns;
+  }
+
+  function buildEvalTrends(sourceRuns = evalRuns) {
     const grouped = new Map<string, typeof evalRuns>();
-    for (const run of evalRuns.slice().reverse()) {
+    for (const run of sourceRuns.slice().reverse()) {
       if (!run.report) {
         continue;
       }
@@ -1051,7 +1062,7 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route("http://localhost:8000/evals/smoke", async (route) => {
-    const job = jobFixture("job-eval-1", "eval.run", "succeeded", { result: evalReport });
+    const job = jobFixture("job-eval-1", "eval.run", "succeeded", { result: evalReport }, null);
     jobs.unshift(job);
     evalRuns.unshift({ job, report: evalReport });
     recordAudit(job);
@@ -1062,9 +1073,15 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route("http://localhost:8000/evals/agent-multihop", async (route) => {
-    const job = jobFixture("job-eval-agent-multihop-1", "eval.run", "succeeded", {
-      result: agentMultihopReport,
-    });
+    const job = jobFixture(
+      "job-eval-agent-multihop-1",
+      "eval.run",
+      "succeeded",
+      {
+        result: agentMultihopReport,
+      },
+      null,
+    );
     jobs.unshift(job);
     evalRuns.unshift({ job, report: agentMultihopReport });
     recordAudit(job);
@@ -1075,16 +1092,26 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route("http://localhost:8000/evals/squad", async (route) => {
+    const payload = route.request().postDataJSON() as Record<string, unknown>;
+    expect(payload.domain_id).toBe("domain-123");
+    const domainId = typeof payload.domain_id === "string" ? payload.domain_id : null;
     const reportPaths = {
       json: "/var/lib/retos/evals/reports/ui-squad.json",
       markdown: "/var/lib/retos/evals/reports/ui-squad.md",
     };
-    const job = jobFixture("job-eval-squad-1", "eval.run", "succeeded", {
-      dataset_path: "/var/lib/retos/evals/datasets/ui-squad.json",
-      max_cases: 2,
-      report_paths: reportPaths,
-      result: squadReport,
-    });
+    const job = jobFixture(
+      "job-eval-squad-1",
+      "eval.run",
+      "succeeded",
+      {
+        dataset_path: "/var/lib/retos/evals/datasets/ui-squad.json",
+        max_cases: 2,
+        domain_id: payload.domain_id ?? null,
+        report_paths: reportPaths,
+        result: squadReport,
+      },
+      domainId,
+    );
     jobs.unshift(job);
     evalRuns.unshift({ job, report: squadReport });
     recordAudit(job);
@@ -1095,16 +1122,25 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route("http://localhost:8000/evals/hotpotqa", async (route) => {
+    const payload = route.request().postDataJSON() as Record<string, unknown>;
+    const domainId = typeof payload.domain_id === "string" ? payload.domain_id : null;
     const reportPaths = {
       json: "/var/lib/retos/evals/reports/ui-hotpotqa.json",
       markdown: "/var/lib/retos/evals/reports/ui-hotpotqa.md",
     };
-    const job = jobFixture("job-eval-hotpotqa-1", "eval.run", "succeeded", {
-      dataset_path: "/var/lib/retos/evals/datasets/ui-hotpotqa.json",
-      max_cases: 1,
-      report_paths: reportPaths,
-      result: hotpotqaReport,
-    });
+    const job = jobFixture(
+      "job-eval-hotpotqa-1",
+      "eval.run",
+      "succeeded",
+      {
+        dataset_path: "/var/lib/retos/evals/datasets/ui-hotpotqa.json",
+        max_cases: 1,
+        domain_id: payload.domain_id ?? null,
+        report_paths: reportPaths,
+        result: hotpotqaReport,
+      },
+      domainId,
+    );
     jobs.unshift(job);
     evalRuns.unshift({ job, report: hotpotqaReport });
     recordAudit(job);
@@ -1115,16 +1151,25 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route("http://localhost:8000/evals/natural-questions", async (route) => {
+    const payload = route.request().postDataJSON() as Record<string, unknown>;
+    const domainId = typeof payload.domain_id === "string" ? payload.domain_id : null;
     const reportPaths = {
       json: "/var/lib/retos/evals/reports/ui-natural-questions.json",
       markdown: "/var/lib/retos/evals/reports/ui-natural-questions.md",
     };
-    const job = jobFixture("job-eval-natural-questions-1", "eval.run", "succeeded", {
-      dataset_path: "/var/lib/retos/evals/datasets/ui-nq.jsonl",
-      max_cases: 1,
-      report_paths: reportPaths,
-      result: naturalQuestionsReport,
-    });
+    const job = jobFixture(
+      "job-eval-natural-questions-1",
+      "eval.run",
+      "succeeded",
+      {
+        dataset_path: "/var/lib/retos/evals/datasets/ui-nq.jsonl",
+        max_cases: 1,
+        domain_id: payload.domain_id ?? null,
+        report_paths: reportPaths,
+        result: naturalQuestionsReport,
+      },
+      domainId,
+    );
     jobs.unshift(job);
     evalRuns.unshift({ job, report: naturalQuestionsReport });
     recordAudit(job);
@@ -1139,18 +1184,27 @@ async function mockProviderApi(page: Page) {
       dataset_path: string;
       dataset_format: string;
       max_cases: number;
+      domain_id?: string | null;
     };
+    const domainId = typeof payload.domain_id === "string" ? payload.domain_id : null;
     const reportPaths = {
       json: "/var/lib/retos/evals/reports/ui-ocr-benchmark.json",
       markdown: "/var/lib/retos/evals/reports/ui-ocr-benchmark.md",
     };
-    const job = jobFixture("job-eval-ocr-benchmark-1", "eval.run", "succeeded", {
-      dataset_path: `/var/lib/retos/evals/datasets/${payload.dataset_path}`,
-      dataset_format: payload.dataset_format,
-      max_cases: payload.max_cases,
-      report_paths: reportPaths,
-      result: ocrBenchmarkReport,
-    });
+    const job = jobFixture(
+      "job-eval-ocr-benchmark-1",
+      "eval.run",
+      "succeeded",
+      {
+        dataset_path: `/var/lib/retos/evals/datasets/${payload.dataset_path}`,
+        dataset_format: payload.dataset_format,
+        max_cases: payload.max_cases,
+        domain_id: payload.domain_id ?? null,
+        report_paths: reportPaths,
+        result: ocrBenchmarkReport,
+      },
+      domainId,
+    );
     jobs.unshift(job);
     evalRuns.unshift({ job, report: ocrBenchmarkReport });
     recordAudit(job);
@@ -1160,16 +1214,18 @@ async function mockProviderApi(page: Page) {
       json: { job, report: ocrBenchmarkReport, report_paths: reportPaths },
     });
   });
-  await page.route("http://localhost:8000/evals/runs?limit=6", async (route) => {
+  await page.route(/http:\/\/localhost:8000\/evals\/runs\?.*/, async (route) => {
+    const runs = evalRunsForRequestUrl(route.request().url());
     await route.fulfill({
       contentType: "application/json",
-      json: evalRuns,
+      json: runs,
     });
   });
-  await page.route("http://localhost:8000/evals/runs/trends?limit=60", async (route) => {
+  await page.route(/http:\/\/localhost:8000\/evals\/runs\/trends\?.*/, async (route) => {
+    const runs = evalRunsForRequestUrl(route.request().url());
     await route.fulfill({
       contentType: "application/json",
-      json: buildEvalTrends(),
+      json: buildEvalTrends(runs),
     });
   });
   await page.route(/http:\/\/localhost:8000\/evals\/runs\/([^/]+)\/rerun/, async (route) => {
@@ -1186,10 +1242,16 @@ async function mockProviderApi(page: Page) {
     }
     evalRerunCount += 1;
     const reportPaths = original.job.payload.report_paths ?? null;
-    const job = jobFixture(`job-eval-rerun-${evalRerunCount}`, "eval.run", "succeeded", {
-      ...original.job.payload,
-      rerun_from_job_id: original.job.id,
-    });
+    const job = jobFixture(
+      `job-eval-rerun-${evalRerunCount}`,
+      "eval.run",
+      "succeeded",
+      {
+        ...original.job.payload,
+        rerun_from_job_id: original.job.id,
+      },
+      original.job.domain_id,
+    );
     jobs.unshift(job);
     evalRuns.unshift({ job, report: original.report });
     recordAudit(job);
@@ -1308,7 +1370,9 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Create domain" }).click();
 
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-456");
-  await expect(page.getByRole("option", { name: "Policy Research" })).toBeAttached();
+  await expect(
+    page.getByLabel("Active domain").getByRole("option", { name: "Policy Research" }),
+  ).toBeAttached();
 
   await page.getByPlaceholder("Research corpus").fill("Policy Corpus");
   await page.getByLabel("URI").fill("file:///corpus/policy");
@@ -1399,6 +1463,8 @@ test("loads the operational console", async ({ page }) => {
     .filter({ hasText: "agent-multihop" });
   await expect(agentEvalRunRow.getByText("3 cases")).toBeVisible();
 
+  await page.getByLabel("Eval domain scope").selectOption("domain-123");
+  await expect(page.getByLabel("Active eval scope").getByText("Smoke Research")).toHaveCount(2);
   await page.getByLabel("SQuAD dataset path").fill("ui-squad.json");
   await page.getByLabel("SQuAD max cases").fill("2");
   await page.getByLabel("SQuAD report stem").fill("ui-squad");
@@ -1407,6 +1473,8 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval metadata").getByText("/evals/datasets/ui-squad.json")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("squad-mars-red-planet")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("squad-v2")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("Smoke Research")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toHaveCount(0);
   await expect(page.getByLabel("Eval run history").getByText("2 cases")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-squad.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-squad.md")).toBeVisible();
