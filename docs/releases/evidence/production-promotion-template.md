@@ -48,6 +48,7 @@ Paste or link the output for each gate:
 
 - Backup timestamp:
 - Backup location:
+- Backup artifact path:
 - Postgres dump created:
 - Storage archive created:
 - Eval reports archive created:

@@ -44,6 +44,7 @@ for command in (
     "make dependency-audit",
     "make security-policy-check",
     "make ignore-hygiene-check",
+    "make operations-runbook-check",
     "make auditor-static-check",
     "make ci-status-check",
     "make production-preflight",
