@@ -131,6 +131,7 @@ These items must be closed before a final production release:
 - [ ] `make auditor-static-check` passes.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
+- [ ] Desktop and mobile visual audit PNGs were reviewed and accepted or tracked.
 - [ ] `make docker-smoke` passes with API, worker, migrate, web, Postgres, RabbitMQ, and Ollama services.
 - [ ] `scripts/check_release_readiness.sh` passes.
 - [ ] `scripts/check_audit_pack.sh` passes.
@@ -149,6 +150,7 @@ These items must be closed before a final production release:
 | --- | --- |
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
 | Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit` |
+| Human visual review | `docs/releases/evidence/production-promotion-template.md` |
 | Dependency advisory evidence | `scripts/check_dependency_audit.sh`, `make dependency-audit` |
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |

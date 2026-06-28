@@ -136,6 +136,7 @@ require(
 for heading in (
     "## Machine Evidence",
     "## Release Provenance",
+    "## Visual Review",
     "## Backup And Restore Rehearsal",
     "## Security Review",
     "## Rollback",
@@ -146,6 +147,16 @@ require(
     "Final release promotion still requires" in tracker,
     "process tracker must keep final release blockers visible",
 )
+for phrase in (
+    "Desktop visual audit PNG reviewed",
+    "Mobile visual audit PNG reviewed",
+    "Visual review decision",
+    "UI issues accepted or filed",
+):
+    require(
+        phrase in promotion_template,
+        f"promotion evidence template missing visual review field: {phrase}",
+    )
 require(
     "make frontend-visual-audit" in tracker and "visual audit evidence" in tracker,
     "process tracker must keep visual audit promotion evidence visible",

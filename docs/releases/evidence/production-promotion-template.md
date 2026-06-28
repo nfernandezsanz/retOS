@@ -45,6 +45,14 @@ Paste or link the output for each gate:
 - Image labels inspected:
 - API, worker, and migrate share one backend image ID:
 
+## Visual Review
+
+- Desktop visual audit PNG reviewed:
+- Mobile visual audit PNG reviewed:
+- Visual reviewer:
+- Visual review decision:
+- UI issues accepted or filed:
+
 ## Backup And Restore Rehearsal
 
 - Backup timestamp:
