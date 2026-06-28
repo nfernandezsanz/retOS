@@ -17,7 +17,13 @@ from retos.evals.datasets import (
     load_natural_questions_cases,
     load_squad_v2_cases,
 )
-from retos.evals.ocr import OCRQualityReport, run_ocr_quality_suite
+from retos.evals.ocr import (
+    OCRBenchmarkAdapterError,
+    OCRBenchmarkOptions,
+    OCRQualityReport,
+    load_ocr_benchmark_cases,
+    run_ocr_quality_suite,
+)
 from retos.evals.reports import write_report_files
 from retos.evals.smoke import EvalSuiteReport, run_smoke_eval_suite
 
@@ -26,7 +32,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run RetOS local smoke evals.")
     parser.add_argument(
         "--suite",
-        choices=("smoke", "squad", "hotpotqa", "natural-questions", "ocr-smoke"),
+        choices=(
+            "smoke",
+            "squad",
+            "hotpotqa",
+            "natural-questions",
+            "ocr-smoke",
+            "ocr-benchmark",
+        ),
         default="smoke",
         help="Eval suite to run.",
     )
@@ -41,6 +54,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="Maximum dataset cases to load for dataset-backed suites.",
+    )
+    parser.add_argument(
+        "--dataset-format",
+        choices=("manifest", "funsd", "sroie"),
+        default="manifest",
+        help="Dataset adapter for --suite ocr-benchmark.",
     )
     parser.add_argument(
         "--index-root",
@@ -78,6 +97,7 @@ def main() -> int:
                 suite=args.suite,
                 dataset_path=args.dataset_path,
                 max_cases=args.max_cases,
+                dataset_format=args.dataset_format,
                 report_dir=args.report_dir,
                 report_stem=args.report_stem,
             )
@@ -87,6 +107,7 @@ def main() -> int:
         suite=args.suite,
         dataset_path=args.dataset_path,
         max_cases=args.max_cases,
+        dataset_format=args.dataset_format,
         report_dir=args.report_dir,
         report_stem=args.report_stem,
     )
@@ -99,6 +120,7 @@ def run(
     suite: str,
     dataset_path: Path | None,
     max_cases: int | None,
+    dataset_format: str = "manifest",
     report_dir: Path | None = None,
     report_stem: str | None = None,
 ) -> int:
@@ -108,9 +130,13 @@ def run(
             suite=suite,
             dataset_path=dataset_path,
             max_cases=max_cases,
+            dataset_format=dataset_format,
         )
     except DatasetAdapterError as exc:
         print(f"Eval dataset error: {exc}", file=sys.stderr)
+        return 2
+    except OCRBenchmarkAdapterError as exc:
+        print(f"OCR benchmark dataset error: {exc}", file=sys.stderr)
         return 2
     except TesseractNotFoundError:
         print(
@@ -139,11 +165,26 @@ def build_report(
     suite: str,
     dataset_path: Path | None,
     max_cases: int | None,
+    dataset_format: str,
 ) -> EvalSuiteReport | OCRQualityReport:
     if suite == "smoke":
         return run_smoke_eval_suite(index_root=index_root)
     if suite == "ocr-smoke":
         return run_ocr_quality_suite(work_dir=index_root / "ocr")
+    if suite == "ocr-benchmark":
+        if dataset_path is None:
+            raise OCRBenchmarkAdapterError("--dataset-path is required for OCR benchmark suites")
+        cases = load_ocr_benchmark_cases(
+            dataset_path,
+            OCRBenchmarkOptions(max_cases=max_cases, dataset_format=dataset_format),
+        )
+        if not cases:
+            raise OCRBenchmarkAdapterError("OCR benchmark dataset produced no eval cases")
+        return run_ocr_quality_suite(
+            work_dir=index_root / "ocr-benchmark",
+            suite_name=f"ocr-{dataset_format}",
+            cases=cases,
+        )
     if max_cases is not None and max_cases < 1:
         raise DatasetAdapterError("--max-cases must be greater than zero")
     if dataset_path is None:

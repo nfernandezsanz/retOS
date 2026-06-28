@@ -170,7 +170,30 @@ async function mockProviderApi(page: Page) {
       },
     ],
   };
-  const evalRuns: { job: ReturnType<typeof jobFixture>; report: typeof evalReport | null }[] = [];
+  const ocrBenchmarkReport = {
+    suite_name: "ocr-manifest",
+    passed: true,
+    case_count: 1,
+    metrics: {
+      character_error_rate: 0,
+      word_error_rate: 0,
+    },
+    cases: [
+      {
+        case_id: "receipt-001",
+        expected_text: "Receipt total 42",
+        actual_text: "Receipt total 42",
+        character_error_rate: 0,
+        word_error_rate: 0,
+        passed: true,
+        failures: [],
+      },
+    ],
+  };
+  const evalRuns: {
+    job: ReturnType<typeof jobFixture>;
+    report: Record<string, unknown> | null;
+  }[] = [];
   const adminUsers = [
     {
       id: "admin-user-1",
@@ -811,6 +834,32 @@ async function mockProviderApi(page: Page) {
       json: { job, report: naturalQuestionsReport, report_paths: reportPaths },
     });
   });
+  await page.route("http://localhost:8000/evals/ocr-benchmark", async (route) => {
+    const payload = route.request().postDataJSON() as {
+      dataset_path: string;
+      dataset_format: string;
+      max_cases: number;
+    };
+    const reportPaths = {
+      json: "/var/lib/retos/evals/reports/ui-ocr-benchmark.json",
+      markdown: "/var/lib/retos/evals/reports/ui-ocr-benchmark.md",
+    };
+    const job = jobFixture("job-eval-ocr-benchmark-1", "eval.run", "succeeded", {
+      dataset_path: `/var/lib/retos/evals/datasets/${payload.dataset_path}`,
+      dataset_format: payload.dataset_format,
+      max_cases: payload.max_cases,
+      report_paths: reportPaths,
+      result: ocrBenchmarkReport,
+    });
+    jobs.unshift(job);
+    evalRuns.unshift({ job, report: ocrBenchmarkReport });
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: { job, report: ocrBenchmarkReport, report_paths: reportPaths },
+    });
+  });
   await page.route("http://localhost:8000/evals/runs?limit=6", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -1005,6 +1054,17 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval run history").getByText("natural-questions")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-natural-questions.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-natural-questions.md")).toBeVisible();
+
+  await page.getByLabel("OCR benchmark path").fill("ocr-benchmark/manifest.json");
+  await page.getByLabel("OCR benchmark format").selectOption("manifest");
+  await page.getByLabel("OCR benchmark max cases").fill("1");
+  await page.getByLabel("OCR benchmark report stem").fill("ui-ocr-benchmark");
+  await page.getByRole("button", { name: "Run OCR benchmark" }).click();
+  await expect(page.getByLabel("Eval metrics").getByText("character error rate")).toBeVisible();
+  await expect(page.getByLabel("Eval cases").getByText("receipt-001")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("ocr-manifest")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-ocr-benchmark.json")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-ocr-benchmark.md")).toBeVisible();
 
   await page.getByRole("button", { name: "Compare latest" }).click();
   await expect(page.getByLabel("Eval comparison").getByText("retos-smoke")).toBeVisible();

@@ -242,6 +242,50 @@ def test_eval_cli_runs_ocr_smoke_suite(tmp_path: Path, capsys, monkeypatch) -> N
     assert (tmp_path / "reports" / "ocr-smoke.md").exists()
 
 
+def test_eval_cli_runs_ocr_benchmark_suite_from_manifest(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    from retos.evals.ocr import write_image_only_pdf
+
+    dataset_root = tmp_path / "ocr-dataset"
+    dataset_root.mkdir()
+    write_image_only_pdf(dataset_root / "case.pdf", "Invoice total 42")
+    manifest_path = dataset_root / "manifest.json"
+    manifest_path.write_text(
+        """
+        {
+          "cases": [
+            {
+              "case_id": "invoice",
+              "input_path": "case.pdf",
+              "expected_text": "Invoice total 42"
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("retos.evals.ocr.ocr_pdf_text", lambda raw, max_pages: "Invoice total 42")
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="markdown",
+        suite="ocr-benchmark",
+        dataset_path=manifest_path,
+        max_cases=1,
+        dataset_format="manifest",
+        report_dir=tmp_path / "reports",
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "OCR Quality Report: ocr-manifest" in captured.out
+    assert (tmp_path / "reports" / "ocr-manifest.json").exists()
+
+
 def test_eval_cli_reports_missing_tesseract_for_ocr_suite(
     tmp_path: Path,
     capsys,

@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+import json
 import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
 from retos.ingestion.scan import ocr_pdf_text
+
+
+class OCRBenchmarkAdapterError(ValueError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -82,6 +88,13 @@ class OCRQualityReport:
 class OCRQualityCase:
     case_id: str
     expected_text: str
+    input_path: Path | None = None
+
+
+@dataclass(frozen=True)
+class OCRBenchmarkOptions:
+    max_cases: int | None = None
+    dataset_format: str = "manifest"
 
 
 def normalize_ocr_text(value: str) -> str:
@@ -169,6 +182,98 @@ def synthetic_ocr_cases() -> tuple[OCRQualityCase, ...]:
     )
 
 
+def load_ocr_benchmark_cases(
+    dataset_path: Path,
+    options: OCRBenchmarkOptions | None = None,
+) -> tuple[OCRQualityCase, ...]:
+    adapter_options = options or OCRBenchmarkOptions()
+    if adapter_options.max_cases is not None and adapter_options.max_cases < 1:
+        raise OCRBenchmarkAdapterError("max_cases must be greater than zero")
+    dataset_format = adapter_options.dataset_format.strip().lower()
+    if dataset_format == "manifest":
+        cases = load_manifest_cases(dataset_path)
+    elif dataset_format == "funsd":
+        cases = load_funsd_cases(dataset_path)
+    elif dataset_format == "sroie":
+        cases = load_sroie_cases(dataset_path)
+    else:
+        raise OCRBenchmarkAdapterError(f"Unsupported OCR benchmark format: {dataset_format}")
+    if adapter_options.max_cases is not None:
+        return tuple(cases[: adapter_options.max_cases])
+    return tuple(cases)
+
+
+def load_manifest_cases(dataset_path: Path) -> tuple[OCRQualityCase, ...]:
+    root = dataset_path.parent
+    payload = read_json(dataset_path)
+    raw_cases = payload.get("cases") if isinstance(payload, dict) else payload
+    if not isinstance(raw_cases, list):
+        raise OCRBenchmarkAdapterError("OCR benchmark manifest must contain a cases list")
+    cases: list[OCRQualityCase] = []
+    for index, item in enumerate(raw_cases):
+        if not isinstance(item, dict):
+            raise OCRBenchmarkAdapterError(f"Expected OCR manifest cases[{index}] to be an object")
+        case_id = require_string(item, "case_id")
+        expected_text = require_string(item, "expected_text")
+        input_path = resolve_case_path(root, require_string(item, "input_path"))
+        cases.append(
+            OCRQualityCase(case_id=case_id, expected_text=expected_text, input_path=input_path)
+        )
+    return tuple(cases)
+
+
+def load_funsd_cases(dataset_path: Path) -> tuple[OCRQualityCase, ...]:
+    root = dataset_path if dataset_path.is_dir() else dataset_path.parent
+    annotations_root = root / "annotations"
+    images_root = root / "images"
+    if not annotations_root.exists() or not annotations_root.is_dir():
+        raise OCRBenchmarkAdapterError("FUNSD dataset must contain an annotations directory")
+    cases: list[OCRQualityCase] = []
+    for annotation_path in sorted(annotations_root.glob("*.json")):
+        payload = read_json(annotation_path)
+        form = payload.get("form")
+        if not isinstance(form, list):
+            raise OCRBenchmarkAdapterError(
+                f"FUNSD annotation {annotation_path.name} missing form list"
+            )
+        expected_text = " ".join(
+            str(item.get("text", "")).strip()
+            for item in form
+            if isinstance(item, dict) and str(item.get("text", "")).strip()
+        )
+        if not expected_text:
+            raise OCRBenchmarkAdapterError(f"FUNSD annotation {annotation_path.name} has no text")
+        image_path = matching_image_path(images_root, annotation_path.stem)
+        cases.append(
+            OCRQualityCase(
+                case_id=f"funsd-{annotation_path.stem}",
+                expected_text=expected_text,
+                input_path=image_path,
+            )
+        )
+    return tuple(cases)
+
+
+def load_sroie_cases(dataset_path: Path) -> tuple[OCRQualityCase, ...]:
+    root = dataset_path if dataset_path.is_dir() else dataset_path.parent
+    box_root = first_existing_directory(root, ("box", "boxes", "ocr", "text"))
+    image_root = first_existing_directory(root, ("img", "images"))
+    cases: list[OCRQualityCase] = []
+    for text_path in sorted(box_root.glob("*.txt")):
+        expected_text = text_from_sroie_boxes(text_path)
+        if not expected_text:
+            raise OCRBenchmarkAdapterError(f"SROIE text file {text_path.name} has no text")
+        image_path = matching_image_path(image_root, text_path.stem)
+        cases.append(
+            OCRQualityCase(
+                case_id=f"sroie-{text_path.stem}",
+                expected_text=expected_text,
+                input_path=image_path,
+            )
+        )
+    return tuple(cases)
+
+
 def write_image_only_pdf(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     image = Image.new("RGB", (1600, 900), "white")
@@ -191,9 +296,14 @@ def run_ocr_quality_suite(
     work_dir.mkdir(parents=True, exist_ok=True)
     results: list[OCRCaseResult] = []
     for case in cases or synthetic_ocr_cases():
-        pdf_path = work_dir / f"{case.case_id}.pdf"
-        write_image_only_pdf(pdf_path, case.expected_text)
-        actual_text = ocr_pdf_text(pdf_path.read_bytes(), max_pages=max_pages)
+        input_path = case.input_path
+        if input_path is None:
+            input_path = work_dir / f"{case.case_id}.pdf"
+            write_image_only_pdf(input_path, case.expected_text)
+        actual_text = ocr_pdf_text(
+            ocr_input_pdf_bytes(input_path, work_dir=work_dir),
+            max_pages=max_pages,
+        )
         results.append(
             score_ocr_text(
                 case_id=case.case_id,
@@ -219,3 +329,68 @@ def run_ocr_quality_suite(
         word_error_rate=word_error_rate,
         cases=tuple(results),
     )
+
+
+def read_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise OCRBenchmarkAdapterError(f"Could not read OCR benchmark file: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise OCRBenchmarkAdapterError(f"OCR benchmark file is not valid JSON: {path}") from exc
+
+
+def require_string(payload: dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise OCRBenchmarkAdapterError(f"Expected {key!r} to be a non-empty string")
+    return value.strip()
+
+
+def resolve_case_path(root: Path, value: str) -> Path:
+    raw_path = Path(value).expanduser()
+    candidate = raw_path if raw_path.is_absolute() else root / raw_path
+    resolved = candidate.resolve(strict=False)
+    root_resolved = root.resolve(strict=False)
+    if resolved != root_resolved and root_resolved not in resolved.parents:
+        raise OCRBenchmarkAdapterError("OCR benchmark input_path must stay inside dataset root")
+    if not resolved.exists() or not resolved.is_file():
+        raise OCRBenchmarkAdapterError(f"OCR benchmark input file not found: {resolved}")
+    return resolved
+
+
+def matching_image_path(root: Path, stem: str) -> Path:
+    for extension in (".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"):
+        candidate = root / f"{stem}{extension}"
+        if candidate.exists() and candidate.is_file():
+            return candidate
+    raise OCRBenchmarkAdapterError(f"Could not find benchmark image for {stem!r}")
+
+
+def first_existing_directory(root: Path, names: tuple[str, ...]) -> Path:
+    for name in names:
+        candidate = root / name
+        if candidate.exists() and candidate.is_dir():
+            return candidate
+    raise OCRBenchmarkAdapterError(
+        f"OCR benchmark dataset missing one of these directories: {', '.join(names)}"
+    )
+
+
+def text_from_sroie_boxes(path: Path) -> str:
+    lines: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        parts = line.split(",", 8)
+        text = parts[-1].strip() if parts else ""
+        if text:
+            lines.append(text)
+    return " ".join(lines)
+
+
+def ocr_input_pdf_bytes(input_path: Path, *, work_dir: Path) -> bytes:
+    if input_path.suffix.lower() == ".pdf":
+        return input_path.read_bytes()
+    converted_path = work_dir / f"{input_path.stem}.benchmark.pdf"
+    with Image.open(input_path) as image:
+        image.convert("RGB").save(converted_path, "PDF", resolution=200.0)
+    return converted_path.read_bytes()

@@ -19,6 +19,7 @@ Reality-check commands:
 make api-smoke
 make eval-smoke
 make eval-ocr
+make eval-ocr-benchmark OCR_PATH=evals/datasets/ocr-benchmark/manifest.json
 make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50 REPORT_DIR=evals/reports
 make frontend-e2e
 make integration
@@ -96,9 +97,11 @@ Current metrics:
 The smoke suite is included in `make check` and GitHub Actions. API smoke also
 creates a tiny SQuAD 2.0 fixture, posts it to `/evals/squad`, verifies the durable
 `eval.run` response, checks that JSON/Markdown reports were written, and compares the
-smoke run against the SQuAD run over HTTP. Browser smoke exercises the React SQuAD
-controls with a mocked API response and verifies visible suite history, report paths,
-and cross-run comparison.
+smoke run against the SQuAD run over HTTP. Docker smoke additionally runs the OCR
+benchmark endpoint against a generated manifest fixture and checks report export in the
+shared eval report volume. Browser smoke exercises the React SQuAD, HotpotQA, Natural
+Questions, and OCR benchmark controls with mocked API responses and verifies visible
+suite history, report paths, and cross-run comparison.
 
 ## Implemented OCR Quality Smoke
 
@@ -109,9 +112,14 @@ OCR so CI stays deterministic; the local command is opt-in because real Tesserac
 availability varies by machine and container profile.
 
 OCR fallback ingestion now also persists `ocr_page_text` artifacts with stable
-`#page=N` URI anchors. Future OCR benchmark adapters should use those page-level
-artifacts for traceable CER/WER reports instead of treating a document as one opaque
-text blob.
+`#page=N` URI anchors.
+
+## Implemented OCR Benchmark Adapters
+
+`make eval-ocr-benchmark` runs `backend/scripts/run_eval_smoke.py --suite ocr-benchmark`.
+The adapter supports local manifest files, FUNSD directories, and SROIE directories.
+All paths are opt-in, bounded by `MAX_CASES`, and resolved under the dataset root so CI
+does not download public data or call paid providers.
 
 ## Public Dataset Candidates
 
@@ -119,9 +127,9 @@ text blob.
 | --- | --- |
 | SQuAD 2.0 | Implemented as an opt-in local adapter and admin API run for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
 | HotpotQA | Implemented as an opt-in local adapter and admin API run for multi-hop retrieval and supporting-fact evaluation, with optional JSON/Markdown report export. |
-| Natural Questions | Real user questions with Wikipedia evidence for open-domain retrieval pressure. |
-| FUNSD | Form understanding, OCR quality, and future layout-aware page artifacts. |
-| ICDAR 2019 SROIE | Receipt OCR and key information extraction pressure. |
+| Natural Questions | Implemented as an opt-in local adapter and admin API run for real user questions with Wikipedia evidence. |
+| FUNSD | Implemented as an opt-in OCR benchmark adapter for form image/text pressure; layout-aware scoring remains future work. |
+| ICDAR 2019 SROIE | Implemented as an opt-in OCR benchmark adapter for receipt OCR pressure; key-value extraction scoring remains future work. |
 | ISRI OCR Evaluation Tools | OCR scoring methodology reference for CER/WER-style checks. |
 
 Dataset adapters must be opt-in and must not make CI depend on network downloads.

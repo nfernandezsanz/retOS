@@ -145,6 +145,28 @@ dataset_root.mkdir(parents=True, exist_ok=True)
     ),
     encoding="utf-8",
 )
+
+ocr_root = dataset_root / "ocr-benchmark"
+ocr_root.mkdir(parents=True, exist_ok=True)
+ocr_document = pymupdf.open()
+ocr_page = ocr_document.new_page(width=1200, height=800)
+ocr_page.insert_text((72, 160), "Receipt total forty two dollars.", fontsize=36)
+ocr_document.save(ocr_root / "receipt-001.pdf")
+ocr_document.close()
+(ocr_root / "manifest.json").write_text(
+    json.dumps(
+        {
+            "cases": [
+                {
+                    "case_id": "receipt-001",
+                    "input_path": "receipt-001.pdf",
+                    "expected_text": "Receipt total forty two dollars.",
+                }
+            ]
+        }
+    ),
+    encoding="utf-8",
+)
 PY
 curl --fail --silent --show-error http://127.0.0.1:8000/healthz >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null
@@ -154,6 +176,7 @@ RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me \
   RETOS_EVAL_REPORT_ROOT=/var/lib/retos/evals/reports \
   RETOS_SMOKE_PREPARE_DATASETS=0 \
   RETOS_SMOKE_CHECK_REPORT_FILES=0 \
+  RETOS_SMOKE_RUN_OCR_BENCHMARK=1 \
   RETOS_SMOKE_SCAN_SOURCE_URI=file:///var/lib/retos/storage/smoke-corpus \
   "${python_bin}" backend/scripts/smoke_api.py http://127.0.0.1:8000
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-squad.json
@@ -162,3 +185,5 @@ RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me \
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-hotpotqa.md
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-natural-questions.json
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-natural-questions.md
+"${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-ocr-benchmark.json
+"${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-ocr-benchmark.md

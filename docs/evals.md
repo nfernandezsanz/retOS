@@ -18,6 +18,15 @@ Run the opt-in local OCR quality smoke suite:
 make eval-ocr
 ```
 
+Run an opt-in OCR benchmark suite from a local manifest, FUNSD directory, or SROIE
+directory:
+
+```bash
+make eval-ocr-benchmark OCR_PATH=evals/datasets/ocr-benchmark/manifest.json
+make eval-ocr-benchmark OCR_PATH=evals/datasets/funsd OCR_FORMAT=funsd MAX_CASES=25
+make eval-ocr-benchmark OCR_PATH=evals/datasets/sroie OCR_FORMAT=sroie MAX_CASES=25
+```
+
 Run the backend quality gate, including eval smoke:
 
 ```bash
@@ -31,6 +40,12 @@ cd backend
 PYTHONPATH=src python scripts/run_eval_smoke.py --format json
 PYTHONPATH=src python scripts/run_eval_smoke.py --format markdown
 PYTHONPATH=src python scripts/run_eval_smoke.py --suite ocr-smoke --format markdown
+PYTHONPATH=src python scripts/run_eval_smoke.py \
+  --suite ocr-benchmark \
+  --dataset-path ../evals/datasets/ocr-benchmark/manifest.json \
+  --dataset-format manifest \
+  --max-cases 25 \
+  --format markdown
 ```
 
 Run an opt-in SQuAD 2.0 dataset eval from a local file:
@@ -180,6 +195,25 @@ curl --request POST http://localhost:8000/evals/natural-questions \
   }'
 ```
 
+OCR benchmark evals use `/evals/ocr-benchmark` with a local dataset path and a
+`dataset_format` of `manifest`, `funsd`, or `sroie`:
+
+```bash
+curl --request POST http://localhost:8000/evals/ocr-benchmark \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "dataset_path":"ocr-benchmark/manifest.json",
+    "dataset_format":"manifest",
+    "max_cases":25,
+    "write_report":true,
+    "report_stem":"ocr-manifest-25",
+    "max_character_error_rate":0.20,
+    "max_word_error_rate":0.35,
+    "max_pages":1
+  }'
+```
+
 `dataset_path` may be relative or absolute, but it must resolve inside
 `RETOS_EVAL_DATASET_ROOT`. Reports are written only when `write_report=true`, and
 always land under `RETOS_EVAL_REPORT_ROOT` as both JSON and Markdown. This keeps
@@ -195,8 +229,8 @@ or read user-provided dataset files under explicit opt-in commands.
 | [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/) | Reading comprehension and abstention. | The official page describes answerable and unanswerable questions over Wikipedia passages and links downloads under CC BY-SA 4.0. |
 | [Natural Questions](https://ai.google.com/research/NaturalQuestions/) | Implemented for real user questions with Wikipedia evidence. | The official Google page describes questions from real users requiring systems to read a Wikipedia article; the public GitHub repository is Apache-2.0. |
 | [HotpotQA](https://hotpotqa.github.io/) | Implemented for multi-hop retrieval and supporting-fact evaluation. | The official benchmark focuses on natural multi-hop questions and supporting facts for explainability. |
-| [FUNSD](https://guillaumejaume.github.io/FUNSD/) | Form understanding and OCR/layout pressure. | Useful once RetOS stores page-level OCR artifacts and layout metadata. |
-| [ICDAR 2019 SROIE](https://rrc.cvc.uab.es/?ch=13) | Receipt OCR and key information extraction. | Useful for scanned-document extraction quality and audit traces. |
+| [FUNSD](https://guillaumejaume.github.io/FUNSD/) | Implemented as an OCR benchmark adapter for form image/text pressure. | Reads local `annotations/*.json` plus matching files in `images/`; layout-aware scoring remains future work. |
+| [ICDAR 2019 SROIE](https://rrc.cvc.uab.es/?ch=13) | Implemented as an OCR benchmark adapter for receipt OCR pressure. | Reads local box/text files plus matching files in `img/` or `images/`; key-value extraction scoring remains future work. |
 | [ISRI OCR Evaluation Tools](https://code.google.com/archive/p/isri-ocr-evaluation-tools/) | OCR scoring references. | Useful as a historical reference for OCR error-rate methodology and tooling. |
 
 ## SQuAD 2.0 Adapter
@@ -279,6 +313,23 @@ Adapter guarantees:
   text fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.
 
+## OCR Benchmark Adapters
+
+OCR benchmark adapters create `OCRQualityCase` inputs for the same OCR scorer used by
+`make eval-ocr`. They never download datasets and they require every input file to stay
+inside the dataset root.
+
+Supported formats:
+
+| Format | Input path | Contract |
+| --- | --- | --- |
+| `manifest` | JSON file | Root object with `cases[]`, or a root list. Each case requires `case_id`, `input_path`, and `expected_text`. Relative `input_path` values resolve beside the manifest. |
+| `funsd` | Dataset directory | Reads `annotations/*.json`, joins non-empty `form[].text`, and resolves matching `.pdf`, `.png`, `.jpg`, `.jpeg`, `.tif`, or `.tiff` files from `images/`. |
+| `sroie` | Dataset directory | Reads text files from `box/`, `boxes/`, `ocr/`, or `text/`, extracts text after the eighth comma on each line, and resolves matching files from `img/` or `images/`. |
+
+Images are converted to temporary PDFs before OCR so the adapter reuses the ingestion
+OCR path rather than introducing a parallel image OCR implementation.
+
 ## Adapter Rules
 
 - Adapters must be optional and skipped unless dataset paths are provided.
@@ -291,5 +342,5 @@ Adapter guarantees:
 
 ## Next Implementation Step
 
-Wire OCR benchmark adapters into the persisted eval run history and React comparison view
-using the existing page-level OCR artifacts.
+Add layout-aware OCR metrics and key-value extraction evals that score page-level
+`ocr_page_text` artifacts alongside plain CER/WER.

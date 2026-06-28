@@ -686,6 +686,29 @@ curl --request POST http://localhost:8000/evals/hotpotqa \
 The response shape matches `/evals/squad`; `report.suite_name` is `hotpotqa`, and
 report exports are written under `RETOS_EVAL_REPORT_ROOT`.
 
+Run an opt-in OCR benchmark eval from a mounted local manifest, FUNSD directory, or
+SROIE directory:
+
+```bash
+curl --request POST http://localhost:8000/evals/ocr-benchmark \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "dataset_path":"ocr-benchmark/manifest.json",
+    "dataset_format":"manifest",
+    "max_cases":25,
+    "write_report":true,
+    "report_stem":"ocr-manifest-25",
+    "max_character_error_rate":0.20,
+    "max_word_error_rate":0.35,
+    "max_pages":1
+  }'
+```
+
+The response shape matches the other eval endpoints; `report.suite_name` is
+`ocr-<dataset_format>`, `report.metrics` contains `character_error_rate` and
+`word_error_rate`, and report exports are written under `RETOS_EVAL_REPORT_ROOT`.
+
 Security and runtime notes:
 
 - `dataset_path` must resolve inside `RETOS_EVAL_DATASET_ROOT`; traversal and
@@ -694,7 +717,9 @@ Security and runtime notes:
 - Adapter or schema errors return `422` and mark the created eval job failed.
 - Reports are written under `RETOS_EVAL_REPORT_ROOT`; clients receive paths for
   later audit/export workflows.
-- API smoke creates tiny SQuAD and HotpotQA fixtures and verifies both endpoints over HTTP.
+- API smoke creates tiny SQuAD, HotpotQA, and Natural Questions fixtures and verifies
+  those endpoints over HTTP. Docker smoke also creates an OCR benchmark manifest fixture
+  and verifies `/evals/ocr-benchmark` through the running stack.
 
 List recent persisted eval runs:
 
@@ -796,6 +821,7 @@ Current console calls:
 - `POST /evals/squad`
 - `POST /evals/hotpotqa`
 - `POST /evals/natural-questions`
+- `POST /evals/ocr-benchmark`
 - `GET /jobs?limit=12`
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`
@@ -813,10 +839,11 @@ audited local accounts:
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source
-scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA/Natural Questions evals, read recent jobs, read
-persisted audit/progress events, group progress by job, filter the job ledger by status/kind, and send queries
-against the selected domain. Query execution uses `run_inline=true` so the UI can render
-the answer and citations immediately.
+scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA/Natural Questions/OCR
+benchmark evals, read recent jobs, read persisted audit/progress events, group progress
+by job, filter the job ledger by status/kind, and send queries against the selected
+domain. Query execution uses `run_inline=true` so the UI can render the answer and
+citations immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.

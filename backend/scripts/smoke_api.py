@@ -165,6 +165,37 @@ def prepare_natural_questions_dataset() -> Path:
     return dataset_path
 
 
+def prepare_ocr_benchmark_dataset() -> Path:
+    dataset_root = Path(os.environ["RETOS_EVAL_DATASET_ROOT"]) / "ocr-benchmark"
+    dataset_root.mkdir(parents=True, exist_ok=True)
+    pdf_path = dataset_root / "receipt-001.pdf"
+    document = pymupdf.open()
+    page = document.new_page(width=1200, height=800)
+    page.insert_text(
+        (72, 160),
+        "Receipt total forty two dollars.",
+        fontsize=36,
+    )
+    document.save(pdf_path)
+    document.close()
+    manifest_path = dataset_root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "case_id": "receipt-001",
+                        "input_path": pdf_path.name,
+                        "expected_text": "Receipt total forty two dollars.",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return manifest_path
+
+
 def main() -> None:
     base_url = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     admin_email = os.environ.get("RETOS_BOOTSTRAP_ADMIN_EMAIL", "admin@retos.dev")
@@ -172,11 +203,14 @@ def main() -> None:
     expect_worker = os.environ.get("RETOS_EXPECT_WORKER", "0") == "1"
     prepare_datasets = os.environ.get("RETOS_SMOKE_PREPARE_DATASETS", "1") == "1"
     check_report_files = os.environ.get("RETOS_SMOKE_CHECK_REPORT_FILES", "1") == "1"
+    run_ocr_benchmark = os.environ.get("RETOS_SMOKE_RUN_OCR_BENCHMARK", "0") == "1"
     scan_source_uri, temp_scan_root = prepare_scan_source()
     if prepare_datasets:
         prepare_squad_dataset()
         prepare_hotpotqa_dataset()
         prepare_natural_questions_dataset()
+        if run_ocr_benchmark:
+            prepare_ocr_benchmark_dataset()
 
     try:
         with httpx.Client(base_url=base_url, timeout=10) as client:
@@ -793,6 +827,59 @@ def main() -> None:
                     "Natural Questions Markdown report was not written",
                 )
 
+            latest_eval_body = nq_body
+            if run_ocr_benchmark:
+                ocr_benchmark_eval = client.post(
+                    "/evals/ocr-benchmark",
+                    headers=auth_headers,
+                    json={
+                        "dataset_path": "ocr-benchmark/manifest.json",
+                        "dataset_format": "manifest",
+                        "max_cases": 1,
+                        "write_report": True,
+                        "report_stem": "api-smoke-ocr-benchmark",
+                        "max_character_error_rate": 0.20,
+                        "max_word_error_rate": 0.35,
+                        "max_pages": 1,
+                    },
+                )
+                require(
+                    ocr_benchmark_eval.status_code == 202,
+                    "OCR benchmark eval failed: "
+                    f"{ocr_benchmark_eval.status_code} {ocr_benchmark_eval.text}",
+                )
+                ocr_benchmark_body = ocr_benchmark_eval.json()
+                require(
+                    ocr_benchmark_body["job"]["kind"] == "eval.run",
+                    "invalid OCR benchmark eval job kind",
+                )
+                require(
+                    ocr_benchmark_body["job"]["status"] == "succeeded",
+                    "OCR benchmark eval did not succeed",
+                )
+                require(
+                    ocr_benchmark_body["report"]["suite_name"] == "ocr-manifest",
+                    "invalid OCR benchmark suite",
+                )
+                require(
+                    ocr_benchmark_body["report"]["case_count"] == 1,
+                    "unexpected OCR benchmark case count",
+                )
+                require(
+                    ocr_benchmark_body["report_paths"],
+                    "OCR benchmark eval did not return report paths",
+                )
+                if check_report_files:
+                    require(
+                        Path(ocr_benchmark_body["report_paths"]["json"]).exists(),
+                        "OCR benchmark JSON report was not written",
+                    )
+                    require(
+                        Path(ocr_benchmark_body["report_paths"]["markdown"]).exists(),
+                        "OCR benchmark Markdown report was not written",
+                    )
+                latest_eval_body = ocr_benchmark_body
+
             eval_runs = client.get("/evals/runs", headers=auth_headers)
             require(
                 eval_runs.status_code == 200,
@@ -800,8 +887,8 @@ def main() -> None:
             )
             latest_eval_run = eval_runs.json()[0]
             require(
-                latest_eval_run["job"]["id"] == nq_body["job"]["id"],
-                "latest eval run did not match Natural Questions eval",
+                latest_eval_run["job"]["id"] == latest_eval_body["job"]["id"],
+                "latest eval run did not match the most recent eval",
             )
             require(
                 latest_eval_run["report"]["passed"] is True,

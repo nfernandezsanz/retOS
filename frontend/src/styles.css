@@ -365,6 +365,7 @@ h2 {
 .text-ingestion-form select,
 .text-ingestion-form textarea,
 .eval-dataset-form input,
+.eval-dataset-form select,
 .provider-login input {
   min-height: 140px;
   width: 100%;
@@ -393,6 +394,7 @@ h2 {
 .text-ingestion-form input,
 .text-ingestion-form select,
 .eval-dataset-form input,
+.eval-dataset-form select,
 .query-box.compact-field input {
   min-height: 44px;
 }
@@ -409,6 +411,7 @@ h2 {
 .text-ingestion-form select:focus-visible,
 .text-ingestion-form textarea:focus-visible,
 .eval-dataset-form input:focus-visible,
+.eval-dataset-form select:focus-visible,
 .provider-login input:focus-visible,
 button:focus-visible {
   outline: 3px solid #93c5fd;
@@ -932,7 +935,8 @@ button:focus-visible {
   padding-top: 14px;
 }
 
-.eval-dataset-form input:disabled {
+.eval-dataset-form input:disabled,
+.eval-dataset-form select:disabled {
   background: #f8fafc;
   color: #64748b;
 }

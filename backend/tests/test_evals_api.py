@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from retos.api.app import create_app
 from retos.core.config import Settings
+from retos.evals.ocr import OCRCaseResult, OCRQualityReport
 from retos.evals.smoke import EvalCaseResult, EvalSuiteReport
 
 
@@ -167,6 +168,15 @@ def test_hotpotqa_eval_requires_admin_token(evals_client: TestClient) -> None:
 def test_natural_questions_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post(
         "/evals/natural-questions",
+        json={"dataset_path": "fixture.json"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_ocr_benchmark_eval_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.post(
+        "/evals/ocr-benchmark",
         json={"dataset_path": "fixture.json"},
     )
 
@@ -363,6 +373,95 @@ def test_natural_questions_eval_runs_and_exports_report(
     assert eval_runs.status_code == 200
     assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
     assert eval_runs.json()[0]["report"]["suite_name"] == "natural-questions"
+
+
+def test_ocr_benchmark_eval_runs_and_exports_report(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    squad_report_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dataset_dir = squad_dataset_root / "ocr-benchmark"
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    (dataset_dir / "receipt.pdf").write_bytes(b"%PDF-1.7\n%%EOF\n")
+    (dataset_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "case_id": "receipt-001",
+                        "input_path": "receipt.pdf",
+                        "expected_text": "Receipt total 42",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_ocr_suite(**kwargs: object) -> OCRQualityReport:
+        assert kwargs["suite_name"] == "ocr-manifest"
+        assert kwargs["max_character_error_rate"] == 0.15
+        assert kwargs["max_word_error_rate"] == 0.25
+        assert kwargs["max_pages"] == 2
+        return OCRQualityReport(
+            suite_name="ocr-manifest",
+            passed=True,
+            case_count=1,
+            character_error_rate=0.0,
+            word_error_rate=0.0,
+            cases=(
+                OCRCaseResult(
+                    case_id="receipt-001",
+                    expected_text="Receipt total 42",
+                    actual_text="Receipt total 42",
+                    character_error_rate=0.0,
+                    word_error_rate=0.0,
+                    passed=True,
+                    failures=(),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr("retos.api.routes.evals.run_ocr_quality_suite", fake_ocr_suite)
+
+    response = evals_client.post(
+        "/evals/ocr-benchmark",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "ocr-benchmark/manifest.json",
+            "dataset_format": "manifest",
+            "max_cases": 1,
+            "write_report": True,
+            "report_stem": "nightly/ocr manifest",
+            "max_character_error_rate": 0.15,
+            "max_word_error_rate": 0.25,
+            "max_pages": 2,
+        },
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job"]["kind"] == "eval.run"
+    assert body["job"]["status"] == "succeeded"
+    assert body["report"]["suite_name"] == "ocr-manifest"
+    assert body["report"]["metrics"] == {
+        "character_error_rate": 0.0,
+        "word_error_rate": 0.0,
+    }
+    assert body["report"]["cases"][0]["case_id"] == "receipt-001"
+    assert body["report_paths"] == {
+        "json": str(squad_report_root / "nightly-ocr-manifest.json"),
+        "markdown": str(squad_report_root / "nightly-ocr-manifest.md"),
+    }
+    assert body["job"]["payload"]["dataset_format"] == "manifest"
+    assert body["job"]["payload"]["report_paths"] == body["report_paths"]
+
+    eval_runs = evals_client.get("/evals/runs", headers=evals_admin_headers)
+    assert eval_runs.status_code == 200
+    assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
+    assert eval_runs.json()[0]["report"]["suite_name"] == "ocr-manifest"
 
 
 def test_squad_eval_accepts_absolute_dataset_path_inside_root(

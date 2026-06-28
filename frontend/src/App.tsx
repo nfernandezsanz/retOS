@@ -191,25 +191,21 @@ function contradictionAuditFor(result: AgentQueryResult) {
   );
 }
 
-type EvalMetrics = {
-  retrieval_recall: number;
-  citation_validity: number;
-  grounded_answer: number;
-  abstention: number;
-  budget_compliance: number;
-};
+type EvalMetrics = Record<string, number>;
 
 type EvalCaseResult = {
   case_id: string;
-  question: string;
+  question?: string;
   passed: boolean;
-  retrieval_recall: boolean;
-  citation_validity: boolean;
-  grounded_answer: boolean;
-  abstention: boolean;
-  budget_compliance: boolean;
-  answer: string;
-  citations: Record<string, unknown>[];
+  retrieval_recall?: boolean;
+  citation_validity?: boolean;
+  grounded_answer?: boolean;
+  abstention?: boolean;
+  budget_compliance?: boolean;
+  answer?: string;
+  citations?: Record<string, unknown>[];
+  character_error_rate?: number;
+  word_error_rate?: number;
   failures: string[];
 };
 
@@ -734,6 +730,25 @@ async function runNaturalQuestionsEval(
   });
 }
 
+async function runOcrBenchmarkEval(
+  token: string,
+  payload: {
+    dataset_path: string;
+    dataset_format: string;
+    max_cases: number;
+    write_report: boolean;
+    report_stem: string | null;
+  },
+): Promise<EvalRunResponse> {
+  return requestJson<EvalRunResponse>("/evals/ocr-benchmark", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 async function loadEvalRuns(token: string): Promise<EvalRunRead[]> {
   return requestJson<EvalRunRead[]>("/evals/runs?limit=6", {
     headers: {
@@ -955,6 +970,7 @@ function App() {
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
   const [isRunningHotpotQAEval, setIsRunningHotpotQAEval] = useState(false);
   const [isRunningNaturalQuestionsEval, setIsRunningNaturalQuestionsEval] = useState(false);
+  const [isRunningOcrBenchmarkEval, setIsRunningOcrBenchmarkEval] = useState(false);
   const [isComparingEvals, setIsComparingEvals] = useState(false);
   const [squadDatasetPath, setSquadDatasetPath] = useState("dev-v2.0.json");
   const [squadMaxCases, setSquadMaxCases] = useState("50");
@@ -974,6 +990,12 @@ function App() {
   const [naturalQuestionsReportStem, setNaturalQuestionsReportStem] = useState(
     "natural-questions-dev-50",
   );
+  const [ocrBenchmarkDatasetPath, setOcrBenchmarkDatasetPath] =
+    useState("ocr-benchmark/manifest.json");
+  const [ocrBenchmarkFormat, setOcrBenchmarkFormat] = useState("manifest");
+  const [ocrBenchmarkMaxCases, setOcrBenchmarkMaxCases] = useState("25");
+  const [ocrBenchmarkWriteReport, setOcrBenchmarkWriteReport] = useState(true);
+  const [ocrBenchmarkReportStem, setOcrBenchmarkReportStem] = useState("ocr-benchmark-25");
   const [evalError, setEvalError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
   const [liveError, setLiveError] = useState<string | null>(null);
@@ -1038,7 +1060,8 @@ function App() {
     isRunningEval ||
     isRunningSquadEval ||
     isRunningHotpotQAEval ||
-    isRunningNaturalQuestionsEval;
+    isRunningNaturalQuestionsEval ||
+    isRunningOcrBenchmarkEval;
   const comparableEvalRuns = evalRuns.filter((run) => run.report !== null);
 
   useEffect(() => {
@@ -1723,6 +1746,37 @@ function App() {
       setEvalError(error instanceof Error ? error.message : "Natural Questions eval failed");
     } finally {
       setIsRunningNaturalQuestionsEval(false);
+    }
+  }
+
+  async function handleRunOcrBenchmarkEval(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsRunningOcrBenchmarkEval(true);
+    setEvalError(null);
+    try {
+      const datasetPath = ocrBenchmarkDatasetPath.trim();
+      const parsedMaxCases = Number.parseInt(ocrBenchmarkMaxCases, 10);
+      if (!datasetPath) {
+        throw new Error("OCR benchmark dataset path is required");
+      }
+      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+        throw new Error("OCR benchmark max cases must be between 1 and 1000");
+      }
+      const accessToken = await getAdminToken();
+      const response = await runOcrBenchmarkEval(accessToken, {
+        dataset_path: datasetPath,
+        dataset_format: ocrBenchmarkFormat,
+        max_cases: parsedMaxCases,
+        write_report: ocrBenchmarkWriteReport,
+        report_stem: ocrBenchmarkReportStem.trim() || null,
+      });
+      applyEvalResponse(response);
+      await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "OCR benchmark eval failed");
+    } finally {
+      setIsRunningOcrBenchmarkEval(false);
     }
   }
 
@@ -2691,6 +2745,73 @@ function App() {
                   : "Run Natural Questions eval"}
               </button>
             </form>
+            <form
+              className="eval-dataset-form"
+              onSubmit={(event) => void handleRunOcrBenchmarkEval(event)}
+            >
+              <label className="span-two">
+                OCR benchmark path
+                <input
+                  aria-label="OCR benchmark path"
+                  value={ocrBenchmarkDatasetPath}
+                  onChange={(event) => setOcrBenchmarkDatasetPath(event.target.value)}
+                  placeholder="ocr-benchmark/manifest.json"
+                />
+              </label>
+              <label>
+                Format
+                <select
+                  aria-label="OCR benchmark format"
+                  value={ocrBenchmarkFormat}
+                  onChange={(event) => setOcrBenchmarkFormat(event.target.value)}
+                >
+                  <option value="manifest">Manifest</option>
+                  <option value="funsd">FUNSD</option>
+                  <option value="sroie">SROIE</option>
+                </select>
+              </label>
+              <label>
+                Max cases
+                <input
+                  aria-label="OCR benchmark max cases"
+                  inputMode="numeric"
+                  min="1"
+                  max="1000"
+                  type="number"
+                  value={ocrBenchmarkMaxCases}
+                  onChange={(event) => setOcrBenchmarkMaxCases(event.target.value)}
+                />
+              </label>
+              <label>
+                Report stem
+                <input
+                  aria-label="OCR benchmark report stem"
+                  disabled={!ocrBenchmarkWriteReport}
+                  value={ocrBenchmarkReportStem}
+                  onChange={(event) => setOcrBenchmarkReportStem(event.target.value)}
+                  placeholder="ocr-benchmark-25"
+                />
+              </label>
+              <label className="checkbox-field">
+                <input
+                  aria-label="Write OCR benchmark reports"
+                  checked={ocrBenchmarkWriteReport}
+                  type="checkbox"
+                  onChange={(event) => setOcrBenchmarkWriteReport(event.target.checked)}
+                />
+                <span>Write reports</span>
+              </label>
+              <button
+                className="secondary-action"
+                disabled={isAnyEvalRunning}
+                type="submit"
+              >
+                <FileSearch aria-hidden="true" />
+                {isRunningOcrBenchmarkEval
+                  ? "Running OCR benchmark"
+                  : "Run OCR benchmark"}
+              </button>
+            </form>
             {evalError ? (
               <p className="inline-error" role="alert">
                 {evalError}
@@ -2715,10 +2836,17 @@ function App() {
                             {evalCase.passed ? "pass" : "fail"}
                           </span>
                           <strong>{evalCase.case_id}</strong>
-                          <span>{evalCase.question}</span>
+                          <span>
+                            {evalCase.question ??
+                              `CER ${formatScore(evalCase.character_error_rate ?? 0)} / WER ${formatScore(
+                                evalCase.word_error_rate ?? 0,
+                              )}`}
+                          </span>
                         </div>
                         <div className="provider-badges">
-                          <span className="badge muted">{evalCase.citations.length} citations</span>
+                          <span className="badge muted">
+                            {(evalCase.citations ?? []).length} citations
+                          </span>
                           <span className="badge muted">
                             {evalCase.failures.length ? evalCase.failures.join(", ") : "no failures"}
                           </span>

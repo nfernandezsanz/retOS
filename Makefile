@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-ocr eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -17,6 +17,7 @@ help:
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
 	@printf "  make eval-smoke       Run deterministic local retrieval/citation evals\n"
 	@printf "  make eval-ocr         Run opt-in local OCR quality evals\n"
+	@printf "  make eval-ocr-benchmark Run OCR benchmark evals with OCR_PATH=...\n"
 	@printf "  make eval-squad       Run opt-in SQuAD v2 evals with SQUAD_PATH=...\n"
 	@printf "  make eval-hotpotqa    Run opt-in HotpotQA evals with HOTPOTQA_PATH=...\n"
 	@printf "  make eval-natural-questions Run opt-in Natural Questions evals with NQ_PATH=...\n"
@@ -63,6 +64,12 @@ eval-smoke:
 
 eval-ocr:
 	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite ocr-smoke --format markdown $(if $(REPORT_DIR),--report-dir "$(REPORT_DIR)",) $(if $(REPORT_STEM),--report-stem "$(REPORT_STEM)",)
+
+eval-ocr-benchmark:
+ifndef OCR_PATH
+	$(error OCR_PATH is required, for example make eval-ocr-benchmark OCR_PATH=evals/datasets/ocr-benchmark/manifest.json)
+endif
+	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite ocr-benchmark --dataset-path "$(OCR_PATH)" --dataset-format "$(or $(OCR_FORMAT),manifest)" --max-cases "$(or $(MAX_CASES),50)" --format markdown $(if $(REPORT_DIR),--report-dir "$(REPORT_DIR)",) $(if $(REPORT_STEM),--report-stem "$(REPORT_STEM)",)
 
 eval-squad:
 ifndef SQUAD_PATH
