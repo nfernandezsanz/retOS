@@ -118,6 +118,13 @@ operator-provided official simplified Natural Questions `.jsonl` or `.jsonl.gz` 
 a bounded local JSONL slice, giving the project a real full document-shape eval path
 without adding network or large-file requirements to CI.
 
+`make eval-calibration` orchestrates bounded public calibration across SQuAD, HotpotQA,
+HotpotQA-agent, and the NQ-Open adapter. It fetches or reuses samples, runs each suite,
+writes per-suite JSON/Markdown reports, and emits
+`evals/reports/calibration/manifest.json` with provenance, metrics, report paths, and
+dataset reuse state. It remains opt-in because it can perform network downloads, while
+unit coverage mocks fetch and eval execution so CI stays deterministic and free.
+
 ## Implemented OCR Quality Smoke
 
 `make eval-ocr` runs `backend/scripts/run_eval_smoke.py --suite ocr-smoke`. It

@@ -11,6 +11,9 @@ tag in GitHub.
 
 ### Added
 
+- Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
+  HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
+  emits a manifest with provenance, metrics, and report paths.
 - Keyboard navigation hardening for the React console, including a skip link to the
   workspace, visible sidebar focus rings, and mobile browser coverage for provider,
   eval, and audit surfaces.
