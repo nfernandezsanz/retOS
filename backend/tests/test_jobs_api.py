@@ -27,6 +27,7 @@ def jobs_client(settings: Settings, jobs_db_path: Path) -> Iterator[TestClient]:
         update={
             "database_url": f"sqlite+aiosqlite:///{jobs_db_path}",
             "database_create_all": True,
+            "index_root": str(jobs_db_path.parent / "index"),
         }
     )
     with TestClient(create_app(local_settings)) as test_client:
@@ -284,6 +285,40 @@ def test_retry_failed_index_job_creates_audited_queued_job(
     assert (journal_count, progress_count) == (1, 1)
 
 
+def test_retry_failed_eval_job_reruns_through_eval_harness(
+    jobs_client: TestClient,
+    jobs_admin_headers: dict[str, str],
+) -> None:
+    created = jobs_client.post(
+        "/jobs",
+        json={"kind": "eval.run", "payload": {"suite_name": "retos-smoke"}},
+        headers=jobs_admin_headers,
+    )
+    assert created.status_code == 201
+    original = created.json()
+    assert (
+        jobs_client.post(f"/jobs/{original['id']}/start", headers=jobs_admin_headers).status_code
+        == 200
+    )
+    failed = jobs_client.post(
+        f"/jobs/{original['id']}/fail",
+        json={"error": "fixture eval failure"},
+        headers=jobs_admin_headers,
+    )
+    assert failed.status_code == 200
+
+    retried = jobs_client.post(f"/jobs/{original['id']}/retry", headers=jobs_admin_headers)
+
+    assert retried.status_code == 202
+    retry_job = retried.json()
+    assert retry_job["id"] != original["id"]
+    assert retry_job["kind"] == "eval.run"
+    assert retry_job["status"] == "succeeded"
+    assert retry_job["payload"]["suite_name"] == "retos-smoke"
+    assert retry_job["payload"]["rerun_from_job_id"] == original["id"]
+    assert retry_job["payload"]["result"]["suite_name"] == "retos-smoke"
+
+
 def test_retry_rejects_active_or_unsupported_jobs(
     jobs_client: TestClient,
     jobs_admin_headers: dict[str, str],
@@ -368,7 +403,6 @@ def test_retry_dispatch_plan_supports_worker_backed_jobs(
             ),
             "Text ingestion retry requires domain_id",
         ),
-        (job_fixture(kind="eval.run"), "cannot be retried"),
     ],
 )
 def test_retry_dispatch_plan_rejects_unrunnable_jobs(job: Job, detail: str) -> None:

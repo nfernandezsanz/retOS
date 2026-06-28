@@ -211,6 +211,7 @@ async def retry_job(
     job_id: Annotated[str, Path(min_length=1)],
 ) -> JobRead:
     now = datetime.now(UTC)
+    should_rerun_eval = False
     async with uow:
         original = await uow.jobs.get(job_id)
         if original is None:
@@ -220,7 +221,13 @@ async def retry_job(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Cannot retry job from {original.status}",
             )
-        plan = retry_dispatch_plan(original)
+        if original.kind == "eval.run":
+            should_rerun_eval = True
+            plan = None
+            job = None
+        else:
+            plan = retry_dispatch_plan(original)
+            job = None
         if original.domain_id is not None and await uow.domains.get(original.domain_id) is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
         if original.source_id is not None:
@@ -235,41 +242,57 @@ async def retry_job(
                     detail="Source does not belong to domain",
                 )
 
-        retry_payload = {
-            **original.payload,
-            "retried_from_job_id": original.id,
-            "retry_requested_at": now.isoformat(),
-        }
-        job = await uow.jobs.add(
-            kind=original.kind,
-            status="queued",
-            domain_id=original.domain_id,
-            source_id=original.source_id,
-            payload=retry_payload,
-        )
-        await uow.journal_events.add(
-            actor=actor,
-            event_type="job.retry_queued",
-            entity_type="job",
-            entity_id=job.id,
-            payload={
-                "from_job_id": original.id,
-                "kind": job.kind,
-                "dispatch_task": plan.task_name,
-            },
-        )
-        await uow.progress_events.add(
-            job_id=job.id,
-            event_type="job.retry_queued",
-            message=f"Queued retry for {job.kind}",
-            payload={
-                "from_job_id": original.id,
-                "dispatch_task": plan.task_name,
-                "status": job.status,
-            },
-        )
-        await uow.commit()
+        if not should_rerun_eval:
+            assert plan is not None
+            retry_payload = {
+                **original.payload,
+                "retried_from_job_id": original.id,
+                "retry_requested_at": now.isoformat(),
+            }
+            job = await uow.jobs.add(
+                kind=original.kind,
+                status="queued",
+                domain_id=original.domain_id,
+                source_id=original.source_id,
+                payload=retry_payload,
+            )
+            await uow.journal_events.add(
+                actor=actor,
+                event_type="job.retry_queued",
+                entity_type="job",
+                entity_id=job.id,
+                payload={
+                    "from_job_id": original.id,
+                    "kind": job.kind,
+                    "dispatch_task": plan.task_name,
+                },
+            )
+            await uow.progress_events.add(
+                job_id=job.id,
+                event_type="job.retry_queued",
+                message=f"Queued retry for {job.kind}",
+                payload={
+                    "from_job_id": original.id,
+                    "dispatch_task": plan.task_name,
+                    "status": job.status,
+                },
+            )
+            await uow.commit()
 
+    if should_rerun_eval:
+        from retos.api.routes.evals import rerun_eval_job
+
+        response = await rerun_eval_job(
+            actor=actor,
+            settings=settings,
+            uow=uow,
+            job_id=job_id,
+            require_domain_for_viewer=False,
+        )
+        return response.job
+
+    assert job is not None
+    assert plan is not None
     if settings.env != "test":
         dispatch_retry_job(job, plan)
     progress_store.append(

@@ -81,7 +81,7 @@ The UI is a working console, not a landing page. It must make background process
   state, and final progress message without losing the underlying audit trail.
 - The selected job detail panel shows status, kind, domain/source IDs, timestamps,
   full JSON payload, error text, and persisted progress events for the selected job.
-- Failed and cancelled worker-backed jobs expose a retry action. The UI posts to
+- Failed and cancelled runnable jobs expose a retry action. The UI posts to
   `/jobs/{job_id}/retry`, selects the new queued job, and shows its retry metadata in the
   detail panel.
 - The shell includes a keyboard-visible skip link to the workspace, keeps sidebar focus
@@ -103,8 +103,9 @@ Show:
 - Progress bars when totals are known.
 - Counters for discovered, processed, skipped, and failed files.
 - Last SSE event and timestamp.
-- Retry action for failed jobs. Implemented for worker-backed jobs through the audit
-  panel; eval reruns remain explicit through the eval controls.
+- Retry action for failed jobs. Implemented for worker-backed jobs and persisted eval
+  runs through the audit panel; eval reruns also remain explicit through the eval
+  controls.
 - Normalized error detail with suggested action.
 - Snapshot recovery plus `Last-Event-ID` reconnect semantics. The live ledger,
   persisted resume cursor, per-job progress grouping, and per-job detail drilldowns

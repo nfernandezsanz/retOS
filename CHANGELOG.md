@@ -99,6 +99,8 @@ tag in GitHub.
   Python certificate-store drift during opt-in real-dataset calibration.
 - Tantivy search now falls back to a sanitized natural-language query when the native
   parser rejects punctuation from real user questions.
+- The generic job retry endpoint now reruns failed or cancelled `eval.run` jobs through
+  the eval harness, preserving `rerun_from_job_id` for audit traceability.
 
 ### Changed
 

@@ -351,6 +351,23 @@ async def rerun_eval(
     uow: UnitOfWorkDep,
     job_id: Annotated[str, PathParam(min_length=1)],
 ) -> EvalRunResponse:
+    return await rerun_eval_job(
+        actor=actor,
+        settings=settings,
+        uow=uow,
+        job_id=job_id,
+        require_domain_for_viewer=True,
+    )
+
+
+async def rerun_eval_job(
+    *,
+    actor: str,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+    job_id: str,
+    require_domain_for_viewer: bool,
+) -> EvalRunResponse:
     async with uow:
         original_job = await uow.jobs.get(job_id)
     plan = rerun_plan_from_eval_job(original_job)
@@ -359,7 +376,7 @@ async def rerun_eval(
         actor=actor,
         domain_id=plan_domain_id,
         uow=uow,
-        require_domain_for_viewer=True,
+        require_domain_for_viewer=require_domain_for_viewer,
     )
     if plan.suite_name == "retos-smoke":
         return await run_smoke_eval_plan(
