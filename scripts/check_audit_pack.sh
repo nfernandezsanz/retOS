@@ -88,6 +88,7 @@ for phrase in (
     "GHCR",
     "SBOM/provenance",
     "Cosign",
+    "tag-to-digest resolution",
     "Branch coverage",
     "95.20% total",
     "90.44% branch-only",

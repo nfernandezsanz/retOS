@@ -114,7 +114,7 @@ production promotion:
 | --- | --- |
 | GHCR digests | `.github/workflows/release.yml` run for the immutable release tag after dependency audits, browser smoke, and visual audit screenshots pass. |
 | SBOM/provenance | GitHub Actions build attestations requested by the release workflow. |
-| Cosign signature verification | `make release-evidence-check` / `scripts/check_published_release_evidence.sh` run with the workflow summary's backend and web digests. |
+| Cosign signature and tag verification | `make release-evidence-check` / `scripts/check_published_release_evidence.sh` run with the workflow summary's backend and web digests, verifying signatures and immutable version tag-to-digest resolution. |
 | Broader calibration or accepted pilot scope | Additional public-slice trend evidence, or an explicit human acceptance of the bounded 200-record/40-case pilot scope. |
 | Human security review | `SECURITY.md` target-environment review of auth, secrets, CORS, exposed ports, backups, provider keys, and rollback ownership. |
 
@@ -126,7 +126,7 @@ These items must be closed before a final production release:
 | --- | --- |
 | GHCR publish evidence missing | Run `.github/workflows/release.yml` for the immutable release tag and record backend/web image digests. |
 | SBOM/provenance evidence missing | Link or copy the attestation evidence from the release workflow into the versioned release note. |
-| Cosign signature evidence missing | Run `make release-evidence-check` with the published digests and record successful keyless signature verification for both images. |
+| Cosign signature/tag evidence missing | Run `make release-evidence-check` with the published digests and record successful keyless signature verification plus version tag-to-digest resolution for both images. |
 | Broader public calibration pending | Add trend evidence beyond the current 200-record/40-case public slices or document the pilot scope limit. |
 | Human security review pending | Review auth, secrets, exposed ports, CORS, backup handling, and provider key handling for the target environment. |
 

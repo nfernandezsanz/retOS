@@ -119,8 +119,18 @@ for phrase in (
     "make docker-runtime-image-check",
     "make docker-smoke",
     "make release-evidence-check",
+    "tag-to-digest resolution",
 ):
     require(phrase in operations, f"docs/operations.md missing operational phrase: {phrase}")
+
+published_evidence = Path("scripts/check_published_release_evidence.sh").read_text(encoding="utf-8")
+for phrase in (
+    "validate_version",
+    "docker buildx imagetools inspect",
+    "RETOS_SKIP_TAG_DIGEST_CHECK",
+    "Immutable tags resolve to the recorded digests",
+):
+    require(phrase in published_evidence, f"published release evidence checker missing {phrase}")
 
 require(
     "one shared backend image reused by API, worker, and migrations" in readme,

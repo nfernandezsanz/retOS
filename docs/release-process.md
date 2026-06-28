@@ -70,7 +70,8 @@ make docker-smoke
    browser smoke, visual audit with downloadable screenshots and hash metadata, release
    readiness, and production preflight before any image is pushed.
 7. Copy the backend and web digests from the workflow summary, then verify the published
-   evidence independently:
+   evidence independently. The check verifies Cosign signatures and confirms each
+   immutable version tag resolves to the recorded digest:
 
 ```bash
 VERSION="${RETOS_RELEASE_VERSION}" \
@@ -192,8 +193,9 @@ Images:
   offline manifest export, and promotion preparation. It does not replace tag publishing,
   GHCR digests, SBOM/provenance, Cosign verification, or target-environment review.
 - `scripts/check_published_release_evidence.sh` is the independent post-publish verifier
-  for immutable image digests. Run it through `make release-evidence-check` before final
-  promotion evidence is accepted.
+  for immutable image digests, Cosign signatures, and version tag-to-digest resolution.
+  Run it through `make release-evidence-check` before final promotion evidence is
+  accepted.
 - CI validates release docs through `make release-check`.
 - CI validates Python and Node dependency advisories before tests and browser smoke.
 - CI validates the production readiness audit pack through `make audit-pack-check`.
