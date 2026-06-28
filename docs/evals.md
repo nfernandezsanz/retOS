@@ -357,19 +357,19 @@ make eval-fetch-dataset PROFILE=nq-simplified-local \
 Run the bounded public calibration set end-to-end:
 
 ```bash
-make eval-calibration MAX_RECORDS=100 MAX_CASES=50
-make eval-calibration TARGET=hotpotqa-agent MAX_RECORDS=100 MAX_CASES=25
-make eval-calibration MAX_RECORDS=100 MAX_CASES=50 \
+make eval-calibration MAX_RECORDS=200 MAX_CASES=40
+make eval-calibration TARGET=hotpotqa-agent MAX_RECORDS=200 MAX_CASES=40
+make eval-calibration MAX_RECORDS=200 MAX_CASES=40 \
   METRIC_GATES="retrieval_recall=0.80 citation_validity=1.0"
-make eval-calibration MAX_RECORDS=100 MAX_CASES=50 \
+make eval-calibration MAX_RECORDS=200 MAX_CASES=40 \
   METRIC_GATES="squad.retrieval_recall=0.80 hotpotqa.retrieval_recall=0.70 hotpotqa-agent.multi_hop_support=0.70 natural-questions.retrieval_recall=0.80"
 make eval-calibration-evidence \
   OUTPUT=docs/releases/evidence/2026.06.28-alpha.1-calibration.md \
   TITLE="RetOS 2026.06.28-alpha.1 Calibration Evidence" \
-  COMMAND="make eval-calibration MAX_RECORDS=100 MAX_CASES=50 ..."
+  COMMAND="make eval-calibration MAX_RECORDS=200 MAX_CASES=40 ..."
 make eval-calibration-compare \
-  BASELINE=evals/reports/calibration-50/manifest.json \
-  CANDIDATE=evals/reports/calibration-100/manifest.json \
+  BASELINE=evals/reports/calibration-100/manifest.json \
+  CANDIDATE=evals/reports/calibration-200/manifest.json \
   OUTPUT=docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md \
   TITLE="RetOS 2026.06.28-alpha.1 Calibration Trend Evidence" \
   MAX_REGRESSION=0

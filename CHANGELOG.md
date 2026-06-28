@@ -105,11 +105,11 @@ tag in GitHub.
 - HotpotQA and HotpotQA-agent calibration now use deterministic named-entity follow-up
   retrieval and a larger supporting-fact evidence budget, improving bounded public
   sample grounding and multi-hop support to PASS without provider calls.
-- Release calibration evidence now records a 100-record public dataset sample with 30
+- Release calibration evidence now records a 200-record public dataset sample with 40
   evaluated cases per target across SQuAD, HotpotQA, HotpotQA-agent, and NQ-Open adapter
   samples.
 - Release calibration trend evidence now records a zero-regression PASS from
-  50-record/20-case to 100-record/30-case public samples after hardening deterministic
+  100-record/30-case to 200-record/40-case public samples after hardening deterministic
   HotpotQA follow-up retrieval.
 - Compose now builds the shared backend image only through the `api` service; `worker`
   and `migrate` reuse the same `retos-backend` tag instead of declaring parallel builds.
