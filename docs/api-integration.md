@@ -963,8 +963,8 @@ benchmark evals, read recent jobs, inspect a selected job's full payload/error/p
 detail, read persisted audit/progress events, group progress by job, filter the job
 ledger by status/kind, and send queries against the selected domain. Query execution
 uses `run_inline=true` so the UI can render the answer, citations, evidence route,
-neighbor context, provider metadata, budget usage, evidence audit, and contradiction
-audit immediately.
+multi-hop audit, neighbor context, provider metadata, budget usage, evidence audit,
+and contradiction audit immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.

@@ -806,6 +806,18 @@ button:focus-visible {
   padding: 12px;
 }
 
+.multi-hop-audit {
+  background: #f8fafc;
+}
+
+.audit-note {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .route-summary {
   display: flex;
   flex-wrap: wrap;

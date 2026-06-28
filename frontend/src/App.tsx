@@ -180,6 +180,15 @@ type AgentEvidenceRoute = {
   }[];
 };
 
+type AgentMultiHopAudit = {
+  checked: boolean;
+  requires_multi_hop: boolean;
+  status: string;
+  document_count: number;
+  bridge_terms: string[];
+  warnings: string[];
+};
+
 type AgentQueryResult = {
   answer: string;
   provider: string;
@@ -199,6 +208,7 @@ type AgentQueryResult = {
       summary: string;
     }[];
   } | null;
+  multi_hop_audit?: AgentMultiHopAudit | null;
   evidence_route?: AgentEvidenceRoute | null;
   usage: AgentBudgetUsage;
   citations: AgentCitation[];
@@ -226,6 +236,20 @@ function contradictionAuditFor(result: AgentQueryResult) {
       checked: false,
       conflict_count: 0,
       findings: [],
+    }
+  );
+}
+
+function multiHopAuditFor(result: AgentQueryResult): AgentMultiHopAudit {
+  const documentCount = new Set(result.citations.map((citation) => citation.document_id)).size;
+  return (
+    result.multi_hop_audit ?? {
+      checked: false,
+      requires_multi_hop: false,
+      status: documentCount > 1 ? "opportunistic_multi_document" : "not_required",
+      document_count: documentCount,
+      bridge_terms: [],
+      warnings: [],
     }
   );
 }
@@ -2737,6 +2761,7 @@ function App() {
                 (() => {
                   const evidenceAudit = evidenceAuditFor(queryResult);
                   const contradictionAudit = contradictionAuditFor(queryResult);
+                  const multiHopAudit = multiHopAuditFor(queryResult);
                   const evidenceRoute = evidenceRouteFor(queryResult);
                   return (
                 <>
@@ -2820,6 +2845,37 @@ function App() {
                           </article>
                         ))}
                       </div>
+                    ) : null}
+                  </div>
+                  <div className="evidence-route multi-hop-audit" aria-label="Multi-hop audit">
+                    <div className="route-summary">
+                      <span
+                        className={
+                          multiHopAudit.status === "supported_multi_document"
+                            ? "badge success"
+                            : multiHopAudit.requires_multi_hop
+                              ? "badge warning"
+                              : "badge muted"
+                        }
+                      >
+                        {multiHopAudit.status.replaceAll("_", " ")}
+                      </span>
+                      <span className={multiHopAudit.requires_multi_hop ? "badge warning" : "badge muted"}>
+                        {multiHopAudit.requires_multi_hop ? "multi-hop question" : "single-hop question"}
+                      </span>
+                      <span className={multiHopAudit.document_count > 1 ? "badge success" : "badge muted"}>
+                        {multiHopAudit.document_count} documents
+                      </span>
+                      {multiHopAudit.warnings.map((warning) => (
+                        <span className="badge warning" key={warning}>
+                          {warning.replaceAll("_", " ")}
+                        </span>
+                      ))}
+                    </div>
+                    {multiHopAudit.bridge_terms.length > 0 ? (
+                      <p className="audit-note">
+                        Bridge terms: {multiHopAudit.bridge_terms.join(", ")}
+                      </p>
                     ) : null}
                   </div>
                   {(queryResult.neighbor_context ?? []).length > 0 ? (

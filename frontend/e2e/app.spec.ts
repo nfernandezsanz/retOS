@@ -901,6 +901,14 @@ async function mockProviderApi(page: Page) {
             conflict_count: 0,
             findings: [],
           },
+          multi_hop_audit: {
+            checked: true,
+            requires_multi_hop: true,
+            status: "supported_multi_document",
+            document_count: 2,
+            bridge_terms: ["search", "readiness"],
+            warnings: [],
+          },
           evidence_route: {
             coverage_level: "single_segment",
             segment_count: 1,
@@ -1181,6 +1189,9 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Query budget usage").getByText("Route single segment")).toBeVisible();
   await expect(page.getByLabel("Evidence route").getByText("single citation")).toBeVisible();
   await expect(page.getByLabel("Evidence route").getByText("Smoke Document")).toBeVisible();
+  await expect(page.getByLabel("Multi-hop audit").getByText("supported multi document")).toBeVisible();
+  await expect(page.getByLabel("Multi-hop audit").getByText("multi-hop question")).toBeVisible();
+  await expect(page.getByLabel("Multi-hop audit").getByText("Bridge terms: search, readiness")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();
   await expect(page.getByText("page=1")).toBeVisible();

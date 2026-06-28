@@ -30,6 +30,8 @@ tag in GitHub.
   enabling full document-shape eval slices without CI network downloads.
 - Deterministic multi-hop query audit that records whether multi-part questions have
   cross-document evidence and bridge terms.
+- React query results now show multi-hop audit status, document breadth, warnings, and
+  bridge terms.
 
 ### Changed
 
