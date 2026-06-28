@@ -47,6 +47,8 @@ make release-check
 make audit-pack-check
 make production-preflight
 make auditor-static-check
+docker compose --env-file .env.example config
+docker compose --dry-run build
 make dependency-audit
 make ci-status-check
 make check
@@ -85,6 +87,8 @@ make release-evidence-check
 | API smoke | Yes |
 | Browser smoke | Yes |
 | Visual audit screenshots | Yes |
+| Compose config | Yes |
+| Docker build dry run | Yes |
 | Docker stack smoke | Yes |
 | Image size budgets | Yes |
 | GHCR publishing | Yes |

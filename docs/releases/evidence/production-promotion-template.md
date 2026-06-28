@@ -31,6 +31,8 @@ Paste or link the output for each gate:
 - `make frontend-test`
 - `make frontend-e2e`
 - `make frontend-visual-audit`
+- `docker compose --env-file .env.example config`
+- `docker compose --dry-run build`
 - `make docker-smoke`
 - `make release-check`
 - `make production-preflight`

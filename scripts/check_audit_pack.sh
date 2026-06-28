@@ -57,6 +57,8 @@ for phrase in (
     "make frontend-test",
     "make frontend-e2e",
     "make frontend-visual-audit",
+    "docker compose --env-file .env.example config",
+    "docker compose --dry-run build",
     "make brand-check",
     "make docker-smoke",
     "make dependency-audit",
