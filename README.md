@@ -1,5 +1,7 @@
 # RetOS
 
+![RetOS project card](docs/assets/retos-project-card.svg)
+
 RetOS is a local-first research system for auditable document investigation. It is designed to run as a reusable Docker stack with a React console, a FastAPI backend, Celery workers backed by RabbitMQ, Postgres persistence, Tantivy BM25 search, local OCR, and a Deep Agents research runtime.
 
 The source of truth is the versioned corpus store. Search indexes are rebuildable projections, not the canonical record.
@@ -55,6 +57,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
   runs, local eval execution, and admin account management.
 - Docker Compose for Postgres, RabbitMQ, Ollama, web, and one shared backend image reused by API, worker, and migrations through role-specific commands.
 - Planning, ADRs, and architecture assets for the open source implementation path.
+- Branding assets and visual guidance for a coherent audit-console identity.
 - Test and coverage defaults that avoid paid LLM calls.
 - CI jobs that validate backend format, PEP 8, types, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke.
 - Release workflow for GHCR image publishing with SBOM/provenance attestations and Cosign

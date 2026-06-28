@@ -2679,8 +2679,11 @@ function App() {
       </a>
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="brand">
-          <ServerCog aria-hidden="true" />
-          <span>RetOS</span>
+          <img src="/retos-mark.svg" alt="" aria-hidden="true" />
+          <div>
+            <span>RetOS</span>
+            <small>Audit console</small>
+          </div>
         </div>
         <nav>
           <a href="#overview">Overview</a>
@@ -2697,6 +2700,10 @@ function App() {
           <div>
             <p className="eyebrow">Local-first research console</p>
             <h1>Auditable document investigation</h1>
+            <p className="hero-copy">
+              Manage corpus state, trace every processing step, and keep local eval evidence
+              visible before a human auditor signs off.
+            </p>
           </div>
           <button
             type="button"
@@ -2708,6 +2715,21 @@ function App() {
             {isLoadingWorkspace ? "Refreshing workspace" : "Refresh workspace"}
           </button>
         </header>
+
+        <section className="brand-brief" aria-label="RetOS operating posture">
+          <div>
+            <ServerCog aria-hidden="true" />
+            <span>Docker-first runtime</span>
+          </div>
+          <div>
+            <ShieldAlert aria-hidden="true" />
+            <span>Hash-chained journals</span>
+          </div>
+          <div>
+            <CheckCircle2 aria-hidden="true" />
+            <span>No paid calls in tests</span>
+          </div>
+        </section>
 
         <section className="metrics" aria-label="System metrics">
           {metrics.map((metric) => {

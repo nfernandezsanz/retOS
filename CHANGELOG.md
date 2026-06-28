@@ -109,9 +109,14 @@ tag in GitHub.
 - Eval report artifact tests now cover path-safe report stem sanitization and JSON/Markdown
   writes, and coverage excludes type-only `Protocol` declarations from runtime branch
   accounting.
+- RetOS now ships a project mark, README project card, favicon metadata, and documented
+  brand tokens for the React audit console.
 
 ### Changed
 
+- The React console now uses a more explicit audit-console brand treatment with a
+  compact operating-posture band, stronger first-viewport identity, reduced-motion
+  handling, and stable responsive heading sizing.
 - HotpotQA and HotpotQA-agent calibration now use deterministic named-entity follow-up
   retrieval and a larger supporting-fact evidence budget, improving bounded public
   sample grounding and multi-hop support to PASS without provider calls.

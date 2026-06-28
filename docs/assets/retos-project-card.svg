@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">RetOS project card</title>
+  <desc id="desc">RetOS branding card for an auditable local-first document research system.</desc>
+  <rect width="1200" height="630" fill="#f8fafc"/>
+  <rect x="72" y="72" width="1056" height="486" rx="32" fill="#ffffff" stroke="#dbe3ef" stroke-width="3"/>
+  <rect x="112" y="112" width="112" height="112" rx="24" fill="#0f172a"/>
+  <path d="M145 142h38l14 14v42h-52z" fill="#f8fafc"/>
+  <path d="M183 142v16h16" fill="#dbeafe"/>
+  <path d="M154 168h32M154 180h21M154 192h32" stroke="#2563eb" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="198" cy="199" r="15" fill="#f97316"/>
+  <path d="m191 199 5 5 10-12" fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="248" y="162" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="800">RetOS</text>
+  <text x="250" y="208" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="600">Local-first auditable document research</text>
+  <rect x="112" y="280" width="260" height="118" rx="18" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>
+  <rect x="402" y="280" width="260" height="118" rx="18" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="2"/>
+  <rect x="692" y="280" width="260" height="118" rx="18" fill="#fff7ed" stroke="#fed7aa" stroke-width="2"/>
+  <text x="140" y="328" fill="#1d4ed8" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800">Traceable</text>
+  <text x="140" y="366" fill="#334155" font-family="Inter, Arial, sans-serif" font-size="20">Journals, hashes, SSE</text>
+  <text x="430" y="328" fill="#166534" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800">Local-first</text>
+  <text x="430" y="366" fill="#334155" font-family="Inter, Arial, sans-serif" font-size="20">Ollama, Docker, no paid tests</text>
+  <text x="720" y="328" fill="#9a3412" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800">Evidence-led</text>
+  <text x="720" y="366" fill="#334155" font-family="Inter, Arial, sans-serif" font-size="20">Citations, evals, audits</text>
+  <path d="M144 470h240M432 470h240M720 470h240" stroke="#dbe3ef" stroke-width="6" stroke-linecap="round"/>
+  <path d="M144 470h192M432 470h216M720 470h168" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="336" cy="470" r="10" fill="#f97316"/>
+  <circle cx="648" cy="470" r="10" fill="#f97316"/>
+  <circle cx="888" cy="470" r="10" fill="#f97316"/>
+</svg>

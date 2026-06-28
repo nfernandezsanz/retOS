@@ -1,0 +1,36 @@
+# RetOS Branding
+
+RetOS should feel like an operational research console: calm, auditable, local-first, and ready for repeated technical use.
+
+## Visual Principles
+
+- Use dense, scan-friendly layouts for work surfaces.
+- Prefer flat colors, crisp borders, and stable hover/focus states.
+- Avoid decorative gradients, oversized marketing sections, and purely atmospheric imagery.
+- Keep every status readable with text plus color; color alone is never the signal.
+
+## Palette
+
+| Role | Hex | Use |
+| --- | --- | --- |
+| Ink | `#0f172a` | Sidebar, primary text, brand ground |
+| Surface | `#ffffff` | Panels and repeated rows |
+| Canvas | `#f8fafc` | Page background and quiet grouped areas |
+| Border | `#dbe3ef` | Panel, row, and input borders |
+| Primary | `#2563eb` | Navigation focus, links, selected operational state |
+| Primary Soft | `#eff6ff` | Informational status backgrounds |
+| Action | `#f97316` | Primary calls to action and verification accent |
+| Success | `#166534` | Passing checks and healthy local state |
+| Warning | `#9a3412` | Attention states and archived records |
+| Danger | `#991b1b` | Destructive or failed states |
+
+## Typography
+
+The app uses system UI fonts by default for Docker/offline reliability. The intended brand direction is Plus Jakarta Sans-compatible: geometric, readable, and professional. Avoid decorative typefaces.
+
+## Assets
+
+- Frontend mark: `frontend/public/retos-mark.svg`
+- Project card: `docs/assets/retos-project-card.svg`
+
+The mark represents a document ledger, a verification path, and a local runtime surface. It should be used as the favicon, sidebar brand mark, and compact project identity image.
