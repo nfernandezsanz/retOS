@@ -118,8 +118,8 @@ text blob.
 | Dataset | Fit |
 | --- | --- |
 | SQuAD 2.0 | Implemented as an opt-in local adapter and admin API run for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
+| HotpotQA | Implemented as an opt-in local adapter and admin API run for multi-hop retrieval and supporting-fact evaluation, with optional JSON/Markdown report export. |
 | Natural Questions | Real user questions with Wikipedia evidence for open-domain retrieval pressure. |
-| HotpotQA | Multi-hop retrieval and supporting-fact evaluation for explainability. |
 | FUNSD | Form understanding, OCR quality, and future layout-aware page artifacts. |
 | ICDAR 2019 SROIE | Receipt OCR and key information extraction pressure. |
 | ISRI OCR Evaluation Tools | OCR scoring methodology reference for CER/WER-style checks. |

@@ -687,6 +687,24 @@ async function runSquadEval(
   });
 }
 
+async function runHotpotQAEval(
+  token: string,
+  payload: {
+    dataset_path: string;
+    max_cases: number;
+    write_report: boolean;
+    report_stem: string | null;
+  },
+): Promise<EvalRunResponse> {
+  return requestJson<EvalRunResponse>("/evals/hotpotqa", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 async function loadEvalRuns(token: string): Promise<EvalRunRead[]> {
   return requestJson<EvalRunRead[]>("/evals/runs?limit=6", {
     headers: {
@@ -868,11 +886,18 @@ function App() {
   const [evalComparison, setEvalComparison] = useState<EvalRunComparison | null>(null);
   const [isRunningEval, setIsRunningEval] = useState(false);
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
+  const [isRunningHotpotQAEval, setIsRunningHotpotQAEval] = useState(false);
   const [isComparingEvals, setIsComparingEvals] = useState(false);
   const [squadDatasetPath, setSquadDatasetPath] = useState("dev-v2.0.json");
   const [squadMaxCases, setSquadMaxCases] = useState("50");
   const [squadWriteReport, setSquadWriteReport] = useState(true);
   const [squadReportStem, setSquadReportStem] = useState("squad-v2-dev-50");
+  const [hotpotqaDatasetPath, setHotpotqaDatasetPath] = useState(
+    "hotpot_dev_distractor_v1.json",
+  );
+  const [hotpotqaMaxCases, setHotpotqaMaxCases] = useState("50");
+  const [hotpotqaWriteReport, setHotpotqaWriteReport] = useState(true);
+  const [hotpotqaReportStem, setHotpotqaReportStem] = useState("hotpotqa-dev-50");
   const [evalError, setEvalError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
   const [liveError, setLiveError] = useState<string | null>(null);
@@ -929,7 +954,7 @@ function App() {
         : queuedJobs.filter((job) => job.status === jobFilter || job.kind === jobFilter),
     [jobFilter, queuedJobs],
   );
-  const isAnyEvalRunning = isRunningEval || isRunningSquadEval;
+  const isAnyEvalRunning = isRunningEval || isRunningSquadEval || isRunningHotpotQAEval;
   const comparableEvalRuns = evalRuns.filter((run) => run.report !== null);
 
   useEffect(() => {
@@ -1552,6 +1577,36 @@ function App() {
       setEvalError(error instanceof Error ? error.message : "SQuAD eval failed");
     } finally {
       setIsRunningSquadEval(false);
+    }
+  }
+
+  async function handleRunHotpotQAEval(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsRunningHotpotQAEval(true);
+    setEvalError(null);
+    try {
+      const datasetPath = hotpotqaDatasetPath.trim();
+      const parsedMaxCases = Number.parseInt(hotpotqaMaxCases, 10);
+      if (!datasetPath) {
+        throw new Error("HotpotQA dataset path is required");
+      }
+      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+        throw new Error("HotpotQA max cases must be between 1 and 1000");
+      }
+      const accessToken = await getAdminToken();
+      const response = await runHotpotQAEval(accessToken, {
+        dataset_path: datasetPath,
+        max_cases: parsedMaxCases,
+        write_report: hotpotqaWriteReport,
+        report_stem: hotpotqaReportStem.trim() || null,
+      });
+      applyEvalResponse(response);
+      await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "HotpotQA eval failed");
+    } finally {
+      setIsRunningHotpotQAEval(false);
     }
   }
 
@@ -2409,6 +2464,59 @@ function App() {
               >
                 <FileSearch aria-hidden="true" />
                 {isRunningSquadEval ? "Running SQuAD eval" : "Run SQuAD eval"}
+              </button>
+            </form>
+            <form
+              className="eval-dataset-form"
+              onSubmit={(event) => void handleRunHotpotQAEval(event)}
+            >
+              <label className="span-two">
+                HotpotQA dataset path
+                <input
+                  aria-label="HotpotQA dataset path"
+                  value={hotpotqaDatasetPath}
+                  onChange={(event) => setHotpotqaDatasetPath(event.target.value)}
+                  placeholder="hotpot_dev_distractor_v1.json"
+                />
+              </label>
+              <label>
+                Max cases
+                <input
+                  aria-label="HotpotQA max cases"
+                  inputMode="numeric"
+                  min="1"
+                  max="1000"
+                  type="number"
+                  value={hotpotqaMaxCases}
+                  onChange={(event) => setHotpotqaMaxCases(event.target.value)}
+                />
+              </label>
+              <label>
+                Report stem
+                <input
+                  aria-label="HotpotQA report stem"
+                  disabled={!hotpotqaWriteReport}
+                  value={hotpotqaReportStem}
+                  onChange={(event) => setHotpotqaReportStem(event.target.value)}
+                  placeholder="hotpotqa-dev-50"
+                />
+              </label>
+              <label className="checkbox-field">
+                <input
+                  aria-label="Write HotpotQA reports"
+                  checked={hotpotqaWriteReport}
+                  type="checkbox"
+                  onChange={(event) => setHotpotqaWriteReport(event.target.checked)}
+                />
+                <span>Write reports</span>
+              </label>
+              <button
+                className="secondary-action"
+                disabled={isAnyEvalRunning}
+                type="submit"
+              >
+                <FileSearch aria-hidden="true" />
+                {isRunningHotpotQAEval ? "Running HotpotQA eval" : "Run HotpotQA eval"}
               </button>
             </form>
             {evalError ? (

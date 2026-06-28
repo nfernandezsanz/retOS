@@ -40,7 +40,7 @@ Run the same Docker smoke used by CI:
 make docker-smoke
 ```
 
-The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, creates a small mounted `.txt`/`.md`/`.pdf` corpus in the shared storage volume, creates a tiny SQuAD fixture in the eval dataset volume, waits for healthchecks, hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan through the worker, text ingestion through the worker, file upload ingestion through the worker, BM25 index rebuild through the worker, search, local and SQuAD eval endpoints with report export, job lifecycle transitions, persisted audit endpoints, SSE, and web over HTTP, then removes its temporary containers and volumes.
+The smoke test uses a temporary Compose project, builds the app images, runs migrations, starts Postgres, RabbitMQ, API, worker, and web, creates a small mounted `.txt`/`.md`/`.pdf` corpus in the shared storage volume, creates tiny SQuAD and HotpotQA fixtures in the eval dataset volume, waits for healthchecks, hits health, auth, domain/source/document/artifact/segment CRUD, mounted source scan through the worker, text ingestion through the worker, file upload ingestion through the worker, BM25 index rebuild through the worker, search, local and dataset-backed eval endpoints with report export, job lifecycle transitions, persisted audit endpoints, SSE, and web over HTTP, then removes its temporary containers and volumes.
 
 ## Run
 
@@ -89,8 +89,8 @@ Eval datasets and report exports are mounted separately from the corpus and inde
 - `retos_eval_datasets` -> `/var/lib/retos/evals/datasets`
 - `retos_eval_reports` -> `/var/lib/retos/evals/reports`
 
-The SQuAD admin API only reads dataset files under `RETOS_EVAL_DATASET_ROOT` and writes
-reports under `RETOS_EVAL_REPORT_ROOT`.
+Dataset-backed eval APIs only read dataset files under `RETOS_EVAL_DATASET_ROOT` and
+write reports under `RETOS_EVAL_REPORT_ROOT`.
 
 Paid providers remain blocked until both conditions are true:
 

@@ -8,7 +8,13 @@ from pathlib import Path
 
 from pytesseract import TesseractNotFoundError
 
-from retos.evals.datasets import DatasetAdapterError, SquadAdapterOptions, load_squad_v2_cases
+from retos.evals.datasets import (
+    DatasetAdapterError,
+    HotpotQAAdapterOptions,
+    SquadAdapterOptions,
+    load_hotpotqa_cases,
+    load_squad_v2_cases,
+)
 from retos.evals.ocr import OCRQualityReport, run_ocr_quality_suite
 from retos.evals.reports import write_report_files
 from retos.evals.smoke import EvalSuiteReport, run_smoke_eval_suite
@@ -18,7 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run RetOS local smoke evals.")
     parser.add_argument(
         "--suite",
-        choices=("smoke", "squad", "ocr-smoke"),
+        choices=("smoke", "squad", "hotpotqa", "ocr-smoke"),
         default="smoke",
         help="Eval suite to run.",
     )
@@ -139,16 +145,24 @@ def build_report(
     if max_cases is not None and max_cases < 1:
         raise DatasetAdapterError("--max-cases must be greater than zero")
     if dataset_path is None:
-        raise DatasetAdapterError("--dataset-path is required for the SQuAD suite")
-    cases = load_squad_v2_cases(
-        dataset_path,
-        SquadAdapterOptions(max_cases=max_cases),
-    )
+        raise DatasetAdapterError("--dataset-path is required for dataset-backed suites")
+    if suite == "squad":
+        cases = load_squad_v2_cases(
+            dataset_path,
+            SquadAdapterOptions(max_cases=max_cases),
+        )
+        suite_name = "squad-v2"
+    else:
+        cases = load_hotpotqa_cases(
+            dataset_path,
+            HotpotQAAdapterOptions(max_cases=max_cases),
+        )
+        suite_name = "hotpotqa"
     if not cases:
-        raise DatasetAdapterError("SQuAD dataset produced no eval cases")
+        raise DatasetAdapterError(f"{suite_name} dataset produced no eval cases")
     return run_smoke_eval_suite(
         index_root=index_root,
-        suite_name="squad-v2",
+        suite_name=suite_name,
         cases=cases,
     )
 

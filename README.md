@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.20% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.18% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -35,7 +35,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - LLM provider catalog API with local Ollama `gemma4` as the default profile and paid providers blocked unless explicitly enabled.
 - Auditable `agent.query` jobs that use controlled corpus search/read tools, persist grounded answers, citations, and budget usage, and emit journal/progress events.
 - Deterministic local eval smoke for retrieval recall, citation validity, grounded answers, abstention, and budget compliance.
-- Opt-in SQuAD 2.0 adapter and admin API endpoint for local dataset-backed evals without network or paid providers, with optional JSON/Markdown report export.
+- Opt-in SQuAD 2.0 and HotpotQA adapters plus admin API endpoints for local dataset-backed evals without network or paid providers, with optional JSON/Markdown report export.
 - Opt-in OCR quality smoke suite for scanned PDFs, character error rate, and word error rate.
 - Cross-run eval comparison API and React view for latest reported runs, with per-metric deltas.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for
@@ -148,6 +148,7 @@ make test
 make eval-smoke
 make eval-ocr
 make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50 REPORT_DIR=evals/reports
+make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpot_dev_distractor_v1.json MAX_CASES=50 REPORT_DIR=evals/reports
 make api-smoke
 ```
 
@@ -197,12 +198,13 @@ Every meaningful change should pass these gates:
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | OCR eval | `make eval-ocr` | Runs opt-in local OCR quality checks over generated image-only PDFs with CER/WER scoring. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
-| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, eval run comparison, job lifecycle, audit export, and SSE over HTTP. |
+| HotpotQA eval | `make eval-hotpotqa HOTPOTQA_PATH=...` | Runs opt-in HotpotQA multi-hop evals from a user-provided dataset file and can write JSON/Markdown reports. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, SQuAD/HotpotQA evals, eval run comparison, job lifecycle, audit export, and SSE over HTTP. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
-| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state, including admin user management, document edit/archive/restore/history, and eval comparison flows. |
+| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state, including admin user management, document edit/archive/restore/history, dataset-backed evals, and eval comparison flows. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
-| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, eval run comparison, job lifecycle, SSE, and web over HTTP. |
+| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, SQuAD/HotpotQA evals, eval run comparison, job lifecycle, SSE, and web over HTTP. |
 
 ## Security Defaults
 
@@ -227,4 +229,4 @@ evals/        Local evaluation reports and optional dataset caches
 
 ## Project Status
 
-The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: broader dataset adapters, page-level OCR artifacts, and OCR benchmark adapters.
+The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: broader eval coverage, OCR benchmark adapters, and richer multi-hop review.

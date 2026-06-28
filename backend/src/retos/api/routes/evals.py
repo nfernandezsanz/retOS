@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
@@ -9,9 +10,15 @@ from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep
 from retos.api.routes.events import progress_store
 from retos.api.routes.jobs import JobRead
 from retos.domain.jobs import Job, JobStatus
-from retos.evals.datasets import DatasetAdapterError, SquadAdapterOptions, load_squad_v2_cases
+from retos.evals.datasets import (
+    DatasetAdapterError,
+    HotpotQAAdapterOptions,
+    SquadAdapterOptions,
+    load_hotpotqa_cases,
+    load_squad_v2_cases,
+)
 from retos.evals.reports import write_report_files
-from retos.evals.smoke import EvalCaseResult, EvalSuiteReport, run_smoke_eval_suite
+from retos.evals.smoke import EvalCase, EvalCaseResult, EvalSuiteReport, run_smoke_eval_suite
 
 router = APIRouter(prefix="/evals", tags=["evals"])
 
@@ -129,6 +136,13 @@ class SquadEvalRequest(BaseModel):
     report_stem: str | None = Field(default=None, max_length=120)
 
 
+class HotpotQAEvalRequest(BaseModel):
+    dataset_path: str = Field(min_length=1, max_length=500)
+    max_cases: int = Field(default=50, ge=1, le=1000)
+    write_report: bool = False
+    report_stem: str | None = Field(default=None, max_length=120)
+
+
 @router.get("/runs", response_model=list[EvalRunRead])
 async def list_eval_runs(
     _: AdminSubjectDep,
@@ -240,6 +254,58 @@ async def run_squad_evals(
     settings: SettingsDep,
     uow: UnitOfWorkDep,
 ) -> EvalRunResponse:
+    return await run_dataset_evals(
+        request=request,
+        actor=actor,
+        settings=settings,
+        uow=uow,
+        suite_name="squad-v2",
+        suite_label="SQuAD",
+        index_namespace="squad",
+        load_cases=lambda dataset_path: load_squad_v2_cases(
+            dataset_path,
+            SquadAdapterOptions(max_cases=request.max_cases),
+        ),
+    )
+
+
+@router.post(
+    "/hotpotqa",
+    response_model=EvalRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def run_hotpotqa_evals(
+    request: HotpotQAEvalRequest,
+    actor: AdminSubjectDep,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+) -> EvalRunResponse:
+    return await run_dataset_evals(
+        request=request,
+        actor=actor,
+        settings=settings,
+        uow=uow,
+        suite_name="hotpotqa",
+        suite_label="HotpotQA",
+        index_namespace="hotpotqa",
+        load_cases=lambda dataset_path: load_hotpotqa_cases(
+            dataset_path,
+            HotpotQAAdapterOptions(max_cases=request.max_cases),
+        ),
+    )
+
+
+async def run_dataset_evals(
+    *,
+    request: SquadEvalRequest | HotpotQAEvalRequest,
+    actor: str,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+    suite_name: str,
+    suite_label: str,
+    index_namespace: str,
+    load_cases: Callable[[Path], tuple[EvalCase, ...]],
+) -> EvalRunResponse:
     dataset_path = resolve_dataset_path(settings.eval_dataset_root, request.dataset_path)
     if not dataset_path.exists() or not dataset_path.is_file():
         raise HTTPException(
@@ -247,15 +313,14 @@ async def run_squad_evals(
             detail="Eval dataset file not found",
         )
 
-    suite_name = "squad-v2"
     now = datetime.now(UTC)
     job = await queue_eval_job(
         actor=actor,
         uow=uow,
         suite_name=suite_name,
         requested_at=now,
-        queued_message="Queued SQuAD eval suite",
-        started_message="Started SQuAD eval suite",
+        queued_message=f"Queued {suite_label} eval suite",
+        started_message=f"Started {suite_label} eval suite",
         payload={
             "dataset_path": str(dataset_path),
             "max_cases": request.max_cases,
@@ -263,14 +328,11 @@ async def run_squad_evals(
         },
     )
     try:
-        cases = load_squad_v2_cases(
-            dataset_path,
-            SquadAdapterOptions(max_cases=request.max_cases),
-        )
+        cases = load_cases(dataset_path)
         if not cases:
-            raise DatasetAdapterError("SQuAD dataset produced no eval cases")
+            raise DatasetAdapterError(f"{suite_label} dataset produced no eval cases")
         report = run_smoke_eval_suite(
-            index_root=Path(settings.index_root) / "evals" / "squad",
+            index_root=Path(settings.index_root) / "evals" / index_namespace,
             suite_name=suite_name,
             cases=cases,
         )
@@ -284,7 +346,7 @@ async def run_squad_evals(
         await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="SQuAD eval suite failed to run",
+            detail=f"{suite_label} eval suite failed to run",
         ) from exc
 
     report_paths: dict[str, str] | None = None
@@ -299,7 +361,7 @@ async def run_squad_evals(
             await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="SQuAD eval report failed to write",
+                detail=f"{suite_label} eval report failed to write",
             ) from exc
         report_paths = {
             "json": str(json_path),
@@ -312,7 +374,7 @@ async def run_squad_evals(
         job_id=job.id,
         requested_at=now,
         report=report,
-        failure_error="SQuAD eval suite failed",
+        failure_error=f"{suite_label} eval suite failed",
         payload={
             "dataset_path": str(dataset_path),
             "max_cases": request.max_cases,

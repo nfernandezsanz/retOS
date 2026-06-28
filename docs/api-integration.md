@@ -658,6 +658,23 @@ when filesystem export is enabled:
 }
 ```
 
+Run an opt-in HotpotQA eval from a mounted local dataset file:
+
+```bash
+curl --request POST http://localhost:8000/evals/hotpotqa \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "dataset_path":"hotpot_dev_distractor_v1.json",
+    "max_cases":50,
+    "write_report":true,
+    "report_stem":"hotpotqa-dev-50"
+  }'
+```
+
+The response shape matches `/evals/squad`; `report.suite_name` is `hotpotqa`, and
+report exports are written under `RETOS_EVAL_REPORT_ROOT`.
+
 Security and runtime notes:
 
 - `dataset_path` must resolve inside `RETOS_EVAL_DATASET_ROOT`; traversal and
@@ -666,7 +683,7 @@ Security and runtime notes:
 - Adapter or schema errors return `422` and mark the created eval job failed.
 - Reports are written under `RETOS_EVAL_REPORT_ROOT`; clients receive paths for
   later audit/export workflows.
-- API smoke creates a tiny SQuAD fixture and verifies this endpoint over HTTP.
+- API smoke creates tiny SQuAD and HotpotQA fixtures and verifies both endpoints over HTTP.
 
 List recent persisted eval runs:
 
@@ -765,6 +782,7 @@ Current console calls:
 - `GET /evals/runs/compare?baseline_job_id=...&candidate_job_id=...`
 - `POST /evals/smoke`
 - `POST /evals/squad`
+- `POST /evals/hotpotqa`
 - `GET /jobs?limit=12`
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`
@@ -781,7 +799,7 @@ audited local accounts:
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source
-scans, rebuild the BM25 index, run local smoke/SQuAD evals, read recent jobs, read
+scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA evals, read recent jobs, read
 persisted audit/progress events, filter the job ledger by status/kind, and send queries
 against the selected domain. Query execution uses `run_inline=true` so the UI can render
 the answer and citations immediately.

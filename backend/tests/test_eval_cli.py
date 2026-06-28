@@ -55,6 +55,39 @@ def write_squad_cli_fixture(path: Path) -> Path:
     return path
 
 
+def write_hotpotqa_cli_fixture(path: Path) -> Path:
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "_id": "vela-air-force",
+                    "question": (
+                        "Which agency operated Vela spacecraft in the United States "
+                        "Air Force history?"
+                    ),
+                    "answer": "United States Air Force",
+                    "supporting_facts": [["Vela", 0], ["United States Air Force", 0]],
+                    "context": [
+                        [
+                            "Vela",
+                            [
+                                "Vela spacecraft were satellites operated by "
+                                "the United States Air Force."
+                            ],
+                        ],
+                        [
+                            "United States Air Force",
+                            ["The United States Air Force operated satellite programs."],
+                        ],
+                    ],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_eval_cli_runs_squad_suite_from_local_file(tmp_path: Path, capsys) -> None:
     dataset_path = write_squad_cli_fixture(tmp_path / "squad.json")
     cli = load_eval_cli()
@@ -71,6 +104,24 @@ def test_eval_cli_runs_squad_suite_from_local_file(tmp_path: Path, capsys) -> No
     assert exit_code == 0
     assert '"suite_name": "squad-v2"' in captured.out
     assert '"case_count": 2' in captured.out
+
+
+def test_eval_cli_runs_hotpotqa_suite_from_local_file(tmp_path: Path, capsys) -> None:
+    dataset_path = write_hotpotqa_cli_fixture(tmp_path / "hotpot.json")
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="json",
+        suite="hotpotqa",
+        dataset_path=dataset_path,
+        max_cases=1,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert '"suite_name": "hotpotqa"' in captured.out
+    assert '"case_count": 1' in captured.out
 
 
 def test_eval_cli_writes_json_and_markdown_reports(tmp_path: Path, capsys) -> None:
@@ -173,20 +224,20 @@ def test_eval_cli_reports_missing_tesseract_for_ocr_suite(
     assert "tesseract is required" in captured.err
 
 
-def test_eval_cli_requires_dataset_path_for_squad(tmp_path: Path, capsys) -> None:
+def test_eval_cli_requires_dataset_path_for_dataset_suites(tmp_path: Path, capsys) -> None:
     cli = load_eval_cli()
 
     exit_code = cli.run(
         index_root=tmp_path / "index",
         output_format="markdown",
-        suite="squad",
+        suite="hotpotqa",
         dataset_path=None,
         max_cases=1,
     )
 
     captured = capsys.readouterr()
     assert exit_code == 2
-    assert "--dataset-path is required" in captured.err
+    assert "--dataset-path is required for dataset-backed suites" in captured.err
 
 
 def test_eval_cli_rejects_non_positive_max_cases(tmp_path: Path, capsys) -> None:

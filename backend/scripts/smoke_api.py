@@ -102,16 +102,53 @@ def prepare_squad_dataset() -> Path:
     return dataset_path
 
 
+def prepare_hotpotqa_dataset() -> Path:
+    dataset_root = Path(os.environ["RETOS_EVAL_DATASET_ROOT"])
+    dataset_root.mkdir(parents=True, exist_ok=True)
+    dataset_path = dataset_root / "smoke-hotpotqa.json"
+    dataset_path.write_text(
+        json.dumps(
+            [
+                {
+                    "_id": "vela-air-force",
+                    "question": (
+                        "Which agency operated Vela spacecraft in the United States "
+                        "Air Force history?"
+                    ),
+                    "answer": "United States Air Force",
+                    "supporting_facts": [["Vela", 0], ["United States Air Force", 0]],
+                    "context": [
+                        [
+                            "Vela",
+                            [
+                                "Vela spacecraft were satellites operated by "
+                                "the United States Air Force."
+                            ],
+                        ],
+                        [
+                            "United States Air Force",
+                            ["The United States Air Force operated satellite programs."],
+                        ],
+                    ],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return dataset_path
+
+
 def main() -> None:
     base_url = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     admin_email = os.environ.get("RETOS_BOOTSTRAP_ADMIN_EMAIL", "admin@retos.dev")
     admin_password = os.environ.get("RETOS_BOOTSTRAP_ADMIN_PASSWORD", "test-admin-password")
     expect_worker = os.environ.get("RETOS_EXPECT_WORKER", "0") == "1"
-    prepare_squad = os.environ.get("RETOS_SMOKE_PREPARE_SQUAD_DATASET", "1") == "1"
+    prepare_datasets = os.environ.get("RETOS_SMOKE_PREPARE_DATASETS", "1") == "1"
     check_report_files = os.environ.get("RETOS_SMOKE_CHECK_REPORT_FILES", "1") == "1"
     scan_source_uri, temp_scan_root = prepare_scan_source()
-    if prepare_squad:
+    if prepare_datasets:
         prepare_squad_dataset()
+        prepare_hotpotqa_dataset()
 
     try:
         with httpx.Client(base_url=base_url, timeout=10) as client:
@@ -641,6 +678,48 @@ def main() -> None:
                     "SQuAD Markdown report was not written",
                 )
 
+            hotpotqa_eval = client.post(
+                "/evals/hotpotqa",
+                headers=auth_headers,
+                json={
+                    "dataset_path": "smoke-hotpotqa.json",
+                    "max_cases": 1,
+                    "write_report": True,
+                    "report_stem": "api-smoke-hotpotqa",
+                },
+            )
+            require(
+                hotpotqa_eval.status_code == 202,
+                f"HotpotQA eval failed: {hotpotqa_eval.status_code} {hotpotqa_eval.text}",
+            )
+            hotpotqa_body = hotpotqa_eval.json()
+            require(
+                hotpotqa_body["job"]["kind"] == "eval.run",
+                "invalid HotpotQA eval job kind",
+            )
+            require(
+                hotpotqa_body["job"]["status"] == "succeeded",
+                "HotpotQA eval did not succeed",
+            )
+            require(
+                hotpotqa_body["report"]["suite_name"] == "hotpotqa",
+                "invalid HotpotQA suite",
+            )
+            require(
+                hotpotqa_body["report"]["case_count"] == 1,
+                "unexpected HotpotQA case count",
+            )
+            require(hotpotqa_body["report_paths"], "HotpotQA eval did not return report paths")
+            if check_report_files:
+                require(
+                    Path(hotpotqa_body["report_paths"]["json"]).exists(),
+                    "HotpotQA JSON report was not written",
+                )
+                require(
+                    Path(hotpotqa_body["report_paths"]["markdown"]).exists(),
+                    "HotpotQA Markdown report was not written",
+                )
+
             eval_runs = client.get("/evals/runs", headers=auth_headers)
             require(
                 eval_runs.status_code == 200,
@@ -648,8 +727,8 @@ def main() -> None:
             )
             latest_eval_run = eval_runs.json()[0]
             require(
-                latest_eval_run["job"]["id"] == squad_body["job"]["id"],
-                "latest eval run did not match SQuAD eval",
+                latest_eval_run["job"]["id"] == hotpotqa_body["job"]["id"],
+                "latest eval run did not match HotpotQA eval",
             )
             require(
                 latest_eval_run["report"]["passed"] is True,
@@ -660,7 +739,7 @@ def main() -> None:
                 headers=auth_headers,
                 params={
                     "baseline_job_id": eval_body["job"]["id"],
-                    "candidate_job_id": squad_body["job"]["id"],
+                    "candidate_job_id": hotpotqa_body["job"]["id"],
                 },
             )
             require(
@@ -673,8 +752,8 @@ def main() -> None:
                 "eval comparison baseline did not match smoke eval",
             )
             require(
-                comparison_body["candidate"]["job_id"] == squad_body["job"]["id"],
-                "eval comparison candidate did not match SQuAD eval",
+                comparison_body["candidate"]["job_id"] == hotpotqa_body["job"]["id"],
+                "eval comparison candidate did not match HotpotQA eval",
             )
             require(
                 any(metric["name"] == "retrieval_recall" for metric in comparison_body["metrics"]),

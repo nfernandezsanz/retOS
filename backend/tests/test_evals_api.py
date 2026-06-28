@@ -87,6 +87,40 @@ def write_squad_api_fixture(path: Path) -> Path:
     return path
 
 
+def write_hotpotqa_api_fixture(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "_id": "vela-air-force",
+                    "question": (
+                        "Which agency operated Vela spacecraft in the United States "
+                        "Air Force history?"
+                    ),
+                    "answer": "United States Air Force",
+                    "supporting_facts": [["Vela", 0], ["United States Air Force", 0]],
+                    "context": [
+                        [
+                            "Vela",
+                            [
+                                "Vela spacecraft were satellites operated by "
+                                "the United States Air Force."
+                            ],
+                        ],
+                        [
+                            "United States Air Force",
+                            ["The United States Air Force operated satellite programs."],
+                        ],
+                    ],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_smoke_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post("/evals/smoke")
 
@@ -95,6 +129,12 @@ def test_smoke_eval_requires_admin_token(evals_client: TestClient) -> None:
 
 def test_squad_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post("/evals/squad", json={"dataset_path": "fixture.json"})
+
+    assert response.status_code == 401
+
+
+def test_hotpotqa_eval_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.post("/evals/hotpotqa", json={"dataset_path": "fixture.json"})
 
     assert response.status_code == 401
 
@@ -207,6 +247,47 @@ def test_squad_eval_runs_and_exports_report(
     assert eval_runs.status_code == 200
     assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
     assert eval_runs.json()[0]["report"]["suite_name"] == "squad-v2"
+
+
+def test_hotpotqa_eval_runs_and_exports_report(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    squad_report_root: Path,
+) -> None:
+    write_hotpotqa_api_fixture(squad_dataset_root / "tiny-hotpot.json")
+
+    response = evals_client.post(
+        "/evals/hotpotqa",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "tiny-hotpot.json",
+            "max_cases": 1,
+            "write_report": True,
+            "report_stem": "nightly/hotpotqa",
+        },
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job"]["kind"] == "eval.run"
+    assert body["job"]["status"] == "succeeded"
+    assert body["report"]["suite_name"] == "hotpotqa"
+    assert body["report"]["passed"] is True
+    assert body["report"]["case_count"] == 1
+    assert body["report_paths"] == {
+        "json": str(squad_report_root / "nightly-hotpotqa.json"),
+        "markdown": str(squad_report_root / "nightly-hotpotqa.md"),
+    }
+    assert body["job"]["payload"]["dataset_path"] == str(squad_dataset_root / "tiny-hotpot.json")
+    assert body["job"]["payload"]["max_cases"] == 1
+    assert body["job"]["payload"]["report_paths"] == body["report_paths"]
+    assert body["job"]["payload"]["result"]["suite_name"] == "hotpotqa"
+
+    eval_runs = evals_client.get("/evals/runs", headers=evals_admin_headers)
+    assert eval_runs.status_code == 200
+    assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
+    assert eval_runs.json()[0]["report"]["suite_name"] == "hotpotqa"
 
 
 def test_squad_eval_accepts_absolute_dataset_path_inside_root(

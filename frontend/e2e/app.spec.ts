@@ -146,6 +146,18 @@ async function mockProviderApi(page: Page) {
       },
     ],
   };
+  const hotpotqaReport = {
+    ...evalReport,
+    suite_name: "hotpotqa",
+    case_count: 1,
+    cases: [
+      {
+        ...evalReport.cases[0],
+        case_id: "hotpotqa-vela-air-force",
+        question: "Which agency operated Vela spacecraft?",
+      },
+    ],
+  };
   const evalRuns: { job: ReturnType<typeof jobFixture>; report: typeof evalReport | null }[] = [];
   const adminUsers = [
     {
@@ -722,6 +734,26 @@ async function mockProviderApi(page: Page) {
       json: { job, report: squadReport, report_paths: reportPaths },
     });
   });
+  await page.route("http://localhost:8000/evals/hotpotqa", async (route) => {
+    const reportPaths = {
+      json: "/var/lib/retos/evals/reports/ui-hotpotqa.json",
+      markdown: "/var/lib/retos/evals/reports/ui-hotpotqa.md",
+    };
+    const job = jobFixture("job-eval-hotpotqa-1", "eval.run", "succeeded", {
+      dataset_path: "/var/lib/retos/evals/datasets/ui-hotpotqa.json",
+      max_cases: 1,
+      report_paths: reportPaths,
+      result: hotpotqaReport,
+    });
+    jobs.unshift(job);
+    evalRuns.unshift({ job, report: hotpotqaReport });
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: { job, report: hotpotqaReport, report_paths: reportPaths },
+    });
+  });
   await page.route("http://localhost:8000/evals/runs?limit=6", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -889,6 +921,17 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval run history").getByText("2 cases")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-squad.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-squad.md")).toBeVisible();
+
+  await page.getByLabel("HotpotQA dataset path").fill("ui-hotpotqa.json");
+  await page.getByLabel("HotpotQA max cases").fill("1");
+  await page.getByLabel("HotpotQA report stem").fill("ui-hotpotqa");
+  await page.getByRole("button", { name: "Run HotpotQA eval" }).click();
+  await expect(page.getByLabel("Eval cases").getByText("hotpotqa-vela-air-force")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("hotpotqa")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("1 cases")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.json")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.md")).toBeVisible();
+
   await page.getByRole("button", { name: "Compare latest" }).click();
   await expect(page.getByLabel("Eval comparison").getByText("retos-smoke")).toBeVisible();
   await expect(page.getByLabel("Eval comparison").getByText("squad-v2")).toBeVisible();

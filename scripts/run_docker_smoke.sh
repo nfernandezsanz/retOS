@@ -99,6 +99,32 @@ dataset_root.mkdir(parents=True, exist_ok=True)
     ),
     encoding="utf-8",
 )
+(dataset_root / "smoke-hotpotqa.json").write_text(
+    json.dumps(
+        [
+            {
+                "_id": "vela-air-force",
+                "question": (
+                    "Which agency operated Vela spacecraft in the United States "
+                    "Air Force history?"
+                ),
+                "answer": "United States Air Force",
+                "supporting_facts": [["Vela", 0], ["United States Air Force", 0]],
+                "context": [
+                    [
+                        "Vela",
+                        ["Vela spacecraft were satellites operated by the United States Air Force."],
+                    ],
+                    [
+                        "United States Air Force",
+                        ["The United States Air Force operated satellite programs."],
+                    ],
+                ],
+            }
+        ]
+    ),
+    encoding="utf-8",
+)
 PY
 curl --fail --silent --show-error http://127.0.0.1:8000/healthz >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null
@@ -106,9 +132,11 @@ RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me \
   RETOS_EXPECT_WORKER=1 \
   RETOS_EVAL_DATASET_ROOT=/var/lib/retos/evals/datasets \
   RETOS_EVAL_REPORT_ROOT=/var/lib/retos/evals/reports \
-  RETOS_SMOKE_PREPARE_SQUAD_DATASET=0 \
+  RETOS_SMOKE_PREPARE_DATASETS=0 \
   RETOS_SMOKE_CHECK_REPORT_FILES=0 \
   RETOS_SMOKE_SCAN_SOURCE_URI=file:///var/lib/retos/storage/smoke-corpus \
   "${python_bin}" backend/scripts/smoke_api.py http://127.0.0.1:8000
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-squad.json
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-squad.md
+"${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-hotpotqa.json
+"${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-hotpotqa.md

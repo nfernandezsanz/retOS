@@ -64,7 +64,7 @@ The UI is a working console, not a landing page. It must make background process
   review.
 - The admin panel reads `/admin/users`, creates admin accounts, updates active state,
   and submits password resets without rendering hashes or secrets.
-- The eval panel posts to `/evals/smoke` and `/evals/squad`, reads `/evals/runs?limit=6`,
+- The eval panel posts to `/evals/smoke`, `/evals/squad`, and `/evals/hotpotqa`, reads `/evals/runs?limit=6`,
   compares reported runs through `/evals/runs/compare`, and renders the returned
   `eval.run` jobs, metric scorecards, per-case pass/failure rows, report paths,
   newest-first run history, and per-metric deltas.
