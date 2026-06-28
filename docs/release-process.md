@@ -67,8 +67,8 @@ make docker-smoke
    `retos-backend` and `retos-web` to GHCR with SBOM, provenance, Cosign signatures, and
    Cosign signature verification for both published digests. The workflow reruns backend
    format/lint/type/test/eval-smoke, Python and Node dependency audits, frontend build,
-   browser smoke, visual audit with downloadable screenshots, release readiness, and
-   production preflight before any image is pushed.
+   browser smoke, visual audit with downloadable screenshots and hash metadata, release
+   readiness, and production preflight before any image is pushed.
 7. Copy the backend and web digests from the workflow summary, then verify the published
    evidence independently:
 
