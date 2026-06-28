@@ -55,7 +55,8 @@ The UI is a working console, not a landing page. It must make background process
   as `Last-Event-ID` on reconnect, allowing reloadable progress replay after API
   restarts.
 - The audit panel renders recent jobs with status/kind filtering, identifiers, timestamps,
-  error state, and payload summaries.
+  error state, payload summaries, and an inspectable detail panel backed by
+  `/jobs/{job_id}`.
 - The audit panel reads `/audit/journal-events?limit=20` and
   `/audit/progress-events?limit=20` to render durable journal/progress records beside the
   live SSE stream.
@@ -72,6 +73,8 @@ The UI is a working console, not a landing page. It must make background process
 - The audit panel groups persisted progress by `job_id` before showing the raw
   journal/progress ledgers, so operators can scan each job's event count, latest
   state, and final progress message without losing the underlying audit trail.
+- The selected job detail panel shows status, kind, domain/source IDs, timestamps,
+  full JSON payload, error text, and persisted progress events for the selected job.
 - Browser smoke tests mock the API contract and verify provider, admin user roles, domain
   creation, document/source inventory, document edit/archive/restore/history, file
   upload, text ingestion, scan/index queueing, job/audit filtering, persisted audit
@@ -88,9 +91,9 @@ Show:
 - Last SSE event and timestamp.
 - Retry action for failed jobs.
 - Normalized error detail with suggested action.
-- Snapshot recovery plus `Last-Event-ID` reconnect semantics. The live ledger and
-  persisted resume cursor and per-job progress grouping are implemented; richer
-  per-job detail drilldowns remain pending.
+- Snapshot recovery plus `Last-Event-ID` reconnect semantics. The live ledger,
+  persisted resume cursor, per-job progress grouping, and per-job detail drilldowns
+  are implemented.
 
 ## Accessibility
 

@@ -8,6 +8,7 @@ import {
   Database,
   CircleStop,
   Download,
+  Eye,
   GitCompare,
   RotateCcw,
   FolderPlus,
@@ -498,6 +499,14 @@ async function loadSources(token: string, domainId: string): Promise<SourceRead[
 
 async function loadJobs(token: string): Promise<JobRead[]> {
   return requestJson<JobRead[]>("/jobs?limit=12", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function loadJob(token: string, jobId: string): Promise<JobRead> {
+  return requestJson<JobRead>(`/jobs/${jobId}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -1002,6 +1011,10 @@ function App() {
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
   const [lastProgressCursor, setLastProgressCursor] = useState<string | null>(null);
   const [jobFilter, setJobFilter] = useState("all");
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobRead | null>(null);
+  const [isLoadingJobDetail, setIsLoadingJobDetail] = useState(false);
+  const [jobDetailError, setJobDetailError] = useState<string | null>(null);
   const [journalEvents, setJournalEvents] = useState<JournalEventRead[]>([]);
   const [auditProgressEvents, setAuditProgressEvents] = useState<ProgressEventRead[]>([]);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
@@ -1055,6 +1068,13 @@ function App() {
   const progressGroups = useMemo(
     () => groupProgressByJob(auditProgressEvents, queuedJobs),
     [auditProgressEvents, queuedJobs],
+  );
+  const selectedJobProgressEvents = useMemo(
+    () =>
+      selectedJobId
+        ? auditProgressEvents.filter((event) => event.job_id === selectedJobId)
+        : [],
+    [auditProgressEvents, selectedJobId],
   );
   const isAnyEvalRunning =
     isRunningEval ||
@@ -1126,6 +1146,30 @@ function App() {
     } finally {
       setIsLoadingAudit(false);
     }
+  }
+
+  async function handleInspectJob(jobId: string) {
+    setSelectedJobId(jobId);
+    setJobDetailError(null);
+    setIsLoadingJobDetail(true);
+    try {
+      const accessToken = await getAdminToken();
+      const [job] = await Promise.all([loadJob(accessToken, jobId), refreshAudit(accessToken)]);
+      setSelectedJob(job);
+      setQueuedJobs((current) =>
+        [job, ...current.filter((candidate) => candidate.id !== job.id)].slice(0, 12),
+      );
+    } catch (error) {
+      setJobDetailError(error instanceof Error ? error.message : "Job detail failed to load");
+    } finally {
+      setIsLoadingJobDetail(false);
+    }
+  }
+
+  function handleCloseJobDetail() {
+    setSelectedJobId(null);
+    setSelectedJob(null);
+    setJobDetailError(null);
   }
 
   async function handleExportAudit() {
@@ -3274,6 +3318,15 @@ function App() {
                     </p>
                   ) : null}
                   <p className="payload-summary">{summarizePayload(job.payload)}</p>
+                  <button
+                    className="ghost-action job-inspect-action"
+                    disabled={isLoadingJobDetail && selectedJobId === job.id}
+                    type="button"
+                    onClick={() => void handleInspectJob(job.id)}
+                  >
+                    <Eye aria-hidden="true" />
+                    {isLoadingJobDetail && selectedJobId === job.id ? "Inspecting" : "Inspect"}
+                  </button>
                 </article>
               ))}
               {filteredJobs.length === 0 ? (
@@ -3283,6 +3336,97 @@ function App() {
                 </div>
               ) : null}
             </div>
+            {selectedJobId ? (
+              <section className="job-detail-panel" aria-label="Selected job detail">
+                <div className="section-heading compact">
+                  <div>
+                    <h3>Job detail</h3>
+                    <span>{selectedJobId}</span>
+                  </div>
+                  <button
+                    className="ghost-action compact-action"
+                    type="button"
+                    onClick={handleCloseJobDetail}
+                  >
+                    <X aria-hidden="true" />
+                    Close
+                  </button>
+                </div>
+                {jobDetailError ? (
+                  <p className="inline-error" role="alert">
+                    {jobDetailError}
+                  </p>
+                ) : null}
+                {selectedJob ? (
+                  <>
+                    <div className="job-detail-grid">
+                      <div>
+                        <span>Status</span>
+                        <strong>{selectedJob.status}</strong>
+                      </div>
+                      <div>
+                        <span>Kind</span>
+                        <strong>{selectedJob.kind}</strong>
+                      </div>
+                      <div>
+                        <span>Domain</span>
+                        <strong>{selectedJob.domain_id ?? "none"}</strong>
+                      </div>
+                      <div>
+                        <span>Source</span>
+                        <strong>{selectedJob.source_id ?? "none"}</strong>
+                      </div>
+                      <div>
+                        <span>Started</span>
+                        <strong>{formatDateTime(selectedJob.started_at)}</strong>
+                      </div>
+                      <div>
+                        <span>Updated</span>
+                        <strong>{formatDateTime(selectedJob.updated_at)}</strong>
+                      </div>
+                    </div>
+                    {selectedJob.error ? (
+                      <p className="inline-error" role="alert">
+                        {selectedJob.error}
+                      </p>
+                    ) : null}
+                    <div className="job-detail-columns">
+                      <div>
+                        <span>Payload</span>
+                        <pre>{JSON.stringify(selectedJob.payload, null, 2)}</pre>
+                      </div>
+                      <div>
+                        <span>Persisted progress</span>
+                        {selectedJobProgressEvents.length > 0 ? (
+                          <ol className="job-detail-timeline">
+                            {selectedJobProgressEvents.map((event) => (
+                              <li key={event.id}>
+                                <strong>{event.event_type}</strong>
+                                <span>{formatDateTime(event.occurred_at)}</span>
+                                <p>{event.message}</p>
+                              </li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p className="payload-summary">
+                            No persisted progress is loaded for this job.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="empty-state compact">
+                    <Activity aria-hidden="true" />
+                    <p>
+                      {isLoadingJobDetail
+                        ? "Loading job detail."
+                        : "Select a job to inspect it."}
+                    </p>
+                  </div>
+                )}
+              </section>
+            ) : null}
             <section className="job-progress-groups" aria-label="Progress grouped by job">
               <div className="section-heading compact">
                 <h3>Progress by job</h3>

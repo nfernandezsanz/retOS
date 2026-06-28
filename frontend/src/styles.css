@@ -1222,6 +1222,118 @@ button:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.job-inspect-action {
+  justify-self: start;
+}
+
+.compact-action {
+  min-height: 40px;
+}
+
+.job-detail-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.job-detail-panel .section-heading > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.job-detail-panel .section-heading span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.job-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.job-detail-grid div,
+.job-detail-columns > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.job-detail-grid span,
+.job-detail-columns > div > span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.job-detail-grid strong {
+  overflow-wrap: anywhere;
+}
+
+.job-detail-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.job-detail-columns pre {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.job-detail-timeline {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.job-detail-timeline li {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.job-detail-timeline strong,
+.job-detail-timeline span,
+.job-detail-timeline p {
+  overflow-wrap: anywhere;
+}
+
+.job-detail-timeline span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.job-detail-timeline p {
+  margin: 0;
+  color: #334155;
+}
+
 .job-progress-groups {
   display: grid;
   gap: 12px;
@@ -1561,6 +1673,8 @@ button:focus-visible {
   .eval-toolbar,
   .eval-metrics,
   .job-row-grid,
+  .job-detail-grid,
+  .job-detail-columns,
   .job-progress-meta,
   .admin-grid,
   .provider-summary {

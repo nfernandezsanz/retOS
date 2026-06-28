@@ -823,6 +823,7 @@ Current console calls:
 - `POST /evals/natural-questions`
 - `POST /evals/ocr-benchmark`
 - `GET /jobs?limit=12`
+- `GET /jobs/{job_id}`
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`
 
@@ -840,10 +841,10 @@ audited local accounts:
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source
 scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA/Natural Questions/OCR
-benchmark evals, read recent jobs, read persisted audit/progress events, group progress
-by job, filter the job ledger by status/kind, and send queries against the selected
-domain. Query execution uses `run_inline=true` so the UI can render the answer and
-citations immediately.
+benchmark evals, read recent jobs, inspect a selected job's full payload/error/progress
+detail, read persisted audit/progress events, group progress by job, filter the job
+ledger by status/kind, and send queries against the selected domain. Query execution
+uses `run_inline=true` so the UI can render the answer and citations immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.
@@ -1029,6 +1030,11 @@ Read one job:
 ```bash
 curl --header "Authorization: Bearer <token>" http://localhost:8000/jobs/<job_id>
 ```
+
+The React audit panel uses this endpoint for the per-job detail drilldown. It pairs the
+returned job payload/error/timestamps with loaded `/audit/progress-events` rows that
+share the same `job_id`, so operators can inspect a job without losing the append-only
+audit trail.
 
 ## Persistence Notes
 

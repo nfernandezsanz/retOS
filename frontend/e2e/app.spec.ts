@@ -585,6 +585,22 @@ async function mockProviderApi(page: Page) {
       json: jobs,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/jobs\/[^/?]+$/, async (route) => {
+    const jobId = new URL(route.request().url()).pathname.split("/")[2];
+    const job = jobs.find((item) => item.id === jobId);
+    if (!job) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        json: { detail: "Job not found" },
+      });
+      return;
+    }
+    await route.fulfill({
+      contentType: "application/json",
+      json: job,
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/audit\/journal-events\?limit=\d+/, async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -1074,6 +1090,18 @@ test("loads the operational console", async ({ page }) => {
 
   await page.getByLabel("Filter jobs").selectOption("index.domain");
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();
+  await page
+    .getByLabel("Recent jobs")
+    .locator("article")
+    .filter({ hasText: "job-index-1" })
+    .getByRole("button", { name: "Inspect" })
+    .click();
+  await expect(page.getByLabel("Selected job detail").getByText("job-index-1")).toBeVisible();
+  await expect(
+    page.getByLabel("Selected job detail").getByText("index.domain", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Selected job detail").getByText("requested_at")).toBeVisible();
+  await expect(page.getByLabel("Selected job detail").getByText("Queued index.domain")).toBeVisible();
 
   await page.getByRole("button", { name: "Connect live updates" }).click();
   await expect(page.getByLabel("Live progress events").getByText("job.queued")).toBeVisible();
