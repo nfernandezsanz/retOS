@@ -68,6 +68,9 @@ The UI is a working console, not a landing page. It must make background process
   compares reported runs through `/evals/runs/compare`, and renders the returned
   `eval.run` jobs, metric scorecards, per-case pass/failure rows, report paths,
   newest-first run history, and per-metric deltas.
+- The audit panel groups persisted progress by `job_id` before showing the raw
+  journal/progress ledgers, so operators can scan each job's event count, latest
+  state, and final progress message without losing the underlying audit trail.
 - Browser smoke tests mock the API contract and verify provider, admin users, domain
   creation, document/source inventory, document edit/archive/restore/history, file
   upload, text ingestion, scan/index queueing, job/audit filtering, persisted audit
@@ -85,7 +88,8 @@ Show:
 - Retry action for failed jobs.
 - Normalized error detail with suggested action.
 - Snapshot recovery plus `Last-Event-ID` reconnect semantics. The live ledger and
-  persisted resume cursor are implemented; richer per-job grouping remains pending.
+  persisted resume cursor and per-job progress grouping are implemented; richer
+  per-job detail drilldowns remain pending.
 
 ## Accessibility
 

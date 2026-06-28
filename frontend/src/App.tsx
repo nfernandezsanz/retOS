@@ -304,6 +304,16 @@ type ProgressEventRead = {
   payload: Record<string, unknown>;
 };
 
+type JobProgressGroup = {
+  jobId: string;
+  kind: string;
+  status: string;
+  eventCount: number;
+  lastEventType: string;
+  lastMessage: string;
+  lastOccurredAt: string;
+};
+
 type AuditExportRead = {
   schema_version: string;
   generated_at: string;
@@ -808,6 +818,43 @@ function summarizePayload(payload: Record<string, unknown>): string {
     .join(" | ");
 }
 
+function eventStatus(event: ProgressEventRead): string | null {
+  const status = event.payload.status;
+  return typeof status === "string" && status.trim() ? status : null;
+}
+
+function groupProgressByJob(
+  events: ProgressEventRead[],
+  jobs: JobRead[],
+): JobProgressGroup[] {
+  const jobsById = new Map(jobs.map((job) => [job.id, job]));
+  const groups = new Map<string, ProgressEventRead[]>();
+  for (const event of events) {
+    if (!event.job_id) {
+      continue;
+    }
+    groups.set(event.job_id, [...(groups.get(event.job_id) ?? []), event]);
+  }
+  return [...groups.entries()]
+    .map(([jobId, groupedEvents]) => {
+      const sortedEvents = [...groupedEvents].sort((left, right) =>
+        left.occurred_at.localeCompare(right.occurred_at),
+      );
+      const lastEvent = sortedEvents.at(-1) ?? sortedEvents[0];
+      const job = jobsById.get(jobId);
+      return {
+        jobId,
+        kind: job?.kind ?? "unknown",
+        status: job?.status ?? eventStatus(lastEvent) ?? "unknown",
+        eventCount: sortedEvents.length,
+        lastEventType: lastEvent?.event_type ?? "unknown",
+        lastMessage: lastEvent?.message ?? "No progress message",
+        lastOccurredAt: lastEvent?.occurred_at ?? "",
+      };
+    })
+    .sort((left, right) => right.lastOccurredAt.localeCompare(left.lastOccurredAt));
+}
+
 function formatHistoryValue(value: unknown): string {
   if (value === null || value === undefined) {
     return "null";
@@ -953,6 +1000,10 @@ function App() {
         ? queuedJobs
         : queuedJobs.filter((job) => job.status === jobFilter || job.kind === jobFilter),
     [jobFilter, queuedJobs],
+  );
+  const progressGroups = useMemo(
+    () => groupProgressByJob(auditProgressEvents, queuedJobs),
+    [auditProgressEvents, queuedJobs],
   );
   const isAnyEvalRunning = isRunningEval || isRunningSquadEval || isRunningHotpotQAEval;
   const comparableEvalRuns = evalRuns.filter((run) => run.report !== null);
@@ -2971,6 +3022,50 @@ function App() {
                 </div>
               ) : null}
             </div>
+            <section className="job-progress-groups" aria-label="Progress grouped by job">
+              <div className="section-heading compact">
+                <h3>Progress by job</h3>
+                <span className="badge muted">{progressGroups.length}</span>
+              </div>
+              <div className="job-progress-list">
+                {progressGroups.map((group) => (
+                  <article className="job-progress-row" key={group.jobId}>
+                    <div className="job-progress-main">
+                      <span
+                        className={`badge ${group.status === "failed" ? "warning" : "muted"}`}
+                      >
+                        {group.status}
+                      </span>
+                      <div>
+                        <strong>{group.kind}</strong>
+                        <span>{group.jobId}</span>
+                      </div>
+                    </div>
+                    <div className="job-progress-meta">
+                      <div>
+                        <span>Events</span>
+                        <strong>{group.eventCount}</strong>
+                      </div>
+                      <div>
+                        <span>Last event</span>
+                        <strong>{group.lastEventType}</strong>
+                      </div>
+                      <div>
+                        <span>Last update</span>
+                        <strong>{formatDateTime(group.lastOccurredAt)}</strong>
+                      </div>
+                    </div>
+                    <p className="payload-summary">{group.lastMessage}</p>
+                  </article>
+                ))}
+                {progressGroups.length === 0 ? (
+                  <div className="empty-state compact">
+                    <Activity aria-hidden="true" />
+                    <p>No job progress groups have been loaded yet.</p>
+                  </div>
+                ) : null}
+              </div>
+            </section>
             <div className="audit-event-grid">
               <section className="audit-event-panel" aria-label="Journal events">
                 <div className="section-heading compact">

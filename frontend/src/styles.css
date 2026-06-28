@@ -1218,6 +1218,72 @@ button:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.job-progress-groups {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.job-progress-list {
+  display: grid;
+  gap: 10px;
+}
+
+.job-progress-row {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.job-progress-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.job-progress-main div {
+  min-width: 0;
+}
+
+.job-progress-main strong,
+.job-progress-main span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.job-progress-main div > span {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.job-progress-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.job-progress-meta div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.job-progress-meta span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.job-progress-meta strong {
+  overflow-wrap: anywhere;
+}
+
 .payload-summary {
   margin: 0;
   color: #334155;
@@ -1490,6 +1556,7 @@ button:focus-visible {
   .eval-toolbar,
   .eval-metrics,
   .job-row-grid,
+  .job-progress-meta,
   .admin-grid,
   .provider-summary {
     grid-template-columns: 1fr;
@@ -1513,6 +1580,10 @@ button:focus-visible {
 
   .audit-event-row > div {
     flex-direction: column;
+  }
+
+  .job-progress-main {
+    align-items: flex-start;
   }
 
   .section-heading {

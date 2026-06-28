@@ -195,23 +195,42 @@ async function mockProviderApi(page: Page) {
   };
 
   function recordAudit(job: ReturnType<typeof jobFixture>) {
+    const baseTime = "2026-06-27T00:01:";
     journalEvents.unshift({
       id: `journal-${job.id}`,
-      occurred_at: "2026-06-27T00:01:00Z",
+      occurred_at: `${baseTime}00Z`,
       actor: "admin@retos.dev",
       event_type: "job.created",
       entity_type: "job",
       entity_id: job.id,
       payload: { kind: job.kind, status: job.status },
     });
-    progressEvents.unshift({
-      id: `progress-${job.id}`,
-      job_id: job.id,
-      occurred_at: "2026-06-27T00:01:00Z",
-      event_type: "job.queued",
-      message: `Queued ${job.kind}`,
-      payload: { status: job.status },
-    });
+    progressEvents.unshift(
+      {
+        id: `progress-${job.id}-completed`,
+        job_id: job.id,
+        occurred_at: `${baseTime}20Z`,
+        event_type: `job.${job.status}`,
+        message: `Completed ${job.kind}`,
+        payload: { status: job.status },
+      },
+      {
+        id: `progress-${job.id}-started`,
+        job_id: job.id,
+        occurred_at: `${baseTime}10Z`,
+        event_type: `${job.kind}.started`,
+        message: `Started ${job.kind}`,
+        payload: { status: "running" },
+      },
+      {
+        id: `progress-${job.id}-queued`,
+        job_id: job.id,
+        occurred_at: `${baseTime}00Z`,
+        event_type: "job.queued",
+        message: `Queued ${job.kind}`,
+        payload: { status: "queued" },
+      },
+    );
   }
 
   function recordAdminAudit(adminUserId: string, eventType: string, email: string) {
@@ -902,6 +921,12 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),
   ).toBeVisible();
+  const scanProgressGroup = page
+    .getByLabel("Progress grouped by job")
+    .locator("article")
+    .filter({ hasText: "job-scan-1" });
+  await expect(scanProgressGroup.getByText("Completed ingest.source")).toBeVisible();
+  await expect(scanProgressGroup.getByText("3")).toBeVisible();
   await page.getByRole("button", { name: "Export audit" }).click();
   await expect(page.getByText("retos-audit-export.json:")).toBeVisible();
 

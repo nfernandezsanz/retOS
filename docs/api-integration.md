@@ -800,7 +800,7 @@ audited local accounts:
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source
 scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA evals, read recent jobs, read
-persisted audit/progress events, filter the job ledger by status/kind, and send queries
+persisted audit/progress events, group progress by job, filter the job ledger by status/kind, and send queries
 against the selected domain. Query execution uses `run_inline=true` so the UI can render
 the answer and citations immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
