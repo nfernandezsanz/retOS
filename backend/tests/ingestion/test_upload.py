@@ -2,6 +2,7 @@ import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
 
+import pymupdf
 import pytest
 from fastapi.testclient import TestClient
 
@@ -50,6 +51,13 @@ def create_upload_domain(client: TestClient, headers: dict[str, str]) -> str:
     )
     assert response.status_code == 201
     return str(response.json()["id"])
+
+
+def write_image_only_pdf(path: Path) -> None:
+    document = pymupdf.open()
+    document.new_page()
+    document.save(path)
+    document.close()
 
 
 def test_sanitize_upload_filename_keeps_safe_supported_name() -> None:
@@ -141,6 +149,50 @@ def test_file_upload_endpoint_ingests_text_file_inline_in_test_env(
     )
     assert artifacts.json()[0]["kind"] == "raw_text"
     assert segments.json()[0]["anchor"] == "uploaded-note.txt#word=0"
+
+
+def test_file_upload_endpoint_persists_ocr_page_artifacts(
+    upload_client: TestClient,
+    upload_admin_headers: dict[str, str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    domain_id = create_upload_domain(upload_client, upload_admin_headers)
+    pdf_path = tmp_path / "upload-scan.pdf"
+    write_image_only_pdf(pdf_path)
+    monkeypatch.setattr(
+        "retos.ingestion.scan.pytesseract.image_to_string",
+        lambda image, lang: "Uploaded OCR evidence",
+    )
+
+    response = upload_client.post(
+        f"/domains/{domain_id}/ingestions/upload",
+        headers=upload_admin_headers,
+        data={"title": "Uploaded Scan", "max_segment_tokens": "20", "max_ocr_pages": "1"},
+        files={"file": ("upload scan.pdf", pdf_path.read_bytes(), "application/pdf")},
+    )
+
+    assert response.status_code == 202
+    documents = upload_client.get(
+        f"/domains/{domain_id}/documents",
+        headers=upload_admin_headers,
+    )
+    [document] = documents.json()
+    assert document["metadata"]["ingestion"]["extraction"] == "pdf_ocr"
+    assert document["metadata"]["ingestion"]["ocr_page_count"] == 1
+
+    versions = upload_client.get(
+        f"/documents/{document['id']}/versions",
+        headers=upload_admin_headers,
+    )
+    artifacts = upload_client.get(
+        f"/document-versions/{versions.json()[0]['id']}/artifacts",
+        headers=upload_admin_headers,
+    )
+    artifact_payload = artifacts.json()
+    assert [artifact["kind"] for artifact in artifact_payload] == ["ocr_page_text", "ocr_text"]
+    assert artifact_payload[0]["uri"].endswith("#page=1")
+    assert artifact_payload[1]["uri"].startswith(f"storage://uploads/{domain_id}/")
 
 
 def test_file_upload_endpoint_rejects_missing_domain(

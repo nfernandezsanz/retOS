@@ -28,6 +28,21 @@ class SourceScanResult:
     segment_count: int
 
 
+@dataclass(frozen=True)
+class OCRPageText:
+    page_number: int
+    text: str
+
+
+@dataclass(frozen=True)
+class ExtractedSourceText:
+    text: str
+    raw: bytes
+    artifact_kind: str
+    extraction_kind: str
+    page_texts: tuple[OCRPageText, ...] = ()
+
+
 class SourceScanError(RuntimeError):
     pass
 
@@ -70,11 +85,11 @@ def extract_pdf_text(raw: bytes) -> str:
     return "\n\n".join(pages)
 
 
-def ocr_pdf_text(raw: bytes, *, max_pages: int) -> str:
+def ocr_pdf_pages(raw: bytes, *, max_pages: int) -> tuple[OCRPageText, ...]:
     if max_pages < 1:
         raise SourceScanError("max_ocr_pages must be positive")
 
-    pages: list[str] = []
+    pages: list[OCRPageText] = []
     with pymupdf.open(stream=raw, filetype="pdf") as document:  # type: ignore[no-untyped-call]
         for page_number, page in enumerate(document):
             if page_number >= max_pages:
@@ -86,10 +101,14 @@ def ocr_pdf_text(raw: bytes, *, max_pages: int) -> str:
             image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
             text = pytesseract.image_to_string(image, lang="eng").strip()
             if text:
-                pages.append(text)
+                pages.append(OCRPageText(page_number=page_number + 1, text=text))
     if not pages:
         raise SourceScanError("PDF OCR produced no text")
-    return "\n\n".join(pages)
+    return tuple(pages)
+
+
+def ocr_pdf_text(raw: bytes, *, max_pages: int) -> str:
+    return "\n\n".join(page.text for page in ocr_pdf_pages(raw, max_pages=max_pages))
 
 
 def extract_pdf_content(
@@ -97,13 +116,14 @@ def extract_pdf_content(
     *,
     enable_ocr: bool,
     max_ocr_pages: int,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, tuple[OCRPageText, ...]]:
     try:
-        return extract_pdf_text(raw), "pdf_text", "pdf_text"
+        return extract_pdf_text(raw), "pdf_text", "pdf_text", ()
     except SourceScanError:
         if not enable_ocr:
             raise
-    return ocr_pdf_text(raw, max_pages=max_ocr_pages), "ocr_text", "pdf_ocr"
+    pages = ocr_pdf_pages(raw, max_pages=max_ocr_pages)
+    return "\n\n".join(page.text for page in pages), "ocr_text", "pdf_ocr", pages
 
 
 def extract_source_text(
@@ -112,19 +132,48 @@ def extract_source_text(
     max_bytes: int,
     enable_ocr: bool = True,
     max_ocr_pages: int = 20,
-) -> tuple[str, bytes, str, str]:
+) -> ExtractedSourceText:
     raw = path.read_bytes()
     if len(raw) > max_bytes:
         raise SourceScanError(f"File exceeds max_bytes: {path}")
     suffix = path.suffix.lower()
     if suffix == ".pdf":
-        text, artifact_kind, extraction_kind = extract_pdf_content(
+        text, artifact_kind, extraction_kind, page_texts = extract_pdf_content(
             raw,
             enable_ocr=enable_ocr,
             max_ocr_pages=max_ocr_pages,
         )
-        return text, raw, artifact_kind, extraction_kind
-    return raw.decode("utf-8", errors="replace"), raw, "raw_text", "raw_text"
+        return ExtractedSourceText(
+            text=text,
+            raw=raw,
+            artifact_kind=artifact_kind,
+            extraction_kind=extraction_kind,
+            page_texts=page_texts,
+        )
+    return ExtractedSourceText(
+        text=raw.decode("utf-8", errors="replace"),
+        raw=raw,
+        artifact_kind="raw_text",
+        extraction_kind="raw_text",
+    )
+
+
+async def add_ocr_page_text_artifacts(
+    *,
+    uow: SQLAlchemyUnitOfWork,
+    document_version_id: str,
+    source_uri: str,
+    page_texts: tuple[OCRPageText, ...],
+) -> None:
+    for page in page_texts:
+        raw_page_text = page.text.encode("utf-8")
+        await uow.documents.add_artifact(
+            document_version_id=document_version_id,
+            kind="ocr_page_text",
+            uri=f"{source_uri}#page={page.page_number}",
+            sha256=content_hash(raw_page_text),
+            size_bytes=len(raw_page_text),
+        )
 
 
 async def run_source_scan(
@@ -194,13 +243,13 @@ async def run_source_scan(
             if scanned_files >= max_files:
                 break
             scanned_files += 1
-            text, raw, artifact_kind, extraction_kind = extract_source_text(
+            extracted = extract_source_text(
                 path,
                 max_bytes=max_bytes,
                 enable_ocr=enable_ocr,
                 max_ocr_pages=max_ocr_pages,
             )
-            file_hash = content_hash(raw)
+            file_hash = content_hash(extracted.raw)
             existing = await uow.documents.get_by_domain_and_hash(job.domain_id, file_hash)
             if existing is not None:
                 skipped_documents += 1
@@ -221,21 +270,28 @@ async def run_source_scan(
                         "source_id": source.id,
                         "relative_path": relative_path,
                         "suffix": path.suffix.lower(),
-                        "extraction": extraction_kind,
+                        "extraction": extracted.extraction_kind,
                         "segmenter": "word-window-v1",
+                        "ocr_page_count": len(extracted.page_texts),
                     }
                 },
                 source_uri=source_uri,
-                size_bytes=len(raw),
+                size_bytes=len(extracted.raw),
             )
             await uow.documents.add_artifact(
                 document_version_id=version.id,
-                kind=artifact_kind,
+                kind=extracted.artifact_kind,
                 uri=source_uri,
                 sha256=file_hash,
-                size_bytes=len(raw),
+                size_bytes=len(extracted.raw),
             )
-            for draft in chunk_text(text, max_tokens=max_segment_tokens):
+            await add_ocr_page_text_artifacts(
+                uow=uow,
+                document_version_id=version.id,
+                source_uri=source_uri,
+                page_texts=extracted.page_texts,
+            )
+            for draft in chunk_text(extracted.text, max_tokens=max_segment_tokens):
                 await uow.documents.add_segment(
                     document_version_id=version.id,
                     ordinal=draft.ordinal,

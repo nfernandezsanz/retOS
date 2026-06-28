@@ -9,7 +9,12 @@ from sqlalchemy.exc import IntegrityError
 
 from retos.api.routes.events import progress_store
 from retos.domain.documents import Document, DocumentVersion, Segment
-from retos.ingestion.scan import SUPPORTED_SOURCE_SUFFIXES, SourceScanError, extract_source_text
+from retos.ingestion.scan import (
+    SUPPORTED_SOURCE_SUFFIXES,
+    SourceScanError,
+    add_ocr_page_text_artifacts,
+    extract_source_text,
+)
 from retos.ingestion.text import chunk_text, content_hash
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
@@ -91,7 +96,7 @@ async def run_file_upload_ingestion(
             raise FileUploadIngestionError("max_ocr_pages must be positive")
 
         try:
-            text, raw, artifact_kind, extraction_kind = extract_source_text(
+            extracted = extract_source_text(
                 file_path,
                 max_bytes=max_bytes,
                 enable_ocr=enable_ocr,
@@ -100,7 +105,7 @@ async def run_file_upload_ingestion(
         except SourceScanError as exc:
             raise FileUploadIngestionError(str(exc)) from exc
 
-        file_hash = content_hash(raw)
+        file_hash = content_hash(extracted.raw)
         existing = await uow.documents.get_by_domain_and_hash(job.domain_id, file_hash)
         if existing is not None:
             raise FileUploadIngestionError("Document content hash already exists for domain")
@@ -134,19 +139,26 @@ async def run_file_upload_ingestion(
                     "source_id": source.id if source else None,
                     "filename": filename_value,
                     "suffix": Path(filename_value).suffix.lower(),
-                    "extraction": extraction_kind,
+                    "extraction": extracted.extraction_kind,
                     "segmenter": "word-window-v1",
+                    "ocr_page_count": len(extracted.page_texts),
                 }
             },
             source_uri=source_uri_value,
-            size_bytes=len(raw),
+            size_bytes=len(extracted.raw),
         )
         artifact = await uow.documents.add_artifact(
             document_version_id=version.id,
-            kind=artifact_kind,
+            kind=extracted.artifact_kind,
             uri=source_uri_value,
             sha256=file_hash,
-            size_bytes=len(raw),
+            size_bytes=len(extracted.raw),
+        )
+        await add_ocr_page_text_artifacts(
+            uow=uow,
+            document_version_id=version.id,
+            source_uri=source_uri_value,
+            page_texts=extracted.page_texts,
         )
         segments = tuple(
             [
@@ -158,7 +170,7 @@ async def run_file_upload_ingestion(
                     token_count=draft.token_count,
                     content_hash=draft.content_hash,
                 )
-                for draft in chunk_text(text, max_tokens=max_segment_tokens)
+                for draft in chunk_text(extracted.text, max_tokens=max_segment_tokens)
             ]
         )
         completed_at = datetime.now(UTC)

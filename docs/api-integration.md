@@ -219,8 +219,8 @@ document inventory for the active research workspace.
 
 ## Artifacts
 
-Artifacts are derived files for a document version: raw text, OCR text, page images,
-manifests, or other rebuildable outputs.
+Artifacts are derived files for a document version: raw text, OCR text, page-level OCR
+text, page images, manifests, or other rebuildable outputs.
 
 Create an artifact:
 
@@ -243,7 +243,10 @@ curl --header "Authorization: Bearer <token>" \
   http://localhost:8000/document-versions/<version_id>/artifacts
 ```
 
-Artifacts are unique per `(document_version_id, kind, uri)`.
+Artifacts are unique per `(document_version_id, kind, uri)`. OCR fallback creates one
+aggregate `ocr_text` artifact for the source URI and one `ocr_page_text` artifact per
+successfully OCR'd page using `#page=N` URI anchors. The page artifacts make OCR output
+auditable without changing the canonical document/version schema.
 
 ## Segments
 
@@ -336,9 +339,10 @@ processes the exact uploaded bytes instead of relying on a parallel implementati
 
 When the worker succeeds, it creates the canonical document, immutable version,
 text artifact (`raw_text`, `extracted_text`, or `ocr_text` depending on extraction),
-deterministic segments, `document.ingested` journal event, `job.succeeded`
-journal/progress records, and live `upload.completed` progress. Duplicate content hashes
-in the same domain are rejected consistently with mounted scans and text ingestion.
+page-level `ocr_page_text` artifacts when OCR fallback is used, deterministic segments,
+`document.ingested` journal event, `job.succeeded` journal/progress records, and live
+`upload.completed` progress. Duplicate content hashes in the same domain are rejected
+consistently with mounted scans and text ingestion.
 
 ## Mounted Source Scan
 
@@ -363,7 +367,9 @@ or worker container. The scan creates one document/version/extracted-text artifa
 file and deterministic word-window segments with anchors based on the relative path.
 Existing content hashes in the same domain are skipped, so scanning the same corpus twice
 is idempotent. PDFs first use local embedded-text extraction; when no text is available
-and `enable_ocr=true`, pages are rendered locally and OCR is run through Tesseract.
+and `enable_ocr=true`, pages are rendered locally and OCR is run through Tesseract. OCR
+fallback writes an aggregate `ocr_text` artifact plus per-page `ocr_page_text` artifacts
+with stable `#page=N` URI anchors.
 
 In `RETOS_ENV=test`, or when `run_inline=true`, the scan runs inline. In Docker/runtime
 mode, the scan is queued as an `ingest.source` job and processed by the worker.

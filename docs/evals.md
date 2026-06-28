@@ -192,5 +192,5 @@ Adapter guarantees:
 ## Next Implementation Step
 
 Add Natural Questions or HotpotQA adapters for larger retrieval and multi-hop coverage,
-add page-level OCR artifacts, then wire OCR benchmark adapters into the persisted eval
-run history and React comparison view.
+then wire OCR benchmark adapters into the persisted eval run history and React comparison
+view using the existing page-level OCR artifacts.

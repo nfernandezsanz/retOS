@@ -37,7 +37,7 @@ The first revision creates these tables:
 | `sources` | Upload, mounted path, or URL inputs attached to a domain. |
 | `documents` | Canonical document records keyed by domain and content hash. |
 | `document_versions` | Immutable versions of document bytes or extracted content. |
-| `artifacts` | Derived files such as raw text, OCR output, page images, or manifests. |
+| `artifacts` | Derived files such as raw text, aggregate OCR output, page-level OCR text, page images, or manifests. |
 | `segments` | Searchable chunks with anchors and token counts. |
 | `jobs` | Durable long-running work records for ingestion, indexing, evals, and agents. |
 | `progress_events` | Persisted progress updates that can back SSE streams and UI timelines. |
@@ -80,11 +80,11 @@ The first API-backed workflows are document registration and job creation:
   and ingestion progress events.
 - `POST /domains/{domain_id}/ingestions/upload` stores sanitized `.txt`, `.md`, or `.pdf`
   uploads in shared storage, queues an `ingest.source` job, and lets the worker create the
-  canonical document/version, `extracted_text` artifact, deterministic segments, and
-  upload-specific journal/progress events.
+  canonical document/version, text artifacts, OCR page artifacts when fallback OCR is used,
+  deterministic segments, and upload-specific journal/progress events.
 - `POST /sources/{source_id}/scan` queues an `ingest.source` job for mounted `file://`
-  `.txt`, `.md`, and digital `.pdf` corpora. The scan skips duplicate domain content
-  hashes, preserving idempotency for repeated fixture corpus runs.
+  `.txt`, `.md`, digital `.pdf`, and OCR-backed `.pdf` corpora. The scan skips duplicate
+  domain content hashes, preserving idempotency for repeated fixture corpus runs.
 - `POST /domains/{domain_id}/index/rebuild` queues an `index.domain` job. The worker reads
   persisted segments and rebuilds a Tantivy BM25 projection under `RETOS_INDEX_ROOT`. The
   index remains disposable; persisted segments and document metadata are the canonical

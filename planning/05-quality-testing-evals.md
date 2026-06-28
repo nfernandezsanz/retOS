@@ -108,6 +108,11 @@ reports character error rate plus word error rate as JSON or Markdown. Unit test
 OCR so CI stays deterministic; the local command is opt-in because real Tesseract
 availability varies by machine and container profile.
 
+OCR fallback ingestion now also persists `ocr_page_text` artifacts with stable
+`#page=N` URI anchors. Future OCR benchmark adapters should use those page-level
+artifacts for traceable CER/WER reports instead of treating a document as one opaque
+text blob.
+
 ## Public Dataset Candidates
 
 | Dataset | Fit |

@@ -17,6 +17,7 @@ from retos.ingestion.scan import (
     extract_source_text,
     fail_source_scan_job,
     iter_supported_files,
+    ocr_pdf_pages,
     ocr_pdf_text,
     path_from_file_uri,
     read_text_file,
@@ -150,17 +151,20 @@ def test_extract_source_text_uses_ocr_fallback_for_image_only_pdf(
         lambda image, lang: "OCR fallback text",
     )
 
-    text, raw, artifact_kind, extraction_kind = extract_source_text(
+    extracted = extract_source_text(
         pdf_path,
         max_bytes=100_000,
         enable_ocr=True,
         max_ocr_pages=1,
     )
 
-    assert text == "OCR fallback text"
-    assert raw == pdf_path.read_bytes()
-    assert artifact_kind == "ocr_text"
-    assert extraction_kind == "pdf_ocr"
+    assert extracted.text == "OCR fallback text"
+    assert extracted.raw == pdf_path.read_bytes()
+    assert extracted.artifact_kind == "ocr_text"
+    assert extracted.extraction_kind == "pdf_ocr"
+    assert [(page.page_number, page.text) for page in extracted.page_texts] == [
+        (1, "OCR fallback text")
+    ]
 
 
 def test_extract_source_text_can_disable_pdf_ocr(tmp_path: Path) -> None:
@@ -182,6 +186,22 @@ def test_ocr_pdf_text_requires_positive_page_limit(tmp_path: Path) -> None:
 
     with pytest.raises(SourceScanError, match="max_ocr_pages"):
         ocr_pdf_text(pdf_path.read_bytes(), max_pages=0)
+
+
+def test_ocr_pdf_pages_returns_page_level_text(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pdf_path = tmp_path / "scan.pdf"
+    write_image_only_pdf(pdf_path)
+    monkeypatch.setattr(
+        "retos.ingestion.scan.pytesseract.image_to_string",
+        lambda image, lang: "Page level OCR",
+    )
+
+    pages = ocr_pdf_pages(pdf_path.read_bytes(), max_pages=1)
+
+    assert [(page.page_number, page.text) for page in pages] == [(1, "Page level OCR")]
 
 
 def test_iter_supported_files_accepts_single_supported_file(tmp_path: Path) -> None:
@@ -281,7 +301,7 @@ def test_scan_source_endpoint_can_ocr_image_only_pdf(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     write_image_only_pdf(tmp_path / "image-only.pdf")
-    _, source_id = create_mount_source(scan_client, scan_admin_headers, tmp_path)
+    domain_id, source_id = create_mount_source(scan_client, scan_admin_headers, tmp_path)
     monkeypatch.setattr(
         "retos.ingestion.scan.pytesseract.image_to_string",
         lambda image, lang: "OCR endpoint text",
@@ -295,7 +315,25 @@ def test_scan_source_endpoint_can_ocr_image_only_pdf(
 
     assert response.status_code == 202
     assert response.json()["status"] == "succeeded"
-    assert count_scan_side_effects(scan_db_path) == (1, 1, 1, 1, 1)
+    assert count_scan_side_effects(scan_db_path) == (1, 1, 2, 1, 1)
+
+    listed_documents = scan_client.get(
+        f"/domains/{domain_id}/documents",
+        headers=scan_admin_headers,
+    )
+    version = scan_client.get(
+        f"/documents/{listed_documents.json()[0]['id']}/versions",
+        headers=scan_admin_headers,
+    )
+    artifacts = scan_client.get(
+        f"/document-versions/{version.json()[0]['id']}/artifacts",
+        headers=scan_admin_headers,
+    )
+    assert [artifact["kind"] for artifact in artifacts.json()] == [
+        "ocr_page_text",
+        "ocr_text",
+    ]
+    assert artifacts.json()[0]["uri"].endswith("#page=1")
 
 
 @pytest.mark.asyncio
