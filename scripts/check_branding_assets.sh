@@ -111,6 +111,13 @@ require(
 require("frontend/visual-audit/" in gitignore, ".gitignore must exclude visual audit PNGs")
 require("frontend/visual-audit" in dockerignore, ".dockerignore must exclude visual audit PNGs")
 require("npm run visual-audit" in ci, "CI must run the frontend visual audit")
+for phrase in (
+    "actions/upload-artifact@v4",
+    "retos-visual-audit-${{ github.sha }}",
+    "frontend/visual-audit/*.png",
+    "if-no-files-found: error",
+):
+    require(phrase in ci, f"CI must preserve visual audit evidence: {phrase}")
 
 print("Branding assets OK: project image, mark, palette, docs, and UI smoke are aligned.")
 PY

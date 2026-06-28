@@ -69,6 +69,12 @@ jobs:
         run: cd frontend && npm run e2e
       - name: Visual audit
         run: cd frontend && npm run visual-audit
+      - name: Upload visual audit screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: retos-visual-audit-${{ github.sha }}
+          path: frontend/visual-audit/*.png
+          if-no-files-found: error
 
   docker:
     runs-on: ubuntu-latest
