@@ -2,8 +2,12 @@ import pytest
 
 from retos.agent.tools import (
     CorpusToolError,
+    clean_entity_candidate,
     create_corpus_toolbox,
+    entity_candidates_from_source,
+    hits_for_optional_segment,
     named_entity_followup_queries,
+    split_table_line,
 )
 from retos.search.index import SearchHit
 
@@ -225,6 +229,21 @@ def test_corpus_toolbox_enforces_search_and_evidence_budgets() -> None:
         toolbox.search_corpus("alpha again")
 
 
+def test_corpus_toolbox_rejects_invalid_search_inputs() -> None:
+    toolbox = create_corpus_toolbox(
+        index=FakeSearchIndex([hit("segment-1", "alpha beta")]),  # type: ignore[arg-type]
+        domain_id="domain-1",
+        max_searches=1,
+        max_citations=5,
+        max_evidence_tokens=20,
+    )
+
+    with pytest.raises(CorpusToolError, match="query is required"):
+        toolbox.search_corpus("   ")
+    with pytest.raises(CorpusToolError, match="limit must be positive"):
+        toolbox.search_corpus("alpha", limit=-1)
+
+
 def test_corpus_toolbox_reads_only_returned_citations() -> None:
     toolbox = create_corpus_toolbox(
         index=FakeSearchIndex([hit("segment-1", "alpha beta")]),  # type: ignore[arg-type]
@@ -237,6 +256,8 @@ def test_corpus_toolbox_reads_only_returned_citations() -> None:
     toolbox.search_corpus("alpha")
 
     assert toolbox.read_citation("segment-1")["text"] == "alpha beta"
+    with pytest.raises(CorpusToolError, match="segment_id is required"):
+        toolbox.read_citation(" ")
     with pytest.raises(CorpusToolError, match="not returned"):
         toolbox.read_citation("segment-2")
 
@@ -336,6 +357,28 @@ def test_corpus_toolbox_inspects_table_and_key_value_rows() -> None:
     ]
 
 
+def test_corpus_toolbox_inspects_all_selected_table_rows_when_segment_is_omitted() -> None:
+    toolbox = create_corpus_toolbox(
+        index=FakeSearchIndex(
+            [
+                hit("segment-table", "Metric\tValue"),
+                hit("segment-key", "Owner: Research"),
+            ]
+        ),  # type: ignore[arg-type]
+        domain_id="domain-1",
+        max_searches=1,
+        max_citations=5,
+        max_evidence_tokens=20,
+    )
+
+    toolbox.search_corpus("metadata")
+    result = toolbox.inspect_evidence_table()
+
+    assert result["row_count"] == 2
+    assert result["rows"][0]["cells"] == ["Metric", "Value"]  # type: ignore[index]
+    assert result["rows"][1]["key"] == "Owner"  # type: ignore[index]
+
+
 def test_corpus_toolbox_source_tools_require_selected_evidence() -> None:
     toolbox = create_corpus_toolbox(
         index=FakeSearchIndex([hit("segment-1", "alpha beta")]),  # type: ignore[arg-type]
@@ -354,3 +397,34 @@ def test_corpus_toolbox_source_tools_require_selected_evidence() -> None:
         toolbox.inspect_evidence_table(" ")
     with pytest.raises(CorpusToolError, match="not returned"):
         toolbox.inspect_evidence_table("missing")
+
+
+def test_hits_for_optional_segment_returns_all_or_single_match() -> None:
+    hits = [hit("segment-1", "alpha beta"), hit("segment-2", "gamma delta")]
+
+    assert hits_for_optional_segment(hits, None) == hits
+    assert [item.segment_id for item in hits_for_optional_segment(hits, "segment-2")] == [
+        "segment-2"
+    ]
+    with pytest.raises(CorpusToolError, match="must not be blank"):
+        hits_for_optional_segment(hits, " ")
+
+
+def test_entity_candidate_cleaning_rejects_stopwords_and_short_tokens() -> None:
+    assert clean_entity_candidate("Compare The Apollo Program") == "Apollo Program"
+    assert clean_entity_candidate("The") == ""
+    assert clean_entity_candidate("AI") == ""
+    assert entity_candidates_from_source("The and Of") == []
+
+
+def test_entity_candidate_variants_split_comparisons() -> None:
+    candidates = entity_candidates_from_source("Compare Apollo Program and The Gemini Program")
+
+    assert "Apollo Program" in candidates
+    assert "Gemini" in candidates
+    assert "Apollo Program and The Gemini" in candidates
+
+
+def test_split_table_line_rejects_single_cell_lines() -> None:
+    assert split_table_line("| only-one |") is None
+    assert split_table_line("plain line") is None

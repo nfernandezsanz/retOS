@@ -10,14 +10,14 @@ production pilot.
 | --- | --- | --- |
 | Product maturity | Pre-alpha candidate | `planning/04-process-tracker.md` keeps phases 0-6 in progress. |
 | CI health | Must be checked against current `HEAD` | `make ci-status-check` queries GitHub Actions for the current commit; `docs/releases/2026.06.28-alpha.1.md` records release-candidate evidence. |
-| Backend coverage | Passing total coverage, branch ratchet in progress | `README.md` records 92.56% total and 84.89% branch-only coverage. |
+| Backend coverage | Passing total coverage, branch ratchet in progress | `README.md` records 92.72% total and 85.26% branch-only coverage. |
 | Runtime topology | Guarded | `scripts/check_docker_topology.sh` and `scripts/check_backend_runtime_image.sh` protect the shared API/worker/migrate backend image model. |
 | Dependency advisories | Guarded | `make dependency-audit` runs `pip-audit` and `npm audit --audit-level=high`; CI runs both checks. |
 | Branding assets and UI contract | Guarded | `make brand-check` runs `scripts/check_branding_assets.sh` to validate project identity assets, palette tokens, README visibility, and Playwright brand smoke coverage. |
 | Local cost safety | Guarded | `.env.example` keeps `RETOS_ALLOW_PAID_LLM=false`, `RETOS_PROVIDER=local`, and `RETOS_OLLAMA_MODEL=gemma4`. |
 | Audit ledger | Implemented foundation | `docs/database.md` and `planning/06-auditability-journals.md` describe persisted journal/progress hash chains and export validation. |
 | Release publishing | Not complete | GHCR digest, SBOM/provenance, and Cosign evidence are pending until the release workflow runs for a tag. |
-| Final branch target | Not complete | Branch coverage is ratcheted at 84.89%; the target remains 90%. |
+| Final branch target | Not complete | Branch coverage is ratcheted at 85.26%; the target remains 90%. |
 
 ## Auditor Review Order
 
