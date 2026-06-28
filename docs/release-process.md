@@ -189,7 +189,7 @@ Images:
   inside GitHub Actions, the manifest is an in-run snapshot and must be paired with a
   later `make ci-status-check` success for the same commit.
 - `make auditor-handoff-check` is the local auditor entry point for static guards,
-  current CI artifact evidence, and manifest export. It does not replace tag publishing,
+  offline manifest export, and promotion preparation. It does not replace tag publishing,
   GHCR digests, SBOM/provenance, Cosign verification, or target-environment review.
 - `scripts/check_published_release_evidence.sh` is the independent post-publish verifier
   for immutable image digests. Run it through `make release-evidence-check` before final

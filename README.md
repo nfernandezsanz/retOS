@@ -2,24 +2,118 @@
 
 ![RetOS project card](docs/assets/retos-project-card.svg)
 
-RetOS is a local-first research system for auditable document investigation. It is designed to run as a reusable Docker stack with a React console, a FastAPI backend, Celery workers backed by RabbitMQ, Postgres persistence, Tantivy BM25 search, local OCR, and a Deep Agents research runtime.
+RetOS is a local-first research console for auditable document investigation. It runs as
+a Docker stack with a React UI, FastAPI, Celery/RabbitMQ workers, Postgres, local OCR,
+Tantivy BM25 search, Ollama `gemma4`, and a Deep Agents research runtime.
 
-The source of truth is the versioned corpus store. Search indexes are rebuildable projections, not the canonical record.
+The short version: bring your documents, keep the canonical corpus versioned, rebuild
+indexes when needed, and make every ingestion/query/eval step traceable.
+
+[![Run locally](https://img.shields.io/badge/run-local%20docker-2563eb?style=for-the-badge)](#local-quick-start)
+[![Open UI](https://img.shields.io/badge/open-react%20console-0f766e?style=for-the-badge)](#where-to-look)
+[![Local audit](https://img.shields.io/badge/audit-local%20handoff-f97316?style=for-the-badge)](#local-audit-handoff)
+[![Docs](https://img.shields.io/badge/read-docs-334155?style=for-the-badge)](#where-to-look)
+[![MIT](https://img.shields.io/badge/license-MIT-111827?style=for-the-badge)](LICENSE)
+
+## Why It Exists
+
+RetOS is built for research workflows where "the answer" is not enough. Operators need
+to see what was ingested, how it was indexed, what the agent read, which citations were
+used, what jobs ran, and whether the audit journal still validates.
+
+The project is intentionally designed as a staff-engineer-quality reference: local-first
+runtime, written decisions, reproducible checks, no paid-provider calls in tests, and
+auditor-friendly evidence.
+
+## Local Quick Start
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Then open the console and API:
+
+| Action | Local URL |
+| --- | --- |
+| Use the React console | http://localhost:8080 |
+| Inspect the API | http://localhost:8000/docs |
+| Check API health | http://localhost:8000/healthz |
+| Watch RabbitMQ | http://localhost:15672 |
+
+Pull the default local model when you want Ollama-backed runs:
+
+```bash
+docker compose --profile models run --rm ollama-pull
+```
+
+Local defaults are intentionally cheap: `RETOS_PROVIDER=local`,
+`RETOS_OLLAMA_MODEL=gemma4`, and `RETOS_ALLOW_PAID_LLM=false`.
+
+## Local Audit Handoff
+
+For a local, auditor-friendly snapshot that does not depend on GitHub Actions:
+
+```bash
+make auditor-handoff-check
+```
+
+That command runs the static auditor gates and writes an offline manifest to
+`evals/reports/audit-manifest.json`. The manifest records the current commit, dirty
+state, required gates, critical file hashes, visual artifact names, and remaining
+external promotion evidence. It deliberately does not claim production promotion.
+
+Remote CI evidence is separate:
+
+```bash
+make ci-status-check
+```
+
+Use that only when you want to verify the latest GitHub Actions run and its downloadable
+visual-audit/audit-manifest artifacts.
+
+## Where To Look
+
+| Need | Start Here |
+| --- | --- |
+| Run the stack | [docs/docker.md](docs/docker.md) |
+| Operate, backup, restore, rollback | [docs/operations.md](docs/operations.md) |
+| Prepare a release | [docs/release-process.md](docs/release-process.md) |
+| Review production readiness | [docs/production-readiness.md](docs/production-readiness.md) |
+| Read project changes | [CHANGELOG.md](CHANGELOG.md) |
+| Query/API examples | [docs/api-integration.md](docs/api-integration.md) |
+| Eval strategy | [docs/evals.md](docs/evals.md) |
+| Data model and migrations | [docs/database.md](docs/database.md) |
+| Security reporting | [SECURITY.md](SECURITY.md) |
+| Brand and UI contract | [docs/branding.md](docs/branding.md) |
+| Roadmap and phase tracker | [planning/](planning/) |
 
 ## Current Status
 
 | Signal | Status |
 | --- | --- |
-| Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 95.20% total coverage; 90.44% branch-only coverage is ratcheted in CI and now clears the 90% branch target. |
-| Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
-| Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
-| Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
-| Next milestone | Phase 5: expand real-dataset calibration beyond the 200-record/40-case PASS slice, continue UI hardening, and collect release promotion evidence. |
+| Product maturity | Pre-alpha foundation; core product slices are being built phase by phase. |
+| Backend coverage | 95.20% total coverage; 90.44% branch-only coverage is ratcheted above the 90% target. |
+| Local runtime | Docker-first stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
+| Cost posture | Zero paid LLM calls by default; paid providers require explicit opt-in. |
+| Production status | Not production-promoted; final release still needs GHCR digests, SBOM/provenance, Cosign evidence, and human target-environment review. |
 
-This repository is intentionally being built as a staff-engineer-quality reference project: decisions are documented, quality gates are automated, integration checks hit real endpoints, UI smoke tests open the actual frontend, and every implementation phase is expected to leave behind tests, auditability, and operating notes.
+## What You Can Do Today
+
+| Workflow | Local Action |
+| --- | --- |
+| Upload and manage documents | Use the React console at http://localhost:8080 |
+| Watch ingestion/indexing | Live job/progress views and SSE-backed updates in the UI |
+| Query with citations | Run grounded agent queries against indexed domains |
+| Inspect audit state | Export `/audit/export` and validate hash-chain fields |
+| Run deterministic evals | `make eval-smoke` and `make eval-agent-multihop` |
+| Smoke the full stack | `make docker-smoke` |
+| Prepare human review | `make auditor-handoff-check` |
 
 ## What This Repository Contains
+
+<details>
+<summary>Implemented capabilities</summary>
 
 - A Python 3.14 FastAPI backend scaffold with secure settings, JWT helpers, Argon2 password hashing, persisted-resume SSE progress streaming, and Celery/RabbitMQ wiring.
 - Initial SQLAlchemy async persistence for domain and source management through a Unit of Work.
@@ -63,7 +157,12 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Release workflow for GHCR image publishing with SBOM/provenance attestations, Cosign
   signing, and signature verification for `retos-backend` and `retos-web`.
 
+</details>
+
 ## Development Model
+
+<details>
+<summary>How autonomous development is expected to work</summary>
 
 RetOS is designed to be developed primarily with autonomous coding agents such as Codex and Claude, with limited human interaction and strong written constraints. The repository is structured so agents can work from durable artifacts instead of relying on ad hoc chat memory:
 
@@ -83,6 +182,8 @@ read planning and ADRs
   -> update docs and tracker
   -> commit with a clear message
 ```
+
+</details>
 
 ## Architecture
 
@@ -111,47 +212,6 @@ documents/uploads/mounts
 | Frontend | React 19, TypeScript, Vite, TanStack Query, TanStack Router |
 | Streaming | Server-Sent Events |
 | License | MIT |
-
-## Quick Start
-
-Copy the example environment and change the secrets before using anything beyond local development:
-
-```bash
-cp .env.example .env
-```
-
-Start the full stack:
-
-```bash
-docker compose up --build
-```
-
-Services:
-
-| Service | URL |
-| --- | --- |
-| Web UI | http://localhost:8080 |
-| API | http://localhost:8000 |
-| API docs | http://localhost:8000/docs |
-| RabbitMQ management | http://localhost:15672 |
-| Ollama | http://localhost:11434 |
-
-Pull the default local model:
-
-```bash
-docker compose --profile models run --rm ollama-pull
-```
-
-More Docker details are in [docs/docker.md](docs/docker.md).
-Operations, release, upgrade, backup, and restore details are in [docs/operations.md](docs/operations.md).
-Security reporting, secure defaults, and human production review guidance are in [SECURITY.md](SECURITY.md).
-Release candidate checklist and note templates are in [docs/release-process.md](docs/release-process.md).
-Production readiness evidence, blockers, and auditor checklist live in [docs/production-readiness.md](docs/production-readiness.md).
-Project changes are tracked in [CHANGELOG.md](CHANGELOG.md).
-Versioned release notes and release-candidate notes live in [docs/releases](docs/releases).
-API integration details are in [docs/api-integration.md](docs/api-integration.md).
-Evaluation details are in [docs/evals.md](docs/evals.md).
-Database and migration details are in [docs/database.md](docs/database.md).
 
 ## Development
 
@@ -207,14 +267,21 @@ make check
 make integration
 make frontend-test
 make frontend-e2e
+make frontend-visual-audit
 docker compose --env-file .env.example config
 docker compose --dry-run build
 make release-check
+make production-preflight
 make dependency-audit
-make ci-status-check
+make auditor-handoff-check
+make audit-manifest-check
 make release-notes-check
+make versioned-release-notes-check
 make docker-smoke
 ```
+
+When you need remote repository evidence for a release commit, run
+`make ci-status-check` separately.
 
 ## Quality Gates
 
@@ -231,8 +298,8 @@ Every meaningful change should pass these gates:
 | Ignore hygiene | `make ignore-hygiene-check` | Validates `.gitignore` and `.dockerignore` keep secrets, generated files, local volumes, public datasets, reports, and backups out of Git and Docker contexts. |
 | Operations runbook | `make operations-runbook-check` | Validates backup, restore, rollback, health-check, audit-export, and promotion-evidence fields. |
 | Auditor static pack | `make auditor-static-check` | Runs the non-destructive auditor gates for dependency advisories, security policy, ignore hygiene, operations runbooks, branding, release workflow, release notes, production preflight, and audit-pack alignment. |
-| Auditor handoff | `make auditor-handoff-check` | Runs the static auditor pack, verifies current GitHub Actions jobs and evidence artifacts, and exports the audit manifest to `evals/reports/audit-manifest.json`. |
-| Audit handoff manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | Exports commit/CI status, generation context, required gates, critical file hashes, visual audit screenshot records, and remaining external promotion evidence as JSON. |
+| Auditor handoff | `make auditor-handoff-check` | Runs the local static auditor pack and exports an offline audit manifest to `evals/reports/audit-manifest.json`. |
+| Audit handoff manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | Exports commit state, generation context, required gates, critical file hashes, visual audit screenshot records, and remaining external promotion evidence as JSON. |
 | Audit manifest schema | `make audit-manifest-check` | Validates the audit manifest schema, required gates, critical file hashes, visual artifact names, and external blockers offline. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | Agent multi-hop eval | `make eval-agent-multihop` | Runs deterministic query-plan, multi-hop audit, evidence-route, citation, grounding, and budget scorers without network or paid providers. |
