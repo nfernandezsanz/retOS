@@ -49,7 +49,8 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Docker images build.
 - Docker stack smoke starts core services and hits API/web endpoints.
 - Release readiness validates operations docs, safe defaults, and image topology.
-- Release workflow validates GHCR publishing, SBOM/provenance, and Cosign signing.
+- Release workflow validates GHCR publishing, SBOM/provenance, Cosign signing, and
+  signature verification.
 - Release note checks validate `CHANGELOG.md`, release-process guidance, and operator
   documentation links.
 - Versioned release note checks validate concrete notes under `docs/releases/`.

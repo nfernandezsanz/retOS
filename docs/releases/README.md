@@ -8,6 +8,6 @@ Before a release leaves candidate status:
 
 - The matching GitHub Actions run must be green.
 - The GHCR release workflow must publish `retos-backend` and `retos-web`.
-- SBOM/provenance and Cosign signature evidence must be linked or copied into the note.
+- SBOM/provenance, Cosign signature, and signature verification evidence must be linked or
+  copied into the note.
 - Migration and rollback notes must be explicit.
-

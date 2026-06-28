@@ -148,6 +148,23 @@ jobs:
           cosign sign --yes "${BACKEND_IMAGE}@${BACKEND_DIGEST}"
           cosign sign --yes "${WEB_IMAGE}@${WEB_DIGEST}"
 
+      - name: Verify published image signatures
+        shell: bash
+        env:
+          BACKEND_DIGEST: ${{ steps.build-backend.outputs.digest }}
+          WEB_DIGEST: ${{ steps.build-web.outputs.digest }}
+        run: |
+          set -euo pipefail
+          certificate_identity_regexp="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/.*"
+          cosign verify \
+            --certificate-identity-regexp "${certificate_identity_regexp}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${BACKEND_IMAGE}@${BACKEND_DIGEST}"
+          cosign verify \
+            --certificate-identity-regexp "${certificate_identity_regexp}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${WEB_IMAGE}@${WEB_DIGEST}"
+
       - name: Summarize release images
         shell: bash
         env:
@@ -163,5 +180,6 @@ jobs:
             echo "| ${BACKEND_IMAGE}:${VERSION} | ${BACKEND_DIGEST} |"
             echo "| ${WEB_IMAGE}:${VERSION} | ${WEB_DIGEST} |"
             echo
-            echo "SBOM, provenance attestations, and Cosign keyless signatures were requested during this run."
+            echo "SBOM and provenance attestations were requested during this run."
+            echo "Cosign keyless signatures were created and verified for both published digests."
           } >> "${GITHUB_STEP_SUMMARY}"

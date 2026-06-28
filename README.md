@@ -60,8 +60,8 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Branding assets and visual guidance for a coherent audit-console identity.
 - Test and coverage defaults that avoid paid LLM calls.
 - CI jobs that validate backend format, PEP 8, types, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke.
-- Release workflow for GHCR image publishing with SBOM/provenance attestations and Cosign
-  signing for `retos-backend` and `retos-web`.
+- Release workflow for GHCR image publishing with SBOM/provenance attestations, Cosign
+  signing, and signature verification for `retos-backend` and `retos-web`.
 
 ## Development Model
 
@@ -248,7 +248,7 @@ Every meaningful change should pass these gates:
 | Current HEAD CI | `make ci-status-check` | Queries GitHub Actions and verifies the current commit has successful backend, frontend, and docker jobs. |
 | Release notes | `make release-notes-check` | Validates changelog, release-process guidance, and docs links for auditable releases. |
 | Versioned release notes | `make versioned-release-notes-check` | Validates concrete release note artifacts with evidence, limits, and rollback details. |
-| Release workflow | `make release-workflow-check` | Validates GHCR publishing, SBOM/provenance, and Cosign signing workflow documentation. |
+| Release workflow | `make release-workflow-check` | Validates GHCR publishing, SBOM/provenance, Cosign signing, and signature verification workflow documentation. |
 | Backend runtime image | `make docker-runtime-image-check` | Verifies running API, worker, and migration containers use the exact same backend Docker image ID. |
 | Docker stack smoke | `make docker-smoke` | Builds the shared backend image plus web image, verifies API/worker/migrate share one runtime image ID, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, SQuAD/HotpotQA/Natural Questions/OCR benchmark evals, eval run comparison, job lifecycle, SSE, and web over HTTP. |
 

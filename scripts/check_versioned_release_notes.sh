@@ -55,6 +55,7 @@ required_phrases = (
     "GHCR publishing",
     "SBOM/provenance",
     "Cosign signatures",
+    "signature verification",
     "Rollback",
 )
 

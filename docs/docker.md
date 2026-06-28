@@ -88,11 +88,13 @@ layers. The web budget allows the Nginx runtime plus compiled React assets.
 
 The workflow builds the same `backend-runtime` target used by Compose, so API, worker,
 and migrate continue to share one backend image after publishing. It also requests SBOM
-and max-mode provenance attestations from `docker/build-push-action`, then signs the
-published digests with Cosign keyless signing. Release readiness runs
-`scripts/check_release_workflow.sh` so the publishing, SBOM, provenance, and Cosign
-contract stays documented. The publish job depends on backend format/lint/type/test/eval
-smoke and frontend checks, so a tag cannot push images before the core quality gates pass.
+and max-mode provenance attestations from `docker/build-push-action`, signs the published
+digests with Cosign keyless signing, and runs Cosign signature verification for both
+digests before summarizing release evidence. Release readiness runs
+`scripts/check_release_workflow.sh` so the publishing, SBOM, provenance, Cosign signing,
+and signature verification contract stays documented. The publish job depends on backend
+format/lint/type/test/eval smoke and frontend checks, so a tag cannot push images before
+the core quality gates pass.
 
 ## Smoke Test
 

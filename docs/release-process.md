@@ -57,9 +57,10 @@ make docker-smoke
 
 5. Confirm GitHub Actions is green for the release commit with `make ci-status-check`.
 6. Push a `v<version>` tag or run `.github/workflows/release.yml` manually to publish
-   `retos-backend` and `retos-web` to GHCR with SBOM, provenance, and Cosign signatures.
-   The workflow reruns backend format/lint/type/test/eval-smoke, frontend checks,
-   release readiness, and production preflight before any image is pushed.
+   `retos-backend` and `retos-web` to GHCR with SBOM, provenance, Cosign signatures, and
+   Cosign signature verification for both published digests. The workflow reruns backend
+   format/lint/type/test/eval-smoke, frontend checks, release readiness, and production
+   preflight before any image is pushed.
 7. Attach validation evidence to the GitHub release notes:
 
 | Evidence | Required |
@@ -75,7 +76,7 @@ make docker-smoke
 | Image size budgets | Yes |
 | GHCR publishing | Yes |
 | SBOM/provenance | Yes |
-| Cosign signatures | Yes |
+| Cosign signatures and verification | Yes |
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
@@ -127,7 +128,7 @@ Images:
 - Image size budgets:
 - GHCR publishing:
 - SBOM/provenance:
-- Cosign signatures:
+- Cosign signatures and verification:
 - Docker stack smoke:
 - Eval smoke:
 
@@ -151,7 +152,8 @@ Images:
   `RETOS_BACKEND_IMAGE_MAX_BYTES` and `RETOS_WEB_IMAGE_MAX_BYTES` only when the release
   notes explain the increase.
 - `.github/workflows/release.yml` is the source of truth for publishing `retos-backend`
-  and `retos-web` to GHCR. It must keep SBOM, provenance, and Cosign signing enabled.
+  and `retos-web` to GHCR. It must keep SBOM, provenance, Cosign signing, and Cosign
+  signature verification enabled.
 - CI validates release docs through `make release-check`.
 - CI validates Python and Node dependency advisories before tests and browser smoke.
 - CI validates the production readiness audit pack through `make audit-pack-check`.

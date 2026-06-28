@@ -41,6 +41,10 @@ required_workflow_phrases = (
     "provenance: mode=max",
     "sigstore/cosign-installer@v4",
     "cosign sign --yes",
+    "Verify published image signatures",
+    "cosign verify",
+    "--certificate-identity-regexp",
+    "--certificate-oidc-issuer",
     "needs:",
     "python-version: \"3.14\"",
     "node-version: \"24\"",
@@ -65,6 +69,7 @@ for phrase in (
     ".github/workflows/release.yml",
     "GHCR",
     "Cosign",
+    "signature verification",
     "SBOM",
     "provenance",
     "retos-backend",
@@ -74,5 +79,5 @@ for phrase in (
     require(phrase in operations, f"docs/operations.md missing release publishing phrase: {phrase}")
     require(phrase in release_process, f"docs/release-process.md missing release publishing phrase: {phrase}")
 
-print("Release workflow OK: GHCR publishing, SBOM/provenance, and signing are documented.")
+print("Release workflow OK: GHCR publishing, SBOM/provenance, signing, and signature verification are documented.")
 PY
