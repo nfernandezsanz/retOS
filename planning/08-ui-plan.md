@@ -80,6 +80,9 @@ The UI is a working console, not a landing page. It must make background process
 - Failed and cancelled worker-backed jobs expose a retry action. The UI posts to
   `/jobs/{job_id}/retry`, selects the new queued job, and shows its retry metadata in the
   detail panel.
+- The shell includes a keyboard-visible skip link to the workspace, keeps sidebar focus
+  rings visible, and verifies mobile provider/eval/audit surfaces do not create
+  document-level horizontal overflow.
 - Browser smoke tests mock the API contract and verify provider, admin user roles,
   per-domain viewer grants, domain
   creation, document/source inventory, document edit/archive/restore/history, file
@@ -105,6 +108,8 @@ Show:
 ## Accessibility
 
 - Use semantic buttons, labels, and inputs.
+- Keep the primary workspace as the document `main` region and expose a skip link before
+  the sidebar navigation.
 - Use `aria-live="polite"` for important async updates.
 - Give icon-only buttons accessible names.
 - Keep focus states visible.
@@ -117,5 +122,7 @@ Every UI slice should include a Playwright smoke test that:
 - Opens the running React app.
 - Verifies the primary view is visible.
 - Checks meaningful controls by role/name.
+- Checks keyboard focus paths, including the skip link, when navigation changes.
+- Checks mobile horizontal overflow on dense operational panels.
 - Checks live regions for async progress where applicable.
 - Exercises reconnect/error states when SSE behavior changes.

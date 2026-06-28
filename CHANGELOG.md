@@ -11,6 +11,9 @@ tag in GitHub.
 
 ### Added
 
+- Keyboard navigation hardening for the React console, including a skip link to the
+  workspace, visible sidebar focus rings, and mobile browser coverage for provider,
+  eval, and audit surfaces.
 - Shared backend Docker runtime for API, worker, and migrations with topology and
   runtime image ID guards.
 - OCI image metadata labels for backend and web images, including source, license,

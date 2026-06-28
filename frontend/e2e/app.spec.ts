@@ -1622,11 +1622,21 @@ test("keeps provider controls usable on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
 
+  await page.keyboard.press("Tab");
+  const skipLink = page.getByRole("link", { name: "Skip to workspace" });
+  await expect(skipLink).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#overview")).toBeFocused();
+
   await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
   await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
 
   await expect(page.getByText("Ollama local runtime")).toBeVisible();
+  await page.getByRole("link", { name: "Evals" }).click();
+  await expect(page.getByRole("heading", { name: "Local evals" })).toBeVisible();
+  await page.getByRole("link", { name: "Audit" }).click();
+  await expect(page.getByRole("heading", { name: "Jobs and evidence ledger" })).toBeVisible();
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );

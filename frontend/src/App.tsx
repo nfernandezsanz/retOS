@@ -2501,7 +2501,10 @@ function App() {
   }
 
   return (
-    <main className="shell">
+    <div className="shell">
+      <a className="skip-link" href="#overview">
+        Skip to workspace
+      </a>
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="brand">
           <ServerCog aria-hidden="true" />
@@ -2517,7 +2520,7 @@ function App() {
         </nav>
       </aside>
 
-      <section className="workspace" id="overview">
+      <main className="workspace" id="overview" tabIndex={-1}>
         <header className="topbar">
           <div>
             <p className="eyebrow">Local-first research console</p>
@@ -4403,8 +4406,8 @@ function App() {
             </div>
           </article>
         </section>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
 
