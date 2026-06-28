@@ -16,7 +16,7 @@ from retos.search.index import (
     TantivySearchIndex,
     natural_language_query_text,
 )
-from retos.search.service import fail_index_job
+from retos.search.service import SearchIndexingError, fail_index_job, rebuild_domain_index
 
 
 @pytest.fixture
@@ -294,6 +294,67 @@ def test_rebuild_index_rejects_missing_domain(
     assert response.status_code == 404
 
 
+async def add_index_job(
+    client: TestClient,
+    *,
+    kind: str = "index.domain",
+    status: str = "queued",
+    domain_id: str | None = None,
+) -> str:
+    async with SQLAlchemyUnitOfWork(client.app.state.session_factory) as uow:
+        job = await uow.jobs.add(
+            kind=kind,  # type: ignore[arg-type]
+            status=status,  # type: ignore[arg-type]
+            domain_id=domain_id,
+            source_id=None,
+            payload={},
+        )
+        await uow.commit()
+    return job.id
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("job_kwargs", "message"),
+    [
+        ({"kind": "ingest.source"}, "Unsupported index job kind"),
+        ({"status": "running"}, "Job must be queued"),
+        ({"domain_id": None}, "requires a domain_id"),
+        ({"domain_id": "missing-domain"}, "Domain not found"),
+    ],
+)
+async def test_rebuild_domain_index_rejects_invalid_jobs(
+    search_client: TestClient,
+    search_admin_headers: dict[str, str],
+    tmp_path: Path,
+    job_kwargs: dict[str, str | None],
+    message: str,
+) -> None:
+    domain_id, _, _ = create_search_fixture(search_client, search_admin_headers)
+    job_kwargs.setdefault("domain_id", domain_id)
+    job_id = await add_index_job(search_client, **job_kwargs)
+
+    with pytest.raises(SearchIndexingError, match=message):
+        await rebuild_domain_index(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(search_client.app.state.session_factory),
+            index=TantivySearchIndex(tmp_path / "index"),
+        )
+
+
+@pytest.mark.asyncio
+async def test_rebuild_domain_index_rejects_missing_job(
+    search_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(SearchIndexingError, match="Job not found"):
+        await rebuild_domain_index(
+            job_id="missing-job",
+            uow=SQLAlchemyUnitOfWork(search_client.app.state.session_factory),
+            index=TantivySearchIndex(tmp_path / "index"),
+        )
+
+
 @pytest.mark.asyncio
 async def test_fail_index_job_marks_job_failed(
     search_client: TestClient,
@@ -318,3 +379,12 @@ async def test_fail_index_job_marks_job_failed(
     assert fetched.status_code == 200
     assert fetched.json()["status"] == "failed"
     assert fetched.json()["error"] == "index exploded"
+
+
+@pytest.mark.asyncio
+async def test_fail_index_job_ignores_missing_job(search_client: TestClient) -> None:
+    await fail_index_job(
+        job_id="missing-job",
+        uow=SQLAlchemyUnitOfWork(search_client.app.state.session_factory),
+        error="index exploded",
+    )

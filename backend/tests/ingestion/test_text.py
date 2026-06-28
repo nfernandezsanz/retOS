@@ -1,6 +1,7 @@
 import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -76,6 +77,29 @@ def count_ingestion_side_effects(db_path: Path) -> tuple[int, int, int, int, int
         return int(documents), int(artifacts), int(segments), int(journals), int(progress)
     finally:
         connection.close()
+
+
+async def add_text_job(
+    client: TestClient,
+    *,
+    kind: str = "ingest.source",
+    status: str = "queued",
+    domain_id: str | None = None,
+    source_id: str | None = None,
+    payload: dict[str, Any] | None = None,
+) -> str:
+    async with SQLAlchemyUnitOfWork(client.app.state.session_factory) as uow:
+        job = await uow.jobs.add(
+            kind=kind,  # type: ignore[arg-type]
+            status=status,  # type: ignore[arg-type]
+            domain_id=domain_id,
+            source_id=source_id,
+            payload=(
+                payload if payload is not None else {"title": "Fixture", "text": "fixture text"}
+            ),
+        )
+        await uow.commit()
+    return job.id
 
 
 def test_chunk_text_is_deterministic() -> None:
@@ -239,6 +263,102 @@ async def test_fail_text_ingestion_job_marks_job_failed(
     assert fetched_job.json()["status"] == "failed"
     assert fetched_job.json()["error"] == "boom"
     assert count_ingestion_side_effects(ingestion_db_path) == (0, 0, 0, 2, 2)
+
+
+@pytest.mark.asyncio
+async def test_fail_text_ingestion_job_ignores_missing_job(
+    ingestion_client: TestClient,
+    ingestion_db_path: Path,
+) -> None:
+    await fail_text_ingestion_job(
+        job_id="missing-job",
+        uow=SQLAlchemyUnitOfWork(ingestion_client.app.state.session_factory),
+        error="boom",
+    )
+
+    assert count_ingestion_side_effects(ingestion_db_path) == (0, 0, 0, 0, 0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("job_kwargs", "message"),
+    [
+        ({"kind": "index.domain"}, "Unsupported ingestion job kind"),
+        ({"status": "running"}, "Job must be queued"),
+        ({"domain_id": None}, "requires a domain_id"),
+        ({"payload": {"title": "Bad", "text": "body", "metadata": "not-object"}}, "metadata"),
+        ({"payload": {"title": "Bad", "text": "body", "external_id": 123}}, "external_id"),
+        ({"payload": {"title": "Bad", "text": "body", "max_segment_tokens": -1}}, "positive"),
+    ],
+)
+async def test_run_text_ingestion_rejects_invalid_job_payloads(
+    ingestion_client: TestClient,
+    ingestion_admin_headers: dict[str, str],
+    ingestion_db_path: Path,
+    job_kwargs: dict[str, Any],
+    message: str,
+) -> None:
+    domain_id, _ = create_domain_and_source(ingestion_client, ingestion_admin_headers)
+    job_kwargs.setdefault("domain_id", domain_id)
+    job_id = await add_text_job(ingestion_client, **job_kwargs)
+
+    with pytest.raises((TextIngestionError, ValueError), match=message):
+        await run_text_ingestion(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(ingestion_client.app.state.session_factory),
+        )
+
+    assert count_ingestion_side_effects(ingestion_db_path) == (0, 0, 0, 0, 0)
+
+
+@pytest.mark.asyncio
+async def test_run_text_ingestion_rejects_missing_source(
+    ingestion_client: TestClient,
+    ingestion_admin_headers: dict[str, str],
+) -> None:
+    domain_id, _ = create_domain_and_source(ingestion_client, ingestion_admin_headers)
+    job_id = await add_text_job(
+        ingestion_client,
+        domain_id=domain_id,
+        source_id="missing-source",
+    )
+
+    with pytest.raises(TextIngestionError, match="Source not found"):
+        await run_text_ingestion(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(ingestion_client.app.state.session_factory),
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_text_ingestion_rejects_duplicate_content(
+    ingestion_client: TestClient,
+    ingestion_admin_headers: dict[str, str],
+) -> None:
+    domain_id, _ = create_domain_and_source(ingestion_client, ingestion_admin_headers)
+    text = "Duplicate inline content"
+    ingestion_client.post(
+        f"/domains/{domain_id}/documents",
+        headers=ingestion_admin_headers,
+        json={
+            "external_id": "existing",
+            "title": "Existing",
+            "content_hash": content_hash(text),
+            "source_uri": "inline://existing",
+            "size_bytes": len(text.encode("utf-8")),
+        },
+    )
+    job_id = await add_text_job(
+        ingestion_client,
+        domain_id=domain_id,
+        payload={"title": "Duplicate", "text": text},
+    )
+
+    with pytest.raises(TextIngestionError, match="already exists"):
+        await run_text_ingestion(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(ingestion_client.app.state.session_factory),
+        )
 
 
 def test_text_ingestion_rejects_source_from_another_domain(

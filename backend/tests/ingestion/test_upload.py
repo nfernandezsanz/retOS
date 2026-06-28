@@ -1,6 +1,7 @@
 import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pymupdf
 import pytest
@@ -60,6 +61,27 @@ def write_image_only_pdf(path: Path) -> None:
     document.close()
 
 
+async def add_upload_job(
+    client: TestClient,
+    *,
+    kind: str = "ingest.source",
+    status: str = "queued",
+    domain_id: str | None = None,
+    source_id: str | None = None,
+    payload: dict[str, Any] | None = None,
+) -> str:
+    async with SQLAlchemyUnitOfWork(client.app.state.session_factory) as uow:
+        job = await uow.jobs.add(
+            kind=kind,  # type: ignore[arg-type]
+            status=status,  # type: ignore[arg-type]
+            domain_id=domain_id,
+            source_id=source_id,
+            payload=payload if payload is not None else {"ingestion_kind": "file_upload"},
+        )
+        await uow.commit()
+    return job.id
+
+
 def test_sanitize_upload_filename_keeps_safe_supported_name() -> None:
     assert sanitize_upload_filename("../Mission Brief 01.pdf") == "Mission-Brief-01.pdf"
 
@@ -72,6 +94,9 @@ def test_sanitize_upload_filename_rejects_unsupported_suffix() -> None:
 def test_sanitize_upload_filename_rejects_empty_name() -> None:
     with pytest.raises(FileUploadIngestionError, match="required"):
         sanitize_upload_filename("   ")
+
+    with pytest.raises(FileUploadIngestionError, match="required"):
+        sanitize_upload_filename(".")
 
 
 def test_enqueue_file_upload_ingestion_dispatches_celery_task(
@@ -379,6 +404,113 @@ async def test_run_file_upload_ingestion_rejects_missing_job(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("job_kwargs", "message"),
+    [
+        ({"kind": "index.domain"}, "Unsupported upload job kind"),
+        ({"status": "running"}, "Job must be queued"),
+        ({"domain_id": None}, "requires a domain_id"),
+        ({"payload": {}}, "ingestion_kind=file_upload"),
+        (
+            {"payload": {"ingestion_kind": "file_upload", "filename": "fixture.txt"}},
+            "file_path and filename",
+        ),
+        (
+            {
+                "payload": {
+                    "ingestion_kind": "file_upload",
+                    "filename": "fixture.txt",
+                    "file_path": "missing.txt",
+                }
+            },
+            "source_uri",
+        ),
+        (
+            {
+                "payload": {
+                    "ingestion_kind": "file_upload",
+                    "filename": "fixture.txt",
+                    "file_path": "missing.txt",
+                    "source_uri": "storage://missing",
+                }
+            },
+            "missing",
+        ),
+    ],
+)
+async def test_run_file_upload_ingestion_rejects_invalid_job_payloads(
+    upload_client: TestClient,
+    upload_admin_headers: dict[str, str],
+    job_kwargs: dict[str, Any],
+    message: str,
+) -> None:
+    domain_id = create_upload_domain(upload_client, upload_admin_headers)
+    job_kwargs.setdefault("domain_id", domain_id)
+    job_id = await add_upload_job(upload_client, **job_kwargs)
+
+    with pytest.raises(FileUploadIngestionError, match=message):
+        await run_file_upload_ingestion(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(upload_client.app.state.session_factory),
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("payload_overrides", "message"),
+    [
+        ({"max_bytes": -1}, "max_bytes"),
+        ({"max_segment_tokens": -1}, "max_segment_tokens"),
+        ({"max_ocr_pages": -1}, "max_ocr_pages"),
+    ],
+)
+async def test_run_file_upload_ingestion_rejects_invalid_numeric_limits(
+    upload_client: TestClient,
+    upload_admin_headers: dict[str, str],
+    tmp_path: Path,
+    payload_overrides: dict[str, int],
+    message: str,
+) -> None:
+    domain_id = create_upload_domain(upload_client, upload_admin_headers)
+    file_path = tmp_path / "fixture.txt"
+    file_path.write_text("valid upload text", encoding="utf-8")
+    payload = {
+        "ingestion_kind": "file_upload",
+        "filename": "fixture.txt",
+        "file_path": str(file_path),
+        "source_uri": "storage://uploads/fixture.txt",
+        **payload_overrides,
+    }
+    job_id = await add_upload_job(upload_client, domain_id=domain_id, payload=payload)
+
+    with pytest.raises(FileUploadIngestionError, match=message):
+        await run_file_upload_ingestion(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(upload_client.app.state.session_factory),
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_file_upload_ingestion_rejects_missing_source(
+    upload_client: TestClient,
+    upload_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_upload_domain(upload_client, upload_admin_headers)
+    job_id = await add_upload_job(
+        upload_client,
+        domain_id=domain_id,
+        source_id="missing-source",
+        payload={"ingestion_kind": "file_upload"},
+    )
+
+    with pytest.raises(FileUploadIngestionError, match="Source not found"):
+        await run_file_upload_ingestion(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(upload_client.app.state.session_factory),
+        )
+
+
+@pytest.mark.asyncio
 async def test_fail_file_upload_ingestion_job_marks_job_failed(
     upload_client: TestClient,
     upload_admin_headers: dict[str, str],
@@ -419,3 +551,24 @@ async def test_fail_file_upload_ingestion_job_marks_job_failed(
         connection.close()
     assert journal_count == 1
     assert progress_count == 1
+
+
+@pytest.mark.asyncio
+async def test_fail_file_upload_ingestion_job_ignores_missing_job(
+    upload_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    await fail_file_upload_ingestion_job(
+        job_id="missing-job",
+        uow=SQLAlchemyUnitOfWork(upload_client.app.state.session_factory),
+        error="fixture failure",
+    )
+
+    connection = sqlite3.connect(tmp_path / "retos-upload.db")
+    try:
+        journal_count = connection.execute("select count(*) from journal_events").fetchone()[0]
+        progress_count = connection.execute("select count(*) from progress_events").fetchone()[0]
+    finally:
+        connection.close()
+    assert journal_count == 0
+    assert progress_count == 0
