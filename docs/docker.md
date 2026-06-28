@@ -73,6 +73,7 @@ The default Docker profile is local-first:
 
 - `RETOS_PROVIDER=local`
 - `RETOS_MODEL=ollama:gemma4`
+- `RETOS_AGENT_RUNTIME=deterministic`
 - `RETOS_OLLAMA_MODEL=gemma4`
 - `RETOS_ALLOW_PAID_LLM=false`
 
@@ -94,6 +95,16 @@ Paid providers remain blocked until both conditions are true:
 
 - The provider-specific key/configuration is present in `.env`.
 - `RETOS_ALLOW_PAID_LLM=true` is set explicitly.
+
+Enable real Deep Agents synthesis only after the local model is available:
+
+```bash
+docker compose --profile models run --rm ollama-pull
+RETOS_AGENT_RUNTIME=deepagents docker compose up --build
+```
+
+The API and worker still use the same backend image and the same controlled corpus tools;
+the runtime switch changes answer synthesis, not storage, indexing, or job semantics.
 
 ## Runtime Roles
 

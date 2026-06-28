@@ -1,5 +1,5 @@
 import pytest
-from pydantic import SecretStr
+from pydantic import SecretStr, ValidationError
 
 from retos.core.config import DEVELOPMENT_ADMIN_PASSWORD, DEVELOPMENT_JWT_SECRET, Settings
 
@@ -76,6 +76,15 @@ def test_local_provider_requires_model_name() -> None:
 
     with pytest.raises(ValueError, match="OLLAMA_MODEL"):
         settings.validate_runtime_security()
+
+
+def test_agent_runtime_must_be_known() -> None:
+    with pytest.raises(ValidationError, match="agent_runtime"):
+        Settings(
+            env="test",
+            agent_runtime="classic-langgraph",  # type: ignore[arg-type]
+            jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+        )
 
 
 def test_eval_roots_have_docker_defaults() -> None:

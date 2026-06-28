@@ -146,6 +146,7 @@ type AgentQueryResult = {
   answer: string;
   provider: string;
   model: string;
+  runtime: string;
   usage: AgentBudgetUsage;
   citations: AgentCitation[];
 };
@@ -2164,6 +2165,7 @@ function App() {
                 <>
                   <div className="result-meta">
                     <span>Job {queryJob?.status ?? "unknown"}</span>
+                    <span>{queryResult.runtime}</span>
                     <span>{queryResult.model}</span>
                     <span>{queryResult.citations.length} citations</span>
                   </div>

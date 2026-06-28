@@ -75,6 +75,9 @@ evidence tokens, and runtime, and writes `agent.queued`, `agent.started`,
 
 The Deep Agents harness factory is present through `deepagents.create_deep_agent` with a
 RetOS-specific system prompt and a registered RetOS harness profile that excludes
-Deep Agents filesystem and shell built-ins for the local `ollama:gemma4` profile. Full
-model invocation, named subagent execution, and evidence-checking middleware remain
-future runtime slices.
+Deep Agents filesystem and shell built-ins for the local `ollama:gemma4` profile.
+`RETOS_AGENT_RUNTIME=deepagents` invokes that harness with `search_corpus` and
+`read_citation` tools after a bounded seed search. `RETOS_AGENT_RUNTIME=deterministic`
+remains the default so CI, Docker smoke, and local development do not require downloaded
+model weights or paid provider calls. Named subagent execution and richer
+evidence-checking middleware remain future runtime slices.

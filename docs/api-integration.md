@@ -456,6 +456,7 @@ The response always includes the durable job. When `run_inline=true`, or in
     "answer": "Grounded answer for: ...",
     "provider": "local",
     "model": "ollama:gemma4",
+    "runtime": "deterministic",
     "usage": {
       "budget": {
         "max_searches": 8,
@@ -490,12 +491,23 @@ events, and emits SSE progress. If the domain index has not been built, the API 
 `409 Conflict` and marks the job failed.
 
 Agent budgets are persisted in the queued job payload and echoed in the final result
-usage. The current deterministic runtime uses controlled RetOS corpus tools instead of
-host filesystem access: `search_corpus` performs one bounded BM25 search and
-`read_citation` can read only citations returned by that search. The runtime caps
-citations with `max_citations`, caps retained evidence with `max_evidence_tokens`, and
-records `search_count`, `citation_count`, `evidence_tokens`, `runtime_ms`, and
-`within_budget` for audit and UI display.
+usage. The runtime always uses controlled RetOS corpus tools instead of host filesystem
+access: `search_corpus` performs bounded BM25 searches and `read_citation` can read only
+citations returned by those searches. The runtime caps citations with `max_citations`,
+caps retained evidence with `max_evidence_tokens`, and records `search_count`,
+`citation_count`, `evidence_tokens`, `runtime_ms`, and `within_budget` for audit and UI
+display.
+
+`RETOS_AGENT_RUNTIME=deterministic` is the default for CI, Docker smoke, and local
+development without downloaded model weights. It performs the controlled corpus search
+and produces a deterministic grounded answer. `RETOS_AGENT_RUNTIME=deepagents` enables
+`deepagents.create_deep_agent` synthesis with the same `search_corpus` and
+`read_citation` tools. For the default local profile, pull the model first:
+
+```bash
+docker compose --profile models run --rm ollama-pull
+RETOS_AGENT_RUNTIME=deepagents docker compose up --build
+```
 
 ## LLM Providers
 

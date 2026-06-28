@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from retos.core.security import hash_password
 
 Environment = Literal["development", "test", "production"]
+AgentRuntimeMode = Literal["deterministic", "deepagents"]
 
 DEVELOPMENT_JWT_SECRET = "change-this-development-secret-at-least-32-chars"
 DEVELOPMENT_ADMIN_PASSWORD = "retos-dev-admin-change-me"
@@ -64,6 +65,7 @@ class Settings(BaseSettings):
     azure_openai_endpoint: str | None = None
     azure_openai_deployment: str | None = None
     allow_paid_llm: bool = False
+    agent_runtime: AgentRuntimeMode = "deterministic"
 
     @property
     def bootstrap_admin(self) -> BootstrapAdmin | None:
@@ -108,6 +110,8 @@ class Settings(BaseSettings):
             raise ValueError("Paid LLM providers require RETOS_ALLOW_PAID_LLM=true")
         if self.provider == "local" and not self.ollama_model.strip():
             raise ValueError("RETOS_OLLAMA_MODEL must not be empty for local provider")
+        if self.agent_runtime not in {"deterministic", "deepagents"}:
+            raise ValueError("RETOS_AGENT_RUNTIME must be deterministic or deepagents")
 
 
 @lru_cache

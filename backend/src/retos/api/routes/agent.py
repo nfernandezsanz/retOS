@@ -73,6 +73,7 @@ class AgentQueryResultRead(BaseModel):
     answer: str
     provider: str
     model: str
+    runtime: str
     usage: AgentBudgetUsageRead
     citations: list[AgentCitationRead]
 
@@ -82,6 +83,7 @@ class AgentQueryResultRead(BaseModel):
             answer=result.answer,
             provider=result.provider,
             model=result.model,
+            runtime=result.runtime,
             usage=AgentBudgetUsageRead(
                 budget=AgentBudgetRead(
                     max_searches=result.usage.budget.max_searches,

@@ -9,6 +9,7 @@ from retos.agent.service import (
     AgentQueryError,
     budget_from_payload,
     build_grounded_answer,
+    extract_harness_answer,
     fail_agent_query_job,
     hits_within_budget,
     run_agent_query,
@@ -164,10 +165,12 @@ def test_agent_query_runs_inline_with_citations(
     assert body["job"]["kind"] == "agent.query"
     assert body["job"]["status"] == "succeeded"
     assert body["job"]["payload"]["result"]["provider"] == "local"
+    assert body["job"]["payload"]["result"]["runtime"] == "deterministic"
     assert body["job"]["payload"]["budget"]["max_citations"] == 5
     assert body["job"]["payload"]["result"]["usage"]["within_budget"] is True
     assert body["result"]["provider"] == "local"
     assert body["result"]["model"] == "ollama:gemma4"
+    assert body["result"]["runtime"] == "deterministic"
     assert body["result"]["usage"]["budget"]["max_searches"] == 8
     assert body["result"]["usage"]["search_count"] == 1
     assert "Apollo guidance computers" in body["result"]["answer"]
@@ -220,6 +223,64 @@ def test_agent_query_applies_evidence_token_budget(
     assert body["result"]["citations"] == []
     assert body["result"]["usage"]["evidence_tokens"] == 0
     assert "could not find enough indexed evidence" in body["result"]["answer"]
+
+
+def test_agent_query_can_use_mocked_deepagents_runtime(
+    settings: Settings,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    local_settings = settings.model_copy(
+        update={
+            "database_url": f"sqlite+aiosqlite:///{tmp_path / 'retos-agent-deep.db'}",
+            "database_create_all": True,
+            "index_root": str(tmp_path / "index"),
+            "agent_runtime": "deepagents",
+        }
+    )
+    invocations: list[dict[str, object]] = []
+    tool_names: list[str] = []
+
+    class FakeHarness:
+        def invoke(self, payload: dict[str, object], *, config: dict[str, object]) -> object:
+            invocations.append({"payload": payload, "config": config})
+            messages = payload["messages"]
+            assert isinstance(messages, list)
+            prompt = messages[0]["content"]  # type: ignore[index]
+            assert "Seed evidence returned by search_corpus" in prompt
+            assert "Apollo guidance computers" in prompt
+            return {"messages": [{"role": "assistant", "content": "Deep answer cites segment-1."}]}
+
+    def fake_create_research_harness(
+        *,
+        settings: Settings,
+        tools: list[object],
+    ) -> FakeHarness:
+        assert settings.agent_runtime == "deepagents"
+        tool_names.extend(getattr(tool, "__name__", "") for tool in tools)
+        return FakeHarness()
+
+    monkeypatch.setattr(
+        "retos.agent.service.create_research_harness",
+        fake_create_research_harness,
+    )
+
+    with TestClient(create_app(local_settings)) as client:
+        headers = agent_admin_headers_for(client)
+        domain_id = create_agent_fixture(client, headers)
+        response = client.post(
+            f"/domains/{domain_id}/queries",
+            json={"question": "What did Apollo computers use?", "run_inline": True},
+            headers=headers,
+        )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["result"]["answer"] == "Deep answer cites segment-1."
+    assert body["result"]["runtime"] == "deepagents"
+    assert body["result"]["usage"]["search_count"] == 1
+    assert tool_names == ["search_corpus", "read_citation"]
+    assert invocations[0]["config"] == {"recursion_limit": 25}
 
 
 def test_agent_query_rejects_invalid_budget(
@@ -293,6 +354,19 @@ def test_build_grounded_answer_abstains_without_hits() -> None:
     answer = build_grounded_answer("What happened?", [])
 
     assert "could not find enough indexed evidence" in answer
+
+
+def test_extract_harness_answer_reads_latest_message_content() -> None:
+    answer = extract_harness_answer(
+        {
+            "messages": [
+                {"role": "user", "content": "Question"},
+                {"role": "assistant", "content": [{"type": "text", "text": "Final answer"}]},
+            ]
+        }
+    )
+
+    assert answer == "Final answer"
 
 
 def test_agent_budget_defaults_and_validation() -> None:

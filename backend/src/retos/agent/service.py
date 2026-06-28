@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from retos.agent.harness import create_research_harness
 from retos.agent.tools import (
+    CorpusToolbox,
     CorpusToolError,
     create_corpus_toolbox,
     select_hits_within_evidence_budget,
@@ -61,6 +64,7 @@ class AgentQueryResult:
     citations: list[Citation]
     provider: str
     model: str
+    runtime: str
     usage: AgentBudgetUsage
 
 
@@ -92,6 +96,102 @@ def build_grounded_answer(question: str, hits: list[SearchHit]) -> str:
         f"The indexed evidence points to: {evidence}\n\n"
         "Review the citations before using this answer."
     )
+
+
+def build_deepagents_prompt(
+    *,
+    question: str,
+    seed_payload: dict[str, object],
+    budget: AgentBudget,
+) -> str:
+    return (
+        "Answer this RetOS research question using only RetOS corpus evidence.\n\n"
+        f"Question: {question}\n\n"
+        "Seed evidence returned by search_corpus:\n"
+        f"{seed_payload}\n\n"
+        "Rules:\n"
+        "- Use segment_id values from the evidence when making factual claims.\n"
+        "- You may call search_corpus for additional evidence within budget.\n"
+        "- You may call read_citation only for segment ids returned by search_corpus.\n"
+        "- Abstain if the returned evidence is insufficient.\n\n"
+        "Budget:\n"
+        f"- max_searches={budget.max_searches}\n"
+        f"- max_citations={budget.max_citations}\n"
+        f"- max_evidence_tokens={budget.max_evidence_tokens}\n"
+        f"- max_runtime_seconds={budget.max_runtime_seconds}"
+    )
+
+
+def text_from_message_content(content: object) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, Mapping):
+                text = item.get("text") or item.get("content")
+                if isinstance(text, str):
+                    parts.append(text)
+        return "\n".join(parts)
+    return ""
+
+
+def extract_harness_answer(output: object) -> str:
+    if isinstance(output, str):
+        return output.strip()
+    if isinstance(output, Mapping):
+        answer = output.get("answer") or output.get("structured_response")
+        if isinstance(answer, str):
+            return answer.strip()
+        messages = output.get("messages")
+        if isinstance(messages, list):
+            for message in reversed(messages):
+                if isinstance(message, Mapping):
+                    content = text_from_message_content(message.get("content"))
+                else:
+                    content = text_from_message_content(getattr(message, "content", ""))
+                if content.strip():
+                    return content.strip()
+    content = text_from_message_content(getattr(output, "content", ""))
+    return content.strip()
+
+
+def invoke_deepagents_harness(*, settings: Settings, toolbox: CorpusToolbox, prompt: str) -> str:
+    harness = create_research_harness(
+        settings=settings,
+        tools=[toolbox.search_corpus, toolbox.read_citation],
+    )
+    invoke = getattr(harness, "invoke", None)
+    if not callable(invoke):
+        raise AgentQueryError("Deep Agents harness does not expose invoke()")
+    output = invoke(
+        {"messages": [{"role": "user", "content": prompt}]},
+        config={"recursion_limit": 25},
+    )
+    answer = extract_harness_answer(output)
+    if not answer:
+        raise AgentQueryError("Deep Agents harness returned an empty answer")
+    return answer
+
+
+def synthesize_agent_answer(
+    *,
+    settings: Settings,
+    question: str,
+    seed_payload: dict[str, object],
+    toolbox: CorpusToolbox,
+    budget: AgentBudget,
+) -> str:
+    if settings.agent_runtime == "deterministic":
+        return build_grounded_answer(question, toolbox.selected_hits)
+    prompt = build_deepagents_prompt(
+        question=question,
+        seed_payload=seed_payload,
+        budget=budget,
+    )
+    return invoke_deepagents_harness(settings=settings, toolbox=toolbox, prompt=prompt)
 
 
 def parse_positive_int_budget(
@@ -188,6 +288,7 @@ def result_payload(
             "answer": result.answer,
             "provider": result.provider,
             "model": result.model,
+            "runtime": result.runtime,
             "usage": usage_to_payload(result.usage),
             "citations": [
                 {
@@ -261,6 +362,7 @@ async def run_agent_query(
                 "domain_slug": domain.slug,
                 "provider": provider.provider,
                 "model": provider.model,
+                "runtime": settings.agent_runtime,
                 "budget": budget_to_payload(budget),
             },
         )
@@ -273,21 +375,34 @@ async def run_agent_query(
             max_evidence_tokens=budget.max_evidence_tokens,
         )
         try:
-            toolbox.search_corpus(question, limit=min(limit, budget.max_citations))
+            seed_payload = toolbox.search_corpus(
+                question,
+                limit=min(limit, budget.max_citations),
+            )
         except CorpusToolError as exc:
             if not isinstance(exc.__cause__, SearchIndexMissingError):
                 raise AgentQueryError(str(exc)) from exc
             raise AgentQueryError("Search index has not been built for this domain") from exc
         hits = toolbox.selected_hits
+        answer = synthesize_agent_answer(
+            settings=settings,
+            question=question,
+            seed_payload=seed_payload,
+            toolbox=toolbox,
+            budget=budget,
+        )
+        if not toolbox.selected_hits:
+            answer = build_grounded_answer(question, [])
+        hits = toolbox.selected_hits
         runtime_ms = int((datetime.now(UTC) - started_at).total_seconds() * 1000)
         usage = AgentBudgetUsage(
-            search_count=1,
+            search_count=toolbox.search_count,
             citation_count=len(hits),
             evidence_tokens=sum(token_count(hit.text) for hit in hits),
             runtime_ms=runtime_ms,
             budget=budget,
             within_budget=(
-                budget.max_searches >= 1
+                toolbox.search_count <= budget.max_searches
                 and len(hits) <= budget.max_citations
                 and sum(token_count(hit.text) for hit in hits) <= budget.max_evidence_tokens
                 and runtime_ms <= budget.max_runtime_seconds * 1000
@@ -298,10 +413,11 @@ async def run_agent_query(
             job_id=job.id,
             domain_id=domain.id,
             question=question,
-            answer=build_grounded_answer(question, hits),
+            answer=answer,
             citations=[citation_from_hit(hit) for hit in hits],
             provider=provider.provider,
             model=provider.model,
+            runtime=settings.agent_runtime,
             usage=usage,
         )
         completed_at = datetime.now(UTC)
@@ -324,6 +440,7 @@ async def run_agent_query(
                 "citation_count": len(result.citations),
                 "provider": result.provider,
                 "model": result.model,
+                "runtime": result.runtime,
                 "usage": usage_to_payload(result.usage),
             },
         )
@@ -343,6 +460,7 @@ async def run_agent_query(
                 "citation_count": len(result.citations),
                 "provider": result.provider,
                 "model": result.model,
+                "runtime": result.runtime,
                 "usage": usage_to_payload(result.usage),
             },
         )
@@ -354,6 +472,7 @@ async def run_agent_query(
             "job_id": job_id,
             "domain_id": result.domain_id,
             "citation_count": len(result.citations),
+            "runtime": result.runtime,
             "within_budget": result.usage.within_budget,
             "search_count": result.usage.search_count,
             "evidence_tokens": result.usage.evidence_tokens,
