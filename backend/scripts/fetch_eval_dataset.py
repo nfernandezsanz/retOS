@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import shutil
 import sys
@@ -84,6 +85,20 @@ DATASET_PROFILES: dict[str, DatasetProfile] = {
         source_homepage="https://github.com/google-research-datasets/natural-questions",
         sampler=lambda src, dest, limit: write_nq_open_adapter_sample(src, dest, limit),
     ),
+    "nq-simplified-local": DatasetProfile(
+        name="nq-simplified-local",
+        suite="natural-questions",
+        url=None,
+        output_name="nq-simplified-sample.jsonl",
+        description=(
+            "Official simplified Natural Questions JSONL/JSONL.GZ sampled from a local "
+            "operator-provided file. Use this for full document-shape calibration after "
+            "accepting the dataset access terms."
+        ),
+        license_note="Natural Questions tooling is published by Google under Apache-2.0.",
+        source_homepage="https://github.com/google-research-datasets/natural-questions",
+        sampler=lambda src, dest, limit: write_jsonl_sample(src, dest, limit),
+    ),
     "funsd": DatasetProfile(
         name="funsd",
         suite="ocr-benchmark",
@@ -135,6 +150,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Overwrite an existing sampled dataset file.",
     )
+    parser.add_argument(
+        "--source-path",
+        type=Path,
+        help=(
+            "Use a local source file instead of downloading. Required for manual local "
+            "profiles such as nq-simplified-local."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -152,6 +175,7 @@ def main() -> int:
             output_dir=args.output_dir,
             max_records=args.max_records,
             force=args.force,
+            source_path=args.source_path,
         )
     except DatasetFetchError as exc:
         print(f"Dataset fetch error: {exc}", file=sys.stderr)
@@ -178,10 +202,16 @@ def fetch_profile(
     output_dir: Path,
     max_records: int,
     force: bool = False,
+    source_path: Path | None = None,
 ) -> dict[str, object]:
     if max_records < 1:
         raise DatasetFetchError("--max-records must be greater than zero")
-    if profile.url is None or profile.sampler is None:
+    if source_path is not None:
+        if profile.sampler is None:
+            raise DatasetFetchError(f"{profile.name} cannot be sampled from a single source file")
+        if not source_path.is_file():
+            raise DatasetFetchError(f"Local source file does not exist: {source_path}")
+    elif profile.url is None or profile.sampler is None:
         raise DatasetFetchError(
             f"{profile.name} requires manual download from {profile.source_homepage}"
         )
@@ -191,10 +221,17 @@ def fetch_profile(
     if output_path.exists() and not force:
         raise DatasetFetchError(f"Refusing to overwrite existing dataset: {output_path}")
 
-    with tempfile.TemporaryDirectory(prefix="retos-eval-dataset-") as temp_dir:
-        downloaded_path = Path(temp_dir) / profile.output_name
-        download_file(profile.url, downloaded_path)
-        record_count = profile.sampler(downloaded_path, output_path, max_records)
+    if source_path is not None:
+        record_count = profile.sampler(source_path, output_path, max_records)
+    else:
+        with tempfile.TemporaryDirectory(prefix="retos-eval-dataset-") as temp_dir:
+            downloaded_path = Path(temp_dir) / profile.output_name
+            if profile.url is None or profile.sampler is None:
+                raise DatasetFetchError(
+                    f"{profile.name} requires manual download from {profile.source_homepage}"
+                )
+            download_file(profile.url, downloaded_path)
+            record_count = profile.sampler(downloaded_path, output_path, max_records)
 
     return {
         "profile": profile.name,
@@ -202,6 +239,7 @@ def fetch_profile(
         "path": str(output_path),
         "records": record_count,
         "source": profile.source_homepage,
+        "source_path": str(source_path) if source_path is not None else None,
         "license_note": profile.license_note,
     }
 
@@ -276,8 +314,8 @@ def write_jsonl_sample(source_path: Path, output_path: Path, max_records: int) -
     count = 0
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with (
-        source_path.open(encoding="utf-8") as source,
         output_path.open("w", encoding="utf-8") as destination,
+        open_text_dataset(source_path) as source,
     ):
         for line in source:
             if count >= max_records:
@@ -291,6 +329,12 @@ def write_jsonl_sample(source_path: Path, output_path: Path, max_records: int) -
     if count == 0:
         raise DatasetFetchError("JSONL payload produced no records")
     return count
+
+
+def open_text_dataset(source_path: Path):
+    if source_path.name.endswith(".gz"):
+        return gzip.open(source_path, "rt", encoding="utf-8")
+    return source_path.open(encoding="utf-8")
 
 
 def write_nq_open_adapter_sample(source_path: Path, output_path: Path, max_records: int) -> int:

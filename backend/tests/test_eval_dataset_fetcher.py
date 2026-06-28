@@ -1,3 +1,4 @@
+import gzip
 import importlib.util
 import io
 import json
@@ -28,6 +29,7 @@ def test_fetcher_lists_public_profiles() -> None:
     assert "hotpotqa-dev-distractor" in table
     assert "nq-open-train" in table
     assert "nq-open-train-adapter" in table
+    assert "nq-simplified-local" in table
     assert "funsd" in table
 
 
@@ -90,6 +92,22 @@ def test_fetcher_samples_json_list_and_jsonl(tmp_path: Path) -> None:
     assert json.loads(list_destination.read_text(encoding="utf-8")) == [{"id": 1}, {"id": 2}]
     assert jsonl_count == 2
     assert jsonl_destination.read_text(encoding="utf-8").splitlines() == [
+        '{"id": 1}',
+        '{"id": 2}',
+    ]
+
+
+def test_fetcher_samples_gzipped_jsonl(tmp_path: Path) -> None:
+    fetcher = load_fetcher()
+    source = tmp_path / "nq.jsonl.gz"
+    destination = tmp_path / "nq-sample.jsonl"
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write('{"id": 1}\n{"id": 2}\n{"id": 3}\n')
+
+    count = fetcher.write_jsonl_sample(source, destination, 2)
+
+    assert count == 2
+    assert destination.read_text(encoding="utf-8").splitlines() == [
         '{"id": 1}',
         '{"id": 2}',
     ]
@@ -243,6 +261,48 @@ def test_fetch_profile_can_write_nq_open_adapter_sample(
     assert cases[0].expected_answer_terms == ("Caroline Herschel",)
 
 
+def test_fetch_profile_can_sample_local_simplified_nq_gzip(tmp_path: Path) -> None:
+    fetcher = load_fetcher()
+    source = tmp_path / "simplified-nq-dev.jsonl.gz"
+    source_item = {
+        "example_id": 987,
+        "question_text": "Which mission landed at Tranquility Base?",
+        "document_title": "Apollo 11",
+        "document_tokens": [
+            {"token": "<P>", "html_token": True},
+            {"token": "Apollo", "html_token": False},
+            {"token": "11", "html_token": False},
+            {"token": "landed", "html_token": False},
+            {"token": "at", "html_token": False},
+            {"token": "Tranquility", "html_token": False},
+            {"token": "Base", "html_token": False},
+        ],
+        "annotations": [
+            {
+                "long_answer": {"start_token": 1, "end_token": 7},
+                "short_answers": [{"start_token": 1, "end_token": 3}],
+                "yes_no_answer": "NONE",
+            }
+        ],
+    }
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write(json.dumps(source_item) + "\n")
+
+    result = fetcher.fetch_profile(
+        profile=fetcher.DATASET_PROFILES["nq-simplified-local"],
+        output_dir=tmp_path / "samples",
+        max_records=1,
+        source_path=source,
+    )
+
+    assert result["profile"] == "nq-simplified-local"
+    assert result["source_path"] == str(source)
+    cases = load_natural_questions_cases(Path(result["path"]))
+    assert len(cases) == 1
+    assert cases[0].documents[0].text == "Apollo 11 landed at Tranquility Base"
+    assert cases[0].expected_answer_terms == ("Apollo 11",)
+
+
 def test_fetch_profile_rejects_manual_and_invalid_profiles(tmp_path: Path) -> None:
     fetcher = load_fetcher()
 
@@ -256,6 +316,18 @@ def test_fetch_profile_rejects_manual_and_invalid_profiles(tmp_path: Path) -> No
         assert "manual download" in str(exc)
     else:
         raise AssertionError("Expected manual profile to fail")
+
+    try:
+        fetcher.fetch_profile(
+            profile=fetcher.DATASET_PROFILES["funsd"],
+            output_dir=tmp_path,
+            max_records=10,
+            source_path=tmp_path / "funsd.zip",
+        )
+    except fetcher.DatasetFetchError as exc:
+        assert "single source file" in str(exc)
+    else:
+        raise AssertionError("Expected file-backed FUNSD sampling to fail")
 
     try:
         fetcher.fetch_profile(

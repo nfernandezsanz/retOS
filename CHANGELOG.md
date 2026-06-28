@@ -26,6 +26,8 @@ tag in GitHub.
   requests and Cosign keyless signing.
 - Versioned release-candidate notes with validation evidence, pending publish evidence,
   known limitations, migration notes, and rollback guidance.
+- Local source sampling for official simplified Natural Questions `.jsonl(.gz)` files,
+  enabling full document-shape eval slices without CI network downloads.
 
 ### Changed
 

@@ -72,7 +72,7 @@ eval-fetch-dataset:
 ifndef PROFILE
 	$(error PROFILE is required, for example make eval-fetch-dataset PROFILE=squad-dev-v2)
 endif
-	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/fetch_eval_dataset.py "$(PROFILE)" --output-dir "../evals/datasets" --max-records "$(or $(MAX_RECORDS),100)" $(if $(FORCE),--force,)
+	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/fetch_eval_dataset.py "$(PROFILE)" --output-dir "../evals/datasets" --max-records "$(or $(MAX_RECORDS),100)" $(if $(FORCE),--force,) $(if $(SOURCE_PATH),--source-path "$(abspath $(SOURCE_PATH))",)
 
 eval-ocr:
 	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite ocr-smoke --format markdown $(if $(REPORT_DIR),--report-dir "$(REPORT_DIR)",) $(if $(REPORT_STEM),--report-stem "$(REPORT_STEM)",)

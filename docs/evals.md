@@ -255,6 +255,8 @@ make eval-fetch-dataset PROFILE=squad-dev-v2 MAX_RECORDS=100
 make eval-fetch-dataset PROFILE=hotpotqa-dev-distractor MAX_RECORDS=100
 make eval-fetch-dataset PROFILE=nq-open-train MAX_RECORDS=100
 make eval-fetch-dataset PROFILE=nq-open-train-adapter MAX_RECORDS=100
+make eval-fetch-dataset PROFILE=nq-simplified-local \
+  SOURCE_PATH=/path/to/simplified-nq-dev-all.jsonl.gz MAX_RECORDS=100
 ```
 
 The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
@@ -267,6 +269,7 @@ profiles:
 | `hotpotqa-dev-distractor` | `hotpotqa-dev-distractor-sample.json` | Directly usable with `make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json`. |
 | `nq-open-train` | `nq-open-train-sample.jsonl` | Raw NQ-Open sample for research inspection. |
 | `nq-open-train-adapter` | `nq-open-train-adapter-sample.jsonl` | Converts NQ-Open questions and answers into the local RetOS Natural Questions adapter shape with synthetic evidence documents; directly usable with `make eval-natural-questions NQ_PATH=evals/datasets/nq-open-train-adapter-sample.jsonl`. |
+| `nq-simplified-local` | `nq-simplified-sample.jsonl` | Samples an operator-provided official simplified Natural Questions `.jsonl` or `.jsonl.gz` file without network access; directly usable with `make eval-natural-questions NQ_PATH=evals/datasets/nq-simplified-sample.jsonl`. |
 | `funsd` | Manual download | Listed with source/license notes; the dataset must be downloaded manually after reviewing the official license. |
 
 | Dataset | Use | Notes |
@@ -362,8 +365,24 @@ The `nq-open-train-adapter` fetch profile is a pragmatic bridge for early real-q
 calibration. NQ-Open does not include the full annotated Wikipedia document shape, so the
 fetcher creates a bounded JSONL sample with synthetic local evidence documents containing
 the provided answer. This is useful for query-shape and answer-term regression, while the
-full document-shape Natural Questions adapter remains the stronger retrieval benchmark
-when annotated data is available.
+full document-shape Natural Questions adapter remains the stronger retrieval benchmark.
+
+For the full document-shape path, download the official simplified Natural Questions file
+after reviewing Google's dataset access terms, then sample it locally:
+
+```bash
+make eval-fetch-dataset PROFILE=nq-simplified-local \
+  SOURCE_PATH=/path/to/simplified-nq-dev-all.jsonl.gz \
+  MAX_RECORDS=100
+make eval-natural-questions \
+  NQ_PATH=evals/datasets/nq-simplified-sample.jsonl \
+  MAX_CASES=50 \
+  REPORT_DIR=evals/reports
+```
+
+The `SOURCE_PATH` flow accepts `.jsonl` and `.jsonl.gz` inputs, writes a bounded JSONL
+sample under `evals/datasets/`, refuses overwrites unless `FORCE=1` is provided, and keeps
+the networked dataset outside default CI.
 
 ## OCR Benchmark Adapters
 
