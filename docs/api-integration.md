@@ -926,6 +926,18 @@ does not call providers, and returns per-metric deltas:
 }
 ```
 
+Gate a candidate run against a baseline before promoting a calibration:
+
+```bash
+curl "http://localhost:8000/evals/runs/regression-gate?baseline_job_id=<old_job_id>&candidate_job_id=<new_job_id>&metric_drop_tolerance=0.02&average_drop_tolerance=0.01" \
+  --header "Authorization: Bearer <token>"
+```
+
+The gate reads persisted reports only. For normal metrics, negative deltas are
+regressions. For `*_error_rate` metrics, positive deltas are regressions. The response
+includes normalized deltas, per-metric regression flags, the average normalized delta,
+and an overall `passed` boolean.
+
 ### Frontend Runtime Notes
 
 The React console reads `VITE_RETOS_API_URL` and falls back to `http://localhost:8000`.

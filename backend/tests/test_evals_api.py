@@ -246,6 +246,15 @@ def test_eval_run_compare_requires_admin_token(evals_client: TestClient) -> None
     assert response.status_code == 401
 
 
+def test_eval_regression_gate_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.get(
+        "/evals/runs/regression-gate",
+        params={"baseline_job_id": "job-a", "candidate_job_id": "job-b"},
+    )
+
+    assert response.status_code == 401
+
+
 def test_eval_run_trends_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.get("/evals/runs/trends")
 
@@ -869,6 +878,155 @@ def test_eval_run_compare_returns_metric_deltas(
         {"name": "abstention", "baseline": 1.0, "candidate": 1.0, "delta": 0.0},
         {"name": "budget_compliance", "baseline": 1.0, "candidate": 1.0, "delta": 0.0},
     ]
+
+
+def test_eval_regression_gate_flags_metric_drops(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    baseline = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert baseline.status_code == 202
+
+    def regressed_suite(*, index_root: object) -> EvalSuiteReport:
+        return EvalSuiteReport(
+            suite_name="retos-smoke",
+            passed=False,
+            case_count=1,
+            retrieval_recall=0.5,
+            citation_validity=1.0,
+            grounded_answer=1.0,
+            abstention=1.0,
+            budget_compliance=1.0,
+            cases=(),
+        )
+
+    monkeypatch.setattr("retos.api.routes.evals.run_smoke_eval_suite", regressed_suite)
+    candidate = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert candidate.status_code == 202
+
+    response = evals_client.get(
+        "/evals/runs/regression-gate",
+        headers=evals_admin_headers,
+        params={
+            "baseline_job_id": baseline.json()["job"]["id"],
+            "candidate_job_id": candidate.json()["job"]["id"],
+            "metric_drop_tolerance": 0.1,
+            "average_drop_tolerance": 0.05,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["passed"] is False
+    assert body["metric_drop_tolerance"] == 0.1
+    assert body["average_drop_tolerance"] == 0.05
+    assert body["average_normalized_delta"] == -0.1
+    assert body["regressions"] == [
+        {
+            "name": "retrieval_recall",
+            "baseline": 1.0,
+            "candidate": 0.5,
+            "delta": -0.5,
+            "normalized_delta": -0.5,
+            "direction": "regressed",
+            "regressed": True,
+        }
+    ]
+
+    tolerated = evals_client.get(
+        "/evals/runs/regression-gate",
+        headers=evals_admin_headers,
+        params={
+            "baseline_job_id": baseline.json()["job"]["id"],
+            "candidate_job_id": candidate.json()["job"]["id"],
+            "metric_drop_tolerance": 0.5,
+            "average_drop_tolerance": 0.1,
+        },
+    )
+    assert tolerated.status_code == 200
+    assert tolerated.json()["passed"] is True
+    assert tolerated.json()["regressions"] == []
+
+
+def test_eval_regression_gate_treats_error_rate_increase_as_regression(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def ocr_suite(*, character_error_rate: float, word_error_rate: float):
+        def fake_suite(**kwargs: object) -> OCRQualityReport:
+            return OCRQualityReport(
+                suite_name="ocr-manifest",
+                passed=True,
+                case_count=1,
+                character_error_rate=character_error_rate,
+                word_error_rate=word_error_rate,
+                key_value_recall=None,
+                cases=(),
+            )
+
+        return fake_suite
+
+    dataset_dir = squad_dataset_root / "ocr-gate"
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    (dataset_dir / "receipt.pdf").write_bytes(b"%PDF-1.7\n%%EOF\n")
+    (dataset_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "case_id": "receipt-gate",
+                        "input_path": "receipt.pdf",
+                        "expected_text": "Receipt total 42",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "retos.api.routes.evals.run_ocr_quality_suite",
+        ocr_suite(character_error_rate=0.05, word_error_rate=0.10),
+    )
+    baseline = evals_client.post(
+        "/evals/ocr-benchmark",
+        headers=evals_admin_headers,
+        json={"dataset_path": "ocr-gate/manifest.json", "dataset_format": "manifest"},
+    )
+    assert baseline.status_code == 202
+    monkeypatch.setattr(
+        "retos.api.routes.evals.run_ocr_quality_suite",
+        ocr_suite(character_error_rate=0.15, word_error_rate=0.10),
+    )
+    candidate = evals_client.post(
+        "/evals/ocr-benchmark",
+        headers=evals_admin_headers,
+        json={"dataset_path": "ocr-gate/manifest.json", "dataset_format": "manifest"},
+    )
+    assert candidate.status_code == 202
+
+    response = evals_client.get(
+        "/evals/runs/regression-gate",
+        headers=evals_admin_headers,
+        params={
+            "baseline_job_id": baseline.json()["job"]["id"],
+            "candidate_job_id": candidate.json()["job"]["id"],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["passed"] is False
+    character_error = next(
+        metric for metric in body["metrics"] if metric["name"] == "character_error_rate"
+    )
+    assert character_error["delta"] == 0.09999999999999999
+    assert character_error["normalized_delta"] == -0.09999999999999999
+    assert character_error["direction"] == "regressed"
+    assert character_error["regressed"] is True
 
 
 def test_eval_run_trends_group_suites_and_metric_directions(

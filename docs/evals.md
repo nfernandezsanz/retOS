@@ -182,6 +182,19 @@ deltas. Metrics ending in `error_rate` are treated as lower-is-better when assig
 `improved`, `regressed`, or `unchanged` direction. The React console renders these
 suite trends in the `Local evals` panel beside history, comparison, and rerun controls.
 
+Use the persisted regression gate before promoting larger real-dataset calibration
+runs:
+
+```bash
+curl "http://localhost:8000/evals/runs/regression-gate?baseline_job_id=<old_job_id>&candidate_job_id=<new_job_id>&metric_drop_tolerance=0.02&average_drop_tolerance=0.01" \
+  --header "Authorization: Bearer <token>"
+```
+
+The gate is local and cost-safe. It reads existing `eval.run` reports, normalizes metric
+direction so lower-is-better OCR error rates are handled correctly, and returns
+`passed=false` when any metric exceeds the allowed drop or when the average normalized
+delta drops beyond tolerance.
+
 Dataset-backed SQuAD evals are also available through the admin API:
 
 ```bash

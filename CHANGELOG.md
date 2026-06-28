@@ -36,6 +36,8 @@ tag in GitHub.
   responses, persisted job payloads, journal/progress events, and the React eval panel.
 - Agent queries now persist and display deterministic query plans with strategy,
   subqueries, expected evidence breadth, planned steps, and operator warnings.
+- Persisted eval runs now expose a regression gate that normalizes metric direction,
+  supports tolerances, and flags candidate calibration drops without provider calls.
 
 ### Changed
 

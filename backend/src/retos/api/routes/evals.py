@@ -81,6 +81,27 @@ class EvalRunComparisonRead(BaseModel):
     status: str
 
 
+class EvalMetricRegressionRead(BaseModel):
+    name: str
+    baseline: float
+    candidate: float
+    delta: float
+    normalized_delta: float
+    direction: str
+    regressed: bool
+
+
+class EvalRegressionGateRead(BaseModel):
+    passed: bool
+    baseline: EvalRunSummaryRead
+    candidate: EvalRunSummaryRead
+    metric_drop_tolerance: float
+    average_drop_tolerance: float
+    average_normalized_delta: float
+    regressions: list[EvalMetricRegressionRead]
+    metrics: list[EvalMetricRegressionRead]
+
+
 class EvalTrendPointRead(BaseModel):
     job_id: str
     suite_name: str
@@ -230,6 +251,33 @@ async def compare_eval_runs(
         metrics=metric_comparisons,
         average_delta=average_delta,
         status=comparison_status(average_delta),
+    )
+
+
+@router.get("/runs/regression-gate", response_model=EvalRegressionGateRead)
+async def eval_regression_gate(
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    baseline_job_id: Annotated[str, Query(min_length=1)],
+    candidate_job_id: Annotated[str, Query(min_length=1)],
+    metric_drop_tolerance: Annotated[float, Query(ge=0, le=1)] = 0.0,
+    average_drop_tolerance: Annotated[float, Query(ge=0, le=1)] = 0.0,
+) -> EvalRegressionGateRead:
+    async with uow:
+        baseline_job = await uow.jobs.get(baseline_job_id)
+        candidate_job = await uow.jobs.get(candidate_job_id)
+
+    baseline_report = report_from_eval_job(baseline_job)
+    candidate_report = report_from_eval_job(candidate_job)
+    assert baseline_job is not None
+    assert candidate_job is not None
+    return regression_gate_for_reports(
+        baseline_job=baseline_job,
+        baseline_report=baseline_report,
+        candidate_job=candidate_job,
+        candidate_report=candidate_report,
+        metric_drop_tolerance=metric_drop_tolerance,
+        average_drop_tolerance=average_drop_tolerance,
     )
 
 
@@ -905,6 +953,51 @@ def comparison_status(average_delta: float) -> str:
     return "unchanged"
 
 
+def regression_gate_for_reports(
+    *,
+    baseline_job: Job,
+    baseline_report: EvalReportRead,
+    candidate_job: Job,
+    candidate_report: EvalReportRead,
+    metric_drop_tolerance: float,
+    average_drop_tolerance: float,
+) -> EvalRegressionGateRead:
+    metrics: list[EvalMetricRegressionRead] = []
+    for name in baseline_report.metrics:
+        if name not in candidate_report.metrics:
+            continue
+        baseline = baseline_report.metrics[name]
+        candidate = candidate_report.metrics[name]
+        delta = candidate - baseline
+        normalized_delta = -delta if metric_lower_is_better(name) else delta
+        metrics.append(
+            EvalMetricRegressionRead(
+                name=name,
+                baseline=baseline,
+                candidate=candidate,
+                delta=delta,
+                normalized_delta=normalized_delta,
+                direction=metric_trend_direction(name=name, delta=delta),
+                regressed=normalized_delta < -metric_drop_tolerance,
+            )
+        )
+    average_normalized_delta = (
+        sum(metric.normalized_delta for metric in metrics) / len(metrics) if metrics else 0.0
+    )
+    regressions = [metric for metric in metrics if metric.regressed]
+    passed = not regressions and average_normalized_delta >= -average_drop_tolerance
+    return EvalRegressionGateRead(
+        passed=passed,
+        baseline=summary_from_eval_run(baseline_job, baseline_report),
+        candidate=summary_from_eval_run(candidate_job, candidate_report),
+        metric_drop_tolerance=metric_drop_tolerance,
+        average_drop_tolerance=average_drop_tolerance,
+        average_normalized_delta=average_normalized_delta,
+        regressions=regressions,
+        metrics=metrics,
+    )
+
+
 def eval_trends_from_jobs(
     *,
     jobs: list[Job],
@@ -984,10 +1077,13 @@ def metric_trends_for_points(points: list[EvalTrendPointRead]) -> list[EvalMetri
 def metric_trend_direction(*, name: str, delta: float) -> str:
     if delta == 0:
         return "unchanged"
-    lower_is_better = name.endswith("_error_rate") or "error_rate" in name
-    if lower_is_better:
+    if metric_lower_is_better(name):
         return "improved" if delta < 0 else "regressed"
     return "improved" if delta > 0 else "regressed"
+
+
+def metric_lower_is_better(name: str) -> bool:
+    return name.endswith("_error_rate") or "error_rate" in name
 
 
 async def queue_eval_job(
