@@ -633,6 +633,7 @@ async function mockProviderApi(page: Page) {
             enabled: true,
             paid: false,
             reason: null,
+            missing_config: [],
             base_url: "http://ollama:11434/",
           },
           {
@@ -643,6 +644,7 @@ async function mockProviderApi(page: Page) {
             enabled: false,
             paid: true,
             reason: "Missing required configuration",
+            missing_config: ["RETOS_OPENAI_API_KEY"],
             base_url: null,
           },
         ],
@@ -1470,8 +1472,9 @@ test("loads the operational console", async ({ page }) => {
 
   await expect(page.getByText("ollama:gemma4")).toBeVisible();
   await expect(page.getByText("Ollama local runtime")).toBeVisible();
-  await expect(page.getByText("OpenAI")).toBeVisible();
+  await expect(page.getByText("OpenAI", { exact: true })).toBeVisible();
   await expect(page.getByText("Blocked")).toBeVisible();
+  await expect(page.getByText("Missing RETOS_OPENAI_API_KEY")).toBeVisible();
   await expect(page.getByLabel("Admin users").getByText("admin@retos.dev")).toBeVisible();
   await page.getByLabel("New admin email").fill("ui-admin@retos.dev");
   await page.getByLabel("New admin password").fill("ui-admin-password");

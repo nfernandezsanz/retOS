@@ -24,6 +24,7 @@ def test_provider_catalog_exposes_safe_default_profiles(settings: Settings) -> N
     assert profiles["openai"].enabled is False
     assert profiles["openai"].paid is True
     assert profiles["openai"].reason == "Missing required configuration"
+    assert profiles["openai"].missing_config == ["RETOS_OPENAI_API_KEY"]
 
 
 def test_paid_provider_stays_disabled_without_cost_opt_in() -> None:
@@ -51,6 +52,7 @@ def test_empty_paid_provider_secret_is_not_configured() -> None:
 
     assert profiles["openai"].configured is False
     assert profiles["openai"].reason == "Missing required configuration"
+    assert profiles["openai"].missing_config == ["RETOS_OPENAI_API_KEY"]
 
 
 def test_paid_provider_can_be_enabled_explicitly() -> None:
@@ -67,6 +69,24 @@ def test_paid_provider_can_be_enabled_explicitly() -> None:
     assert provider.provider == "openai"
     assert provider.paid is True
     assert provider.can_call is True
+
+
+def test_azure_provider_reports_each_missing_runtime_setting() -> None:
+    settings = Settings(
+        env="test",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+        azure_openai_api_key=SecretStr("az-test"),
+        azure_openai_endpoint=" ",
+        azure_openai_deployment=None,
+    )
+
+    profiles = {profile.name: profile for profile in list_provider_profiles(settings)}
+
+    assert profiles["azure"].configured is False
+    assert profiles["azure"].missing_config == [
+        "RETOS_AZURE_OPENAI_ENDPOINT",
+        "RETOS_AZURE_OPENAI_DEPLOYMENT",
+    ]
 
 
 def test_llm_providers_endpoint_requires_admin(client: TestClient) -> None:
@@ -96,4 +116,6 @@ def test_llm_providers_endpoint_returns_safe_catalog(client: TestClient) -> None
         "openrouter",
         "azure",
     }
-    assert "api_key" not in str(body).lower()
+    providers = {provider["name"]: provider for provider in body["providers"]}
+    assert providers["openai"]["missing_config"] == ["RETOS_OPENAI_API_KEY"]
+    assert "sk-test" not in str(body)

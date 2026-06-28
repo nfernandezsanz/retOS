@@ -58,10 +58,16 @@ only safe metadata:
 - Active provider name, model, paid/free flag, and whether calls are allowed.
 - Available profiles and whether each profile is configured and enabled.
 - A human-readable disabled reason when configuration or cost opt-in is missing.
+- Safe `missing_config` environment variable names so the UI can show exactly what is
+  missing without exposing secret values.
 
 The endpoint never returns API keys and never performs a model call. This gives the UI a
 safe way to render provider switches and warnings before the Deep Agents runtime is
 connected.
+
+Runtime startup uses the same configuration checks as the catalog. Selecting a paid
+provider requires both `RETOS_ALLOW_PAID_LLM=true` and complete provider configuration;
+otherwise startup fails fast instead of silently running with an unusable provider.
 
 ## Implemented Query Contract
 

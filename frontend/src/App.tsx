@@ -40,6 +40,7 @@ type ProviderProfile = {
   enabled: boolean;
   paid: boolean;
   reason: string | null;
+  missing_config: string[];
   base_url: string | null;
 };
 
@@ -4145,6 +4146,11 @@ function App() {
                   ) : (
                     <ShieldAlert aria-label={provider.reason ?? "Provider blocked"} className="row-icon" />
                   )}
+                  {provider.missing_config.length > 0 ? (
+                    <p className="provider-missing">
+                      Missing {provider.missing_config.join(", ")}
+                    </p>
+                  ) : null}
                 </article>
               ))}
               {!catalog ? (

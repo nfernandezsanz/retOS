@@ -1911,6 +1911,15 @@ button:focus-visible {
   justify-content: flex-end;
 }
 
+.provider-missing {
+  grid-column: 1 / -1;
+  margin: -2px 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .admin-users {
   display: grid;
   gap: 12px;

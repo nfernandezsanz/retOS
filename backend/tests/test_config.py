@@ -66,6 +66,32 @@ def test_paid_provider_requires_explicit_opt_in() -> None:
         settings.validate_runtime_security()
 
 
+def test_paid_provider_requires_runtime_configuration_after_opt_in() -> None:
+    settings = Settings(
+        env="test",
+        provider="openai",
+        allow_paid_llm=True,
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+    )
+
+    with pytest.raises(ValueError, match="RETOS_OPENAI_API_KEY"):
+        settings.validate_runtime_security()
+
+
+def test_azure_provider_requires_all_runtime_configuration() -> None:
+    settings = Settings(
+        env="test",
+        provider="azure",
+        allow_paid_llm=True,
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+        azure_openai_api_key=SecretStr("az-test"),
+        azure_openai_endpoint="https://retos.openai.azure.com",
+    )
+
+    with pytest.raises(ValueError, match="RETOS_AZURE_OPENAI_DEPLOYMENT"):
+        settings.validate_runtime_security()
+
+
 def test_local_provider_requires_model_name() -> None:
     settings = Settings(
         env="test",

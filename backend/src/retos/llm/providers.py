@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, HttpUrl, SecretStr
+from pydantic import BaseModel, Field, HttpUrl
 
 from retos.core.config import Settings
 
@@ -16,6 +16,7 @@ class ProviderProfile(BaseModel):
     enabled: bool
     paid: bool
     reason: str | None = None
+    missing_config: list[str] = Field(default_factory=list)
     base_url: HttpUrl | None = None
 
 
@@ -32,16 +33,26 @@ class ProviderDefinition:
     name: ProviderName
     label: str
     paid: bool
+    required_config: tuple[str, ...]
 
 
 PROVIDER_DEFINITIONS: tuple[ProviderDefinition, ...] = (
-    ProviderDefinition("fake", "Deterministic test double", False),
-    ProviderDefinition("local", "Ollama local runtime", False),
-    ProviderDefinition("openai", "OpenAI", True),
-    ProviderDefinition("anthropic", "Anthropic", True),
-    ProviderDefinition("google", "Google Gemini", True),
-    ProviderDefinition("openrouter", "OpenRouter", True),
-    ProviderDefinition("azure", "Azure OpenAI", True),
+    ProviderDefinition("fake", "Deterministic test double", False, ()),
+    ProviderDefinition("local", "Ollama local runtime", False, ("RETOS_OLLAMA_MODEL",)),
+    ProviderDefinition("openai", "OpenAI", True, ("RETOS_OPENAI_API_KEY",)),
+    ProviderDefinition("anthropic", "Anthropic", True, ("RETOS_ANTHROPIC_API_KEY",)),
+    ProviderDefinition("google", "Google Gemini", True, ("RETOS_GOOGLE_API_KEY",)),
+    ProviderDefinition("openrouter", "OpenRouter", True, ("RETOS_OPENROUTER_API_KEY",)),
+    ProviderDefinition(
+        "azure",
+        "Azure OpenAI",
+        True,
+        (
+            "RETOS_AZURE_OPENAI_API_KEY",
+            "RETOS_AZURE_OPENAI_ENDPOINT",
+            "RETOS_AZURE_OPENAI_DEPLOYMENT",
+        ),
+    ),
 )
 
 
@@ -58,32 +69,12 @@ def provider_model(settings: Settings, provider: ProviderName) -> str:
     return models[provider]
 
 
-def has_secret(secret: SecretStr | None) -> bool:
-    return secret is not None and bool(secret.get_secret_value().strip())
-
-
-def has_text(value: str | None) -> bool:
-    return value is not None and bool(value.strip())
-
-
 def provider_is_configured(settings: Settings, provider: ProviderName) -> bool:
-    if provider == "fake":
-        return settings.env == "test"
-    if provider == "local":
-        return bool(settings.ollama_base_url and settings.ollama_model.strip())
-    if provider == "openai":
-        return has_secret(settings.openai_api_key)
-    if provider == "anthropic":
-        return has_secret(settings.anthropic_api_key)
-    if provider == "google":
-        return has_secret(settings.google_api_key)
-    if provider == "openrouter":
-        return has_secret(settings.openrouter_api_key)
-    return (
-        has_secret(settings.azure_openai_api_key)
-        and has_text(settings.azure_openai_endpoint)
-        and has_text(settings.azure_openai_deployment)
-    )
+    return not missing_provider_config(settings, provider)
+
+
+def missing_provider_config(settings: Settings, provider: ProviderName) -> list[str]:
+    return settings.missing_provider_config(provider)
 
 
 def provider_reason(*, configured: bool, paid: bool, allow_paid: bool) -> str | None:
@@ -97,7 +88,8 @@ def provider_reason(*, configured: bool, paid: bool, allow_paid: bool) -> str | 
 def list_provider_profiles(settings: Settings) -> list[ProviderProfile]:
     profiles: list[ProviderProfile] = []
     for definition in PROVIDER_DEFINITIONS:
-        configured = provider_is_configured(settings, definition.name)
+        missing_config = missing_provider_config(settings, definition.name)
+        configured = not missing_config
         reason = provider_reason(
             configured=configured,
             paid=definition.paid,
@@ -112,6 +104,7 @@ def list_provider_profiles(settings: Settings) -> list[ProviderProfile]:
                 enabled=reason is None,
                 paid=definition.paid,
                 reason=reason,
+                missing_config=missing_config,
                 base_url=settings.ollama_base_url if definition.name == "local" else None,
             )
         )

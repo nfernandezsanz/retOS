@@ -13,6 +13,8 @@ tag in GitHub.
 
 - Nullable audit `trace_id` columns for journal/progress correlation, including default
   job-id traces for job-backed events and trace-aware audit export hashes.
+- Provider catalog `missing_config` hints and runtime fail-fast checks so selected paid
+  providers require both explicit cost opt-in and complete provider configuration.
 - Audit export integrity metadata with canonical payload hashes and a chronological
   SHA-256 hash chain for offline review.
 - React document evidence inspection for latest versions, artifacts, and searchable

@@ -688,6 +688,7 @@ The response includes the active profile and the available profiles:
       "enabled": true,
       "paid": false,
       "reason": null,
+      "missing_config": [],
       "base_url": "http://ollama:11434/"
     }
   ]
@@ -697,6 +698,13 @@ The response includes the active profile and the available profiles:
 `fake` is reserved for tests. `openai`, `anthropic`, `google`, `openrouter`, and
 `azure` require their provider-specific key/configuration and remain disabled unless
 `RETOS_ALLOW_PAID_LLM=true`.
+
+`missing_config` contains safe environment variable names, never secret values. For
+example, an unconfigured OpenAI profile returns `["RETOS_OPENAI_API_KEY"]`; Azure can
+return `RETOS_AZURE_OPENAI_API_KEY`, `RETOS_AZURE_OPENAI_ENDPOINT`, and
+`RETOS_AZURE_OPENAI_DEPLOYMENT` depending on what is missing. If a paid profile is
+selected as `RETOS_PROVIDER`, runtime security validation fails fast until both
+`RETOS_ALLOW_PAID_LLM=true` and all required provider settings are present.
 
 ## Evals
 

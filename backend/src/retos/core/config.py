@@ -11,6 +11,20 @@ AgentRuntimeMode = Literal["deterministic", "deepagents"]
 
 DEVELOPMENT_JWT_SECRET = "change-this-development-secret-at-least-32-chars"
 DEVELOPMENT_ADMIN_PASSWORD = "retos-dev-admin-change-me"
+KNOWN_PROVIDER_PROFILES: frozenset[str] = frozenset(
+    {
+        "fake",
+        "local",
+        "openai",
+        "anthropic",
+        "google",
+        "openrouter",
+        "azure",
+    }
+)
+PAID_PROVIDER_PROFILES: frozenset[str] = frozenset(
+    {"openai", "anthropic", "google", "openrouter", "azure"}
+)
 
 
 class BootstrapAdmin(BaseSettings):
@@ -80,6 +94,58 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.env == "production"
 
+    def missing_provider_config(self, provider: str) -> list[str]:
+        if provider == "fake":
+            return [] if self.env == "test" else ["RETOS_ENV=test"]
+        if provider == "local":
+            missing = []
+            if not self.ollama_model.strip():
+                missing.append("RETOS_OLLAMA_MODEL")
+            if not self.ollama_base_url.strip():
+                missing.append("RETOS_OLLAMA_BASE_URL")
+            return missing
+        if provider == "openai":
+            return (
+                []
+                if self.openai_api_key is not None
+                and self.openai_api_key.get_secret_value().strip()
+                else ["RETOS_OPENAI_API_KEY"]
+            )
+        if provider == "anthropic":
+            return (
+                []
+                if self.anthropic_api_key is not None
+                and self.anthropic_api_key.get_secret_value().strip()
+                else ["RETOS_ANTHROPIC_API_KEY"]
+            )
+        if provider == "google":
+            return (
+                []
+                if self.google_api_key is not None
+                and self.google_api_key.get_secret_value().strip()
+                else ["RETOS_GOOGLE_API_KEY"]
+            )
+        if provider == "openrouter":
+            return (
+                []
+                if self.openrouter_api_key is not None
+                and self.openrouter_api_key.get_secret_value().strip()
+                else ["RETOS_OPENROUTER_API_KEY"]
+            )
+        if provider == "azure":
+            missing = []
+            if (
+                self.azure_openai_api_key is None
+                or not self.azure_openai_api_key.get_secret_value().strip()
+            ):
+                missing.append("RETOS_AZURE_OPENAI_API_KEY")
+            if self.azure_openai_endpoint is None or not self.azure_openai_endpoint.strip():
+                missing.append("RETOS_AZURE_OPENAI_ENDPOINT")
+            if self.azure_openai_deployment is None or not self.azure_openai_deployment.strip():
+                missing.append("RETOS_AZURE_OPENAI_DEPLOYMENT")
+            return missing
+        return ["RETOS_PROVIDER"]
+
     def validate_runtime_security(self) -> None:
         secret = self.jwt_secret.get_secret_value()
         if len(secret) < 32:
@@ -96,20 +162,14 @@ class Settings(BaseSettings):
             )
         if self.is_production and any(str(origin) == "*" for origin in self.allowed_origins):
             raise ValueError("Wildcard CORS origins are not allowed in production")
-        if self.provider not in {
-            "fake",
-            "local",
-            "openai",
-            "anthropic",
-            "google",
-            "openrouter",
-            "azure",
-        }:
+        if self.provider not in KNOWN_PROVIDER_PROFILES:
             raise ValueError("RETOS_PROVIDER must be a known provider profile")
-        if self.provider not in {"fake", "local"} and not self.allow_paid_llm:
+        if self.provider in PAID_PROVIDER_PROFILES and not self.allow_paid_llm:
             raise ValueError("Paid LLM providers require RETOS_ALLOW_PAID_LLM=true")
-        if self.provider == "local" and not self.ollama_model.strip():
-            raise ValueError("RETOS_OLLAMA_MODEL must not be empty for local provider")
+        missing_provider_config = self.missing_provider_config(self.provider)
+        if missing_provider_config:
+            missing = ", ".join(missing_provider_config)
+            raise ValueError(f"RETOS_PROVIDER={self.provider} is missing: {missing}")
         if self.agent_runtime not in {"deterministic", "deepagents"}:
             raise ValueError("RETOS_AGENT_RUNTIME must be deterministic or deepagents")
 
