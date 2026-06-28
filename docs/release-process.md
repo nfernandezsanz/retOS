@@ -45,6 +45,7 @@ scripts/check_versioned_release_notes.sh
 ```bash
 make release-check
 make audit-pack-check
+make dependency-audit
 make ci-status-check
 make check
 make integration
@@ -66,6 +67,7 @@ make docker-smoke
 | Image tags | Yes |
 | OCI labels inspected | Yes |
 | Backend coverage | Yes |
+| Dependency audit | Yes |
 | API smoke | Yes |
 | Browser smoke | Yes |
 | Docker stack smoke | Yes |
@@ -150,5 +152,6 @@ Images:
 - `.github/workflows/release.yml` is the source of truth for publishing `retos-backend`
   and `retos-web` to GHCR. It must keep SBOM, provenance, and Cosign signing enabled.
 - CI validates release docs through `make release-check`.
+- CI validates Python and Node dependency advisories before tests and browser smoke.
 - CI validates the production readiness audit pack through `make audit-pack-check`.
 - Operators use `docs/operations.md` for upgrade, backup, restore, and rollback.

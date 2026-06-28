@@ -21,6 +21,7 @@ paths = {
     "release_note": Path("docs/releases/2026.06.28-alpha.1.md"),
     "ci": Path(".github/workflows/ci.yml"),
     "ci_status_script": Path("scripts/check_ci_status.sh"),
+    "dependency_audit_script": Path("scripts/check_dependency_audit.sh"),
 }
 
 for name, path in paths.items():
@@ -51,10 +52,14 @@ for phrase in (
     "make frontend-test",
     "make frontend-e2e",
     "make docker-smoke",
+    "make dependency-audit",
     "make ci-status-check",
     "scripts/check_release_readiness.sh",
     "scripts/check_audit_pack.sh",
+    "scripts/check_dependency_audit.sh",
     "scripts/check_ci_status.sh",
+    "pip-audit",
+    "npm audit --audit-level=high",
     "GHCR",
     "SBOM/provenance",
     "Cosign",
@@ -94,8 +99,16 @@ require(
     "release process must require current HEAD CI verification",
 )
 require(
+    "make dependency-audit" in release_process,
+    "release process must require dependency advisory verification",
+)
+require(
     "Final release promotion still requires" in tracker,
     "process tracker must keep final release blockers visible",
+)
+require(
+    "pip_audit" in ci and "npm audit --audit-level=high" in ci,
+    "CI must run Python and Node dependency audits",
 )
 require(
     "check_audit_pack.sh" in ci,

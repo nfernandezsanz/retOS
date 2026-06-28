@@ -14,7 +14,7 @@ pwdlib[argon2]==0.3.0
 python-multipart==0.0.32
 httpx==0.28.1
 certifi==2026.6.17
-orjson==3.11.5
+orjson==3.11.9
 structlog==25.5.0
 opentelemetry-api==1.39.1
 opentelemetry-sdk==1.39.1
@@ -22,4 +22,4 @@ deepagents==0.6.12
 tantivy==0.26.0
 pymupdf==1.27.2.3
 pytesseract==0.3.13
-Pillow==12.1.0
+Pillow==12.2.0

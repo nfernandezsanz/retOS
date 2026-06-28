@@ -12,6 +12,7 @@ production pilot.
 | CI health | Must be checked against current `HEAD` | `make ci-status-check` queries GitHub Actions for the current commit; `docs/releases/2026.06.28-alpha.1.md` records release-candidate evidence. |
 | Backend coverage | Passing total coverage, branch ratchet in progress | `README.md` records 90.70% total and 80.73% branch-only coverage. |
 | Runtime topology | Guarded | `scripts/check_docker_topology.sh` and `scripts/check_backend_runtime_image.sh` protect the shared API/worker/migrate backend image model. |
+| Dependency advisories | Guarded | `make dependency-audit` runs `pip-audit` and `npm audit --audit-level=high`; CI runs both checks. |
 | Local cost safety | Guarded | `.env.example` keeps `RETOS_ALLOW_PAID_LLM=false`, `RETOS_PROVIDER=local`, and `RETOS_OLLAMA_MODEL=gemma4`. |
 | Audit ledger | Implemented foundation | `docs/database.md` and `planning/06-auditability-journals.md` describe persisted journal/progress hash chains and export validation. |
 | Release publishing | Not complete | GHCR digest, SBOM/provenance, and Cosign evidence are pending until the release workflow runs for a tag. |
@@ -45,6 +46,7 @@ make frontend-e2e
 docker compose --env-file .env.example config
 docker compose --dry-run build
 make release-check
+make dependency-audit
 make ci-status-check
 make release-notes-check
 make versioned-release-notes-check
@@ -78,6 +80,7 @@ These items must be closed before a final production release:
 - [ ] Latest GitHub Actions run is green for that SHA.
 - [ ] `make ci-status-check` passes for the current `HEAD`.
 - [ ] `make check` passes with no paid providers.
+- [ ] `make dependency-audit` reports no known Python runtime advisories and no high-severity Node advisories.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test` and `make frontend-e2e` pass.
 - [ ] `make docker-smoke` passes with API, worker, migrate, web, Postgres, RabbitMQ, and Ollama services.
@@ -96,6 +99,7 @@ These items must be closed before a final production release:
 | Evidence | Location |
 | --- | --- |
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
+| Dependency advisory evidence | `scripts/check_dependency_audit.sh`, `make dependency-audit` |
 | Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check` |
 | Release procedure | `docs/release-process.md` |
 | Operations runbooks | `docs/operations.md` |
