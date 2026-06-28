@@ -102,11 +102,18 @@ for phrase in (
     "RETOS_VISUAL_AUDIT",
     "retos-console-desktop.png",
     "retos-console-mobile.png",
+    "manifest.json",
+    "sha256",
+    "size_bytes",
+    "viewport",
 ):
     require(phrase in e2e, f"Playwright visual audit missing phrase: {phrase}")
 require(
-    "make frontend-visual-audit" in readme and "make frontend-visual-audit" in branding,
-    "README and branding guide must document the visual audit command",
+    "make frontend-visual-audit" in readme
+    and "frontend/visual-audit/manifest.json" in readme
+    and "make frontend-visual-audit" in branding
+    and "frontend/visual-audit/manifest.json" in branding,
+    "README and branding guide must document the visual audit command and manifest",
 )
 require("frontend/visual-audit/" in gitignore, ".gitignore must exclude visual audit PNGs")
 require("frontend/visual-audit" in dockerignore, ".dockerignore must exclude visual audit PNGs")
@@ -115,6 +122,7 @@ for phrase in (
     "actions/upload-artifact@v4",
     "retos-visual-audit-${{ github.sha }}",
     "frontend/visual-audit/*.png",
+    "frontend/visual-audit/manifest.json",
     "if-no-files-found: error",
 ):
     require(phrase in ci, f"CI must preserve visual audit evidence: {phrase}")
