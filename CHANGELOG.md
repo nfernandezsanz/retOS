@@ -38,6 +38,8 @@ tag in GitHub.
   subqueries, expected evidence breadth, planned steps, and operator warnings.
 - Agent query plans now execute bounded multi-hop subqueries and accumulate unique
   evidence under citation, token, and search budgets.
+- Deterministic agent multi-hop eval suite for query plans, bounded subqueries,
+  evidence-route coverage, bridge terms, citations, grounding, and budgets.
 - Persisted eval runs now expose a regression gate that normalizes metric direction,
   supports tolerances, and flags candidate calibration drops without provider calls.
 

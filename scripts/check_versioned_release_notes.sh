@@ -63,7 +63,7 @@ for path in versioned_files:
     for phrase in required_phrases:
         require(phrase in content, f"{path} missing {phrase}")
     require("Pending until" in content, f"{path} must state pending publish evidence while pre-release")
-    require("90.54%" in content, f"{path} must record current backend coverage evidence")
+    require("90.63%" in content, f"{path} must record current backend coverage evidence")
 
 print(f"Versioned release notes OK: {len(versioned_files)} release note(s) validated.")
 PY

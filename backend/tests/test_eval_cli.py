@@ -218,6 +218,26 @@ def test_eval_cli_uses_suite_name_as_default_report_stem(tmp_path: Path) -> None
     assert (tmp_path / "reports" / "retos-smoke.md").exists()
 
 
+def test_eval_cli_runs_agent_multihop_suite(tmp_path: Path, capsys) -> None:
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="json",
+        suite="agent-multihop",
+        dataset_path=None,
+        max_cases=None,
+        report_dir=tmp_path / "reports",
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert '"suite_name": "agent-multihop"' in captured.out
+    assert '"multi_hop_support": 1.0' in captured.out
+    assert (tmp_path / "reports" / "agent-multihop.json").exists()
+    assert (tmp_path / "reports" / "agent-multihop.md").exists()
+
+
 def test_eval_cli_runs_ocr_smoke_suite(tmp_path: Path, capsys, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     cli = load_eval_cli()
 

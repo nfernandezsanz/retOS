@@ -222,6 +222,12 @@ def test_natural_questions_eval_requires_admin_token(evals_client: TestClient) -
     assert response.status_code == 401
 
 
+def test_agent_multihop_eval_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.post("/evals/agent-multihop")
+
+    assert response.status_code == 401
+
+
 def test_ocr_benchmark_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post(
         "/evals/ocr-benchmark",
@@ -373,6 +379,77 @@ def test_smoke_eval_rerun_creates_new_job_with_origin(
     assert body["job"]["payload"]["suite_name"] == "retos-smoke"
     assert body["job"]["payload"]["rerun_from_job_id"] == original_job_id
     assert body["report"]["suite_name"] == "retos-smoke"
+
+
+def test_agent_multihop_eval_runs_and_persists_auditable_job(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> None:
+    response = evals_client.post("/evals/agent-multihop", headers=evals_admin_headers)
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job"]["kind"] == "eval.run"
+    assert body["job"]["status"] == "succeeded"
+    assert body["job"]["payload"]["suite_name"] == "agent-multihop"
+    assert body["report"]["suite_name"] == "agent-multihop"
+    assert body["report"]["metadata"] == {
+        "dataset": "agent-multihop-fixtures",
+        "source": "built-in",
+    }
+    assert body["report"]["metrics"] == {
+        "query_plan": 1.0,
+        "multi_hop_support": 1.0,
+        "evidence_route": 1.0,
+        "citation_validity": 1.0,
+        "grounded_answer": 1.0,
+        "budget_compliance": 1.0,
+    }
+    assert body["report"]["cases"][0]["usage"]["search_count"] >= 2
+    assert (
+        body["report"]["cases"][0]["audits"]["query_plan"]["strategy"] == "multi_hop_evidence_route"
+    )
+
+    job_id = body["job"]["id"]
+    journals = evals_client.get("/audit/journal-events", headers=evals_admin_headers)
+    progress_events = evals_client.get("/audit/progress-events", headers=evals_admin_headers)
+    assert journals.status_code == 200
+    assert any(
+        event["event_type"] == "eval.completed"
+        and event["entity_id"] == job_id
+        and event["payload"]["metrics"]["multi_hop_support"] == 1.0
+        for event in journals.json()
+    )
+    assert progress_events.status_code == 200
+    assert any(
+        event["event_type"] == "eval.completed"
+        and event["job_id"] == job_id
+        and event["payload"]["metadata"]["dataset"] == "agent-multihop-fixtures"
+        for event in progress_events.json()
+    )
+
+
+def test_agent_multihop_eval_rerun_creates_new_job_with_origin(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> None:
+    original = evals_client.post("/evals/agent-multihop", headers=evals_admin_headers)
+    assert original.status_code == 202
+    original_job_id = original.json()["job"]["id"]
+
+    rerun = evals_client.post(
+        f"/evals/runs/{original_job_id}/rerun",
+        headers=evals_admin_headers,
+    )
+
+    assert rerun.status_code == 202
+    body = rerun.json()
+    assert body["job"]["id"] != original_job_id
+    assert body["job"]["kind"] == "eval.run"
+    assert body["job"]["status"] == "succeeded"
+    assert body["job"]["payload"]["suite_name"] == "agent-multihop"
+    assert body["job"]["payload"]["rerun_from_job_id"] == original_job_id
+    assert body["report"]["suite_name"] == "agent-multihop"
 
 
 def test_squad_eval_runs_and_exports_report(

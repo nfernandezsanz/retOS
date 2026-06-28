@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.54% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.63% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -37,6 +37,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - LLM provider catalog API with local Ollama `gemma4` as the default profile and paid providers blocked unless explicitly enabled.
 - Auditable `agent.query` jobs that use controlled corpus search/read tools, execute bounded multi-hop subqueries, persist grounded answers, citations, deterministic query plans, evidence-route coverage, deterministic multi-hop audit status with bridge terms, bounded neighboring context, and budget usage, and emit journal/progress events.
 - Deterministic local eval smoke for retrieval recall, citation validity, grounded answers, abstention, and budget compliance, with report provenance metadata persisted for audits.
+- Deterministic agent multi-hop evals for query planning, bounded subquery execution, evidence-route coverage, bridge terms, citations, grounding, and budgets, without provider calls.
 - Opt-in SQuAD 2.0, HotpotQA, and Natural Questions adapters plus admin API endpoints
   for local dataset-backed evals without network or paid providers, with optional
   JSON/Markdown report export.
@@ -213,12 +214,13 @@ Every meaningful change should pass these gates:
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
+| Agent multi-hop eval | `make eval-agent-multihop` | Runs deterministic query-plan, multi-hop audit, evidence-route, citation, grounding, and budget scorers without network or paid providers. |
 | Dataset fetch | `make eval-fetch-dataset PROFILE=squad-dev-v2` | Opt-in download or local sampling of bounded public dataset samples under `evals/datasets`; never runs in CI by default. |
 | OCR eval | `make eval-ocr` | Runs opt-in local OCR quality checks over generated image-only PDFs with CER/WER scoring. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | HotpotQA eval | `make eval-hotpotqa HOTPOTQA_PATH=...` | Runs opt-in HotpotQA multi-hop evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | Natural Questions eval | `make eval-natural-questions NQ_PATH=...` | Runs opt-in Natural Questions real-query evals from a user-provided JSONL/JSON dataset file and can write JSON/Markdown reports. |
-| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, SQuAD/HotpotQA/Natural Questions evals, eval rerun/comparison/trends, job lifecycle, audit export, and SSE over HTTP. OCR benchmark API smoke is opt-in for Docker where Tesseract is present. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, agent multi-hop/SQuAD/HotpotQA/Natural Questions evals, eval rerun/comparison/trends, job lifecycle, audit export, and SSE over HTTP. OCR benchmark API smoke is opt-in for Docker where Tesseract is present. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state, including admin user management, document edit/archive/restore/history, dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |

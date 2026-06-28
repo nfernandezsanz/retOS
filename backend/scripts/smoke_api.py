@@ -797,6 +797,29 @@ def main() -> None:
             require(eval_body["report"]["passed"] is True, "eval report did not pass")
             require(eval_body["report"]["case_count"] == 3, "unexpected eval case count")
 
+            agent_eval = client.post("/evals/agent-multihop", headers=auth_headers)
+            require(
+                agent_eval.status_code == 202,
+                f"agent multi-hop eval failed: {agent_eval.status_code} {agent_eval.text}",
+            )
+            agent_eval_body = agent_eval.json()
+            require(
+                agent_eval_body["job"]["kind"] == "eval.run",
+                "invalid agent multi-hop eval job kind",
+            )
+            require(
+                agent_eval_body["job"]["status"] == "succeeded",
+                "agent multi-hop eval did not succeed",
+            )
+            require(
+                agent_eval_body["report"]["suite_name"] == "agent-multihop",
+                "invalid agent multi-hop suite",
+            )
+            require(
+                agent_eval_body["report"]["metrics"]["multi_hop_support"] == 1.0,
+                "agent multi-hop eval did not validate multi-hop support",
+            )
+
             squad_eval = client.post(
                 "/evals/squad",
                 headers=auth_headers,
@@ -1043,6 +1066,10 @@ def main() -> None:
             require(
                 any(item["suite_name"] == "retos-smoke" for item in trend_body),
                 "eval trends did not include smoke suite",
+            )
+            require(
+                any(item["suite_name"] == "agent-multihop" for item in trend_body),
+                "eval trends did not include agent multi-hop suite",
             )
             require(
                 any(

@@ -12,6 +12,12 @@ Run the deterministic smoke suite:
 make eval-smoke
 ```
 
+Run the deterministic agent multi-hop suite:
+
+```bash
+make eval-agent-multihop
+```
+
 Run the opt-in local OCR quality smoke suite:
 
 ```bash
@@ -39,6 +45,7 @@ The underlying CLI supports JSON or Markdown output:
 cd backend
 PYTHONPATH=src python scripts/run_eval_smoke.py --format json
 PYTHONPATH=src python scripts/run_eval_smoke.py --format markdown
+PYTHONPATH=src python scripts/run_eval_smoke.py --suite agent-multihop --format markdown
 PYTHONPATH=src python scripts/run_eval_smoke.py --suite ocr-smoke --format markdown
 PYTHONPATH=src python scripts/run_eval_smoke.py \
   --suite ocr-benchmark \
@@ -112,6 +119,25 @@ The built-in suite creates a temporary Tantivy index and evaluates fixture cases
 
 The suite exits non-zero if any case fails.
 
+## Agent Multi-Hop Eval
+
+The built-in agent suite creates a temporary Tantivy index and exercises the same
+bounded planned-search helper used by `agent.query`. It validates deterministic
+multi-hop query planning, bounded subquery execution, multi-document evidence-route
+coverage, bridge-term support, citation validity, grounded answer terms, and budget
+compliance.
+
+It is safe for CI because it does not call Ollama, OpenAI, Anthropic, or any paid
+provider:
+
+```bash
+PYTHONPATH=src python scripts/run_eval_smoke.py --suite agent-multihop --format markdown
+```
+
+The same suite is available through the admin API at `/evals/agent-multihop`. API runs
+persist an `eval.run` job, report metrics, journal/progress events, and support reruns
+through `/evals/runs/<job_id>/rerun`.
+
 ## OCR Quality
 
 `make eval-ocr` generates tiny image-only PDFs locally, runs them through the same OCR
@@ -147,7 +173,9 @@ curl "http://localhost:8000/evals/runs?limit=6" \
 
 The React console uses these endpoints in the `Local evals` panel to run smoke,
 SQuAD, HotpotQA, and Natural Questions evals, show metrics, per-case status, exported
-report paths, dataset provenance metadata, and a newest-first run history. Each history
+report paths, dataset provenance metadata, and a newest-first run history. The
+`agent-multihop` API suite is available for backend/API validation and persisted
+history even before it receives a dedicated UI control. Each history
 row can rerun the persisted suite when its stored payload still contains the dataset and
 threshold settings needed for a faithful repeat:
 
@@ -444,5 +472,5 @@ CER/WER and optional key-value recall.
 
 ## Next Implementation Step
 
-Use the geometric OCR metrics in larger real-dataset evaluation profiles and add
-operator-facing trend views for layout regressions.
+Expand real-dataset eval profiles and add deeper agent calibration cases that combine
+HotpotQA supporting facts with persisted agent query audits.

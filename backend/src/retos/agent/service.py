@@ -331,6 +331,40 @@ def hits_within_budget(hits: list[SearchHit], budget: AgentBudget) -> list[Searc
     )
 
 
+def seed_agent_evidence(
+    *,
+    question: str,
+    limit: int,
+    budget: AgentBudget,
+    query_plan: QueryPlan,
+    toolbox: CorpusToolbox,
+) -> dict[str, object]:
+    planned_searches: list[dict[str, object]] = [
+        toolbox.search_corpus(
+            question,
+            limit=min(limit, budget.max_citations),
+        )
+    ]
+    if query_plan.requires_multi_hop:
+        for planned_query in query_plan.search_queries[1:]:
+            if toolbox.search_count >= budget.max_searches:
+                break
+            if planned_query.strip().lower() == question.lower():
+                continue
+            planned_searches.append(
+                toolbox.search_corpus(
+                    planned_query,
+                    limit=min(limit, budget.max_citations),
+                )
+            )
+    return {
+        "query": question,
+        "hits": [hit_to_payload(hit) for hit in toolbox.selected_hits],
+        "planned_searches": planned_searches,
+        "usage": toolbox.usage_payload(),
+    }
+
+
 def usage_to_payload(usage: AgentBudgetUsage) -> dict[str, object]:
     return {
         "budget": budget_to_payload(usage.budget),
@@ -506,30 +540,13 @@ async def run_agent_query(
             max_evidence_tokens=budget.max_evidence_tokens,
         )
         try:
-            planned_searches: list[dict[str, object]] = [
-                toolbox.search_corpus(
-                    question,
-                    limit=min(limit, budget.max_citations),
-                )
-            ]
-            if query_plan.requires_multi_hop:
-                for planned_query in query_plan.search_queries[1:]:
-                    if toolbox.search_count >= budget.max_searches:
-                        break
-                    if planned_query.strip().lower() == question.lower():
-                        continue
-                    planned_searches.append(
-                        toolbox.search_corpus(
-                            planned_query,
-                            limit=min(limit, budget.max_citations),
-                        )
-                    )
-            seed_payload: dict[str, object] = {
-                "query": question,
-                "hits": [hit_to_payload(hit) for hit in toolbox.selected_hits],
-                "planned_searches": planned_searches,
-                "usage": toolbox.usage_payload(),
-            }
+            seed_payload = seed_agent_evidence(
+                question=question,
+                limit=limit,
+                budget=budget,
+                query_plan=query_plan,
+                toolbox=toolbox,
+            )
         except CorpusToolError as exc:
             if not isinstance(exc.__cause__, SearchIndexMissingError):
                 raise AgentQueryError(str(exc)) from exc

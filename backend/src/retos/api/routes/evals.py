@@ -12,6 +12,7 @@ from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep
 from retos.api.routes.events import progress_store
 from retos.api.routes.jobs import JobRead
 from retos.domain.jobs import Job, JobStatus
+from retos.evals.agent import AgentEvalSuiteReport, run_agent_multihop_eval_suite
 from retos.evals.datasets import (
     DatasetAdapterError,
     HotpotQAAdapterOptions,
@@ -43,7 +44,10 @@ class EvalReportRead(BaseModel):
     cases: list[dict[str, Any]]
 
     @classmethod
-    def from_report(cls, report: EvalSuiteReport | OCRQualityReport) -> EvalReportRead:
+    def from_report(
+        cls,
+        report: EvalSuiteReport | OCRQualityReport | AgentEvalSuiteReport,
+    ) -> EvalReportRead:
         return cls.model_validate(report.to_dict())
 
 
@@ -302,6 +306,13 @@ async def rerun_eval(
             uow=uow,
             rerun_from_job_id=job_id,
         )
+    if plan.suite_name == "agent-multihop":
+        return await run_agent_multihop_eval_plan(
+            actor=actor,
+            settings=settings,
+            uow=uow,
+            rerun_from_job_id=job_id,
+        )
     if plan.suite_name == "squad-v2" and isinstance(plan.request, SquadEvalRequest):
         return await run_squad_eval_plan(
             request=plan.request,
@@ -356,6 +367,19 @@ async def run_smoke_evals(
     return await run_smoke_eval_plan(actor=actor, settings=settings, uow=uow)
 
 
+@router.post(
+    "/agent-multihop",
+    response_model=EvalRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def run_agent_multihop_evals(
+    actor: AdminSubjectDep,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+) -> EvalRunResponse:
+    return await run_agent_multihop_eval_plan(actor=actor, settings=settings, uow=uow)
+
+
 async def run_smoke_eval_plan(
     *,
     actor: str,
@@ -393,6 +417,50 @@ async def run_smoke_eval_plan(
         requested_at=now,
         report=report,
         failure_error="Eval smoke suite failed",
+        payload=rerun_payload(rerun_from_job_id),
+    )
+    return EvalRunResponse(
+        job=JobRead.from_job(completed), report=EvalReportRead.from_report(report)
+    )
+
+
+async def run_agent_multihop_eval_plan(
+    *,
+    actor: str,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+    rerun_from_job_id: str | None = None,
+) -> EvalRunResponse:
+    suite_name = "agent-multihop"
+    now = datetime.now(UTC)
+    job = await queue_eval_job(
+        actor=actor,
+        uow=uow,
+        suite_name=suite_name,
+        requested_at=now,
+        queued_message="Queued agent multi-hop eval suite",
+        started_message="Started agent multi-hop eval suite",
+        payload=rerun_payload(rerun_from_job_id),
+    )
+    try:
+        report = run_agent_multihop_eval_suite(
+            index_root=Path(settings.index_root) / "evals" / "agent-multihop",
+            metadata={"source": "built-in", "dataset": "agent-multihop-fixtures"},
+        )
+    except Exception as exc:
+        await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Agent multi-hop eval suite failed to run",
+        ) from exc
+
+    completed = await complete_eval_job(
+        actor=actor,
+        uow=uow,
+        job_id=job.id,
+        requested_at=now,
+        report=report,
+        failure_error="Agent multi-hop eval suite failed",
         payload=rerun_payload(rerun_from_job_id),
     )
     return EvalRunResponse(
@@ -793,7 +861,7 @@ def rerun_plan_from_eval_job(job: Job | None) -> EvalRerunPlan:
 
     payload = job.payload
     suite_name = string_from_payload(payload, "suite_name")
-    if suite_name == "retos-smoke":
+    if suite_name in {"retos-smoke", "agent-multihop"}:
         return EvalRerunPlan(suite_name=suite_name)
 
     if suite_name in {"squad-v2", "hotpotqa", "natural-questions"}:
@@ -1154,7 +1222,7 @@ async def complete_eval_job(
     uow: UnitOfWorkDep,
     job_id: str,
     requested_at: datetime,
-    report: EvalSuiteReport | OCRQualityReport,
+    report: EvalSuiteReport | OCRQualityReport | AgentEvalSuiteReport,
     failure_error: str,
     payload: dict[str, Any] | None = None,
 ) -> Job:

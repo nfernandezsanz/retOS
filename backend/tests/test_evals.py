@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from retos.evals.agent import agent_multihop_eval_cases, run_agent_multihop_eval_suite
 from retos.evals.smoke import (
     EvalCase,
     EvalDocument,
@@ -55,6 +56,37 @@ def test_smoke_eval_cases_are_immutable_fixtures() -> None:
         "no-evidence",
     ]
     assert all(case.max_citations == 5 for case in cases)
+
+
+def test_agent_multihop_eval_suite_validates_plan_audits_and_budget(tmp_path: Path) -> None:
+    report = run_agent_multihop_eval_suite(
+        index_root=tmp_path,
+        metadata={"dataset": "agent-multihop-fixtures"},
+    )
+
+    assert report.passed is True
+    assert report.case_count == 1
+    assert report.query_plan == 1.0
+    assert report.multi_hop_support == 1.0
+    assert report.evidence_route == 1.0
+    assert report.citation_validity == 1.0
+    assert report.grounded_answer == 1.0
+    assert report.budget_compliance == 1.0
+    payload = report.to_dict()
+    assert payload["metrics"]["multi_hop_support"] == 1.0
+    assert payload["cases"][0]["usage"]["search_count"] >= 2
+    assert payload["cases"][0]["audits"]["query_plan"]["strategy"] == "multi_hop_evidence_route"
+    markdown = report.to_markdown()
+    assert "Agent Eval Report: agent-multihop" in markdown
+    assert markdown.index("| Budget compliance | 1.00 |") < markdown.index("| Metadata | Value |")
+    assert markdown.index("| Metadata | Value |") < markdown.index("| Case | Status | Failures |")
+
+
+def test_agent_multihop_eval_cases_are_immutable_fixtures() -> None:
+    cases = agent_multihop_eval_cases()
+
+    assert [case.id for case in cases] == ["apollo-telemetry-bridge"]
+    assert cases[0].min_search_count == 2
 
 
 def test_eval_case_reports_missing_grounding() -> None:

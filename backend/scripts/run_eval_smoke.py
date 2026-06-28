@@ -8,6 +8,7 @@ from pathlib import Path
 
 from pytesseract import TesseractNotFoundError
 
+from retos.evals.agent import AgentEvalSuiteReport, run_agent_multihop_eval_suite
 from retos.evals.datasets import (
     DatasetAdapterError,
     HotpotQAAdapterOptions,
@@ -37,6 +38,7 @@ def parse_args() -> argparse.Namespace:
             "squad",
             "hotpotqa",
             "natural-questions",
+            "agent-multihop",
             "ocr-smoke",
             "ocr-benchmark",
         ),
@@ -166,7 +168,7 @@ def build_report(
     dataset_path: Path | None,
     max_cases: int | None,
     dataset_format: str,
-) -> EvalSuiteReport | OCRQualityReport:
+) -> EvalSuiteReport | OCRQualityReport | AgentEvalSuiteReport:
     if suite == "smoke":
         return run_smoke_eval_suite(
             index_root=index_root,
@@ -174,6 +176,11 @@ def build_report(
         )
     if suite == "ocr-smoke":
         return run_ocr_quality_suite(work_dir=index_root / "ocr")
+    if suite == "agent-multihop":
+        return run_agent_multihop_eval_suite(
+            index_root=index_root / "agent-multihop",
+            metadata={"source": "built-in", "dataset": "agent-multihop-fixtures"},
+        )
     if suite == "ocr-benchmark":
         if dataset_path is None:
             raise OCRBenchmarkAdapterError("--dataset-path is required for OCR benchmark suites")

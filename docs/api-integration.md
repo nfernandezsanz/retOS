@@ -878,6 +878,19 @@ summary, pass rate, and per-metric first/latest/min/max/average/delta values. Di
 is metric-aware: higher scores improve normal eval metrics, while lower values improve
 `*_error_rate` OCR metrics. Use `suite_name=<name>` to narrow the trend to one suite.
 
+Run the deterministic agent multi-hop eval suite:
+
+```bash
+curl --request POST http://localhost:8000/evals/agent-multihop \
+  --header "Authorization: Bearer <token>"
+```
+
+The response shape matches `/evals/smoke`; `report.suite_name` is `agent-multihop`.
+Metrics cover `query_plan`, `multi_hop_support`, `evidence_route`,
+`citation_validity`, `grounded_answer`, and `budget_compliance`. The suite uses local
+fixtures and the same bounded planned-search helper as `agent.query`, so it does not
+call Ollama or paid providers.
+
 Rerun a persisted eval run:
 
 ```bash
@@ -976,6 +989,7 @@ Current console calls:
 - `GET /evals/runs/compare?baseline_job_id=...&candidate_job_id=...`
 - `POST /evals/runs/{job_id}/rerun`
 - `POST /evals/smoke`
+- `POST /evals/agent-multihop`
 - `POST /evals/squad`
 - `POST /evals/hotpotqa`
 - `POST /evals/natural-questions`
@@ -998,7 +1012,7 @@ audited local accounts:
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source
-scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA/Natural Questions/OCR
+scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/Natural Questions/OCR
 benchmark evals, read recent jobs, inspect a selected job's full payload/error/progress
 detail, read persisted audit/progress events, group progress by job, filter the job
 ledger by status/kind, and send queries against the selected domain. Query execution
