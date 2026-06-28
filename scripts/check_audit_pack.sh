@@ -115,8 +115,12 @@ require(
     "release note must keep maturity limitation explicit",
 )
 require(
-    "Baseline draft commit:" in release_note and "make ci-status-check" in release_note,
-    "release note must distinguish baseline draft evidence from current HEAD CI evidence",
+    "Current draft evidence commit:" in release_note and "make ci-status-check" in release_note,
+    "release note must distinguish current draft evidence from final tag evidence",
+)
+require(
+    "audit-evidence" in release_note and "retos-audit-manifest-" in release_note,
+    "release note must record final CI audit-evidence and manifest artifact evidence",
 )
 require(
     "Publishing evidence still required" in release_note,

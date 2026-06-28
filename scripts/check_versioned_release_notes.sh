@@ -47,9 +47,9 @@ required_sections = (
 )
 
 required_phrases = (
-    "Baseline draft commit:",
+    "Current draft evidence commit:",
     "make ci-status-check",
-    "exact release commit must be reconciled",
+    "exact immutable release tag commit must",
     "Images:",
     "retos-backend",
     "retos-web",
@@ -60,6 +60,10 @@ required_phrases = (
     "signature verification",
     "make release-evidence-check",
     "make frontend-visual-audit",
+    "make audit-manifest",
+    "Audit handoff manifest",
+    "retos-audit-manifest-",
+    "audit-evidence",
     "Rollback",
 )
 
