@@ -477,6 +477,13 @@ supporting documents and shared bridge terms between those supporting documents,
 wraps the original question in a comparison prompt so RetOS must exercise the
 multi-hop query planner.
 
+The deterministic calibration path expands initial retrieval with bounded named-entity
+follow-up searches from the question and first-pass evidence. Follow-up hits can be
+prioritized inside the citation budget so bridge documents are auditable without calling
+an LLM provider. HotpotQA-agent cases use a larger evidence-token budget than tiny smoke
+fixtures because real supporting-fact paragraphs can exceed the default local budget on
+their own.
+
 The resulting report uses the `hotpotqa-agent` suite name and scores:
 
 - query-plan strategy and planned search fanout

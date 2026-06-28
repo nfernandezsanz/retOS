@@ -33,48 +33,35 @@ if len(set(images.values())) != 1:
     raise SystemExit(f"Backend roles must share one image: {details}")
 
 builds = {role: services[role].get("build") for role in backend_roles}
-missing_builds = [role for role, build in builds.items() if not build]
-if missing_builds:
+if not builds["api"]:
+    raise SystemExit("The api service must declare the single backend image build.")
+unexpected_builds = [role for role in ("worker", "migrate") if builds[role]]
+if unexpected_builds:
     raise SystemExit(
-        "Every backend role must declare the shared backend build so each role "
-        f"can be built directly. Missing build on: {', '.join(missing_builds)}"
+        "Only api may build the shared backend image; worker and migrate must reuse "
+        f"the same tag. Unexpected build on: {', '.join(unexpected_builds)}"
     )
 
 expected_context = str(Path.cwd())
-for role, build in builds.items():
-    actual_context = str(Path(build.get("context", "")).resolve())
-    if actual_context != expected_context:
-        raise SystemExit(
-            f"The {role} backend build must use the repository root as context: "
-            f"expected {expected_context}, got {actual_context}"
-        )
+api_build = builds["api"]
+actual_context = str(Path(api_build.get("context", "")).resolve())
+if actual_context != expected_context:
+    raise SystemExit(
+        "The api backend build must use the repository root as context: "
+        f"expected {expected_context}, got {actual_context}"
+    )
 
-    if build.get("dockerfile") != "backend/Dockerfile":
-        raise SystemExit(
-            f"The {role} backend build must use backend/Dockerfile, got "
-            f"{build.get('dockerfile')}"
-        )
+if api_build.get("dockerfile") != "backend/Dockerfile":
+    raise SystemExit(
+        "The api backend build must use backend/Dockerfile, got "
+        f"{api_build.get('dockerfile')}"
+    )
 
-    if build.get("target") != "backend-runtime":
-        raise SystemExit(
-            f"The {role} backend build must target backend-runtime, got "
-            f"{build.get('target')}"
-        )
-
-reference_build = {
-    key: builds["api"].get(key)
-    for key in ("context", "dockerfile", "target")
-}
-for role in ("worker", "migrate"):
-    candidate = {
-        key: builds[role].get(key)
-        for key in ("context", "dockerfile", "target")
-    }
-    if candidate != reference_build:
-        raise SystemExit(
-            "Backend roles must share the same build definition. "
-            f"api={reference_build}, {role}={candidate}"
-        )
+if api_build.get("target") != "backend-runtime":
+    raise SystemExit(
+        "The api backend build must target backend-runtime, got "
+        f"{api_build.get('target')}"
+    )
 
 commands = {role: services[role].get("command") for role in backend_roles}
 expected_commands = {
@@ -88,7 +75,7 @@ if commands != expected_commands:
 
 print(
     "Docker topology OK: api, worker, and migrate share "
-    f"{images['api']} from backend/Dockerfile target backend-runtime "
-    "with role-specific commands."
+    f"{images['api']}; api builds backend/Dockerfile target backend-runtime, "
+    "worker and migrate reuse that image with role-specific commands."
 )
 PY

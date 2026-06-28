@@ -27,6 +27,7 @@ from retos.agent.tools import (
     CorpusToolError,
     create_corpus_toolbox,
     hit_to_payload,
+    named_entity_followup_queries,
     select_hits_within_evidence_budget,
     token_count,
 )
@@ -146,7 +147,7 @@ def build_grounded_answer(question: str, hits: list[SearchHit]) -> str:
             "I could not find enough indexed evidence to answer this question. "
             "Rebuild the index or ingest more documents, then try again."
         )
-    evidence = " ".join(hit.text.strip() for hit in hits[:3] if hit.text.strip())
+    evidence = " ".join(hit.text.strip() for hit in hits if hit.text.strip())
     citation_ids = ", ".join(hit.segment_id for hit in hits)
     return (
         f"Grounded answer for: {question}\n\n"
@@ -346,11 +347,32 @@ def seed_agent_evidence(
         )
     ]
     if query_plan.requires_multi_hop:
+        searched_queries = {question.strip().lower()}
+        for entity_query in named_entity_followup_queries(
+            question=question,
+            hits=toolbox.selected_hits,
+            max_queries=budget.max_searches - toolbox.search_count,
+        ):
+            if toolbox.search_count >= budget.max_searches:
+                break
+            clean_entity_query = entity_query.strip().lower()
+            if clean_entity_query in searched_queries:
+                continue
+            searched_queries.add(clean_entity_query)
+            planned_searches.append(
+                toolbox.search_corpus(
+                    entity_query,
+                    limit=min(limit, budget.max_citations),
+                    prefer_new_hits=True,
+                )
+            )
         for planned_query in query_plan.search_queries[1:]:
             if toolbox.search_count >= budget.max_searches:
                 break
-            if planned_query.strip().lower() == question.lower():
+            clean_planned_query = planned_query.strip().lower()
+            if clean_planned_query in searched_queries:
                 continue
+            searched_queries.add(clean_planned_query)
             planned_searches.append(
                 toolbox.search_corpus(
                     planned_query,

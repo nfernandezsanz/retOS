@@ -1,6 +1,10 @@
 import pytest
 
-from retos.agent.tools import CorpusToolError, create_corpus_toolbox
+from retos.agent.tools import (
+    CorpusToolError,
+    create_corpus_toolbox,
+    named_entity_followup_queries,
+)
 from retos.search.index import SearchHit
 
 
@@ -78,6 +82,49 @@ def test_corpus_toolbox_accumulates_unique_hits_across_searches() -> None:
         "citation_count": 2,
         "evidence_tokens": 4,
     }
+
+
+def test_corpus_toolbox_can_prioritize_followup_hits() -> None:
+    class SwitchingSearchIndex(FakeSearchIndex):
+        def search_domain(self, domain_id: str, query_text: str, *, limit: int) -> list[SearchHit]:
+            self.calls.append((domain_id, query_text, limit))
+            if query_text == "alpha":
+                return [hit("segment-1", "alpha evidence"), hit("segment-2", "beta evidence")]
+            return [hit("segment-3", "gamma evidence")]
+
+    index = SwitchingSearchIndex([])
+    toolbox = create_corpus_toolbox(
+        index=index,  # type: ignore[arg-type]
+        domain_id="domain-1",
+        max_searches=2,
+        max_citations=2,
+        max_evidence_tokens=20,
+    )
+
+    toolbox.search_corpus("alpha")
+    result = toolbox.search_corpus("gamma", prefer_new_hits=True)
+
+    assert [item["segment_id"] for item in result["hits"]] == [  # type: ignore[index]
+        "segment-3",
+        "segment-1",
+    ]
+
+
+def test_named_entity_followup_queries_use_question_and_evidence_entities() -> None:
+    queries = named_entity_followup_queries(
+        question="Compare Animorphs and The Hork-Bajir Chronicles",
+        hits=[
+            hit(
+                "segment-1",
+                "Kiss and Tell starred Shirley Temple as Corliss Archer.",
+            )
+        ],
+        max_queries=5,
+    )
+
+    assert "Animorphs" in queries
+    assert "Hork-Bajir Chronicles" in queries
+    assert "Shirley Temple" in queries
 
 
 def test_corpus_toolbox_enforces_search_and_evidence_budgets() -> None:

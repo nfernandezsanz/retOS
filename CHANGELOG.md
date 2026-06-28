@@ -89,6 +89,11 @@ tag in GitHub.
 
 ### Changed
 
+- HotpotQA and HotpotQA-agent calibration now use deterministic named-entity follow-up
+  retrieval and a larger supporting-fact evidence budget, improving bounded public
+  sample grounding and multi-hop support to PASS without provider calls.
+- Compose now builds the shared backend image only through the `api` service; `worker`
+  and `migrate` reuse the same `retos-backend` tag instead of declaring parallel builds.
 - Docker smoke now verifies API, worker, and migrations run the same backend image ID,
   then inspects built application image metadata and image size budgets before exercising
   the stack.

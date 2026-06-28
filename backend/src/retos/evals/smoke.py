@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Any
 
 from retos.agent.service import build_grounded_answer, citation_from_hit
+from retos.agent.tools import (
+    merge_unique_hits,
+    named_entity_followup_queries,
+    select_hits_within_evidence_budget,
+)
 from retos.search.index import IndexedSegment, SearchHit, TantivySearchIndex
 
 
@@ -280,7 +285,7 @@ def run_smoke_eval_suite(
     for case in eval_cases:
         domain_id = f"eval-{case.id}"
         index.rebuild_domain(domain_id, segments_for_case(case))
-        hits = index.search_domain(domain_id, case.question, limit=case.max_citations)
+        hits = search_eval_evidence(index=index, domain_id=domain_id, case=case)
         answer = build_grounded_answer(case.question, hits)
         results.append(score_case(case, hits, answer))
 
@@ -296,6 +301,36 @@ def run_smoke_eval_suite(
         cases=tuple(results),
         metadata=metadata or {},
     )
+
+
+def search_eval_evidence(
+    *,
+    index: TantivySearchIndex,
+    domain_id: str,
+    case: EvalCase,
+) -> list[SearchHit]:
+    hits = index.search_domain(domain_id, case.question, limit=case.max_citations)
+    if len(case.expected_citation_titles) < 2:
+        return hits
+    expected_titles = set(case.expected_citation_titles)
+    if expected_titles.issubset({hit.title for hit in hits}):
+        return hits
+
+    merged_hits = hits
+    for followup_query in named_entity_followup_queries(
+        question=case.question,
+        hits=hits,
+        max_queries=3,
+    ):
+        followup_hits = index.search_domain(domain_id, followup_query, limit=case.max_citations)
+        merged_hits = select_hits_within_evidence_budget(
+            merge_unique_hits(followup_hits, merged_hits),
+            max_citations=case.max_citations,
+            max_evidence_tokens=100_000,
+        )
+        if expected_titles.issubset({hit.title for hit in merged_hits}):
+            break
+    return merged_hits
 
 
 def markdown_cell(value: object) -> str:

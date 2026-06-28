@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -45,7 +46,13 @@ class CorpusToolbox:
             "evidence_tokens": sum(token_count(hit.text) for hit in self.selected_hits),
         }
 
-    def search_corpus(self, query: str, limit: int | None = None) -> dict[str, object]:
+    def search_corpus(
+        self,
+        query: str,
+        limit: int | None = None,
+        *,
+        prefer_new_hits: bool = False,
+    ) -> dict[str, object]:
         """Search indexed RetOS evidence for the current domain."""
         clean_query = query.strip()
         if not clean_query:
@@ -66,8 +73,13 @@ class CorpusToolbox:
         except SearchIndexMissingError as exc:
             raise CorpusToolError("Search index has not been built for this domain") from exc
 
+        merged_hits = (
+            merge_unique_hits(raw_hits, self.selected_hits)
+            if prefer_new_hits
+            else merge_unique_hits(self.selected_hits, raw_hits)
+        )
         self.selected_hits = select_hits_within_evidence_budget(
-            merge_unique_hits(self.selected_hits, raw_hits),
+            merged_hits,
             max_citations=self.max_citations,
             max_evidence_tokens=self.max_evidence_tokens,
         )
@@ -166,6 +178,90 @@ def merge_unique_hits(existing: list[SearchHit], incoming: list[SearchHit]) -> l
         seen.add(hit.segment_id)
         merged.append(hit)
     return merged
+
+
+ENTITY_STOPWORDS = {
+    "A",
+    "An",
+    "And",
+    "Are",
+    "As",
+    "Compare",
+    "For",
+    "HotpotQA",
+    "In",
+    "Is",
+    "Of",
+    "Or",
+    "The",
+    "To",
+    "What",
+    "When",
+    "Where",
+    "Which",
+    "Who",
+    "Were",
+    "With",
+}
+
+
+def named_entity_followup_queries(
+    *,
+    question: str,
+    hits: list[SearchHit],
+    max_queries: int = 4,
+) -> list[str]:
+    candidates: list[str] = []
+    for source in (question, *(hit.text for hit in hits[:3])):
+        for match in re.finditer(
+            r"\b(?:[A-Z][A-Za-z0-9'.-]*)(?:\s+(?:and|of|for|the|[A-Z][A-Za-z0-9'.-]*)){0,5}",
+            source,
+        ):
+            for candidate in entity_candidate_variants(match.group(0)):
+                candidates.append(candidate)
+
+    question_lower = question.lower()
+    queries: list[str] = []
+    for candidate in candidates:
+        if candidate.lower() == question_lower:
+            continue
+        if candidate not in queries:
+            queries.append(candidate)
+        if len(queries) >= max_queries:
+            break
+    return queries
+
+
+def clean_entity_candidate(value: str) -> str:
+    candidate = " ".join(value.strip(" ,.;:?!()[]{}\"'").split())
+    while candidate.startswith("Compare "):
+        candidate = candidate[8:]
+    while candidate.startswith("The "):
+        candidate = candidate[4:]
+    if not candidate or candidate in ENTITY_STOPWORDS:
+        return ""
+    words = candidate.split()
+    meaningful_words = [word for word in words if word not in ENTITY_STOPWORDS]
+    if not meaningful_words:
+        return ""
+    if len(meaningful_words) == 1 and len(meaningful_words[0]) < 6:
+        return ""
+    return candidate[:120]
+
+
+def entity_candidate_variants(value: str) -> list[str]:
+    cleaned = clean_entity_candidate(value)
+    if not cleaned:
+        return []
+    variants = [cleaned]
+    for separator in (" and The ", " and "):
+        if separator in cleaned:
+            variants.extend(
+                candidate
+                for part in cleaned.split(separator)
+                if (candidate := clean_entity_candidate(part))
+            )
+    return variants
 
 
 def ensure_selected_hits(hits: list[SearchHit]) -> None:

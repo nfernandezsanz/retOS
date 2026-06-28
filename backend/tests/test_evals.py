@@ -6,9 +6,10 @@ from retos.evals.smoke import (
     EvalDocument,
     run_smoke_eval_suite,
     score_case,
+    search_eval_evidence,
     smoke_eval_cases,
 )
-from retos.search.index import SearchHit
+from retos.search.index import IndexedSegment, SearchHit, TantivySearchIndex
 
 
 def test_smoke_eval_suite_passes_with_local_index(tmp_path: Path) -> None:
@@ -140,3 +141,56 @@ def test_eval_case_reports_missing_grounding() -> None:
     assert result.citation_validity is True
     assert result.grounded_answer is False
     assert result.failures == ("grounded_answer",)
+
+
+def test_eval_search_uses_named_entity_followups_for_multihop_cases(tmp_path: Path) -> None:
+    case = EvalCase(
+        id="hotpot-style",
+        question=("What government position was held by the woman who portrayed Corliss Archer?"),
+        documents=(
+            EvalDocument(
+                id="kiss",
+                title="HotpotQA: Kiss and Tell",
+                text="Kiss and Tell starred Shirley Temple as Corliss Archer.",
+                anchor="fixture://hotpot/kiss",
+            ),
+            EvalDocument(
+                id="shirley",
+                title="HotpotQA: Shirley Temple",
+                text="Shirley Temple served as Chief of Protocol of the United States.",
+                anchor="fixture://hotpot/shirley",
+            ),
+            EvalDocument(
+                id="noise",
+                title="HotpotQA: Other Film",
+                text="Other Film discussed unrelated casting notes.",
+                anchor="fixture://hotpot/noise",
+            ),
+        ),
+        expected_citation_titles=("HotpotQA: Kiss and Tell", "HotpotQA: Shirley Temple"),
+        expected_answer_terms=("Chief of Protocol",),
+        max_citations=2,
+    )
+    index = TantivySearchIndex(tmp_path / "index")
+    index.rebuild_domain(
+        "domain",
+        [
+            IndexedSegment(
+                segment_id=f"{document.id}-segment",
+                document_id=document.id,
+                document_version_id=f"{document.id}-v1",
+                title=document.title,
+                text=document.text,
+                anchor=document.anchor,
+                ordinal=ordinal,
+            )
+            for ordinal, document in enumerate(case.documents)
+        ],
+    )
+
+    hits = search_eval_evidence(index=index, domain_id="domain", case=case)
+
+    assert {hit.title for hit in hits} >= {
+        "HotpotQA: Kiss and Tell",
+        "HotpotQA: Shirley Temple",
+    }

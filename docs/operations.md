@@ -10,15 +10,15 @@ RetOS publishes two application images per release:
 
 | Image | Built By | Runtime Role |
 | --- | --- | --- |
-| `retos-backend:${RETOS_IMAGE_TAG}` | `backend/Dockerfile` target `backend-runtime` through the shared `api`/`worker`/`migrate` Compose build | API, worker, and migrate commands from the same image. |
+| `retos-backend:${RETOS_IMAGE_TAG}` | `backend/Dockerfile` target `backend-runtime` through the `api` Compose build | API, worker, and migrate commands from the same image. |
 | `retos-web:${RETOS_IMAGE_TAG}` | `frontend/Dockerfile` | Static React console served by Nginx. |
 
 The backend image must stay shared. `api`, `worker`, and `migrate` must resolve to
-the same `retos-backend` image, declare the same backend build, and differ only by
-command:
+the same `retos-backend` image. Only `api` declares the backend build; `worker` and
+`migrate` reuse the built tag and differ only by command:
 
 ```bash
-RETOS_IMAGE_TAG=2026.06.28 docker compose build api worker migrate web
+RETOS_IMAGE_TAG=2026.06.28 docker compose build api web
 RETOS_IMAGE_TAG=2026.06.28 docker compose --env-file .env.example config
 scripts/check_docker_topology.sh
 ```
@@ -38,7 +38,7 @@ RETOS_VERSION=2026.06.28 \
 RETOS_REVISION="$(git rev-parse HEAD)" \
 RETOS_CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
 RETOS_IMAGE_TAG=2026.06.28 \
-docker compose build api worker migrate web
+docker compose build api web
 
 RETOS_REQUIRE_BUILT_IMAGES=1 RETOS_IMAGE_TAG=2026.06.28 scripts/check_image_metadata.sh
 RETOS_REQUIRE_BUILT_IMAGES=1 RETOS_IMAGE_TAG=2026.06.28 scripts/check_image_size.sh
@@ -95,7 +95,7 @@ scripts/check_docker_topology.sh
 5. Pull or build the release images:
 
 ```bash
-docker compose pull api worker migrate web || docker compose build api worker migrate web
+docker compose pull api web || docker compose build api web
 ```
 
 6. Apply migrations through the release backend image:
