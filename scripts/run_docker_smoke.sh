@@ -39,6 +39,7 @@ trap finish EXIT
 "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
 "${compose[@]}" up --build -d --wait --wait-timeout 180 postgres rabbitmq api worker web
 RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_metadata.sh
+RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_size.sh
 "${compose[@]}" exec -T api python - <<'PY'
 import json
 from pathlib import Path

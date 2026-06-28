@@ -33,7 +33,12 @@ RETOS_IMAGE_TAG=2026.06.28 \
 docker compose build api web
 
 RETOS_REQUIRE_BUILT_IMAGES=1 RETOS_IMAGE_TAG=2026.06.28 scripts/check_image_metadata.sh
+RETOS_REQUIRE_BUILT_IMAGES=1 RETOS_IMAGE_TAG=2026.06.28 scripts/check_image_size.sh
 ```
+
+The default release budgets are `RETOS_BACKEND_IMAGE_MAX_BYTES=1400000000` and
+`RETOS_WEB_IMAGE_MAX_BYTES=200000000`. Increase those limits only when the release notes
+explain the dependency or asset change that makes the larger image intentional.
 
 Before tagging a release candidate, run:
 

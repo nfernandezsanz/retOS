@@ -20,10 +20,13 @@ tag in GitHub.
   neighboring-context, and warning signals for each completed query.
 - NQ-Open dataset fetch profile that converts real question samples into the local
   Natural Questions adapter shape for opt-in calibration without full corpus downloads.
+- Image size guardrails for backend and web release images, including configurable byte
+  budgets and Docker smoke enforcement.
 
 ### Changed
 
-- Docker smoke now inspects built application image metadata before exercising the stack.
+- Docker smoke now inspects built application image metadata and image size budgets before
+  exercising the stack.
 
 ### Security
 

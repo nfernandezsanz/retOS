@@ -29,6 +29,7 @@ Do not use `latest` for shared environments. Local development may use the defau
 ```bash
 docker compose build api web
 RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_metadata.sh
+RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_size.sh
 ```
 
 3. Run the complete local gate:
@@ -54,6 +55,7 @@ make docker-smoke
 | API smoke | Yes |
 | Browser smoke | Yes |
 | Docker stack smoke | Yes |
+| Image size budgets | Yes |
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
@@ -97,6 +99,7 @@ Images:
 - Browser smoke:
 - Docker topology:
 - Image metadata:
+- Image size budgets:
 - Docker stack smoke:
 - Eval smoke:
 
@@ -113,5 +116,9 @@ Images:
 
 - `CHANGELOG.md` stays human-readable and ordered newest first.
 - Every release note references the commit SHA and immutable image tags.
+- Every release candidate records `scripts/check_image_size.sh` output or the equivalent
+  `make image-size-check` evidence. Default budgets can be overridden with
+  `RETOS_BACKEND_IMAGE_MAX_BYTES` and `RETOS_WEB_IMAGE_MAX_BYTES` only when the release
+  notes explain the increase.
 - CI validates release docs through `make release-check`.
 - Operators use `docs/operations.md` for upgrade, backup, restore, and rollback.

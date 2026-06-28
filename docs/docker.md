@@ -20,6 +20,7 @@ Build only application images:
 
 ```bash
 docker compose build api web
+make image-size-check
 ```
 
 Build tagged, traceable release images:
@@ -54,6 +55,19 @@ only by command.
 
 CI also runs `scripts/check_image_metadata.sh` so release images cannot lose their
 OCI labels. Docker smoke inspects the built `retos-backend` and `retos-web` images.
+
+CI and Docker smoke also run `scripts/check_image_size.sh`. The source check documents
+the current image budgets, and the built-image check fails when a release image grows
+past the configured byte limit:
+
+| Image | Default Budget | Override |
+| --- | ---: | --- |
+| `retos-backend` | `1,400,000,000` bytes | `RETOS_BACKEND_IMAGE_MAX_BYTES` |
+| `retos-web` | `200,000,000` bytes | `RETOS_WEB_IMAGE_MAX_BYTES` |
+
+The backend budget intentionally allows Python 3.14, OCR, PDF, and search runtime
+dependencies while still catching accidental build-context leaks or duplicate runtime
+layers. The web budget allows the Nginx runtime plus compiled React assets.
 
 ## Smoke Test
 
