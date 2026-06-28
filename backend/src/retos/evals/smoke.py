@@ -320,7 +320,7 @@ def search_eval_evidence(
     for followup_query in named_entity_followup_queries(
         question=case.question,
         hits=hits,
-        max_queries=3,
+        max_queries=max(case.max_citations * 4, 12),
     ):
         followup_hits = index.search_domain(domain_id, followup_query, limit=case.max_citations)
         merged_hits = select_hits_within_evidence_budget(

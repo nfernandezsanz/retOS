@@ -103,12 +103,12 @@ tag in GitHub.
 - HotpotQA and HotpotQA-agent calibration now use deterministic named-entity follow-up
   retrieval and a larger supporting-fact evidence budget, improving bounded public
   sample grounding and multi-hop support to PASS without provider calls.
-- Release calibration evidence now records a forced 25-record public dataset refresh
-  with 10 evaluated cases per target across SQuAD, HotpotQA, HotpotQA-agent, and
-  NQ-Open adapter samples.
+- Release calibration evidence now records a 50-record public dataset sample with 20
+  evaluated cases per target across SQuAD, HotpotQA, HotpotQA-agent, and NQ-Open adapter
+  samples.
 - Release calibration trend evidence now records a zero-regression PASS from
-  25-record/10-case to 50-record/10-case public samples, while documenting the
-  discovered 50-record/20-case HotpotQA retrieval/grounding drop for follow-up.
+  25-record/10-case to 50-record/20-case public samples after hardening deterministic
+  HotpotQA follow-up retrieval.
 - Compose now builds the shared backend image only through the `api` service; `worker`
   and `migrate` reuse the same `retos-backend` tag instead of declaring parallel builds.
 - Docker smoke now verifies API, worker, and migrations run the same backend image ID,

@@ -369,7 +369,7 @@ make eval-calibration-evidence \
   COMMAND="make eval-calibration MAX_RECORDS=100 MAX_CASES=50 ..."
 make eval-calibration-compare \
   BASELINE=evals/reports/calibration-25/manifest.json \
-  CANDIDATE=evals/reports/calibration-50x10/manifest.json \
+  CANDIDATE=evals/reports/calibration-50/manifest.json \
   OUTPUT=docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md \
   TITLE="RetOS 2026.06.28-alpha.1 Calibration Trend Evidence" \
   MAX_REGRESSION=0

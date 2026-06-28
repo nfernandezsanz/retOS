@@ -211,25 +211,58 @@ def named_entity_followup_queries(
     hits: list[SearchHit],
     max_queries: int = 4,
 ) -> list[str]:
+    question_lower = question.lower()
+    question_terms = significant_query_terms(question)
+    candidates: dict[str, tuple[int, int, int, int]] = {}
+
+    for source_rank, source in entity_sources(question=question, hits=hits):
+        for candidate in entity_candidates_from_source(source):
+            candidate_lower = candidate.lower()
+            if candidate_lower == question_lower:
+                continue
+            candidate_terms = significant_query_terms(candidate)
+            already_in_question = bool(candidate_terms) and candidate_terms.issubset(question_terms)
+            priority = 1 if already_in_question else 0
+            compound_penalty = 1 if " and " in candidate.lower() else 0
+            word_bonus = min(len(candidate.split()), 4)
+            ranking = (priority, source_rank, compound_penalty, -word_bonus)
+            existing = candidates.get(candidate)
+            if existing is None or ranking < existing:
+                candidates[candidate] = ranking
+
+    return [
+        candidate for candidate, _ranking in sorted(candidates.items(), key=lambda item: item[1])
+    ][:max_queries]
+
+
+def entity_sources(*, question: str, hits: list[SearchHit]) -> list[tuple[int, str]]:
+    sources: list[tuple[int, str]] = []
+    for index, hit in enumerate(hits):
+        sources.append((index * 2, hit.title))
+        sources.append((index * 2 + 1, hit.text))
+    sources.append((len(hits) * 2 + 10, question))
+    return sources
+
+
+def entity_candidates_from_source(source: str) -> list[str]:
     candidates: list[str] = []
-    for source in (question, *(hit.text for hit in hits[:3])):
-        for match in re.finditer(
-            r"\b(?:[A-Z][A-Za-z0-9'.-]*)(?:\s+(?:and|of|for|the|[A-Z][A-Za-z0-9'.-]*)){0,5}",
-            source,
-        ):
+    patterns = (
+        r"\b(?:[A-Z][A-Za-z0-9'.-]*)(?:\s+(?:and|of|for|the|[A-Z][A-Za-z0-9'.-]*)){0,5}",
+        r"\b[A-Z][A-Za-z0-9'.-]*\s+(?:administration|presidency|government)\b",
+    )
+    for pattern in patterns:
+        for match in re.finditer(pattern, source):
             for candidate in entity_candidate_variants(match.group(0)):
                 candidates.append(candidate)
+    return candidates
 
-    question_lower = question.lower()
-    queries: list[str] = []
-    for candidate in candidates:
-        if candidate.lower() == question_lower:
-            continue
-        if candidate not in queries:
-            queries.append(candidate)
-        if len(queries) >= max_queries:
-            break
-    return queries
+
+def significant_query_terms(value: str) -> set[str]:
+    return {
+        token.lower()
+        for token in re.findall(r"[A-Za-z0-9]+", value)
+        if len(token) >= 3 and token.capitalize() not in ENTITY_STOPWORDS
+    }
 
 
 def clean_entity_candidate(value: str) -> str:
@@ -253,7 +286,7 @@ def entity_candidate_variants(value: str) -> list[str]:
     cleaned = clean_entity_candidate(value)
     if not cleaned:
         return []
-    variants = [cleaned]
+    variants: list[str] = []
     for separator in (" and The ", " and "):
         if separator in cleaned:
             variants.extend(
@@ -261,6 +294,7 @@ def entity_candidate_variants(value: str) -> list[str]:
                 for part in cleaned.split(separator)
                 if (candidate := clean_entity_candidate(part))
             )
+    variants.append(cleaned)
     return variants
 
 

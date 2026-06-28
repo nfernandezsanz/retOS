@@ -18,12 +18,12 @@ class FakeSearchIndex:
         return self.hits[:limit]
 
 
-def hit(segment_id: str, text: str) -> SearchHit:
+def hit(segment_id: str, text: str, *, title: str = "Fixture") -> SearchHit:
     return SearchHit(
         segment_id=segment_id,
         document_id="document-1",
         document_version_id="version-1",
-        title="Fixture",
+        title=title,
         text=text,
         anchor="page=1",
         ordinal=0,
@@ -119,12 +119,63 @@ def test_named_entity_followup_queries_use_question_and_evidence_entities() -> N
                 "Kiss and Tell starred Shirley Temple as Corliss Archer.",
             )
         ],
-        max_queries=5,
+        max_queries=6,
     )
 
     assert "Animorphs" in queries
     assert "Hork-Bajir Chronicles" in queries
     assert "Shirley Temple" in queries
+
+
+def test_named_entity_followup_queries_prioritize_new_evidence_entities() -> None:
+    queries = named_entity_followup_queries(
+        question=(
+            "The football manager who recruited David Beckham managed Manchester United "
+            "during what timeframe?"
+        ),
+        hits=[
+            hit(
+                "segment-1",
+                "The David Beckham Academy was a football school founded by David Beckham.",
+                title="HotpotQA: David Beckham Academy",
+            ),
+            hit(
+                "segment-2",
+                (
+                    "The 1995-96 season was Manchester United's fourth season. "
+                    "Their triumph was remarkable because Alex Ferguson had sold "
+                    "experienced players before the start of the season."
+                ),
+                title="HotpotQA: 1995-96 Manchester United F.C. season",
+            ),
+        ],
+        max_queries=8,
+    )
+
+    assert "Alex Ferguson" in queries
+    assert queries.index("Alex Ferguson") < queries.index("David Beckham")
+
+
+def test_named_entity_followup_queries_extract_administration_bridge() -> None:
+    queries = named_entity_followup_queries(
+        question=(
+            "Roger O. Egeberg was Assistant Secretary for Health and Scientific Affairs "
+            "during the administration of a president that served during what years?"
+        ),
+        hits=[
+            hit(
+                "segment-1",
+                (
+                    "Roger Olaf Egeberg served as Assistant Secretary for Health and "
+                    "Scientific Affairs during the Nixon administration."
+                ),
+                title="HotpotQA: Roger O. Egeberg",
+            )
+        ],
+        max_queries=6,
+    )
+
+    assert "Nixon administration" in queries
 
 
 def test_corpus_toolbox_enforces_search_and_evidence_budgets() -> None:
