@@ -4,6 +4,9 @@ from retos.evals.agent import agent_multihop_eval_cases, run_agent_multihop_eval
 from retos.evals.smoke import (
     EvalCase,
     EvalDocument,
+    EvalSuiteReport,
+    markdown_cell,
+    ratio,
     run_smoke_eval_suite,
     score_case,
     search_eval_evidence,
@@ -46,6 +49,50 @@ def test_eval_report_includes_metadata_in_json_and_markdown(tmp_path: Path) -> N
     assert "| Metadata | Value |" in markdown
     assert "| adapter | squad-v2 |" in markdown
     assert "| dataset_path | /datasets/squad.json |" in markdown
+
+
+def test_eval_report_markdown_escapes_metadata_and_failures() -> None:
+    report = EvalSuiteReport(
+        suite_name="edge-suite",
+        passed=False,
+        case_count=1,
+        retrieval_recall=0.0,
+        citation_validity=1.0,
+        grounded_answer=0.0,
+        abstention=1.0,
+        budget_compliance=1.0,
+        cases=(
+            score_case(
+                EvalCase(
+                    id="bad-case",
+                    question="What is missing?",
+                    documents=(),
+                    expected_citation_titles=("Missing | Title",),
+                    expected_answer_terms=("needle",),
+                ),
+                [],
+                "No relevant answer.",
+            ),
+        ),
+        metadata={"dataset": "a|b", "empty": "", "notes": "line one\nline two"},
+    )
+
+    markdown = report.to_markdown()
+
+    assert "| dataset | a\\|b |" in markdown
+    assert "| empty | - |" in markdown
+    assert "| notes | line one line two |" in markdown
+    assert "| bad-case | FAIL | retrieval_recall, grounded_answer |" in markdown
+
+
+def test_ratio_returns_perfect_score_for_empty_inputs() -> None:
+    assert ratio([]) == 1.0
+    assert ratio([True, False, True]) == 2 / 3
+
+
+def test_markdown_cell_escapes_pipes_newlines_and_empty_values() -> None:
+    assert markdown_cell("left|right\nnext") == "left\\|right next"
+    assert markdown_cell("") == "-"
 
 
 def test_smoke_eval_cases_are_immutable_fixtures() -> None:
@@ -141,6 +188,62 @@ def test_eval_case_reports_missing_grounding() -> None:
     assert result.citation_validity is True
     assert result.grounded_answer is False
     assert result.failures == ("grounded_answer",)
+
+
+def test_eval_case_reports_citation_abstention_and_budget_failures() -> None:
+    case = EvalCase(
+        id="negative",
+        question="Which evidence should be cited?",
+        documents=(
+            EvalDocument(
+                id="known",
+                title="Known Source",
+                text="Known source discusses retention policy.",
+                anchor="fixture://known#p1",
+            ),
+        ),
+        expected_citation_titles=("Known Source",),
+        expected_answer_terms=("retention policy",),
+        expect_abstention=True,
+        max_citations=1,
+    )
+    hits = [
+        SearchHit(
+            segment_id="unknown-segment",
+            document_id="unknown-doc",
+            document_version_id="unknown-v1",
+            title="Unexpected Source",
+            text="Unexpected text.",
+            anchor="",
+            ordinal=0,
+            score=1.0,
+        ),
+        SearchHit(
+            segment_id="negative-known-segment-0",
+            document_id="negative-known",
+            document_version_id="negative-known-v1",
+            title="Known Source",
+            text="Known source discusses retention policy.",
+            anchor="fixture://known#p1",
+            ordinal=1,
+            score=0.8,
+        ),
+    ]
+
+    result = score_case(case, hits, "The answer omits the expected phrase.")
+
+    assert result.passed is False
+    assert result.retrieval_recall is True
+    assert result.citation_validity is False
+    assert result.grounded_answer is False
+    assert result.abstention is False
+    assert result.budget_compliance is False
+    assert result.failures == (
+        "citation_validity",
+        "grounded_answer",
+        "abstention",
+        "budget_compliance",
+    )
 
 
 def test_eval_search_uses_named_entity_followups_for_multihop_cases(tmp_path: Path) -> None:

@@ -208,11 +208,11 @@ async def run_source_scan(
         if not (root.is_dir() or root.is_file()):
             raise SourceScanError("Source path must be a file or directory")
 
-        max_files = int(job.payload.get("max_files") or 500)
-        max_bytes = int(job.payload.get("max_bytes") or 2_000_000)
-        max_segment_tokens = int(job.payload.get("max_segment_tokens") or 220)
+        max_files = int(job.payload.get("max_files", 500))
+        max_bytes = int(job.payload.get("max_bytes", 2_000_000))
+        max_segment_tokens = int(job.payload.get("max_segment_tokens", 220))
         enable_ocr = bool(job.payload.get("enable_ocr", True))
-        max_ocr_pages = int(job.payload.get("max_ocr_pages") or 20)
+        max_ocr_pages = int(job.payload.get("max_ocr_pages", 20))
         if max_files < 1:
             raise SourceScanError("max_files must be positive")
         if max_bytes < 1:

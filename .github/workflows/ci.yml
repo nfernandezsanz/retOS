@@ -34,7 +34,7 @@ jobs:
         run: |
           cd backend
           pytest
-          python scripts/check_branch_coverage.py --fail-under 85.69
+          python scripts/check_branch_coverage.py --fail-under 86.79
       - name: Eval smoke
         env:
           RETOS_ALLOW_PAID_LLM: "false"

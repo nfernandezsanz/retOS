@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pymupdf
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 
 from retos.api.app import create_app
 from retos.api.routes.ingestions import enqueue_source_scan
 from retos.core.config import Settings
-from retos.domain.documents import utc_now
+from retos.domain.documents import Source, utc_now
 from retos.domain.jobs import Job
 from retos.ingestion.scan import (
     SourceScanError,
@@ -111,6 +115,107 @@ def count_scan_side_effects(db_path: Path) -> tuple[int, int, int, int, int]:
         return int(documents), int(versions), int(artifacts), int(segments), int(jobs)
     finally:
         connection.close()
+
+
+def scan_job(
+    *,
+    kind: str = "ingest.source",
+    status: str = "queued",
+    domain_id: str | None = "domain-scan",
+    source_id: str | None = "source-scan",
+    payload: dict[str, Any] | None = None,
+) -> Job:
+    now = utc_now()
+    return Job(
+        id="job-scan",
+        kind=kind,  # type: ignore[arg-type]
+        status=status,  # type: ignore[arg-type]
+        domain_id=domain_id,
+        source_id=source_id,
+        payload=payload or {},
+        error=None,
+        started_at=None,
+        completed_at=None,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def scan_source(
+    *,
+    kind: str = "mount",
+    domain_id: str = "domain-scan",
+    uri: str,
+) -> Source:
+    now = utc_now()
+    return Source(
+        id="source-scan",
+        domain_id=domain_id,
+        kind=kind,  # type: ignore[arg-type]
+        name="Mounted corpus",
+        uri=uri,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+class FakeJobs:
+    def __init__(self, job: Job | None) -> None:
+        self.job = job
+        self.updates: list[dict[str, Any]] = []
+
+    async def get(self, job_id: str) -> Job | None:
+        return self.job if self.job is not None and self.job.id == job_id else None
+
+    async def update_status(self, **kwargs: Any) -> None:
+        self.updates.append(kwargs)
+
+
+class FakeSources:
+    def __init__(self, source: Source | None) -> None:
+        self.source = source
+
+    async def get(self, source_id: str) -> Source | None:
+        return self.source if self.source is not None and self.source.id == source_id else None
+
+
+class FakeDocuments:
+    async def get_by_domain_and_hash(self, domain_id: str, content_hash: str) -> object | None:
+        return object()
+
+
+class FakeEvents:
+    def __init__(self) -> None:
+        self.events: list[dict[str, Any]] = []
+
+    async def add(self, **event: Any) -> None:
+        self.events.append(event)
+
+
+class FakeScanUnitOfWork:
+    def __init__(
+        self,
+        *,
+        job: Job | None,
+        source: Source | None = None,
+        fail_commit: bool = False,
+    ) -> None:
+        self.jobs = FakeJobs(job)
+        self.sources = FakeSources(source)
+        self.documents = FakeDocuments()
+        self.journal_events = FakeEvents()
+        self.progress_events = FakeEvents()
+        self.fail_commit = fail_commit
+
+    async def __aenter__(self) -> FakeScanUnitOfWork:
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        return None
+
+    async def commit(self) -> None:
+        if self.fail_commit:
+            raise IntegrityError("statement", {}, Exception("race"))
 
 
 def test_path_from_file_uri_rejects_unsupported_uri() -> None:
@@ -243,6 +348,98 @@ def test_enqueue_source_scan_dispatches_celery_task(monkeypatch: pytest.MonkeyPa
     enqueue_source_scan(job)
 
     assert delayed == ["job-scan"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("job", "source", "message"),
+    [
+        (None, None, "Job not found"),
+        (scan_job(kind="index.domain"), None, "Unsupported scan job kind"),
+        (scan_job(status="running"), None, "Job must be queued"),
+        (scan_job(domain_id=None), None, "require domain_id and source_id"),
+        (scan_job(source_id=None), None, "require domain_id and source_id"),
+        (scan_job(), None, "Source not found"),
+    ],
+)
+async def test_run_source_scan_rejects_invalid_job_and_source_state(
+    job: Job | None,
+    source: Source | None,
+    message: str,
+) -> None:
+    with pytest.raises(SourceScanError, match=message):
+        await run_source_scan(
+            job_id="job-scan",
+            uow=FakeScanUnitOfWork(job=job, source=source),  # type: ignore[arg-type]
+            actor="test-suite",
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_source_scan_rejects_source_domain_mismatch(tmp_path: Path) -> None:
+    with pytest.raises(SourceScanError, match="does not belong"):
+        await run_source_scan(
+            job_id="job-scan",
+            uow=FakeScanUnitOfWork(  # type: ignore[arg-type]
+                job=scan_job(domain_id="domain-a"),
+                source=scan_source(domain_id="domain-b", uri=tmp_path.as_uri()),
+            ),
+            actor="test-suite",
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_source_scan_rejects_non_mount_source(tmp_path: Path) -> None:
+    with pytest.raises(SourceScanError, match="mount sources only"):
+        await run_source_scan(
+            job_id="job-scan",
+            uow=FakeScanUnitOfWork(  # type: ignore[arg-type]
+                job=scan_job(),
+                source=scan_source(kind="upload", uri=tmp_path.as_uri()),
+            ),
+            actor="test-suite",
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        ({"max_files": 0}, "max_files must be positive"),
+        ({"max_bytes": 0}, "max_bytes must be positive"),
+        ({"max_ocr_pages": 0}, "max_ocr_pages must be positive"),
+    ],
+)
+async def test_run_source_scan_rejects_invalid_payload_limits(
+    tmp_path: Path,
+    payload: dict[str, Any],
+    message: str,
+) -> None:
+    with pytest.raises(SourceScanError, match=message):
+        await run_source_scan(
+            job_id="job-scan",
+            uow=FakeScanUnitOfWork(  # type: ignore[arg-type]
+                job=scan_job(payload=payload),
+                source=scan_source(uri=tmp_path.as_uri()),
+            ),
+            actor="test-suite",
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_source_scan_wraps_integrity_error_on_commit(tmp_path: Path) -> None:
+    (tmp_path / "skip-me.txt").write_text("already indexed", encoding="utf-8")
+
+    with pytest.raises(SourceScanError, match="could not be persisted"):
+        await run_source_scan(
+            job_id="job-scan",
+            uow=FakeScanUnitOfWork(  # type: ignore[arg-type]
+                job=scan_job(),
+                source=scan_source(uri=tmp_path.as_uri()),
+                fail_commit=True,
+            ),
+            actor="test-suite",
+        )
 
 
 def test_scan_source_endpoint_ingests_text_and_markdown_idempotently(
