@@ -75,6 +75,14 @@ jobs:
           name: retos-visual-audit-${{ github.sha }}
           path: frontend/visual-audit/*.png
           if-no-files-found: error
+      - name: Export audit manifest
+        run: make audit-manifest OUTPUT=retos-audit-manifest.json
+      - name: Upload audit manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: retos-audit-manifest-${{ github.sha }}
+          path: retos-audit-manifest.json
+          if-no-files-found: error
 
   docker:
     runs-on: ubuntu-latest

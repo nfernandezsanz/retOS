@@ -47,6 +47,7 @@ make release-check
 make audit-pack-check
 make production-preflight
 make auditor-static-check
+make audit-manifest OUTPUT=evals/reports/audit-manifest.json
 docker compose --env-file .env.example config
 docker compose --dry-run build
 make dependency-audit
@@ -96,6 +97,7 @@ make release-evidence-check
 | SBOM/provenance | Yes |
 | Cosign signatures and verification | Yes |
 | `make release-evidence-check` output | Yes |
+| `make audit-manifest` JSON | Yes |
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
@@ -178,6 +180,9 @@ Images:
   signature verification enabled.
 - The release workflow must run dependency audits plus browser/visual smoke before
   publishing images, and it must upload visual audit screenshots as release evidence.
+- `make audit-manifest` exports a machine-readable local handoff manifest with the
+  current commit, CI lookup, critical file hashes, visual audit screenshots, required
+  gates, and remaining external promotion evidence.
 - `scripts/check_published_release_evidence.sh` is the independent post-publish verifier
   for immutable image digests. Run it through `make release-evidence-check` before final
   promotion evidence is accepted.

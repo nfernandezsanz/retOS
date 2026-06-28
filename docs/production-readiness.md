@@ -56,6 +56,7 @@ make security-policy-check
 make ignore-hygiene-check
 make operations-runbook-check
 make auditor-static-check
+make audit-manifest OUTPUT=evals/reports/audit-manifest.json
 make ci-status-check
 make release-notes-check
 make versioned-release-notes-check
@@ -90,6 +91,7 @@ auditor a stable local entry point:
 | Ignore hygiene | `make ignore-hygiene-check` | Git and Docker contexts exclude secrets, generated files, local volumes, public datasets, reports, and backups. |
 | Operations runbook | `make operations-runbook-check` | Backup, restore, rollback, health-check, audit-export, and promotion-evidence fields are aligned. |
 | Auditor static pack | `make auditor-static-check` | Non-destructive dependency, security, ignore, operations, branding, release, preflight, and audit-pack guards pass together. |
+| Audit manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | JSON handoff with current commit, dirty state, CI run, required gates, critical file hashes, local visual screenshots, CI/release artifact names, and remaining external promotion evidence; CI also uploads `retos-audit-manifest-<commit>`. |
 | Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, and docker jobs for the current commit. |
 
 ## External Promotion Evidence
@@ -129,6 +131,7 @@ These items must be closed before a final production release:
 - [ ] `make ignore-hygiene-check` passes.
 - [ ] `make operations-runbook-check` passes.
 - [ ] `make auditor-static-check` passes.
+- [ ] `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` was exported for the promotion record.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
 - [ ] Desktop and mobile visual audit PNGs were reviewed and accepted or tracked.
@@ -156,6 +159,7 @@ These items must be closed before a final production release:
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
 | Operations runbook | `docs/operations.md`, `scripts/check_operations_runbook.sh`, `make operations-runbook-check` |
 | Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check` |
+| Audit handoff manifest | `scripts/export_audit_manifest.py`, `make audit-manifest` |
 | Release procedure | `docs/release-process.md` |
 | Operations runbooks | `docs/operations.md` |
 | Docker topology | `docs/docker.md`, `docker-compose.yml`, `scripts/check_docker_topology.sh` |

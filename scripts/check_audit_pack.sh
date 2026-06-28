@@ -26,6 +26,7 @@ paths = {
     "security_policy_script": Path("scripts/check_security_policy.sh"),
     "ignore_hygiene_script": Path("scripts/check_ignore_hygiene.sh"),
     "security_policy": Path("SECURITY.md"),
+    "audit_manifest_script": Path("scripts/export_audit_manifest.py"),
 }
 
 for name, path in paths.items():
@@ -66,6 +67,7 @@ for phrase in (
     "make ignore-hygiene-check",
     "make operations-runbook-check",
     "make auditor-static-check",
+    "make audit-manifest",
     "make ci-status-check",
     "make production-preflight",
     "make release-evidence-check",
@@ -94,6 +96,7 @@ for phrase in (
     "SECURITY.md",
     ".dockerignore",
     "docs/releases/evidence/production-promotion-template.md",
+    "JSON handoff",
 ):
     require(phrase in audit_pack, f"docs/production-readiness.md missing evidence phrase: {phrase}")
 
@@ -134,6 +137,10 @@ require(
 require(
     "make dependency-audit" in release_process,
     "release process must require dependency advisory verification",
+)
+require(
+    "make audit-manifest" in release_process and "scripts/export_audit_manifest.py" in audit_pack,
+    "release process and audit pack must document the audit manifest exporter",
 )
 require(
     "production-promotion-template.md" in operations and "production-promotion-template.md" in release_process,
@@ -187,6 +194,12 @@ require(
     "make auditor-static-check" in ci,
     "CI must run the consolidated auditor static pack",
 )
+for phrase in (
+    "make audit-manifest OUTPUT=retos-audit-manifest.json",
+    "retos-audit-manifest-${{ github.sha }}",
+    "path: retos-audit-manifest.json",
+):
+    require(phrase in ci, f"CI must publish audit manifest evidence: {phrase}")
 
 print("Audit pack OK: production readiness evidence, blockers, and links are aligned.")
 PY

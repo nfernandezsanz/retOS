@@ -23,6 +23,7 @@ required_files=(
   "docs/production-readiness.md"
   "scripts/check_production_preflight.sh"
   "scripts/check_published_release_evidence.sh"
+  "scripts/export_audit_manifest.py"
 )
 
 for file in "${required_files[@]}"; do
