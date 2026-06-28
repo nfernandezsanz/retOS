@@ -133,6 +133,14 @@ metadata sidecars so reused runs keep source URL, record count, source path, and
 provenance. Calibration remains opt-in because it can perform network downloads, while
 unit coverage mocks fetch and eval execution so CI stays deterministic and free.
 
+`make eval-calibration-compare BASELINE=<manifest> CANDIDATE=<manifest>` compares two
+calibration manifests for release trend evidence. The comparison requires the candidate
+to pass its own gates, keep every baseline target and numeric metric, retain at least the
+baseline record/case counts, and avoid metric regression beyond `MAX_REGRESSION`. The
+Markdown export omits local dataset/report paths and keeps only source URLs, license
+notes, metric deltas, and record/case deltas. This is used to prove bounded sample growth
+without relying on ignored local report files.
+
 ## Implemented OCR Quality Smoke
 
 `make eval-ocr` runs `backend/scripts/run_eval_smoke.py --suite ocr-smoke`. It

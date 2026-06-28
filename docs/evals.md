@@ -367,6 +367,12 @@ make eval-calibration-evidence \
   OUTPUT=docs/releases/evidence/2026.06.28-alpha.1-calibration.md \
   TITLE="RetOS 2026.06.28-alpha.1 Calibration Evidence" \
   COMMAND="make eval-calibration MAX_RECORDS=100 MAX_CASES=50 ..."
+make eval-calibration-compare \
+  BASELINE=evals/reports/calibration-25/manifest.json \
+  CANDIDATE=evals/reports/calibration-50x10/manifest.json \
+  OUTPUT=docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md \
+  TITLE="RetOS 2026.06.28-alpha.1 Calibration Trend Evidence" \
+  MAX_REGRESSION=0
 ```
 
 The calibration command fetches or reuses bounded samples for SQuAD, HotpotQA,
@@ -388,6 +394,13 @@ metrics, gate decisions, source URLs, records, and license notes, but intentiona
 local dataset/report paths. When a dataset sample is fetched, RetOS writes a small
 ignored `*.metadata.json` sidecar beside it so later reused-sample runs retain the
 effective source URL, record count, source path, and license provenance.
+
+`make eval-calibration-compare` compares two manifests for trend evidence. Candidate
+runs must pass their own gates, retain every baseline target and numeric metric, keep at
+least the baseline record/case counts, and avoid metric regression beyond
+`MAX_REGRESSION`. Its Markdown output is also path-safe, so release notes can preserve
+source URLs, license notes, metric deltas, and record/case growth without committing raw
+dataset or report paths.
 
 The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
 unless `FORCE=1` is provided, and is never part of the default CI path. Networked

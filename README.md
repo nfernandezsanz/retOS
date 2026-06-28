@@ -13,7 +13,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
-| Next milestone | Phase 5: expand real-dataset trend evidence beyond the 25-record/10-case PASS calibration sample, continue UI hardening, and collect release promotion evidence. |
+| Next milestone | Phase 5: resolve the 50-record/20-case HotpotQA calibration drop, continue UI hardening, and collect release promotion evidence. |
 
 This repository is intentionally being built as a staff-engineer-quality reference project: decisions are documented, quality gates are automated, integration checks hit real endpoints, UI smoke tests open the actual frontend, and every implementation phase is expected to leave behind tests, auditability, and operating notes.
 

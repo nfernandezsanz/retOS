@@ -79,6 +79,9 @@ tag in GitHub.
 - Real-dataset calibration gates can now be scoped per target, fetched samples preserve
   ignored provenance sidecars, and manifests can be exported as path-safe Markdown
   release evidence.
+- Real-dataset calibration manifests can now be compared as path-safe trend evidence
+  with record/case growth checks, metric-regression tolerance, source URLs, and license
+  provenance.
 - React eval controls now expose an explicit `Eval scope` selector that attaches
   dataset-backed SQuAD, HotpotQA, Natural Questions, and OCR benchmark runs to a domain
   and filters history, trends, comparison, and regression-gate workflows.
@@ -103,6 +106,9 @@ tag in GitHub.
 - Release calibration evidence now records a forced 25-record public dataset refresh
   with 10 evaluated cases per target across SQuAD, HotpotQA, HotpotQA-agent, and
   NQ-Open adapter samples.
+- Release calibration trend evidence now records a zero-regression PASS from
+  25-record/10-case to 50-record/10-case public samples, while documenting the
+  discovered 50-record/20-case HotpotQA retrieval/grounding drop for follow-up.
 - Compose now builds the shared backend image only through the `api` service; `worker`
   and `migrate` reuse the same `retos-backend` tag instead of declaring parallel builds.
 - Docker smoke now verifies API, worker, and migrations run the same backend image ID,
