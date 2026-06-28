@@ -74,5 +74,7 @@ jobs:
         run: docker compose --env-file .env.example config
       - name: Docker topology
         run: scripts/check_docker_topology.sh
+      - name: Release readiness
+        run: scripts/check_release_readiness.sh
       - name: Docker stack smoke
         run: scripts/run_docker_smoke.sh

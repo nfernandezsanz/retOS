@@ -24,6 +24,8 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 | `retos_storage` | Raw files and artifacts. |
 | `retos_index` | Rebuildable search indexes. |
 | `retos_ollama` | Ollama models. |
+| `retos_eval_datasets` | Operator-provided local eval datasets and samples. |
+| `retos_eval_reports` | Exported JSON/Markdown eval reports. |
 
 ## Security Defaults
 
@@ -42,5 +44,19 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Compose topology validates that API, worker, and migrations share one backend image.
 - Docker images build.
 - Docker stack smoke starts core services and hits API/web endpoints.
+- Release readiness validates operations docs, safe defaults, and image topology.
 - No secrets are baked into images.
 - Migrations work from an empty database.
+
+## Operations Notes
+
+- Release images are tagged with `RETOS_IMAGE_TAG`; avoid mutable tags outside local
+  development.
+- `api`, `worker`, and `migrate` must always share the backend image and may differ only
+  by command.
+- Backups must include Postgres, storage, eval reports, eval datasets, and optionally the
+  rebuildable index volume.
+- Restores must stop API/worker first, restore Postgres and volumes, run migrations, and
+  then run health/smoke checks.
+- `docs/operations.md` is the operator-facing source of truth for release, upgrade,
+  backup, restore, health checks, and rollback.
