@@ -4,7 +4,7 @@
 
 - Minimum 90% total coverage.
 - Target minimum 90% branch coverage.
-- Current branch-only ratchet: 83.65%, enforced by CI until focused branch tests raise
+- Current branch-only ratchet: 83.94%, enforced by CI until focused branch tests raise
   the ratchet without hiding gaps.
 - Recommended 95% for auth, journals, identities, permissions, provider routing, and citation validation.
 

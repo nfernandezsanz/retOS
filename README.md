@@ -11,7 +11,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 91.96% total coverage; 83.65% branch-only coverage is ratcheted in CI while the project works toward the 90% branch target. |
+| Backend coverage | 92.13% total coverage; 83.94% branch-only coverage is ratcheted in CI while the project works toward the 90% branch target. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -224,7 +224,7 @@ Every meaningful change should pass these gates:
 | Backend format | `make format-check` | Enforces Black formatting. |
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
-| Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 83.65%, target 90%). |
+| Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 83.94%, target 90%). |
 | Dependency audit | `make dependency-audit` | Runs `pip-audit` against backend runtime requirements and `npm audit --audit-level=high` against the frontend lockfile. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | Agent multi-hop eval | `make eval-agent-multihop` | Runs deterministic query-plan, multi-hop audit, evidence-route, citation, grounding, and budget scorers without network or paid providers. |
