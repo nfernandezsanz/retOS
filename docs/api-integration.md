@@ -29,7 +29,7 @@ Roles are intentionally small:
 | Role | Allowed |
 | --- | --- |
 | `admin` | Full local administration: account management, domain/source/document mutations, ingestion, indexing, agent queries, eval execution, job transitions, job retry, and all read-only operations. |
-| `viewer` | Read-only operational visibility. Domain-scoped resources, audit journal/progress/export, and persisted SSE replay require explicit domain grants. Provider catalog and eval run history/comparison remain global observability surfaces. |
+| `viewer` | Read-only operational visibility. Domain-scoped resources, audit journal/progress/export, and persisted SSE replay require explicit domain grants. Provider catalog remains a global observability surface because it exposes readiness, not secrets. Eval execution, history, and comparison require an admin token. |
 
 Endpoints that mutate state, spend compute, enqueue work, or change account security
 require an `admin` token. Viewer-safe endpoints use the same `Authorization` header but
@@ -764,8 +764,8 @@ curl "http://localhost:8000/evals/runs?limit=6" \
   --header "Authorization: Bearer <token>"
 ```
 
-The response is ordered newest-first and includes runs that failed before a report
-was produced:
+The endpoint requires an admin token. The response is ordered newest-first and includes
+runs that failed before a report was produced:
 
 ```json
 [
@@ -791,8 +791,8 @@ curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&cand
   --header "Authorization: Bearer <token>"
 ```
 
-The endpoint reads reports already stored in `job.payload.result`, does not call
-providers, and returns per-metric deltas:
+The endpoint requires an admin token, reads reports already stored in `job.payload.result`,
+does not call providers, and returns per-metric deltas:
 
 ```json
 {

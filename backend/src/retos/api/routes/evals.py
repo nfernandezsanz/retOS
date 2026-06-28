@@ -6,7 +6,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, ValidationError
 
-from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep, ViewerSubjectDep
+from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep
 from retos.api.routes.events import progress_store
 from retos.api.routes.jobs import JobRead
 from retos.domain.jobs import Job, JobStatus
@@ -122,7 +122,7 @@ class OCRBenchmarkEvalRequest(BaseModel):
 
 @router.get("/runs", response_model=list[EvalRunRead])
 async def list_eval_runs(
-    _: ViewerSubjectDep,
+    _: AdminSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> list[EvalRunRead]:
@@ -139,7 +139,7 @@ async def list_eval_runs(
 
 @router.get("/runs/compare", response_model=EvalRunComparisonRead)
 async def compare_eval_runs(
-    _: ViewerSubjectDep,
+    _: AdminSubjectDep,
     uow: UnitOfWorkDep,
     baseline_job_id: Annotated[str, Query(min_length=1)],
     candidate_job_id: Annotated[str, Query(min_length=1)],

@@ -100,7 +100,6 @@ def test_viewer_can_read_granted_operational_state(client: TestClient) -> None:
         ("get", "/audit/journal-events"),
         ("get", "/audit/progress-events"),
         ("get", "/audit/export"),
-        ("get", "/evals/runs"),
     ]
 
     for method, path in allowed_requests:
@@ -114,6 +113,8 @@ def test_viewer_can_read_granted_operational_state(client: TestClient) -> None:
         f"/domains/{ungranted_domain_id}",
         f"/domains/{ungranted_domain_id}/sources",
         f"/jobs/{ungranted_job_id}",
+        "/evals/runs",
+        "/evals/runs/compare?baseline_job_id=job-a&candidate_job_id=job-b",
     ]
     for path in forbidden_requests:
         response = client.get(path, headers=viewer_headers)

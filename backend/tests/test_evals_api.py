@@ -37,6 +37,29 @@ def evals_admin_headers(evals_client: TestClient) -> dict[str, str]:
 
 
 @pytest.fixture
+def evals_viewer_headers(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> dict[str, str]:
+    created = evals_client.post(
+        "/admin/users",
+        headers=evals_admin_headers,
+        json={
+            "email": "evals-viewer@retos.dev",
+            "password": "evals-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    assert created.status_code == 201
+    response = evals_client.post(
+        "/auth/login",
+        json={"email": "evals-viewer@retos.dev", "password": "evals-viewer-password"},
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+@pytest.fixture
 def squad_dataset_root(tmp_path: Path) -> Path:
     return tmp_path / "evals" / "datasets"
 
@@ -196,6 +219,23 @@ def test_eval_run_compare_requires_admin_token(evals_client: TestClient) -> None
     )
 
     assert response.status_code == 401
+
+
+def test_eval_history_requires_admin_role(
+    evals_client: TestClient,
+    evals_viewer_headers: dict[str, str],
+) -> None:
+    runs = evals_client.get("/evals/runs", headers=evals_viewer_headers)
+    comparison = evals_client.get(
+        "/evals/runs/compare",
+        headers=evals_viewer_headers,
+        params={"baseline_job_id": "job-a", "candidate_job_id": "job-b"},
+    )
+
+    assert runs.status_code == 403
+    assert runs.json()["detail"] == "Admin role required"
+    assert comparison.status_code == 403
+    assert comparison.json()["detail"] == "Admin role required"
 
 
 def test_smoke_eval_runs_and_persists_auditable_job(
