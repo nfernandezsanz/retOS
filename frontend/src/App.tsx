@@ -372,6 +372,27 @@ type EvalRunComparison = {
   status: string;
 };
 
+type EvalMetricRegression = {
+  name: string;
+  baseline: number;
+  candidate: number;
+  delta: number;
+  normalized_delta: number;
+  direction: string;
+  regressed: boolean;
+};
+
+type EvalRegressionGate = {
+  passed: boolean;
+  baseline: EvalRunSummary;
+  candidate: EvalRunSummary;
+  metric_drop_tolerance: number;
+  average_drop_tolerance: number;
+  average_normalized_delta: number;
+  regressions: EvalMetricRegression[];
+  metrics: EvalMetricRegression[];
+};
+
 type EvalTrendPoint = {
   job_id: string;
   suite_name: string;
@@ -994,6 +1015,27 @@ async function compareEvalRuns(
   });
 }
 
+async function runEvalRegressionGate(
+  token: string,
+  baselineJobId: string,
+  candidateJobId: string,
+): Promise<EvalRegressionGate> {
+  const query = new URLSearchParams({
+    baseline_job_id: baselineJobId,
+    candidate_job_id: candidateJobId,
+    metric_drop_tolerance: "0.02",
+    average_drop_tolerance: "0.01",
+  });
+  return requestJson<EvalRegressionGate>(
+    `/evals/runs/regression-gate?${query.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+}
+
 async function rerunEval(token: string, jobId: string): Promise<EvalRunResponse> {
   return requestJson<EvalRunResponse>(`/evals/runs/${jobId}/rerun`, {
     method: "POST",
@@ -1207,6 +1249,8 @@ function App() {
   const [evalRuns, setEvalRuns] = useState<EvalRunRead[]>([]);
   const [evalTrends, setEvalTrends] = useState<EvalSuiteTrend[]>([]);
   const [evalComparison, setEvalComparison] = useState<EvalRunComparison | null>(null);
+  const [evalRegressionGate, setEvalRegressionGate] =
+    useState<EvalRegressionGate | null>(null);
   const [isRunningEval, setIsRunningEval] = useState(false);
   const [isRunningAgentMultihopEval, setIsRunningAgentMultihopEval] = useState(false);
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
@@ -1214,6 +1258,7 @@ function App() {
   const [isRunningNaturalQuestionsEval, setIsRunningNaturalQuestionsEval] = useState(false);
   const [isRunningOcrBenchmarkEval, setIsRunningOcrBenchmarkEval] = useState(false);
   const [isComparingEvals, setIsComparingEvals] = useState(false);
+  const [isRunningRegressionGate, setIsRunningRegressionGate] = useState(false);
   const [rerunningEvalJobId, setRerunningEvalJobId] = useState<string | null>(null);
   const [squadDatasetPath, setSquadDatasetPath] = useState("dev-v2.0.json");
   const [squadMaxCases, setSquadMaxCases] = useState("50");
@@ -1323,6 +1368,7 @@ function App() {
     isRunningHotpotQAEval ||
     isRunningNaturalQuestionsEval ||
     isRunningOcrBenchmarkEval ||
+    isRunningRegressionGate ||
     rerunningEvalJobId !== null;
   const comparableEvalRuns = evalRuns.filter((run) => run.report !== null);
 
@@ -1473,6 +1519,7 @@ function App() {
         latestWithReport ? reportPathsFromPayload(latestWithReport.job.payload) : null,
       );
       setEvalComparison(null);
+      setEvalRegressionGate(null);
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Eval history refresh failed");
     }
@@ -2176,10 +2223,30 @@ function App() {
       const accessToken = await getAdminToken();
       const comparison = await compareEvalRuns(accessToken, baseline.job.id, candidate.job.id);
       setEvalComparison(comparison);
+      setEvalRegressionGate(null);
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Eval comparison failed");
     } finally {
       setIsComparingEvals(false);
+    }
+  }
+
+  async function handleRunRegressionGate() {
+    setIsRunningRegressionGate(true);
+    setEvalError(null);
+    try {
+      const [candidate, baseline] = comparableEvalRuns;
+      if (!candidate || !baseline) {
+        throw new Error("At least two reported eval runs are required for regression gating");
+      }
+      const accessToken = await getAdminToken();
+      const gate = await runEvalRegressionGate(accessToken, baseline.job.id, candidate.job.id);
+      setEvalRegressionGate(gate);
+      setEvalComparison(null);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "Regression gate failed");
+    } finally {
+      setIsRunningRegressionGate(false);
     }
   }
 
@@ -2204,6 +2271,7 @@ function App() {
     setEvalReport(response.report);
     setEvalReportPaths(response.report_paths ?? reportPathsFromPayload(response.job.payload));
     setEvalComparison(null);
+    setEvalRegressionGate(null);
     setEvalRuns((current) =>
       [
         { job: response.job, report: response.report },
@@ -2318,6 +2386,7 @@ function App() {
     setEvalRuns([]);
     setEvalTrends([]);
     setEvalComparison(null);
+    setEvalRegressionGate(null);
     setEvalError(null);
     setDomains([]);
     setSelectedDomainId("");
@@ -3429,11 +3498,30 @@ function App() {
                   <button
                     className="secondary-action compact-action"
                     type="button"
-                    disabled={isAnyEvalRunning || isComparingEvals || comparableEvalRuns.length < 2}
+                    disabled={
+                      isAnyEvalRunning ||
+                      isComparingEvals ||
+                      isRunningRegressionGate ||
+                      comparableEvalRuns.length < 2
+                    }
                     onClick={() => void handleCompareLatestEvals()}
                   >
                     <GitCompare aria-hidden="true" />
                     {isComparingEvals ? "Comparing" : "Compare latest"}
+                  </button>
+                  <button
+                    className="secondary-action compact-action"
+                    type="button"
+                    disabled={
+                      isAnyEvalRunning ||
+                      isComparingEvals ||
+                      isRunningRegressionGate ||
+                      comparableEvalRuns.length < 2
+                    }
+                    onClick={() => void handleRunRegressionGate()}
+                  >
+                    <ShieldAlert aria-hidden="true" />
+                    {isRunningRegressionGate ? "Checking gate" : "Regression gate"}
                   </button>
                   <button
                     className="icon-button"
@@ -3478,6 +3566,56 @@ function App() {
                         <span>{formatScore(metric.candidate)}</span>
                         <span className={metric.delta < 0 ? "delta negative" : "delta"}>
                           {formatDelta(metric.delta)}
+                        </span>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {evalRegressionGate ? (
+                <div
+                  className={`eval-regression-gate ${evalRegressionGate.passed ? "passed" : "failed"}`}
+                  aria-label="Eval regression gate"
+                  aria-live="polite"
+                >
+                  <div className="gate-summary">
+                    <div>
+                      <span>Decision</span>
+                      <strong>{evalRegressionGate.passed ? "Promote" : "Block"}</strong>
+                      <small>
+                        {evalRegressionGate.regressions.length} metric regressions
+                      </small>
+                    </div>
+                    <div>
+                      <span>Average normalized delta</span>
+                      <strong>{formatDelta(evalRegressionGate.average_normalized_delta)}</strong>
+                      <small>
+                        Limit {formatScore(evalRegressionGate.average_drop_tolerance)}
+                      </small>
+                    </div>
+                    <div>
+                      <span>Metric tolerance</span>
+                      <strong>{formatScore(evalRegressionGate.metric_drop_tolerance)}</strong>
+                      <small>
+                        {evalRegressionGate.baseline.suite_name} to{" "}
+                        {evalRegressionGate.candidate.suite_name}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="comparison-metrics">
+                    <div className="comparison-metric comparison-header">
+                      <strong>Metric</strong>
+                      <span>Baseline</span>
+                      <span>Candidate</span>
+                      <span>Gate</span>
+                    </div>
+                    {evalRegressionGate.metrics.map((metric) => (
+                      <article className="comparison-metric" key={metric.name}>
+                        <strong>{metric.name.replaceAll("_", " ")}</strong>
+                        <span>{formatScore(metric.baseline)}</span>
+                        <span>{formatScore(metric.candidate)}</span>
+                        <span className={metric.regressed ? "delta negative" : "delta"}>
+                          {metric.regressed ? "regressed" : formatDelta(metric.normalized_delta)}
                         </span>
                       </article>
                     ))}

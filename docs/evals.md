@@ -194,7 +194,8 @@ curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&cand
 
 Comparison is local and deterministic. It reads already persisted `eval.run` report
 payloads, returns baseline/candidate summaries, per-metric deltas, an average delta,
-and a coarse status of `improved`, `regressed`, or `unchanged`.
+and a coarse status of `improved`, `regressed`, or `unchanged`. The React console exposes
+this as `Compare latest` for the two newest reported runs.
 
 Operator-facing trends are available through:
 
@@ -220,7 +221,9 @@ curl "http://localhost:8000/evals/runs/regression-gate?baseline_job_id=<old_job_
 The gate is local and cost-safe. It reads existing `eval.run` reports, normalizes metric
 direction so lower-is-better OCR error rates are handled correctly, and returns
 `passed=false` when any metric exceeds the allowed drop or when the average normalized
-delta drops beyond tolerance.
+delta drops beyond tolerance. The React console exposes this as `Regression gate` using
+the same newest candidate and previous baseline pair, with a default 2% per-metric
+tolerance and 1% average tolerance.
 
 Dataset-backed SQuAD evals are also available through the admin API:
 

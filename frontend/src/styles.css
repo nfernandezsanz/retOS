@@ -1201,13 +1201,39 @@ button:focus-visible {
   padding: 12px;
 }
 
+.eval-regression-gate {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.eval-regression-gate.passed {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.eval-regression-gate.failed {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
 .comparison-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-.comparison-summary div {
+.gate-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.comparison-summary div,
+.gate-summary div {
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -1218,14 +1244,17 @@ button:focus-visible {
 }
 
 .comparison-summary span,
-.comparison-summary small {
+.comparison-summary small,
+.gate-summary span,
+.gate-summary small {
   color: #64748b;
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.comparison-summary strong {
+.comparison-summary strong,
+.gate-summary strong {
   color: #0f172a;
   overflow-wrap: anywhere;
 }
@@ -1986,6 +2015,7 @@ button:focus-visible {
   .audit-toolbar,
   .audit-event-grid,
   .comparison-summary,
+  .gate-summary,
   .comparison-metric,
   .eval-trends,
   .trend-metric-row,

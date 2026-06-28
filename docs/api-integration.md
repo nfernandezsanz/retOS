@@ -952,7 +952,9 @@ curl "http://localhost:8000/evals/runs/regression-gate?baseline_job_id=<old_job_
 The gate reads persisted reports only. For normal metrics, negative deltas are
 regressions. For `*_error_rate` metrics, positive deltas are regressions. The response
 includes normalized deltas, per-metric regression flags, the average normalized delta,
-and an overall `passed` boolean.
+and an overall `passed` boolean. The React console calls this endpoint from the
+`Regression gate` action in the local eval history panel and renders the promote/block
+decision beside the metric-level gate evidence.
 
 ### Frontend Runtime Notes
 
@@ -987,6 +989,7 @@ Current console calls:
 - `GET /evals/runs?limit=6`
 - `GET /evals/runs/trends?limit=60`
 - `GET /evals/runs/compare?baseline_job_id=...&candidate_job_id=...`
+- `GET /evals/runs/regression-gate?baseline_job_id=...&candidate_job_id=...`
 - `POST /evals/runs/{job_id}/rerun`
 - `POST /evals/smoke`
 - `POST /evals/agent-multihop`

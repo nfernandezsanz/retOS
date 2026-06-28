@@ -43,6 +43,8 @@ tag in GitHub.
   evidence-route coverage, bridge terms, citations, grounding, and budgets.
 - React local eval controls now run the built-in agent multi-hop eval and surface its
   metrics in the same result, history, trend, and audit workflow as other suites.
+- React eval history now exposes the persisted regression gate with promote/block
+  decisions, tolerances, and per-metric regression evidence.
 - Persisted eval runs now expose a regression gate that normalizes metric direction,
   supports tolerances, and flags candidate calibration drops without provider calls.
 

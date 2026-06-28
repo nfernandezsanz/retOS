@@ -274,6 +274,21 @@ async function mockProviderApi(page: Page) {
     average_delta: 0,
     status: "unchanged",
   };
+  const evalRegressionGate = {
+    passed: true,
+    baseline: evalComparison.baseline,
+    candidate: evalComparison.candidate,
+    metric_drop_tolerance: 0.02,
+    average_drop_tolerance: 0.01,
+    average_normalized_delta: 0,
+    regressions: [],
+    metrics: evalComparison.metrics.map((metric) => ({
+      ...metric,
+      normalized_delta: metric.delta,
+      direction: "higher_is_better",
+      regressed: false,
+    })),
+  };
 
   function buildEvalTrends() {
     const grouped = new Map<string, typeof evalRuns>();
@@ -1179,6 +1194,12 @@ async function mockProviderApi(page: Page) {
       json: evalComparison,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/evals\/runs\/regression-gate.*/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: evalRegressionGate,
+    });
+  });
   await page.route("http://localhost:8000/events/progress", async (route) => {
     await route.fulfill({
       contentType: "text/event-stream",
@@ -1421,6 +1442,12 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval comparison").getByText("squad-v2")).toBeVisible();
   await expect(page.getByLabel("Eval comparison").getByText("retrieval recall")).toBeVisible();
   await expect(page.getByLabel("Eval comparison").getByText("unchanged")).toBeVisible();
+
+  await page.getByRole("button", { name: "Regression gate" }).click();
+  await expect(page.getByLabel("Eval regression gate").getByText("Promote")).toBeVisible();
+  await expect(page.getByLabel("Eval regression gate").getByText("0 metric regressions")).toBeVisible();
+  await expect(page.getByLabel("Eval regression gate").getByText("retrieval recall")).toBeVisible();
+  await expect(page.getByLabel("Eval regression gate").getByText("2%")).toBeVisible();
 
   await page.getByLabel("Filter jobs").selectOption("index.domain");
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();
