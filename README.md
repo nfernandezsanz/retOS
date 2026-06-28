@@ -249,6 +249,7 @@ Every meaningful change should pass these gates:
 | Release notes | `make release-notes-check` | Validates changelog, release-process guidance, and docs links for auditable releases. |
 | Versioned release notes | `make versioned-release-notes-check` | Validates concrete release note artifacts with evidence, limits, and rollback details. |
 | Release workflow | `make release-workflow-check` | Validates GHCR publishing, SBOM/provenance, Cosign signing, and signature verification workflow documentation. |
+| Published release evidence | `make release-evidence-check` | Verifies immutable GHCR backend/web digests with Cosign after a release workflow run supplies `VERSION`, `BACKEND_DIGEST`, and `WEB_DIGEST`. |
 | Backend runtime image | `make docker-runtime-image-check` | Verifies running API, worker, and migration containers use the exact same backend Docker image ID. |
 | Docker stack smoke | `make docker-smoke` | Builds the shared backend image plus web image, verifies API/worker/migrate share one runtime image ID, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, SQuAD/HotpotQA/Natural Questions/OCR benchmark evals, eval run comparison, job lifecycle, SSE, and web over HTTP. |
 

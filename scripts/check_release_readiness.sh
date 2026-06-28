@@ -18,6 +18,7 @@ required_files=(
   "docs/release-process.md"
   "docs/production-readiness.md"
   "scripts/check_production_preflight.sh"
+  "scripts/check_published_release_evidence.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -103,6 +104,7 @@ for phrase in (
     "docker compose --env-file .env.example config",
     "make docker-runtime-image-check",
     "make docker-smoke",
+    "make release-evidence-check",
 ):
     require(phrase in operations, f"docs/operations.md missing operational phrase: {phrase}")
 

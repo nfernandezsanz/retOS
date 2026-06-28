@@ -52,6 +52,7 @@ for phrase in (
     "RETOS_IMAGE_TAG",
     "RETOS_REVISION",
     "scripts/check_image_metadata.sh",
+    "make release-evidence-check",
     "make docker-smoke",
     "Backend coverage",
     "Migration Notes",

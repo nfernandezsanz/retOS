@@ -3,7 +3,7 @@ PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 BRANCH_COVERAGE_MIN ?= 90.44
 
-.PHONY: help install format format-check test lint typecheck dependency-audit db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck dependency-audit db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -45,7 +45,8 @@ help:
 	@printf "  make ci-status-check  Validate GitHub Actions is green for current HEAD\n"
 	@printf "  make release-notes-check Validate changelog and release note guidance\n"
 	@printf "  make versioned-release-notes-check Validate versioned release note artifacts\n"
-	@printf "  make release-workflow-check Validate GHCR publishing and signing workflow\n"
+	@printf "  make release-workflow-check Validate GHCR publishing, signing, and verification workflow\n"
+	@printf "  make release-evidence-check Verify published GHCR digests with Cosign\n"
 	@printf "  make image-size-check Validate built app image size budgets\n"
 	@printf "  make docker-up        Start the full local stack\n"
 	@printf "  make docker-down      Stop the local stack\n"
@@ -186,6 +187,9 @@ versioned-release-notes-check:
 
 release-workflow-check:
 	scripts/check_release_workflow.sh
+
+release-evidence-check:
+	scripts/check_published_release_evidence.sh
 
 image-size-check:
 	RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_size.sh

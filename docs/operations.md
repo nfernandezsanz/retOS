@@ -57,6 +57,9 @@ signing, and runs Cosign signature verification for both digests before summariz
 release evidence. The workflow reruns backend and frontend gates before the publish job.
 Verify `scripts/check_release_workflow.sh` before cutting a tag so the registry
 publishing, signing, and signature verification contract stays aligned with the docs.
+After the release workflow publishes immutable digests, run `make release-evidence-check`
+with `VERSION`, `BACKEND_DIGEST`, and `WEB_DIGEST` from the workflow summary to verify the
+published images independently before recording production evidence.
 
 Before tagging a release candidate, run:
 

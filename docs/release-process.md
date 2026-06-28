@@ -61,7 +61,17 @@ make docker-smoke
    Cosign signature verification for both published digests. The workflow reruns backend
    format/lint/type/test/eval-smoke, frontend checks, release readiness, and production
    preflight before any image is pushed.
-7. Attach validation evidence to the GitHub release notes:
+7. Copy the backend and web digests from the workflow summary, then verify the published
+   evidence independently:
+
+```bash
+VERSION="${RETOS_RELEASE_VERSION}" \
+BACKEND_DIGEST="sha256:<backend-digest>" \
+WEB_DIGEST="sha256:<web-digest>" \
+make release-evidence-check
+```
+
+8. Attach validation evidence to the GitHub release notes:
 
 | Evidence | Required |
 | --- | --- |
@@ -77,6 +87,7 @@ make docker-smoke
 | GHCR publishing | Yes |
 | SBOM/provenance | Yes |
 | Cosign signatures and verification | Yes |
+| `make release-evidence-check` output | Yes |
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
@@ -154,6 +165,9 @@ Images:
 - `.github/workflows/release.yml` is the source of truth for publishing `retos-backend`
   and `retos-web` to GHCR. It must keep SBOM, provenance, Cosign signing, and Cosign
   signature verification enabled.
+- `scripts/check_published_release_evidence.sh` is the independent post-publish verifier
+  for immutable image digests. Run it through `make release-evidence-check` before final
+  promotion evidence is accepted.
 - CI validates release docs through `make release-check`.
 - CI validates Python and Node dependency advisories before tests and browser smoke.
 - CI validates the production readiness audit pack through `make audit-pack-check`.

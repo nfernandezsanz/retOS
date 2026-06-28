@@ -56,6 +56,7 @@ required_phrases = (
     "SBOM/provenance",
     "Cosign signatures",
     "signature verification",
+    "make release-evidence-check",
     "Rollback",
 )
 
