@@ -36,6 +36,15 @@ async def test_unit_of_work_commit_and_rollback_require_entered_session() -> Non
 
 
 @pytest.mark.asyncio
+async def test_unit_of_work_exit_before_enter_is_noop() -> None:
+    uow = SQLAlchemyUnitOfWork(lambda: FakeSession())  # type: ignore[arg-type]
+
+    await uow.__aexit__(None, None, None)
+
+    assert uow.session is None
+
+
+@pytest.mark.asyncio
 async def test_unit_of_work_closes_session_and_rolls_back_on_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
