@@ -514,6 +514,14 @@ The response always includes the durable job. When `run_inline=true`, or in
       "conflict_count": 0,
       "findings": []
     },
+    "multi_hop_audit": {
+      "checked": true,
+      "requires_multi_hop": false,
+      "status": "not_required",
+      "document_count": 1,
+      "bridge_terms": [],
+      "warnings": []
+    },
     "evidence_route": {
       "coverage_level": "single_segment",
       "segment_count": 1,
@@ -583,6 +591,14 @@ The `contradiction_audit` is a deterministic first-pass reviewer over returned
 citations. It flags citation pairs with opposite polarity markers and overlapping
 domain terms so operators can review conflicting evidence. It is intentionally
 conservative and does not replace deeper named subagent review.
+
+The `multi_hop_audit` is a deterministic review of cross-document evidence. It marks
+questions with simple multi-hop indicators such as `compare`, `between`, `both`, `same`,
+or `and`, records whether the selected citations span multiple documents, extracts shared
+bridge terms across cited documents, and emits warnings such as
+`multi_hop_question_single_document` or `missing_cross_document_bridge_terms`. It gives
+operators a cheap way to see whether a multi-part question was answered from broad enough
+evidence before relying on the final answer.
 
 The `evidence_route` is a deterministic coverage map for the answer. It records the
 coverage level (`no_evidence`, `single_segment`, `single_document`, or

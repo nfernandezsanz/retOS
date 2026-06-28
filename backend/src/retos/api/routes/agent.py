@@ -100,6 +100,15 @@ class AgentContradictionAuditRead(BaseModel):
     findings: list[AgentContradictionFindingRead]
 
 
+class AgentMultiHopAuditRead(BaseModel):
+    checked: bool
+    requires_multi_hop: bool
+    status: str
+    document_count: int
+    bridge_terms: list[str]
+    warnings: list[str]
+
+
 class AgentEvidenceRouteDocumentRead(BaseModel):
     document_id: str
     title: str
@@ -125,6 +134,7 @@ class AgentQueryResultRead(BaseModel):
     runtime: str
     evidence_audit: AgentEvidenceAuditRead
     contradiction_audit: AgentContradictionAuditRead
+    multi_hop_audit: AgentMultiHopAuditRead
     evidence_route: AgentEvidenceRouteRead
     usage: AgentBudgetUsageRead
     citations: list[AgentCitationRead]
@@ -153,6 +163,14 @@ class AgentQueryResultRead(BaseModel):
                     )
                     for finding in result.contradiction_audit.findings
                 ],
+            ),
+            multi_hop_audit=AgentMultiHopAuditRead(
+                checked=result.multi_hop_audit.checked,
+                requires_multi_hop=result.multi_hop_audit.requires_multi_hop,
+                status=result.multi_hop_audit.status,
+                document_count=result.multi_hop_audit.document_count,
+                bridge_terms=result.multi_hop_audit.bridge_terms,
+                warnings=result.multi_hop_audit.warnings,
             ),
             evidence_route=AgentEvidenceRouteRead(
                 coverage_level=result.evidence_route.coverage_level,

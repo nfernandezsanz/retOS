@@ -69,7 +69,8 @@ connected.
 implementation uses controlled corpus tools (`search_corpus`, `read_citation`,
 `map_sources`, and `inspect_evidence_table`) over already-indexed domain evidence,
 builds a grounded answer from retrieved segments, persists citations, `evidence_audit`,
-`contradiction_audit`, deterministic `evidence_route`, and bounded adjacent
+`contradiction_audit`, deterministic `multi_hop_audit`, deterministic `evidence_route`,
+and bounded adjacent
 `neighbor_context` under
 `job.payload.result`, enforces query budgets for searches, citations, neighboring
 context, evidence tokens, and runtime, and writes `agent.queued`, `agent.started`,
@@ -84,10 +85,13 @@ after a bounded seed search. `RETOS_AGENT_RUNTIME=deterministic`
 remains the default so CI, Docker smoke, and local development do not require downloaded
 model weights or paid provider calls. The post-answer evidence audit appends a final
 ledger when the model does not explicitly cite returned segment ids. The contradiction
-audit flags opposite-polarity citation pairs for operator review. The Deep Agents
-harness now registers named `evidence_checker` and `contradiction_checker` subagents
-with the same controlled RetOS corpus tools. The `source_mapper` and `table_inspector`
-runtime roles are served by `map_sources` and `inspect_evidence_table`, while
-`evidence_route` gives operators a deterministic coverage view across citations,
-documents, anchors, and neighboring context. Richer multi-hop planning remains a future
-slice.
+audit flags opposite-polarity citation pairs for operator review. The deterministic
+`multi_hop_audit` flags multi-part questions, checks whether citations span multiple
+documents, and records cross-document bridge terms so operators can spot narrow answers
+to broad questions. The Deep Agents harness now registers named `evidence_checker` and
+`contradiction_checker` subagents with the same controlled RetOS corpus tools. The
+`source_mapper` and `table_inspector` runtime roles are served by `map_sources` and
+`inspect_evidence_table`, while `evidence_route` gives operators a deterministic coverage
+view across citations, documents, anchors, and neighboring context. Richer multi-hop
+planning can now build on persisted multi-hop audit signals instead of starting from an
+unstructured answer.

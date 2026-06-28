@@ -28,6 +28,8 @@ tag in GitHub.
   known limitations, migration notes, and rollback guidance.
 - Local source sampling for official simplified Natural Questions `.jsonl(.gz)` files,
   enabling full document-shape eval slices without CI network downloads.
+- Deterministic multi-hop query audit that records whether multi-part questions have
+  cross-document evidence and bridge terms.
 
 ### Changed
 

@@ -4,6 +4,7 @@ from retos.agent.audits import (
     audit_contradictions,
     audit_evidence,
     audit_evidence_route,
+    audit_multi_hop,
     ensure_evidence_ledger,
 )
 
@@ -113,3 +114,41 @@ def test_evidence_route_recognizes_multi_document_coverage() -> None:
     assert route.anchor_count == 2
     assert route.multi_document is True
     assert route.warnings == ["no_neighbor_context"]
+
+
+def test_multi_hop_audit_flags_single_document_multi_hop_question() -> None:
+    citation = FixtureCitation(
+        "segment-one",
+        "Apollo reviews mention checklist evidence.",
+        document_id="document-a",
+    )
+
+    audit = audit_multi_hop("Compare Apollo reviews and checklist evidence", [citation])
+
+    assert audit.checked is True
+    assert audit.requires_multi_hop is True
+    assert audit.status == "insufficient_multi_document_evidence"
+    assert audit.document_count == 1
+    assert audit.bridge_terms == []
+    assert audit.warnings == ["multi_hop_question_single_document"]
+
+
+def test_multi_hop_audit_recognizes_cross_document_bridge_terms() -> None:
+    left = FixtureCitation(
+        "segment-left",
+        "Apollo checklist review confirmed guidance readiness.",
+        document_id="document-a",
+    )
+    right = FixtureCitation(
+        "segment-right",
+        "Mission checklist review compared guidance telemetry.",
+        document_id="document-b",
+    )
+
+    audit = audit_multi_hop("Compare Apollo checklist review and telemetry", [left, right])
+
+    assert audit.requires_multi_hop is True
+    assert audit.status == "supported_multi_document"
+    assert audit.document_count == 2
+    assert {"checklist", "review", "guidance"}.issuperset(set(audit.bridge_terms))
+    assert audit.warnings == []

@@ -117,6 +117,75 @@ def create_agent_fixture(client: TestClient, headers: dict[str, str]) -> str:
     return domain_id
 
 
+def create_multi_document_agent_fixture(client: TestClient, headers: dict[str, str]) -> str:
+    domain_response = client.post(
+        "/domains",
+        json={"slug": "multi-agent-domain", "name": "Multi Agent Domain"},
+        headers=headers,
+    )
+    domain_id = domain_response.json()["id"]
+    source_response = client.post(
+        f"/domains/{domain_id}/sources",
+        json={"kind": "upload", "name": "Multi source", "uri": "inline://multi-agent"},
+        headers=headers,
+    )
+    source_id = source_response.json()["id"]
+
+    document_payloads = [
+        (
+            "Apollo Review Notes",
+            "inline://multi-agent/apollo.txt",
+            "sha256:aaaaaaaaaaaaaa01",
+            "Apollo checklist review confirmed guidance readiness.",
+            "sha256:bbbbbbbbbbbbbb01",
+        ),
+        (
+            "Telemetry Review Notes",
+            "inline://multi-agent/telemetry.txt",
+            "sha256:aaaaaaaaaaaaaa02",
+            "Mission checklist review compared guidance telemetry.",
+            "sha256:bbbbbbbbbbbbbb02",
+        ),
+    ]
+    for title, source_uri, document_hash, segment_text, segment_hash in document_payloads:
+        document_response = client.post(
+            f"/domains/{domain_id}/documents",
+            json={
+                "source_id": source_id,
+                "title": title,
+                "content_hash": document_hash,
+                "source_uri": source_uri,
+                "size_bytes": 120,
+            },
+            headers=headers,
+        )
+        versions = client.get(
+            f"/documents/{document_response.json()['id']}/versions",
+            headers=headers,
+        )
+        version_id = versions.json()[0]["id"]
+        client.post(
+            f"/document-versions/{version_id}/segments",
+            json={
+                "ordinal": 0,
+                "text": segment_text,
+                "anchor": "paragraph=0",
+                "token_count": len(segment_text.split()),
+                "content_hash": segment_hash,
+            },
+            headers=headers,
+        )
+
+    rebuild = client.post(
+        f"/domains/{domain_id}/index/rebuild",
+        json={"run_inline": True},
+        headers=headers,
+    )
+    assert rebuild.status_code == 202
+    assert rebuild.json()["status"] == "succeeded"
+    return domain_id
+
+
 def test_agent_query_requires_admin(agent_client: TestClient) -> None:
     response = agent_client.post(
         "/domains/missing/queries",
@@ -179,6 +248,7 @@ def test_agent_query_runs_inline_with_citations(
     assert body["job"]["payload"]["result"]["runtime"] == "deterministic"
     assert body["job"]["payload"]["result"]["evidence_audit"]["grounded"] is True
     assert body["job"]["payload"]["result"]["contradiction_audit"]["conflict_count"] == 0
+    assert body["job"]["payload"]["result"]["multi_hop_audit"]["checked"] is True
     assert body["job"]["payload"]["result"]["evidence_route"]["coverage_level"] in {
         "single_segment",
         "single_document",
@@ -195,6 +265,11 @@ def test_agent_query_runs_inline_with_citations(
     ]
     assert body["result"]["contradiction_audit"]["checked"] is True
     assert body["result"]["contradiction_audit"]["conflict_count"] == 0
+    assert body["result"]["multi_hop_audit"]["checked"] is True
+    assert body["result"]["multi_hop_audit"]["status"] in {
+        "not_required",
+        "opportunistic_multi_document",
+    }
     assert body["result"]["evidence_route"]["segment_count"] == len(body["result"]["citations"])
     assert body["result"]["evidence_route"]["document_count"] == 1
     assert body["result"]["evidence_route"]["has_neighbor_context"] is bool(
@@ -210,6 +285,35 @@ def test_agent_query_runs_inline_with_citations(
     assert "Evidence ledger:" in body["result"]["answer"]
     assert body["result"]["citations"][0]["title"] == "Apollo Guidance Memo"
     assert body["result"]["citations"][0]["anchor"] == "paragraph=0"
+
+
+def test_agent_query_records_multi_hop_audit_for_cross_document_evidence(
+    agent_client: TestClient,
+    agent_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_multi_document_agent_fixture(agent_client, agent_admin_headers)
+
+    response = agent_client.post(
+        f"/domains/{domain_id}/queries",
+        json={
+            "question": "Compare Apollo checklist review and telemetry guidance",
+            "limit": 5,
+            "run_inline": True,
+            "budget": {"max_citations": 5, "max_evidence_tokens": 80},
+        },
+        headers=agent_admin_headers,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    audit = body["result"]["multi_hop_audit"]
+    assert audit["checked"] is True
+    assert audit["requires_multi_hop"] is True
+    assert audit["status"] == "supported_multi_document"
+    assert audit["document_count"] == 2
+    assert {"checklist", "review", "guidance"}.issuperset(set(audit["bridge_terms"]))
+    assert audit["warnings"] == []
+    assert body["result"]["evidence_route"]["coverage_level"] == "multi_document"
 
 
 def test_agent_query_expands_neighbor_context_within_evidence_budget(

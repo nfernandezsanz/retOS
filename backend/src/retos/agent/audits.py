@@ -53,6 +53,16 @@ class ContradictionAudit:
 
 
 @dataclass(frozen=True)
+class MultiHopAudit:
+    checked: bool
+    requires_multi_hop: bool
+    status: str
+    document_count: int
+    bridge_terms: list[str]
+    warnings: list[str]
+
+
+@dataclass(frozen=True)
 class EvidenceRouteDocument:
     document_id: str
     title: str
@@ -73,6 +83,25 @@ class EvidenceRoute:
 
 
 NEGATION_TERMS = frozenset({"no", "not", "never", "without", "absent", "false", "failed"})
+MULTI_HOP_MARKERS = frozenset(
+    {
+        "after",
+        "and",
+        "between",
+        "both",
+        "compare",
+        "compared",
+        "connection",
+        "difference",
+        "during",
+        "earlier",
+        "later",
+        "relationship",
+        "same",
+        "versus",
+        "while",
+    }
+)
 STOPWORDS = frozenset(
     {
         "about",
@@ -168,6 +197,57 @@ def audit_contradictions(citations: Sequence[AuditedCitation]) -> ContradictionA
     )
 
 
+def audit_multi_hop(question: str, citations: Sequence[AuditedCitation]) -> MultiHopAudit:
+    question_tokens = set(re.findall(r"[a-z0-9]+", question.lower()))
+    requires_multi_hop = bool(question_tokens & MULTI_HOP_MARKERS)
+    document_ids = {citation.document_id for citation in citations}
+    document_count = len(document_ids)
+    bridge_terms = cross_document_bridge_terms(citations)
+
+    warnings: list[str] = []
+    if not citations:
+        status = "no_evidence"
+        if requires_multi_hop:
+            warnings.append("multi_hop_question_without_evidence")
+    elif requires_multi_hop and document_count < 2:
+        status = "insufficient_multi_document_evidence"
+        warnings.append("multi_hop_question_single_document")
+    elif requires_multi_hop and not bridge_terms:
+        status = "multi_document_without_bridge_terms"
+        warnings.append("missing_cross_document_bridge_terms")
+    elif requires_multi_hop:
+        status = "supported_multi_document"
+    elif document_count > 1 and bridge_terms:
+        status = "opportunistic_multi_document"
+    else:
+        status = "not_required"
+
+    return MultiHopAudit(
+        checked=True,
+        requires_multi_hop=requires_multi_hop,
+        status=status,
+        document_count=document_count,
+        bridge_terms=bridge_terms,
+        warnings=warnings,
+    )
+
+
+def cross_document_bridge_terms(citations: Sequence[AuditedCitation]) -> list[str]:
+    terms_by_document: dict[str, set[str]] = {}
+    for citation in citations:
+        terms_by_document.setdefault(citation.document_id, set()).update(
+            significant_terms(citation.text)
+        )
+    if len(terms_by_document) < 2:
+        return []
+
+    document_terms = list(terms_by_document.values())
+    bridge_terms = set(document_terms[0])
+    for terms in document_terms[1:]:
+        bridge_terms &= terms
+    return sorted(bridge_terms)[:12]
+
+
 def audit_evidence_route(
     citations: Sequence[AuditedCitation],
     neighbor_context: Sequence[AuditedNeighborContext] = (),
@@ -247,6 +327,17 @@ def contradiction_audit_to_payload(audit: ContradictionAudit) -> dict[str, objec
             }
             for finding in audit.findings
         ],
+    }
+
+
+def multi_hop_audit_to_payload(audit: MultiHopAudit) -> dict[str, object]:
+    return {
+        "checked": audit.checked,
+        "requires_multi_hop": audit.requires_multi_hop,
+        "status": audit.status,
+        "document_count": audit.document_count,
+        "bridge_terms": audit.bridge_terms,
+        "warnings": audit.warnings,
     }
 
 
