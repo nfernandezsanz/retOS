@@ -6,7 +6,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+from pytesseract import TesseractNotFoundError
+
 from retos.evals.datasets import DatasetAdapterError, SquadAdapterOptions, load_squad_v2_cases
+from retos.evals.ocr import OCRQualityReport, run_ocr_quality_suite
 from retos.evals.reports import write_report_files
 from retos.evals.smoke import EvalSuiteReport, run_smoke_eval_suite
 
@@ -15,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run RetOS local smoke evals.")
     parser.add_argument(
         "--suite",
-        choices=("smoke", "squad"),
+        choices=("smoke", "squad", "ocr-smoke"),
         default="smoke",
         help="Eval suite to run.",
     )
@@ -101,6 +104,13 @@ def run(
     except DatasetAdapterError as exc:
         print(f"Eval dataset error: {exc}", file=sys.stderr)
         return 2
+    except TesseractNotFoundError:
+        print(
+            "OCR eval error: tesseract is required for --suite ocr-smoke. "
+            "Install tesseract locally or run the suite inside the RetOS backend image.",
+            file=sys.stderr,
+        )
+        return 2
     if output_format == "markdown":
         print(report.to_markdown())
     else:
@@ -121,9 +131,11 @@ def build_report(
     suite: str,
     dataset_path: Path | None,
     max_cases: int | None,
-) -> EvalSuiteReport:
+) -> EvalSuiteReport | OCRQualityReport:
     if suite == "smoke":
         return run_smoke_eval_suite(index_root=index_root)
+    if suite == "ocr-smoke":
+        return run_ocr_quality_suite(work_dir=index_root / "ocr")
     if max_cases is not None and max_cases < 1:
         raise DatasetAdapterError("--max-cases must be greater than zero")
     if dataset_path is None:

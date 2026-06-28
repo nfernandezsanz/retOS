@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Protocol
 
-from retos.evals.smoke import EvalSuiteReport
+
+class EvalReportWritable(Protocol):
+    @property
+    def suite_name(self) -> str: ...
+
+    def to_dict(self) -> dict[str, object]: ...
+
+    def to_markdown(self) -> str: ...
 
 
 def write_report_files(
     *,
-    report: EvalSuiteReport,
+    report: EvalReportWritable,
     report_dir: Path,
     report_stem: str | None,
 ) -> tuple[Path, Path]:

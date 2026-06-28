@@ -116,6 +116,63 @@ def test_eval_cli_uses_suite_name_as_default_report_stem(tmp_path: Path) -> None
     assert (tmp_path / "reports" / "retos-smoke.md").exists()
 
 
+def test_eval_cli_runs_ocr_smoke_suite(tmp_path: Path, capsys, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    cli = load_eval_cli()
+
+    def fake_ocr_suite(*, work_dir: Path):
+        from retos.evals.ocr import OCRQualityCase, run_ocr_quality_suite
+
+        monkeypatch.setattr("retos.evals.ocr.ocr_pdf_text", lambda raw, max_pages: "OCR text")
+        return run_ocr_quality_suite(
+            work_dir=work_dir,
+            cases=(OCRQualityCase(case_id="ocr", expected_text="OCR text"),),
+        )
+
+    monkeypatch.setattr(cli, "run_ocr_quality_suite", fake_ocr_suite)
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="markdown",
+        suite="ocr-smoke",
+        dataset_path=None,
+        max_cases=None,
+        report_dir=tmp_path / "reports",
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "OCR Quality Report: ocr-smoke" in captured.out
+    assert (tmp_path / "reports" / "ocr-smoke.json").exists()
+    assert (tmp_path / "reports" / "ocr-smoke.md").exists()
+
+
+def test_eval_cli_reports_missing_tesseract_for_ocr_suite(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    from pytesseract import TesseractNotFoundError
+
+    cli = load_eval_cli()
+
+    def missing_tesseract(*, work_dir: Path):
+        raise TesseractNotFoundError()
+
+    monkeypatch.setattr(cli, "run_ocr_quality_suite", missing_tesseract)
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="markdown",
+        suite="ocr-smoke",
+        dataset_path=None,
+        max_cases=None,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "tesseract is required" in captured.err
+
+
 def test_eval_cli_requires_dataset_path_for_squad(tmp_path: Path, capsys) -> None:
     cli = load_eval_cli()
 

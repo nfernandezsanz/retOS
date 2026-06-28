@@ -18,6 +18,7 @@ Reality-check commands:
 ```bash
 make api-smoke
 make eval-smoke
+make eval-ocr
 make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50 REPORT_DIR=evals/reports
 make frontend-e2e
 make integration
@@ -32,7 +33,7 @@ make docker-smoke
 | Integration | Postgres, index rebuild, artifacts, API with fake providers. | Never by default |
 | Contract | Tool schemas, provider interface, API responses, migrations. | Never by default |
 | E2E | React UI, API, ingestion fixtures, query fixtures, SSE progress. | Never by default |
-| Evals | Retrieval, grounding, citations, budget compliance. | Local/fake by default |
+| Evals | Retrieval, grounding, citations, budget compliance, OCR quality. | Local/fake by default |
 | Live smoke | OpenAI, Anthropic, Ollama real providers. | Explicit opt-in only |
 
 ## Cost Controls
@@ -74,6 +75,8 @@ The project should never rely only on isolated unit tests. Every implementation 
 | Grounded claims | Claims have supporting evidence. | Rule + fixture |
 | Abstention | Missing evidence leads to no-answer behavior. | Deterministic |
 | Budget compliance | Runs respect tool and runtime budgets. | Deterministic |
+| OCR character error rate | OCR output preserves normalized characters. | Deterministic local OCR or mocked adapter |
+| OCR word error rate | OCR output preserves searchable word tokens. | Deterministic local OCR or mocked adapter |
 | Provider parity | Provider switching preserves contracts. | Fake providers |
 
 ## Implemented Eval Smoke
@@ -97,6 +100,14 @@ smoke run against the SQuAD run over HTTP. Browser smoke exercises the React SQu
 controls with a mocked API response and verifies visible suite history, report paths,
 and cross-run comparison.
 
+## Implemented OCR Quality Smoke
+
+`make eval-ocr` runs `backend/scripts/run_eval_smoke.py --suite ocr-smoke`. It
+generates tiny image-only PDFs, sends them through the ingestion OCR function, and
+reports character error rate plus word error rate as JSON or Markdown. Unit tests mock
+OCR so CI stays deterministic; the local command is opt-in because real Tesseract
+availability varies by machine and container profile.
+
 ## Public Dataset Candidates
 
 | Dataset | Fit |
@@ -104,5 +115,8 @@ and cross-run comparison.
 | SQuAD 2.0 | Implemented as an opt-in local adapter and admin API run for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
 | Natural Questions | Real user questions with Wikipedia evidence for open-domain retrieval pressure. |
 | HotpotQA | Multi-hop retrieval and supporting-fact evaluation for explainability. |
+| FUNSD | Form understanding, OCR quality, and future layout-aware page artifacts. |
+| ICDAR 2019 SROIE | Receipt OCR and key information extraction pressure. |
+| ISRI OCR Evaluation Tools | OCR scoring methodology reference for CER/WER-style checks. |
 
 Dataset adapters must be opt-in and must not make CI depend on network downloads.

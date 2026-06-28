@@ -12,6 +12,12 @@ Run the deterministic smoke suite:
 make eval-smoke
 ```
 
+Run the opt-in local OCR quality smoke suite:
+
+```bash
+make eval-ocr
+```
+
 Run the backend quality gate, including eval smoke:
 
 ```bash
@@ -24,6 +30,7 @@ The underlying CLI supports JSON or Markdown output:
 cd backend
 PYTHONPATH=src python scripts/run_eval_smoke.py --format json
 PYTHONPATH=src python scripts/run_eval_smoke.py --format markdown
+PYTHONPATH=src python scripts/run_eval_smoke.py --suite ocr-smoke --format markdown
 ```
 
 Run an opt-in SQuAD 2.0 dataset eval from a local file:
@@ -68,6 +75,20 @@ The built-in suite creates a temporary Tantivy index and evaluates fixture cases
 | Budget compliance | Returned citations stay within the case budget. |
 
 The suite exits non-zero if any case fails.
+
+## OCR Quality
+
+`make eval-ocr` generates tiny image-only PDFs locally, runs them through the same OCR
+function used by ingestion, and scores the extracted text with:
+
+| Metric | Meaning |
+| --- | --- |
+| Character error rate | Edit distance over normalized characters, useful for punctuation and spelling drift. |
+| Word error rate | Edit distance over normalized word tokens, useful for searchable evidence quality. |
+
+The suite is opt-in because real OCR depends on local Tesseract availability and
+host-specific rendering behavior. Unit tests mock the OCR adapter so CI coverage stays
+deterministic, local, and free.
 
 ## API And UI
 
@@ -129,6 +150,9 @@ or read user-provided dataset files under explicit opt-in commands.
 | [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/) | Reading comprehension and abstention. | The official page describes answerable and unanswerable questions over Wikipedia passages and links downloads under CC BY-SA 4.0. |
 | [Natural Questions](https://ai.google.com/research/NaturalQuestions/) | Real user questions with Wikipedia evidence. | The official Google page describes questions from real users requiring systems to read a Wikipedia article; the public GitHub repository is Apache-2.0. |
 | [HotpotQA](https://hotpotqa.github.io/) | Multi-hop retrieval and supporting-fact evaluation. | The official benchmark focuses on natural multi-hop questions and supporting facts for explainability. |
+| [FUNSD](https://guillaumejaume.github.io/FUNSD/) | Form understanding and OCR/layout pressure. | Useful once RetOS stores page-level OCR artifacts and layout metadata. |
+| [ICDAR 2019 SROIE](https://rrc.cvc.uab.es/?ch=13) | Receipt OCR and key information extraction. | Useful for scanned-document extraction quality and audit traces. |
+| [ISRI OCR Evaluation Tools](https://code.google.com/archive/p/isri-ocr-evaluation-tools/) | OCR scoring references. | Useful as a historical reference for OCR error-rate methodology and tooling. |
 
 ## SQuAD 2.0 Adapter
 
@@ -168,4 +192,5 @@ Adapter guarantees:
 ## Next Implementation Step
 
 Add Natural Questions or HotpotQA adapters for larger retrieval and multi-hop coverage,
-then compare eval runs across suites and datasets in the React console.
+add page-level OCR artifacts, then wire OCR benchmark adapters into the persisted eval
+run history and React comparison view.
