@@ -8,6 +8,7 @@ versioned release note or the release record for the target environment.
 | Field | Value |
 | --- | --- |
 | Release version | `<version>` |
+| Immutable release tag | `v<version>` |
 | Commit SHA | `<full-sha>` |
 | GitHub Actions run | `<url>` |
 | Backend image digest | `sha256:<digest>` |

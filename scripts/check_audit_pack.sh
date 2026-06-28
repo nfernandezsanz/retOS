@@ -126,6 +126,10 @@ require(
     "release process must require current HEAD CI verification",
 )
 require(
+    "make auditor-static-check" in release_process and "make frontend-visual-audit" in release_process,
+    "release process must require auditor static and visual audit evidence",
+)
+require(
     "make dependency-audit" in release_process,
     "release process must require dependency advisory verification",
 )
@@ -143,6 +147,10 @@ for heading in (
     "## Decision",
 ):
     require(heading in promotion_template, f"promotion evidence template missing {heading}")
+require(
+    "Immutable release tag" in promotion_template,
+    "promotion evidence template must record the immutable release tag",
+)
 require(
     "Final release promotion still requires" in tracker,
     "process tracker must keep final release blockers visible",

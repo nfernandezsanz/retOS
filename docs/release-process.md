@@ -46,12 +46,14 @@ scripts/check_versioned_release_notes.sh
 make release-check
 make audit-pack-check
 make production-preflight
+make auditor-static-check
 make dependency-audit
 make ci-status-check
 make check
 make integration
 make frontend-test
 make frontend-e2e
+make frontend-visual-audit
 make docker-smoke
 ```
 
@@ -82,6 +84,7 @@ make release-evidence-check
 | Dependency audit | Yes |
 | API smoke | Yes |
 | Browser smoke | Yes |
+| Visual audit screenshots | Yes |
 | Docker stack smoke | Yes |
 | Image size budgets | Yes |
 | GHCR publishing | Yes |
@@ -91,6 +94,7 @@ make release-evidence-check
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
+| Production promotion template | Yes |
 
 Before production promotion, reconcile this release evidence with
 [docs/production-readiness.md](production-readiness.md) and close or explicitly accept
