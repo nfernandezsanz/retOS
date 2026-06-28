@@ -652,6 +652,12 @@ async function mockProviderApi(page: Page) {
             "Grounded answer for: What evidence mentions search readiness?\n\nThe indexed evidence points to: Smoke segment text for search readiness.",
           provider: "local",
           model: "ollama:gemma4",
+          runtime: "deterministic",
+          evidence_audit: {
+            grounded: true,
+            cited_segment_ids: ["segment-1234567890"],
+            unreferenced_citation_ids: [],
+          },
           usage: {
             budget: {
               max_searches: 8,
@@ -790,6 +796,7 @@ test("loads the operational console", async ({ page }) => {
 
   await expect(page.getByText("Grounded answer for:")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Within budget")).toBeVisible();
+  await expect(page.getByLabel("Query budget usage").getByText("Evidence linked 1/1")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Citations 1/5")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
   await expect(page.getByText("page=1")).toBeVisible();

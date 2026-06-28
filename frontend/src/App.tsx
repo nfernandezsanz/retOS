@@ -147,6 +147,11 @@ type AgentQueryResult = {
   provider: string;
   model: string;
   runtime: string;
+  evidence_audit: {
+    grounded: boolean;
+    cited_segment_ids: string[];
+    unreferenced_citation_ids: string[];
+  };
   usage: AgentBudgetUsage;
   citations: AgentCitation[];
 };
@@ -155,6 +160,16 @@ type AgentQueryResponse = {
   job: JobRead;
   result: AgentQueryResult | null;
 };
+
+function evidenceAuditFor(result: AgentQueryResult) {
+  return (
+    result.evidence_audit ?? {
+      grounded: result.citations.length === 0,
+      cited_segment_ids: [],
+      unreferenced_citation_ids: result.citations.map((citation) => citation.segment_id),
+    }
+  );
+}
 
 type EvalMetrics = {
   retrieval_recall: number;
@@ -2162,6 +2177,9 @@ function App() {
             </form>
             <section className="query-result" aria-live="polite">
               {queryResult ? (
+                (() => {
+                  const evidenceAudit = evidenceAuditFor(queryResult);
+                  return (
                 <>
                   <div className="result-meta">
                     <span>Job {queryJob?.status ?? "unknown"}</span>
@@ -2171,6 +2189,11 @@ function App() {
                   </div>
                   <div className="result-meta budget-meta" aria-label="Query budget usage">
                     <span>{queryResult.usage.within_budget ? "Within budget" : "Budget exceeded"}</span>
+                    <span>
+                      {evidenceAudit.grounded ? "Evidence linked" : "Evidence missing"}{" "}
+                      {evidenceAudit.cited_segment_ids.length}/
+                      {queryResult.citations.length}
+                    </span>
                     <span>
                       Searches {queryResult.usage.search_count}/
                       {queryResult.usage.budget.max_searches}
@@ -2201,6 +2224,8 @@ function App() {
                     ))}
                   </div>
                 </>
+                  );
+                })()
               ) : (
                 <div className="empty-state compact">
                   <Bot aria-hidden="true" />

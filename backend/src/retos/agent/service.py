@@ -45,6 +45,13 @@ class AgentBudgetUsage:
 
 
 @dataclass(frozen=True)
+class EvidenceAudit:
+    grounded: bool
+    cited_segment_ids: list[str]
+    unreferenced_citation_ids: list[str]
+
+
+@dataclass(frozen=True)
 class Citation:
     segment_id: str
     document_id: str
@@ -65,6 +72,7 @@ class AgentQueryResult:
     provider: str
     model: str
     runtime: str
+    evidence_audit: EvidenceAudit
     usage: AgentBudgetUsage
 
 
@@ -91,9 +99,11 @@ def build_grounded_answer(question: str, hits: list[SearchHit]) -> str:
             "Rebuild the index or ingest more documents, then try again."
         )
     evidence = " ".join(hit.text.strip() for hit in hits[:3] if hit.text.strip())
+    citation_ids = ", ".join(hit.segment_id for hit in hits)
     return (
         f"Grounded answer for: {question}\n\n"
         f"The indexed evidence points to: {evidence}\n\n"
+        f"Evidence ledger: {citation_ids}\n\n"
         "Review the citations before using this answer."
     )
 
@@ -194,6 +204,26 @@ def synthesize_agent_answer(
     return invoke_deepagents_harness(settings=settings, toolbox=toolbox, prompt=prompt)
 
 
+def audit_evidence(answer: str, citations: list[Citation]) -> EvidenceAudit:
+    citation_ids = [citation.segment_id for citation in citations]
+    cited_ids = [segment_id for segment_id in citation_ids if segment_id in answer]
+    unreferenced_ids = [segment_id for segment_id in citation_ids if segment_id not in cited_ids]
+    return EvidenceAudit(
+        grounded=not citations or bool(cited_ids),
+        cited_segment_ids=cited_ids,
+        unreferenced_citation_ids=unreferenced_ids,
+    )
+
+
+def ensure_evidence_ledger(answer: str, citations: list[Citation]) -> tuple[str, EvidenceAudit]:
+    audit = audit_evidence(answer, citations)
+    if audit.grounded or not citations:
+        return answer, audit
+    ledger = ", ".join(citation.segment_id for citation in citations)
+    updated_answer = f"{answer.rstrip()}\n\nEvidence ledger: {ledger}"
+    return updated_answer, audit_evidence(updated_answer, citations)
+
+
 def parse_positive_int_budget(
     payload: dict[str, object],
     key: str,
@@ -277,6 +307,14 @@ def usage_to_payload(usage: AgentBudgetUsage) -> dict[str, object]:
     }
 
 
+def evidence_audit_to_payload(audit: EvidenceAudit) -> dict[str, object]:
+    return {
+        "grounded": audit.grounded,
+        "cited_segment_ids": audit.cited_segment_ids,
+        "unreferenced_citation_ids": audit.unreferenced_citation_ids,
+    }
+
+
 def result_payload(
     *,
     original_payload: dict[str, object],
@@ -289,6 +327,7 @@ def result_payload(
             "provider": result.provider,
             "model": result.model,
             "runtime": result.runtime,
+            "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
             "usage": usage_to_payload(result.usage),
             "citations": [
                 {
@@ -394,6 +433,8 @@ async def run_agent_query(
         if not toolbox.selected_hits:
             answer = build_grounded_answer(question, [])
         hits = toolbox.selected_hits
+        citations = [citation_from_hit(hit) for hit in hits]
+        answer, evidence_audit = ensure_evidence_ledger(answer, citations)
         runtime_ms = int((datetime.now(UTC) - started_at).total_seconds() * 1000)
         usage = AgentBudgetUsage(
             search_count=toolbox.search_count,
@@ -414,10 +455,11 @@ async def run_agent_query(
             domain_id=domain.id,
             question=question,
             answer=answer,
-            citations=[citation_from_hit(hit) for hit in hits],
+            citations=citations,
             provider=provider.provider,
             model=provider.model,
             runtime=settings.agent_runtime,
+            evidence_audit=evidence_audit,
             usage=usage,
         )
         completed_at = datetime.now(UTC)
@@ -441,6 +483,7 @@ async def run_agent_query(
                 "provider": result.provider,
                 "model": result.model,
                 "runtime": result.runtime,
+                "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
                 "usage": usage_to_payload(result.usage),
             },
         )
@@ -461,6 +504,7 @@ async def run_agent_query(
                 "provider": result.provider,
                 "model": result.model,
                 "runtime": result.runtime,
+                "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
                 "usage": usage_to_payload(result.usage),
             },
         )
@@ -473,6 +517,7 @@ async def run_agent_query(
             "domain_id": result.domain_id,
             "citation_count": len(result.citations),
             "runtime": result.runtime,
+            "grounded": result.evidence_audit.grounded,
             "within_budget": result.usage.within_budget,
             "search_count": result.usage.search_count,
             "evidence_tokens": result.usage.evidence_tokens,

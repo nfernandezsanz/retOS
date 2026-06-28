@@ -69,11 +69,18 @@ class AgentBudgetUsageRead(BaseModel):
     within_budget: bool
 
 
+class AgentEvidenceAuditRead(BaseModel):
+    grounded: bool
+    cited_segment_ids: list[str]
+    unreferenced_citation_ids: list[str]
+
+
 class AgentQueryResultRead(BaseModel):
     answer: str
     provider: str
     model: str
     runtime: str
+    evidence_audit: AgentEvidenceAuditRead
     usage: AgentBudgetUsageRead
     citations: list[AgentCitationRead]
 
@@ -84,6 +91,11 @@ class AgentQueryResultRead(BaseModel):
             provider=result.provider,
             model=result.model,
             runtime=result.runtime,
+            evidence_audit=AgentEvidenceAuditRead(
+                grounded=result.evidence_audit.grounded,
+                cited_segment_ids=result.evidence_audit.cited_segment_ids,
+                unreferenced_citation_ids=result.evidence_audit.unreferenced_citation_ids,
+            ),
             usage=AgentBudgetUsageRead(
                 budget=AgentBudgetRead(
                     max_searches=result.usage.budget.max_searches,

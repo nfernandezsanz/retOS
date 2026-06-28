@@ -457,6 +457,11 @@ The response always includes the durable job. When `run_inline=true`, or in
     "provider": "local",
     "model": "ollama:gemma4",
     "runtime": "deterministic",
+    "evidence_audit": {
+      "grounded": true,
+      "cited_segment_ids": ["<segment_id>"],
+      "unreferenced_citation_ids": []
+    },
     "usage": {
       "budget": {
         "max_searches": 8,
@@ -497,6 +502,11 @@ citations returned by those searches. The runtime caps citations with `max_citat
 caps retained evidence with `max_evidence_tokens`, and records `search_count`,
 `citation_count`, `evidence_tokens`, `runtime_ms`, and `within_budget` for audit and UI
 display.
+
+Every completed query also persists `evidence_audit`. If citations exist but the answer
+does not reference returned segment ids, RetOS appends an `Evidence ledger` to the final
+answer and records which citation ids are now linked. This keeps Deep Agents output
+auditable without granting the model host filesystem access.
 
 `RETOS_AGENT_RUNTIME=deterministic` is the default for CI, Docker smoke, and local
 development without downloaded model weights. It performs the controlled corpus search

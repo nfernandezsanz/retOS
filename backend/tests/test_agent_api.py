@@ -7,8 +7,10 @@ from fastapi.testclient import TestClient
 from retos.agent.harness import create_research_harness
 from retos.agent.service import (
     AgentQueryError,
+    audit_evidence,
     budget_from_payload,
     build_grounded_answer,
+    citation_from_hit,
     extract_harness_answer,
     fail_agent_query_job,
     hits_within_budget,
@@ -166,14 +168,20 @@ def test_agent_query_runs_inline_with_citations(
     assert body["job"]["status"] == "succeeded"
     assert body["job"]["payload"]["result"]["provider"] == "local"
     assert body["job"]["payload"]["result"]["runtime"] == "deterministic"
+    assert body["job"]["payload"]["result"]["evidence_audit"]["grounded"] is True
     assert body["job"]["payload"]["budget"]["max_citations"] == 5
     assert body["job"]["payload"]["result"]["usage"]["within_budget"] is True
     assert body["result"]["provider"] == "local"
     assert body["result"]["model"] == "ollama:gemma4"
     assert body["result"]["runtime"] == "deterministic"
+    assert body["result"]["evidence_audit"]["grounded"] is True
+    assert body["result"]["evidence_audit"]["cited_segment_ids"] == [
+        citation["segment_id"] for citation in body["result"]["citations"]
+    ]
     assert body["result"]["usage"]["budget"]["max_searches"] == 8
     assert body["result"]["usage"]["search_count"] == 1
     assert "Apollo guidance computers" in body["result"]["answer"]
+    assert "Evidence ledger:" in body["result"]["answer"]
     assert body["result"]["citations"][0]["title"] == "Apollo Guidance Memo"
     assert body["result"]["citations"][0]["anchor"] == "paragraph=0"
 
@@ -221,6 +229,7 @@ def test_agent_query_applies_evidence_token_budget(
     assert response.status_code == 202
     body = response.json()
     assert body["result"]["citations"] == []
+    assert body["result"]["evidence_audit"]["grounded"] is True
     assert body["result"]["usage"]["evidence_tokens"] == 0
     assert "could not find enough indexed evidence" in body["result"]["answer"]
 
@@ -249,7 +258,7 @@ def test_agent_query_can_use_mocked_deepagents_runtime(
             prompt = messages[0]["content"]  # type: ignore[index]
             assert "Seed evidence returned by search_corpus" in prompt
             assert "Apollo guidance computers" in prompt
-            return {"messages": [{"role": "assistant", "content": "Deep answer cites segment-1."}]}
+            return {"messages": [{"role": "assistant", "content": "Deep answer without ids."}]}
 
     def fake_create_research_harness(
         *,
@@ -276,8 +285,13 @@ def test_agent_query_can_use_mocked_deepagents_runtime(
 
     assert response.status_code == 202
     body = response.json()
-    assert body["result"]["answer"] == "Deep answer cites segment-1."
+    assert body["result"]["answer"].startswith("Deep answer without ids.")
+    assert "Evidence ledger:" in body["result"]["answer"]
     assert body["result"]["runtime"] == "deepagents"
+    assert body["result"]["evidence_audit"]["grounded"] is True
+    assert body["result"]["evidence_audit"]["cited_segment_ids"] == [
+        citation["segment_id"] for citation in body["result"]["citations"]
+    ]
     assert body["result"]["usage"]["search_count"] == 1
     assert tool_names == ["search_corpus", "read_citation"]
     assert invocations[0]["config"] == {"recursion_limit": 25}
@@ -367,6 +381,25 @@ def test_extract_harness_answer_reads_latest_message_content() -> None:
     )
 
     assert answer == "Final answer"
+
+
+def test_evidence_audit_marks_uncited_answers() -> None:
+    hit = SearchHit(
+        segment_id="segment-known",
+        document_id="document-1",
+        document_version_id="version-1",
+        title="Known",
+        text="Known evidence",
+        anchor=None,
+        ordinal=0,
+        score=1.0,
+    )
+
+    audit = audit_evidence("Answer without the id.", [citation_from_hit(hit)])
+
+    assert audit.grounded is False
+    assert audit.cited_segment_ids == []
+    assert audit.unreferenced_citation_ids == ["segment-known"]
 
 
 def test_agent_budget_defaults_and_validation() -> None:
