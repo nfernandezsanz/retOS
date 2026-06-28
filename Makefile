@@ -3,7 +3,7 @@ PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 BRANCH_COVERAGE_MIN ?= 90.44
 
-.PHONY: help install format format-check test lint typecheck dependency-audit db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck dependency-audit db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -40,6 +40,7 @@ help:
 	@printf "  make docker-smoke     Build and smoke the Docker stack\n"
 	@printf "  make release-check    Validate release docs, defaults, and Docker topology\n"
 	@printf "  make audit-pack-check Validate production readiness audit evidence\n"
+	@printf "  make production-preflight Validate local preflight evidence and external release blockers\n"
 	@printf "  make brand-check      Validate project branding assets and UI brand smoke coverage\n"
 	@printf "  make ci-status-check  Validate GitHub Actions is green for current HEAD\n"
 	@printf "  make release-notes-check Validate changelog and release note guidance\n"
@@ -167,6 +168,9 @@ release-check:
 
 audit-pack-check:
 	scripts/check_audit_pack.sh
+
+production-preflight:
+	scripts/check_production_preflight.sh
 
 brand-check:
 	scripts/check_branding_assets.sh

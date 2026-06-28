@@ -17,6 +17,7 @@ required_files=(
   "docker-compose.yml"
   "docs/release-process.md"
   "docs/production-readiness.md"
+  "scripts/check_production_preflight.sh"
 )
 
 for file in "${required_files[@]}"; do

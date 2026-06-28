@@ -61,6 +61,7 @@ Before tagging a release candidate, run:
 
 ```bash
 make release-check
+make production-preflight
 make check
 make integration
 make frontend-test

@@ -55,6 +55,7 @@ for phrase in (
     "make docker-smoke",
     "make dependency-audit",
     "make ci-status-check",
+    "make production-preflight",
     "scripts/check_release_readiness.sh",
     "scripts/check_audit_pack.sh",
     "scripts/check_branding_assets.sh",

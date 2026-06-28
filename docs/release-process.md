@@ -45,6 +45,7 @@ scripts/check_versioned_release_notes.sh
 ```bash
 make release-check
 make audit-pack-check
+make production-preflight
 make dependency-audit
 make ci-status-check
 make check

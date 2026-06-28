@@ -243,6 +243,7 @@ Every meaningful change should pass these gates:
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
 | Release readiness | `make release-check` | Validates release docs, Docker image topology, safe defaults, and operations runbook coverage. |
 | Production audit pack | `make audit-pack-check` | Validates that production readiness evidence, blockers, and auditor links stay current. |
+| Production preflight | `make production-preflight` | Validates local evidence, branding, release docs, and external release blockers are aligned for human review. |
 | Brand contract | `make brand-check` | Validates the project card, favicon mark, palette, branding guide, README visibility, and Playwright brand smoke coverage. |
 | Current HEAD CI | `make ci-status-check` | Queries GitHub Actions and verifies the current commit has successful backend, frontend, and docker jobs. |
 | Release notes | `make release-notes-check` | Validates changelog, release-process guidance, and docs links for auditable releases. |
