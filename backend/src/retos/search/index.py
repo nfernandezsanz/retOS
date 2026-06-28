@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -33,6 +34,10 @@ class SearchHit:
 
 class SearchIndexMissingError(RuntimeError):
     pass
+
+
+def natural_language_query_text(query_text: str) -> str:
+    return " ".join(re.sub(r"[^\w\s]", " ", query_text).split())
 
 
 def domain_index_path(index_root: str | Path, domain_id: str) -> Path:
@@ -94,7 +99,13 @@ class TantivySearchIndex:
 
         index = tantivy.Index.open(str(path))
         index.reload()
-        query = index.parse_query(query_text, ["title", "body"])
+        try:
+            query = index.parse_query(query_text, ["title", "body"])
+        except ValueError:
+            fallback_query_text = natural_language_query_text(query_text)
+            if not fallback_query_text:
+                return []
+            query = index.parse_query(fallback_query_text, ["title", "body"])
         searcher = index.searcher()
         results = searcher.search(query, limit)
         hits: list[SearchHit] = []

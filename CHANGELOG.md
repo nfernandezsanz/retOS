@@ -86,14 +86,21 @@ tag in GitHub.
 - Dataset fetch profiles now support retryable source mirrors and persist the effective
   `source_url`, giving real-dataset calibration runs clearer provenance when an
   official primary endpoint is unavailable.
+- Dataset fetching now prioritizes configured HTTPS mirrors over HTTP primaries so
+  public calibration does not stall on slow or insecure legacy dataset endpoints.
 - Networked eval dataset fetches now use the bundled `certifi` CA store to avoid local
   Python certificate-store drift during opt-in real-dataset calibration.
+- Tantivy search now falls back to a sanitized natural-language query when the native
+  parser rejects punctuation from real user questions.
 
 ### Changed
 
 - HotpotQA and HotpotQA-agent calibration now use deterministic named-entity follow-up
   retrieval and a larger supporting-fact evidence budget, improving bounded public
   sample grounding and multi-hop support to PASS without provider calls.
+- Release calibration evidence now records a forced 25-record public dataset refresh
+  with 10 evaluated cases per target across SQuAD, HotpotQA, HotpotQA-agent, and
+  NQ-Open adapter samples.
 - Compose now builds the shared backend image only through the `api` service; `worker`
   and `migrate` reuse the same `retos-backend` tag instead of declaring parallel builds.
 - Docker smoke now verifies API, worker, and migrations run the same backend image ID,

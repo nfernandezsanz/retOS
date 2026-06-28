@@ -10,7 +10,12 @@ from retos.core.config import Settings
 from retos.domain.documents import utc_now
 from retos.domain.jobs import Job
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
-from retos.search.index import IndexedSegment, SearchIndexMissingError, TantivySearchIndex
+from retos.search.index import (
+    IndexedSegment,
+    SearchIndexMissingError,
+    TantivySearchIndex,
+    natural_language_query_text,
+)
 from retos.search.service import fail_index_job
 
 
@@ -113,6 +118,37 @@ def test_tantivy_search_index_rebuilds_and_queries(tmp_path: Path) -> None:
     assert hits[0].segment_id == "segment-1"
     assert hits[0].anchor == "paragraph=1"
     assert hits[0].score > 0
+
+
+def test_tantivy_search_index_falls_back_for_natural_language_punctuation(
+    tmp_path: Path,
+) -> None:
+    index = TantivySearchIndex(tmp_path)
+    index.rebuild_domain(
+        "domain-1",
+        [
+            IndexedSegment(
+                segment_id="segment-1",
+                document_id="document-1",
+                document_version_id="version-1",
+                title="Super Bowl LIII",
+                text="Atlanta hosted the Super Bowl in 2019 at Mercedes-Benz Stadium.",
+                anchor="paragraph=1",
+                ordinal=0,
+            )
+        ],
+    )
+
+    hits = index.search_domain("domain-1", "who's hosting the super bowl in 2019?", limit=5)
+
+    assert hits[0].segment_id == "segment-1"
+
+
+def test_natural_language_query_text_removes_parser_syntax() -> None:
+    assert (
+        natural_language_query_text("who's hosting the super bowl in 2019?")
+        == "who s hosting the super bowl in 2019"
+    )
 
 
 def test_tantivy_search_index_requires_rebuild(tmp_path: Path) -> None:

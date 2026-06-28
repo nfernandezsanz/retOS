@@ -279,7 +279,12 @@ def fetch_profile(
 
 
 def source_urls(profile: DatasetProfile) -> tuple[str, ...]:
-    return (profile.url, *profile.mirror_urls) if profile.url is not None else ()
+    if profile.url is None:
+        return ()
+    parsed = urlparse(profile.url)
+    if parsed.scheme == "http" and profile.mirror_urls:
+        return (*profile.mirror_urls, profile.url)
+    return (profile.url, *profile.mirror_urls)
 
 
 def download_first_available(

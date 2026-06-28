@@ -281,6 +281,16 @@ def test_fetch_profile_uses_dataset_mirror_when_primary_download_fails(
     assert json.loads(Path(result["path"]).read_text(encoding="utf-8")) == [{"_id": "case-1"}]
 
 
+def test_fetcher_prioritizes_https_mirror_over_http_primary() -> None:
+    fetcher = load_fetcher()
+    profile = fetcher.DATASET_PROFILES["hotpotqa-dev-distractor"]
+
+    urls = fetcher.source_urls(profile)
+
+    assert urls[0].startswith("https://")
+    assert urls[-1] == profile.url
+
+
 def test_fetch_profile_can_write_nq_open_adapter_sample(
     tmp_path: Path,
     monkeypatch,
