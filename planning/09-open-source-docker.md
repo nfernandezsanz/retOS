@@ -45,6 +45,7 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Docker images build.
 - Docker stack smoke starts core services and hits API/web endpoints.
 - Release readiness validates operations docs, safe defaults, and image topology.
+- Release workflow validates GHCR publishing, SBOM/provenance, and Cosign signing.
 - Release note checks validate `CHANGELOG.md`, release-process guidance, and operator
   documentation links.
 - No secrets are baked into images.
@@ -56,6 +57,9 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
   development.
 - Release candidates must update `CHANGELOG.md` and follow `docs/release-process.md`
   before tagging.
+- Release tags publish `retos-backend` and `retos-web` to GHCR through
+  `.github/workflows/release.yml`; the backend image remains shared by API, worker, and
+  migrations.
 - `api`, `worker`, and `migrate` must always share the backend image and may differ only
   by command.
 - Backups must include Postgres, storage, eval reports, eval datasets, and optionally the

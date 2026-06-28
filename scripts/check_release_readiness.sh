@@ -26,6 +26,7 @@ done
 scripts/check_docker_topology.sh >/dev/null
 scripts/check_image_metadata.sh >/dev/null
 scripts/check_image_size.sh >/dev/null
+scripts/check_release_workflow.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 
 python3 - <<'PY'
@@ -85,6 +86,11 @@ for phrase in (
     "org.opencontainers.image",
     "RETOS_BACKEND_IMAGE_MAX_BYTES",
     "RETOS_WEB_IMAGE_MAX_BYTES",
+    ".github/workflows/release.yml",
+    "GHCR",
+    "Cosign",
+    "SBOM",
+    "provenance",
     "docs/release-process.md",
     "docker compose --env-file .env.example config",
     "make docker-smoke",

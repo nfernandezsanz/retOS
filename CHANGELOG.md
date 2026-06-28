@@ -22,6 +22,8 @@ tag in GitHub.
   Natural Questions adapter shape for opt-in calibration without full corpus downloads.
 - Image size guardrails for backend and web release images, including configurable byte
   budgets and Docker smoke enforcement.
+- GHCR release workflow for backend and web images with SBOM/provenance attestation
+  requests and Cosign keyless signing.
 
 ### Changed
 

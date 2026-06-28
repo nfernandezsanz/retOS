@@ -1,0 +1,165 @@
+name: Release Images
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Immutable image version, for example 2026.06.28-alpha.1"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+  attestations: write
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/retos-backend
+  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/retos-web
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: python -m pip install -r backend/requirements-dev.txt
+      - name: Format
+        run: cd backend && black --check --diff src tests scripts
+      - name: PEP 8
+        run: cd backend && ruff check src tests scripts
+      - name: Typecheck
+        run: cd backend && mypy src
+      - name: Test
+        env:
+          RETOS_ENV: test
+          RETOS_ALLOW_PAID_LLM: "false"
+        run: cd backend && pytest
+      - name: Eval smoke
+        env:
+          RETOS_ALLOW_PAID_LLM: "false"
+        run: cd backend && PYTHONPATH=src python scripts/run_eval_smoke.py --format markdown
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Check
+        run: cd frontend && npm run check
+
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - backend
+      - frontend
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: sigstore/cosign-installer@v4
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${{ inputs.version }}"
+          fi
+          if [[ ! "${version}" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}([-._+a-zA-Z0-9]+)?$ ]]; then
+            echo "Version must look like 2026.06.28 or 2026.06.28-alpha.1" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${GITHUB_OUTPUT}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check release readiness
+        run: make release-check
+
+      - name: Build and push backend image
+        id: build-backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: backend-runtime
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          build-args: |
+            RETOS_VERSION=${{ steps.version.outputs.version }}
+            RETOS_REVISION=${{ github.sha }}
+            RETOS_CREATED=${{ steps.version.outputs.created }}
+
+      - name: Build and push web image
+        id: build-web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ${{ env.WEB_IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+          build-args: |
+            RETOS_VERSION=${{ steps.version.outputs.version }}
+            RETOS_REVISION=${{ github.sha }}
+            RETOS_CREATED=${{ steps.version.outputs.created }}
+
+      - name: Sign published images
+        shell: bash
+        env:
+          BACKEND_DIGEST: ${{ steps.build-backend.outputs.digest }}
+          WEB_DIGEST: ${{ steps.build-web.outputs.digest }}
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${BACKEND_IMAGE}@${BACKEND_DIGEST}"
+          cosign sign --yes "${WEB_IMAGE}@${WEB_DIGEST}"
+
+      - name: Summarize release images
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BACKEND_DIGEST: ${{ steps.build-backend.outputs.digest }}
+          WEB_DIGEST: ${{ steps.build-web.outputs.digest }}
+        run: |
+          {
+            echo "## RetOS release images"
+            echo
+            echo "| Image | Digest |"
+            echo "| --- | --- |"
+            echo "| ${BACKEND_IMAGE}:${VERSION} | ${BACKEND_DIGEST} |"
+            echo "| ${WEB_IMAGE}:${VERSION} | ${WEB_DIGEST} |"
+            echo
+            echo "SBOM, provenance attestations, and Cosign keyless signatures were requested during this run."
+          } >> "${GITHUB_STEP_SUMMARY}"

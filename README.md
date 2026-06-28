@@ -51,6 +51,8 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Planning, ADRs, and architecture assets for the open source implementation path.
 - Test and coverage defaults that avoid paid LLM calls.
 - CI jobs that validate backend format, PEP 8, types, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke.
+- Release workflow for GHCR image publishing with SBOM/provenance attestations and Cosign
+  signing for `retos-backend` and `retos-web`.
 
 ## Development Model
 
@@ -221,6 +223,7 @@ Every meaningful change should pass these gates:
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
 | Release readiness | `make release-check` | Validates release docs, Docker image topology, safe defaults, and operations runbook coverage. |
 | Release notes | `make release-notes-check` | Validates changelog, release-process guidance, and docs links for auditable releases. |
+| Release workflow | `make release-workflow-check` | Validates GHCR publishing, SBOM/provenance, and Cosign signing workflow documentation. |
 | Docker stack smoke | `make docker-smoke` | Builds the shared backend image plus web image, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, SQuAD/HotpotQA/Natural Questions/OCR benchmark evals, eval run comparison, job lifecycle, SSE, and web over HTTP. |
 
 ## Security Defaults

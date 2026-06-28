@@ -69,6 +69,23 @@ The backend budget intentionally allows Python 3.14, OCR, PDF, and search runtim
 dependencies while still catching accidental build-context leaks or duplicate runtime
 layers. The web budget allows the Nginx runtime plus compiled React assets.
 
+## Publish
+
+`.github/workflows/release.yml` publishes release images to GHCR:
+
+| Image | Registry Package |
+| --- | --- |
+| `retos-backend` | `ghcr.io/<owner>/retos-backend` |
+| `retos-web` | `ghcr.io/<owner>/retos-web` |
+
+The workflow builds the same `backend-runtime` target used by Compose, so API, worker,
+and migrate continue to share one backend image after publishing. It also requests SBOM
+and max-mode provenance attestations from `docker/build-push-action`, then signs the
+published digests with Cosign keyless signing. Release readiness runs
+`scripts/check_release_workflow.sh` so the publishing, SBOM, provenance, and Cosign
+contract stays documented. The publish job depends on backend format/lint/type/test/eval
+smoke and frontend checks, so a tag cannot push images before the core quality gates pass.
+
 ## Smoke Test
 
 Run the same Docker smoke used by CI:

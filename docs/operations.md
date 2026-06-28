@@ -40,6 +40,13 @@ The default release budgets are `RETOS_BACKEND_IMAGE_MAX_BYTES=1400000000` and
 `RETOS_WEB_IMAGE_MAX_BYTES=200000000`. Increase those limits only when the release notes
 explain the dependency or asset change that makes the larger image intentional.
 
+Release images are published by `.github/workflows/release.yml` to GHCR as
+`retos-backend` and `retos-web`. The workflow requests SBOM and max-mode provenance
+attestations during the image builds, then signs the published digests with Cosign
+keyless signing. The workflow reruns backend and frontend gates before the publish job.
+Verify `scripts/check_release_workflow.sh` before cutting a tag so the registry
+publishing and signing contract stays aligned with the docs.
+
 Before tagging a release candidate, run:
 
 ```bash

@@ -32,7 +32,13 @@ RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_metadata.sh
 RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_size.sh
 ```
 
-3. Run the complete local gate:
+3. Validate the publishing workflow contract:
+
+```bash
+scripts/check_release_workflow.sh
+```
+
+4. Run the complete local gate:
 
 ```bash
 make release-check
@@ -43,8 +49,12 @@ make frontend-e2e
 make docker-smoke
 ```
 
-4. Confirm GitHub Actions is green for the release commit.
-5. Attach validation evidence to the GitHub release notes:
+5. Confirm GitHub Actions is green for the release commit.
+6. Push a `v<version>` tag or run `.github/workflows/release.yml` manually to publish
+   `retos-backend` and `retos-web` to GHCR with SBOM, provenance, and Cosign signatures.
+   The workflow reruns backend format/lint/type/test/eval-smoke and frontend checks before
+   any image is pushed.
+7. Attach validation evidence to the GitHub release notes:
 
 | Evidence | Required |
 | --- | --- |
@@ -56,6 +66,9 @@ make docker-smoke
 | Browser smoke | Yes |
 | Docker stack smoke | Yes |
 | Image size budgets | Yes |
+| GHCR publishing | Yes |
+| SBOM/provenance | Yes |
+| Cosign signatures | Yes |
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
@@ -100,6 +113,9 @@ Images:
 - Docker topology:
 - Image metadata:
 - Image size budgets:
+- GHCR publishing:
+- SBOM/provenance:
+- Cosign signatures:
 - Docker stack smoke:
 - Eval smoke:
 
@@ -120,5 +136,7 @@ Images:
   `make image-size-check` evidence. Default budgets can be overridden with
   `RETOS_BACKEND_IMAGE_MAX_BYTES` and `RETOS_WEB_IMAGE_MAX_BYTES` only when the release
   notes explain the increase.
+- `.github/workflows/release.yml` is the source of truth for publishing `retos-backend`
+  and `retos-web` to GHCR. It must keep SBOM, provenance, and Cosign signing enabled.
 - CI validates release docs through `make release-check`.
 - Operators use `docs/operations.md` for upgrade, backup, restore, and rollback.
