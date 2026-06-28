@@ -154,6 +154,10 @@ require(
     "check_production_preflight.sh" in ci,
     "CI must run the production preflight guard",
 )
+require(
+    "make auditor-static-check" in ci,
+    "CI must run the consolidated auditor static pack",
+)
 
 print("Audit pack OK: production readiness evidence, blockers, and links are aligned.")
 PY

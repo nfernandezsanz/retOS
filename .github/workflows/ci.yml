@@ -79,8 +79,13 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - name: Install smoke dependencies
-        run: python -m pip install -r backend/requirements.txt
+        run: python -m pip install -r backend/requirements-dev.txt
       - name: Compose config
         run: docker compose --env-file .env.example config
       - name: Docker topology
@@ -101,5 +106,7 @@ jobs:
         run: scripts/check_versioned_release_notes.sh
       - name: Image metadata source
         run: scripts/check_image_metadata.sh
+      - name: Auditor static pack
+        run: make auditor-static-check
       - name: Docker stack smoke
         run: scripts/run_docker_smoke.sh
