@@ -24,6 +24,7 @@ paths = {
     "e2e": Path("frontend/e2e/app.spec.ts"),
     "gitignore": Path(".gitignore"),
     "dockerignore": Path(".dockerignore"),
+    "ci": Path(".github/workflows/ci.yml"),
 }
 
 for name, path in paths.items():
@@ -40,6 +41,7 @@ app = paths["app"].read_text(encoding="utf-8")
 e2e = paths["e2e"].read_text(encoding="utf-8")
 gitignore = paths["gitignore"].read_text(encoding="utf-8")
 dockerignore = paths["dockerignore"].read_text(encoding="utf-8")
+ci = paths["ci"].read_text(encoding="utf-8")
 
 for phrase in (
     "![RetOS project card](docs/assets/retos-project-card.svg)",
@@ -108,6 +110,7 @@ require(
 )
 require("frontend/visual-audit/" in gitignore, ".gitignore must exclude visual audit PNGs")
 require("frontend/visual-audit" in dockerignore, ".dockerignore must exclude visual audit PNGs")
+require("npm run visual-audit" in ci, "CI must run the frontend visual audit")
 
 print("Branding assets OK: project image, mark, palette, docs, and UI smoke are aligned.")
 PY

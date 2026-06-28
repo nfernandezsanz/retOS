@@ -67,6 +67,8 @@ jobs:
         run: cd frontend && npx playwright install --with-deps chromium
       - name: Browser smoke
         run: cd frontend && npm run e2e
+      - name: Visual audit
+        run: cd frontend && npm run visual-audit
 
   docker:
     runs-on: ubuntu-latest
