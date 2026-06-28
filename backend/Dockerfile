@@ -48,5 +48,19 @@ EXPOSE 8000
 
 FROM backend-base AS backend-runtime
 
+ARG RETOS_VERSION=local
+ARG RETOS_REVISION=unknown
+ARG RETOS_CREATED=unknown
+
+LABEL org.opencontainers.image.title="RetOS Backend" \
+      org.opencontainers.image.description="Shared FastAPI, Celery worker, and migration runtime for RetOS" \
+      org.opencontainers.image.source="https://github.com/nfernandezsanz/retOS" \
+      org.opencontainers.image.url="https://github.com/nfernandezsanz/retOS" \
+      org.opencontainers.image.documentation="https://github.com/nfernandezsanz/retOS/blob/main/docs/docker.md" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="${RETOS_VERSION}" \
+      org.opencontainers.image.revision="${RETOS_REVISION}" \
+      org.opencontainers.image.created="${RETOS_CREATED}"
+
 ENTRYPOINT ["retos-backend"]
 CMD ["api"]

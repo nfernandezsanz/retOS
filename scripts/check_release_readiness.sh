@@ -22,6 +22,7 @@ for file in "${required_files[@]}"; do
 done
 
 scripts/check_docker_topology.sh >/dev/null
+scripts/check_image_metadata.sh >/dev/null
 
 python3 - <<'PY'
 from __future__ import annotations
@@ -77,6 +78,7 @@ for phrase in (
     "retos-backend",
     "retos-web",
     "RETOS_IMAGE_TAG",
+    "org.opencontainers.image",
     "docker compose --env-file .env.example config",
     "make docker-smoke",
 ):

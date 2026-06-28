@@ -22,6 +22,19 @@ RETOS_IMAGE_TAG=2026.06.28 docker compose --env-file .env.example config
 scripts/check_docker_topology.sh
 ```
 
+Application images must also carry `org.opencontainers.image.*` OCI metadata labels for
+source, documentation, license, version, revision, and build creation time:
+
+```bash
+RETOS_VERSION=2026.06.28 \
+RETOS_REVISION="$(git rev-parse HEAD)" \
+RETOS_CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+RETOS_IMAGE_TAG=2026.06.28 \
+docker compose build api web
+
+RETOS_REQUIRE_BUILT_IMAGES=1 RETOS_IMAGE_TAG=2026.06.28 scripts/check_image_metadata.sh
+```
+
 Before tagging a release candidate, run:
 
 ```bash
@@ -197,6 +210,7 @@ make api-smoke
 - Back up Postgres and storage before image upgrades or schema migrations.
 - Treat `evals/datasets` as operator-provided data; do not commit downloaded datasets.
 - Verify `scripts/check_docker_topology.sh` before release so worker and API cannot drift.
+- Verify `scripts/check_image_metadata.sh` before release so images remain traceable to source and license.
 
 ## Rollback Notes
 

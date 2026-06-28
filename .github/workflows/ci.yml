@@ -63,6 +63,10 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    env:
+      RETOS_VERSION: ci
+      RETOS_REVISION: ${{ github.sha }}
+      RETOS_CREATED: ci
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6

@@ -22,16 +22,38 @@ Build only application images:
 docker compose build api web
 ```
 
+Build tagged, traceable release images:
+
+```bash
+RETOS_IMAGE_TAG=2026.06.28 \
+RETOS_VERSION=2026.06.28 \
+RETOS_REVISION="$(git rev-parse HEAD)" \
+RETOS_CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+docker compose build api web
+```
+
 The `worker` service intentionally does not have its own build or Dockerfile. It runs the exact same `retos-backend` image built by the `api` service from the `backend-runtime` target with `command: ["worker"]`.
 
 The `migrate` service also uses `retos-backend` and runs `command: ["migrate"]`.
 It applies `alembic upgrade head` before API and worker start.
+
+Both application images include OCI labels for source repository, documentation, MIT
+license, version, revision, and build creation time. Compose passes these build args:
+
+| Build Arg | Default | Purpose |
+| --- | --- | --- |
+| `RETOS_VERSION` | `local` | Human release or package version. |
+| `RETOS_REVISION` | `unknown` | Git commit SHA or source revision. |
+| `RETOS_CREATED` | `unknown` | Build timestamp, preferably RFC 3339 UTC. |
 
 CI enforces this topology with `scripts/check_docker_topology.sh`: `api`, `worker`,
 and `migrate` must resolve to the same backend image, only `api` may declare the
 shared backend build, the backend build must use `backend/Dockerfile` from the
 repository root, the target must be `backend-runtime`, and each role may differ
 only by command.
+
+CI also runs `scripts/check_image_metadata.sh` so release images cannot lose their
+OCI labels. Docker smoke inspects the built `retos-backend` and `retos-web` images.
 
 ## Smoke Test
 

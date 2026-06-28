@@ -6,6 +6,10 @@ x-backend-build: &backend-build
   context: .
   dockerfile: backend/Dockerfile
   target: backend-runtime
+  args: &image-build-args
+    RETOS_VERSION: ${RETOS_VERSION:-local}
+    RETOS_REVISION: ${RETOS_REVISION:-unknown}
+    RETOS_CREATED: ${RETOS_CREATED:-unknown}
 
 x-app-env: &app-env
   RETOS_DATABASE_URL: postgresql+asyncpg://retos:${RETOS_POSTGRES_PASSWORD:-retos}@postgres:5432/retos
@@ -93,6 +97,7 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args: *image-build-args
     init: true
     ports:
       - "8080:8080"
