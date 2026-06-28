@@ -158,6 +158,18 @@ async function mockProviderApi(page: Page) {
       },
     ],
   };
+  const naturalQuestionsReport = {
+    ...evalReport,
+    suite_name: "natural-questions",
+    case_count: 1,
+    cases: [
+      {
+        ...evalReport.cases[0],
+        case_id: "natural-questions-123",
+        question: "Which star is Mercury closest to?",
+      },
+    ],
+  };
   const evalRuns: { job: ReturnType<typeof jobFixture>; report: typeof evalReport | null }[] = [];
   const adminUsers = [
     {
@@ -779,6 +791,26 @@ async function mockProviderApi(page: Page) {
       json: { job, report: hotpotqaReport, report_paths: reportPaths },
     });
   });
+  await page.route("http://localhost:8000/evals/natural-questions", async (route) => {
+    const reportPaths = {
+      json: "/var/lib/retos/evals/reports/ui-natural-questions.json",
+      markdown: "/var/lib/retos/evals/reports/ui-natural-questions.md",
+    };
+    const job = jobFixture("job-eval-natural-questions-1", "eval.run", "succeeded", {
+      dataset_path: "/var/lib/retos/evals/datasets/ui-nq.jsonl",
+      max_cases: 1,
+      report_paths: reportPaths,
+      result: naturalQuestionsReport,
+    });
+    jobs.unshift(job);
+    evalRuns.unshift({ job, report: naturalQuestionsReport });
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: { job, report: naturalQuestionsReport, report_paths: reportPaths },
+    });
+  });
   await page.route("http://localhost:8000/evals/runs?limit=6", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -854,7 +886,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();
 
   await page
-    .getByLabel("Question")
+    .getByRole("textbox", { name: "Question", exact: true })
     .fill("What evidence mentions search readiness?");
   await page.getByRole("button", { name: "Run grounded query" }).click();
 
@@ -964,6 +996,15 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval run history").getByText("1 cases")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.md")).toBeVisible();
+
+  await page.getByLabel("Natural Questions dataset path").fill("ui-nq.jsonl");
+  await page.getByLabel("Natural Questions max cases").fill("1");
+  await page.getByLabel("Natural Questions report stem").fill("ui-natural-questions");
+  await page.getByRole("button", { name: "Run Natural Questions eval" }).click();
+  await expect(page.getByLabel("Eval cases").getByText("natural-questions-123")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("natural-questions")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-natural-questions.json")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-natural-questions.md")).toBeVisible();
 
   await page.getByRole("button", { name: "Compare latest" }).click();
   await expect(page.getByLabel("Eval comparison").getByText("retos-smoke")).toBeVisible();

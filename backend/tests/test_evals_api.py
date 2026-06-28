@@ -121,6 +121,31 @@ def write_hotpotqa_api_fixture(path: Path) -> Path:
     return path
 
 
+def write_natural_questions_api_fixture(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "example_id": 123,
+                "question_text": "Which star is Mercury closest to?",
+                "document_title": "Mercury (planet)",
+                "document_text": (
+                    "Mercury is the closest planet to the Sun and has a short orbital year."
+                ),
+                "annotations": [
+                    {
+                        "long_answer": {"start_token": 0, "end_token": 14},
+                        "short_answers": [{"start_token": 7, "end_token": 8}],
+                        "yes_no_answer": "NONE",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_smoke_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post("/evals/smoke")
 
@@ -135,6 +160,15 @@ def test_squad_eval_requires_admin_token(evals_client: TestClient) -> None:
 
 def test_hotpotqa_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post("/evals/hotpotqa", json={"dataset_path": "fixture.json"})
+
+    assert response.status_code == 401
+
+
+def test_natural_questions_eval_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.post(
+        "/evals/natural-questions",
+        json={"dataset_path": "fixture.json"},
+    )
 
     assert response.status_code == 401
 
@@ -288,6 +322,47 @@ def test_hotpotqa_eval_runs_and_exports_report(
     assert eval_runs.status_code == 200
     assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
     assert eval_runs.json()[0]["report"]["suite_name"] == "hotpotqa"
+
+
+def test_natural_questions_eval_runs_and_exports_report(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    squad_report_root: Path,
+) -> None:
+    write_natural_questions_api_fixture(squad_dataset_root / "tiny-nq.jsonl")
+
+    response = evals_client.post(
+        "/evals/natural-questions",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "tiny-nq.jsonl",
+            "max_cases": 1,
+            "write_report": True,
+            "report_stem": "nightly/natural questions",
+        },
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job"]["kind"] == "eval.run"
+    assert body["job"]["status"] == "succeeded"
+    assert body["report"]["suite_name"] == "natural-questions"
+    assert body["report"]["passed"] is True
+    assert body["report"]["case_count"] == 1
+    assert body["report_paths"] == {
+        "json": str(squad_report_root / "nightly-natural-questions.json"),
+        "markdown": str(squad_report_root / "nightly-natural-questions.md"),
+    }
+    assert body["job"]["payload"]["dataset_path"] == str(squad_dataset_root / "tiny-nq.jsonl")
+    assert body["job"]["payload"]["max_cases"] == 1
+    assert body["job"]["payload"]["report_paths"] == body["report_paths"]
+    assert body["job"]["payload"]["result"]["suite_name"] == "natural-questions"
+
+    eval_runs = evals_client.get("/evals/runs", headers=evals_admin_headers)
+    assert eval_runs.status_code == 200
+    assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
+    assert eval_runs.json()[0]["report"]["suite_name"] == "natural-questions"
 
 
 def test_squad_eval_accepts_absolute_dataset_path_inside_root(

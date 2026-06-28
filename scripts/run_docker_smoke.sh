@@ -125,6 +125,26 @@ dataset_root.mkdir(parents=True, exist_ok=True)
     ),
     encoding="utf-8",
 )
+(dataset_root / "smoke-nq.jsonl").write_text(
+    json.dumps(
+        {
+            "example_id": 123,
+            "question_text": "Which star is Mercury closest to?",
+            "document_title": "Mercury (planet)",
+            "document_text": (
+                "Mercury is the closest planet to the Sun and has a short orbital year."
+            ),
+            "annotations": [
+                {
+                    "long_answer": {"start_token": 0, "end_token": 14},
+                    "short_answers": [{"start_token": 7, "end_token": 8}],
+                    "yes_no_answer": "NONE",
+                }
+            ],
+        }
+    ),
+    encoding="utf-8",
+)
 PY
 curl --fail --silent --show-error http://127.0.0.1:8000/healthz >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null
@@ -140,3 +160,5 @@ RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me \
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-squad.md
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-hotpotqa.json
 "${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-hotpotqa.md
+"${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-natural-questions.json
+"${compose[@]}" exec -T api test -f /var/lib/retos/evals/reports/api-smoke-natural-questions.md

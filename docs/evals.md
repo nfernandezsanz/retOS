@@ -45,6 +45,12 @@ Run an opt-in HotpotQA dataset eval from a local file:
 make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpot_dev_distractor_v1.json MAX_CASES=50
 ```
 
+Run an opt-in Natural Questions dataset eval from a local JSONL or JSON file:
+
+```bash
+make eval-natural-questions NQ_PATH=evals/datasets/nq-dev-sample.jsonl MAX_CASES=50
+```
+
 Persist both JSON and Markdown reports:
 
 ```bash
@@ -68,7 +74,8 @@ PYTHONPATH=src python scripts/run_eval_smoke.py \
   --format markdown
 ```
 
-HotpotQA uses the same report flags with `--suite hotpotqa`.
+HotpotQA and Natural Questions use the same report flags with `--suite hotpotqa` and
+`--suite natural-questions`.
 
 ## What The Smoke Suite Measures
 
@@ -117,8 +124,9 @@ curl "http://localhost:8000/evals/runs?limit=6" \
 ```
 
 The React console uses these endpoints in the `Local evals` panel to run smoke,
-SQuAD, and HotpotQA evals, show metrics, per-case status, exported report paths,
-and a newest-first run history. It can also compare the latest two reported runs through:
+SQuAD, HotpotQA, and Natural Questions evals, show metrics, per-case status, exported
+report paths, and a newest-first run history. It can also compare the latest two
+reported runs through:
 
 ```bash
 curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&candidate_job_id=<new_job_id>" \
@@ -157,6 +165,21 @@ curl --request POST http://localhost:8000/evals/hotpotqa \
   }'
 ```
 
+Dataset-backed Natural Questions evals use the same request body against
+`/evals/natural-questions`:
+
+```bash
+curl --request POST http://localhost:8000/evals/natural-questions \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "dataset_path":"nq-dev-sample.jsonl",
+    "max_cases":50,
+    "write_report":true,
+    "report_stem":"natural-questions-dev-50"
+  }'
+```
+
 `dataset_path` may be relative or absolute, but it must resolve inside
 `RETOS_EVAL_DATASET_ROOT`. Reports are written only when `write_report=true`, and
 always land under `RETOS_EVAL_REPORT_ROOT` as both JSON and Markdown. This keeps
@@ -170,7 +193,7 @@ or read user-provided dataset files under explicit opt-in commands.
 | Dataset | Use | Notes |
 | --- | --- | --- |
 | [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/) | Reading comprehension and abstention. | The official page describes answerable and unanswerable questions over Wikipedia passages and links downloads under CC BY-SA 4.0. |
-| [Natural Questions](https://ai.google.com/research/NaturalQuestions/) | Real user questions with Wikipedia evidence. | The official Google page describes questions from real users requiring systems to read a Wikipedia article; the public GitHub repository is Apache-2.0. |
+| [Natural Questions](https://ai.google.com/research/NaturalQuestions/) | Implemented for real user questions with Wikipedia evidence. | The official Google page describes questions from real users requiring systems to read a Wikipedia article; the public GitHub repository is Apache-2.0. |
 | [HotpotQA](https://hotpotqa.github.io/) | Implemented for multi-hop retrieval and supporting-fact evaluation. | The official benchmark focuses on natural multi-hop questions and supporting facts for explainability. |
 | [FUNSD](https://guillaumejaume.github.io/FUNSD/) | Form understanding and OCR/layout pressure. | Useful once RetOS stores page-level OCR artifacts and layout metadata. |
 | [ICDAR 2019 SROIE](https://rrc.cvc.uab.es/?ch=13) | Receipt OCR and key information extraction. | Useful for scanned-document extraction quality and audit traces. |
@@ -229,6 +252,33 @@ Adapter guarantees:
   fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.
 
+## Natural Questions Adapter
+
+The Natural Questions adapter reads local JSONL, `.jsonl.gz`, JSON arrays, or JSON objects
+that follow the official Google Research shape:
+
+```text
+{example_id, question_text, document_text|document_tokens, annotations}
+annotations[] -> {long_answer, short_answers, yes_no_answer}
+```
+
+Each answerable case becomes one `EvalCase` with the annotated long-answer span as the
+indexed document. The expected citation title comes from `document_title`, `title`, or
+the final segment of `document_url`. Short-answer spans become grounded answer terms;
+`YES`/`NO` answers are kept as retrieval/citation cases without brittle term checks. Cases
+with no valid long answer become abstention cases when unanswerable examples are enabled.
+
+Adapter guarantees:
+
+- No network access.
+- No paid model calls.
+- `--max-cases` bounds runtime for local experiments.
+- `POST /evals/natural-questions` can run the same adapter through the admin API and
+  persist report paths in the durable eval job payload.
+- Malformed JSONL lines, missing annotations, invalid token spans, and missing document
+  text fail fast with explicit errors.
+- Tests use tiny generated fixtures, not vendored benchmark data.
+
 ## Adapter Rules
 
 - Adapters must be optional and skipped unless dataset paths are provided.
@@ -241,6 +291,5 @@ Adapter guarantees:
 
 ## Next Implementation Step
 
-Add Natural Questions for broader real-query retrieval coverage, then wire OCR benchmark
-adapters into the persisted eval run history and React comparison view using the existing
-page-level OCR artifacts.
+Wire OCR benchmark adapters into the persisted eval run history and React comparison view
+using the existing page-level OCR artifacts.

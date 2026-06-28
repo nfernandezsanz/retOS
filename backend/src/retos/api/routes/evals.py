@@ -13,8 +13,10 @@ from retos.domain.jobs import Job, JobStatus
 from retos.evals.datasets import (
     DatasetAdapterError,
     HotpotQAAdapterOptions,
+    NaturalQuestionsAdapterOptions,
     SquadAdapterOptions,
     load_hotpotqa_cases,
+    load_natural_questions_cases,
     load_squad_v2_cases,
 )
 from retos.evals.reports import write_report_files
@@ -137,6 +139,13 @@ class SquadEvalRequest(BaseModel):
 
 
 class HotpotQAEvalRequest(BaseModel):
+    dataset_path: str = Field(min_length=1, max_length=500)
+    max_cases: int = Field(default=50, ge=1, le=1000)
+    write_report: bool = False
+    report_stem: str | None = Field(default=None, max_length=120)
+
+
+class NaturalQuestionsEvalRequest(BaseModel):
     dataset_path: str = Field(min_length=1, max_length=500)
     max_cases: int = Field(default=50, ge=1, le=1000)
     write_report: bool = False
@@ -295,9 +304,35 @@ async def run_hotpotqa_evals(
     )
 
 
+@router.post(
+    "/natural-questions",
+    response_model=EvalRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def run_natural_questions_evals(
+    request: NaturalQuestionsEvalRequest,
+    actor: AdminSubjectDep,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+) -> EvalRunResponse:
+    return await run_dataset_evals(
+        request=request,
+        actor=actor,
+        settings=settings,
+        uow=uow,
+        suite_name="natural-questions",
+        suite_label="Natural Questions",
+        index_namespace="natural-questions",
+        load_cases=lambda dataset_path: load_natural_questions_cases(
+            dataset_path,
+            NaturalQuestionsAdapterOptions(max_cases=request.max_cases),
+        ),
+    )
+
+
 async def run_dataset_evals(
     *,
-    request: SquadEvalRequest | HotpotQAEvalRequest,
+    request: SquadEvalRequest | HotpotQAEvalRequest | NaturalQuestionsEvalRequest,
     actor: str,
     settings: SettingsDep,
     uow: UnitOfWorkDep,

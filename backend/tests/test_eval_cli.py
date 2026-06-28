@@ -88,6 +88,30 @@ def write_hotpotqa_cli_fixture(path: Path) -> Path:
     return path
 
 
+def write_natural_questions_cli_fixture(path: Path) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "example_id": 123,
+                "question_text": "Which star is Mercury closest to?",
+                "document_title": "Mercury (planet)",
+                "document_text": (
+                    "Mercury is the closest planet to the Sun and has a short orbital year."
+                ),
+                "annotations": [
+                    {
+                        "long_answer": {"start_token": 0, "end_token": 14},
+                        "short_answers": [{"start_token": 7, "end_token": 8}],
+                        "yes_no_answer": "NONE",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_eval_cli_runs_squad_suite_from_local_file(tmp_path: Path, capsys) -> None:
     dataset_path = write_squad_cli_fixture(tmp_path / "squad.json")
     cli = load_eval_cli()
@@ -121,6 +145,27 @@ def test_eval_cli_runs_hotpotqa_suite_from_local_file(tmp_path: Path, capsys) ->
     captured = capsys.readouterr()
     assert exit_code == 0
     assert '"suite_name": "hotpotqa"' in captured.out
+    assert '"case_count": 1' in captured.out
+
+
+def test_eval_cli_runs_natural_questions_suite_from_local_file(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    dataset_path = write_natural_questions_cli_fixture(tmp_path / "nq.jsonl")
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="json",
+        suite="natural-questions",
+        dataset_path=dataset_path,
+        max_cases=1,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert '"suite_name": "natural-questions"' in captured.out
     assert '"case_count": 1' in captured.out
 
 

@@ -11,8 +11,10 @@ from pytesseract import TesseractNotFoundError
 from retos.evals.datasets import (
     DatasetAdapterError,
     HotpotQAAdapterOptions,
+    NaturalQuestionsAdapterOptions,
     SquadAdapterOptions,
     load_hotpotqa_cases,
+    load_natural_questions_cases,
     load_squad_v2_cases,
 )
 from retos.evals.ocr import OCRQualityReport, run_ocr_quality_suite
@@ -24,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run RetOS local smoke evals.")
     parser.add_argument(
         "--suite",
-        choices=("smoke", "squad", "hotpotqa", "ocr-smoke"),
+        choices=("smoke", "squad", "hotpotqa", "natural-questions", "ocr-smoke"),
         default="smoke",
         help="Eval suite to run.",
     )
@@ -152,12 +154,18 @@ def build_report(
             SquadAdapterOptions(max_cases=max_cases),
         )
         suite_name = "squad-v2"
-    else:
+    elif suite == "hotpotqa":
         cases = load_hotpotqa_cases(
             dataset_path,
             HotpotQAAdapterOptions(max_cases=max_cases),
         )
         suite_name = "hotpotqa"
+    else:
+        cases = load_natural_questions_cases(
+            dataset_path,
+            NaturalQuestionsAdapterOptions(max_cases=max_cases),
+        )
+        suite_name = "natural-questions"
     if not cases:
         raise DatasetAdapterError(f"{suite_name} dataset produced no eval cases")
     return run_smoke_eval_suite(

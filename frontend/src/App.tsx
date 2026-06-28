@@ -716,6 +716,24 @@ async function runHotpotQAEval(
   });
 }
 
+async function runNaturalQuestionsEval(
+  token: string,
+  payload: {
+    dataset_path: string;
+    max_cases: number;
+    write_report: boolean;
+    report_stem: string | null;
+  },
+): Promise<EvalRunResponse> {
+  return requestJson<EvalRunResponse>("/evals/natural-questions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 async function loadEvalRuns(token: string): Promise<EvalRunRead[]> {
   return requestJson<EvalRunRead[]>("/evals/runs?limit=6", {
     headers: {
@@ -936,6 +954,7 @@ function App() {
   const [isRunningEval, setIsRunningEval] = useState(false);
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
   const [isRunningHotpotQAEval, setIsRunningHotpotQAEval] = useState(false);
+  const [isRunningNaturalQuestionsEval, setIsRunningNaturalQuestionsEval] = useState(false);
   const [isComparingEvals, setIsComparingEvals] = useState(false);
   const [squadDatasetPath, setSquadDatasetPath] = useState("dev-v2.0.json");
   const [squadMaxCases, setSquadMaxCases] = useState("50");
@@ -947,6 +966,14 @@ function App() {
   const [hotpotqaMaxCases, setHotpotqaMaxCases] = useState("50");
   const [hotpotqaWriteReport, setHotpotqaWriteReport] = useState(true);
   const [hotpotqaReportStem, setHotpotqaReportStem] = useState("hotpotqa-dev-50");
+  const [naturalQuestionsDatasetPath, setNaturalQuestionsDatasetPath] = useState(
+    "nq-dev-sample.jsonl",
+  );
+  const [naturalQuestionsMaxCases, setNaturalQuestionsMaxCases] = useState("50");
+  const [naturalQuestionsWriteReport, setNaturalQuestionsWriteReport] = useState(true);
+  const [naturalQuestionsReportStem, setNaturalQuestionsReportStem] = useState(
+    "natural-questions-dev-50",
+  );
   const [evalError, setEvalError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
   const [liveError, setLiveError] = useState<string | null>(null);
@@ -1007,7 +1034,11 @@ function App() {
     () => groupProgressByJob(auditProgressEvents, queuedJobs),
     [auditProgressEvents, queuedJobs],
   );
-  const isAnyEvalRunning = isRunningEval || isRunningSquadEval || isRunningHotpotQAEval;
+  const isAnyEvalRunning =
+    isRunningEval ||
+    isRunningSquadEval ||
+    isRunningHotpotQAEval ||
+    isRunningNaturalQuestionsEval;
   const comparableEvalRuns = evalRuns.filter((run) => run.report !== null);
 
   useEffect(() => {
@@ -1662,6 +1693,36 @@ function App() {
       setEvalError(error instanceof Error ? error.message : "HotpotQA eval failed");
     } finally {
       setIsRunningHotpotQAEval(false);
+    }
+  }
+
+  async function handleRunNaturalQuestionsEval(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsRunningNaturalQuestionsEval(true);
+    setEvalError(null);
+    try {
+      const datasetPath = naturalQuestionsDatasetPath.trim();
+      const parsedMaxCases = Number.parseInt(naturalQuestionsMaxCases, 10);
+      if (!datasetPath) {
+        throw new Error("Natural Questions dataset path is required");
+      }
+      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+        throw new Error("Natural Questions max cases must be between 1 and 1000");
+      }
+      const accessToken = await getAdminToken();
+      const response = await runNaturalQuestionsEval(accessToken, {
+        dataset_path: datasetPath,
+        max_cases: parsedMaxCases,
+        write_report: naturalQuestionsWriteReport,
+        report_stem: naturalQuestionsReportStem.trim() || null,
+      });
+      applyEvalResponse(response);
+      await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "Natural Questions eval failed");
+    } finally {
+      setIsRunningNaturalQuestionsEval(false);
     }
   }
 
@@ -2573,6 +2634,61 @@ function App() {
               >
                 <FileSearch aria-hidden="true" />
                 {isRunningHotpotQAEval ? "Running HotpotQA eval" : "Run HotpotQA eval"}
+              </button>
+            </form>
+            <form
+              className="eval-dataset-form"
+              onSubmit={(event) => void handleRunNaturalQuestionsEval(event)}
+            >
+              <label className="span-two">
+                Natural Questions dataset path
+                <input
+                  aria-label="Natural Questions dataset path"
+                  value={naturalQuestionsDatasetPath}
+                  onChange={(event) => setNaturalQuestionsDatasetPath(event.target.value)}
+                  placeholder="nq-dev-sample.jsonl"
+                />
+              </label>
+              <label>
+                Max cases
+                <input
+                  aria-label="Natural Questions max cases"
+                  inputMode="numeric"
+                  min="1"
+                  max="1000"
+                  type="number"
+                  value={naturalQuestionsMaxCases}
+                  onChange={(event) => setNaturalQuestionsMaxCases(event.target.value)}
+                />
+              </label>
+              <label>
+                Report stem
+                <input
+                  aria-label="Natural Questions report stem"
+                  disabled={!naturalQuestionsWriteReport}
+                  value={naturalQuestionsReportStem}
+                  onChange={(event) => setNaturalQuestionsReportStem(event.target.value)}
+                  placeholder="natural-questions-dev-50"
+                />
+              </label>
+              <label className="checkbox-field">
+                <input
+                  aria-label="Write Natural Questions reports"
+                  checked={naturalQuestionsWriteReport}
+                  type="checkbox"
+                  onChange={(event) => setNaturalQuestionsWriteReport(event.target.checked)}
+                />
+                <span>Write reports</span>
+              </label>
+              <button
+                className="secondary-action"
+                disabled={isAnyEvalRunning}
+                type="submit"
+              >
+                <FileSearch aria-hidden="true" />
+                {isRunningNaturalQuestionsEval
+                  ? "Running Natural Questions eval"
+                  : "Run Natural Questions eval"}
               </button>
             </form>
             {evalError ? (

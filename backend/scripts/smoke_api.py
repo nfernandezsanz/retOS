@@ -138,6 +138,33 @@ def prepare_hotpotqa_dataset() -> Path:
     return dataset_path
 
 
+def prepare_natural_questions_dataset() -> Path:
+    dataset_root = Path(os.environ["RETOS_EVAL_DATASET_ROOT"])
+    dataset_root.mkdir(parents=True, exist_ok=True)
+    dataset_path = dataset_root / "smoke-nq.jsonl"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "example_id": 123,
+                "question_text": "Which star is Mercury closest to?",
+                "document_title": "Mercury (planet)",
+                "document_text": (
+                    "Mercury is the closest planet to the Sun and has a short orbital year."
+                ),
+                "annotations": [
+                    {
+                        "long_answer": {"start_token": 0, "end_token": 14},
+                        "short_answers": [{"start_token": 7, "end_token": 8}],
+                        "yes_no_answer": "NONE",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return dataset_path
+
+
 def main() -> None:
     base_url = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     admin_email = os.environ.get("RETOS_BOOTSTRAP_ADMIN_EMAIL", "admin@retos.dev")
@@ -149,6 +176,7 @@ def main() -> None:
     if prepare_datasets:
         prepare_squad_dataset()
         prepare_hotpotqa_dataset()
+        prepare_natural_questions_dataset()
 
     try:
         with httpx.Client(base_url=base_url, timeout=10) as client:
@@ -720,6 +748,51 @@ def main() -> None:
                     "HotpotQA Markdown report was not written",
                 )
 
+            nq_eval = client.post(
+                "/evals/natural-questions",
+                headers=auth_headers,
+                json={
+                    "dataset_path": "smoke-nq.jsonl",
+                    "max_cases": 1,
+                    "write_report": True,
+                    "report_stem": "api-smoke-natural-questions",
+                },
+            )
+            require(
+                nq_eval.status_code == 202,
+                f"Natural Questions eval failed: {nq_eval.status_code} {nq_eval.text}",
+            )
+            nq_body = nq_eval.json()
+            require(
+                nq_body["job"]["kind"] == "eval.run",
+                "invalid Natural Questions eval job kind",
+            )
+            require(
+                nq_body["job"]["status"] == "succeeded",
+                "Natural Questions eval did not succeed",
+            )
+            require(
+                nq_body["report"]["suite_name"] == "natural-questions",
+                "invalid Natural Questions suite",
+            )
+            require(
+                nq_body["report"]["case_count"] == 1,
+                "unexpected Natural Questions case count",
+            )
+            require(
+                nq_body["report_paths"],
+                "Natural Questions eval did not return report paths",
+            )
+            if check_report_files:
+                require(
+                    Path(nq_body["report_paths"]["json"]).exists(),
+                    "Natural Questions JSON report was not written",
+                )
+                require(
+                    Path(nq_body["report_paths"]["markdown"]).exists(),
+                    "Natural Questions Markdown report was not written",
+                )
+
             eval_runs = client.get("/evals/runs", headers=auth_headers)
             require(
                 eval_runs.status_code == 200,
@@ -727,8 +800,8 @@ def main() -> None:
             )
             latest_eval_run = eval_runs.json()[0]
             require(
-                latest_eval_run["job"]["id"] == hotpotqa_body["job"]["id"],
-                "latest eval run did not match HotpotQA eval",
+                latest_eval_run["job"]["id"] == nq_body["job"]["id"],
+                "latest eval run did not match Natural Questions eval",
             )
             require(
                 latest_eval_run["report"]["passed"] is True,
@@ -739,7 +812,7 @@ def main() -> None:
                 headers=auth_headers,
                 params={
                     "baseline_job_id": eval_body["job"]["id"],
-                    "candidate_job_id": hotpotqa_body["job"]["id"],
+                    "candidate_job_id": nq_body["job"]["id"],
                 },
             )
             require(
@@ -752,8 +825,8 @@ def main() -> None:
                 "eval comparison baseline did not match smoke eval",
             )
             require(
-                comparison_body["candidate"]["job_id"] == hotpotqa_body["job"]["id"],
-                "eval comparison candidate did not match HotpotQA eval",
+                comparison_body["candidate"]["job_id"] == nq_body["job"]["id"],
+                "eval comparison candidate did not match Natural Questions eval",
             )
             require(
                 any(metric["name"] == "retrieval_recall" for metric in comparison_body["metrics"]),

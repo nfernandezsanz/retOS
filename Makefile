@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-ocr eval-squad eval-hotpotqa check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-ocr eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -19,6 +19,7 @@ help:
 	@printf "  make eval-ocr         Run opt-in local OCR quality evals\n"
 	@printf "  make eval-squad       Run opt-in SQuAD v2 evals with SQUAD_PATH=...\n"
 	@printf "  make eval-hotpotqa    Run opt-in HotpotQA evals with HOTPOTQA_PATH=...\n"
+	@printf "  make eval-natural-questions Run opt-in Natural Questions evals with NQ_PATH=...\n"
 	@printf "  make check            Run backend format/lint/typecheck/tests\n"
 	@printf "  make frontend-install Install frontend dependencies\n"
 	@printf "  make frontend-test    Run frontend checks\n"
@@ -74,6 +75,12 @@ ifndef HOTPOTQA_PATH
 	$(error HOTPOTQA_PATH is required, for example make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpot_dev_distractor_v1.json)
 endif
 	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite hotpotqa --dataset-path "$(HOTPOTQA_PATH)" --max-cases "$(or $(MAX_CASES),50)" --format markdown $(if $(REPORT_DIR),--report-dir "$(REPORT_DIR)",) $(if $(REPORT_STEM),--report-stem "$(REPORT_STEM)",)
+
+eval-natural-questions:
+ifndef NQ_PATH
+	$(error NQ_PATH is required, for example make eval-natural-questions NQ_PATH=evals/datasets/nq-dev-sample.jsonl)
+endif
+	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite natural-questions --dataset-path "$(NQ_PATH)" --max-cases "$(or $(MAX_CASES),50)" --format markdown $(if $(REPORT_DIR),--report-dir "$(REPORT_DIR)",) $(if $(REPORT_STEM),--report-stem "$(REPORT_STEM)",)
 
 check: format-check lint typecheck test eval-smoke
 
