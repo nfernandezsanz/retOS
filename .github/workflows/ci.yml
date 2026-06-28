@@ -80,5 +80,13 @@ jobs:
         run: scripts/check_docker_topology.sh
       - name: Release readiness
         run: scripts/check_release_readiness.sh
+      - name: Release workflow
+        run: scripts/check_release_workflow.sh
+      - name: Release notes
+        run: scripts/check_release_notes.sh
+      - name: Versioned release notes
+        run: scripts/check_versioned_release_notes.sh
+      - name: Image metadata source
+        run: scripts/check_image_metadata.sh
       - name: Docker stack smoke
         run: scripts/run_docker_smoke.sh

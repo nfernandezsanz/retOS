@@ -33,6 +33,8 @@ tag in GitHub.
   runtime image ID guards.
 - Docker topology guard now fails if API and worker drift in application environment or
   persistent backend state volumes while sharing the backend image.
+- CI now validates release workflow, release notes, versioned release notes, and static
+  OCI image metadata before the Docker stack smoke run.
 - OCI image metadata labels for backend and web images, including source, license,
   version, revision, and build timestamp.
 - Release readiness checks for Docker topology, image metadata, safe local defaults, and
