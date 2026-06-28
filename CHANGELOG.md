@@ -57,6 +57,11 @@ tag in GitHub.
 - HotpotQA supporting facts can now be converted into a local `hotpotqa-agent` eval
   profile for deterministic agent query-plan, evidence-route, bridge-term, grounding,
   citation, and budget calibration through CLI, admin API, rerun, and React controls.
+- Dataset fetch profiles now support retryable source mirrors and persist the effective
+  `source_url`, giving real-dataset calibration runs clearer provenance when an
+  official primary endpoint is unavailable.
+- Networked eval dataset fetches now use the bundled `certifi` CA store to avoid local
+  Python certificate-store drift during opt-in real-dataset calibration.
 
 ### Changed
 

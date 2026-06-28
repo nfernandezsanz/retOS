@@ -31,6 +31,7 @@ def test_fetcher_lists_public_profiles() -> None:
     assert "nq-open-train-adapter" in table
     assert "nq-simplified-local" in table
     assert "funsd" in table
+    assert fetcher.DATASET_PROFILES["hotpotqa-dev-distractor"].mirror_urls
 
 
 def test_fetcher_samples_squad_fixture(tmp_path: Path) -> None:
@@ -207,6 +208,7 @@ def test_fetch_profile_downloads_and_samples_without_overwriting(
 
     assert result["profile"] == "squad-dev-v2"
     assert result["records"] == 1
+    assert result["source_url"] == fetcher.DATASET_PROFILES["squad-dev-v2"].url
     output_path = Path(result["path"])
     assert output_path.exists()
     assert json.loads(output_path.read_text(encoding="utf-8"))["data"][0]["paragraphs"][0][
@@ -223,6 +225,60 @@ def test_fetch_profile_downloads_and_samples_without_overwriting(
         assert "overwrite" in str(exc)
     else:
         raise AssertionError("Expected overwrite protection to fail")
+
+
+def test_fetch_profile_uses_dataset_mirror_when_primary_download_fails(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    fetcher = load_fetcher()
+    payload = json.dumps([{"_id": "case-1"}, {"_id": "case-2"}]).encode()
+    primary_url = "https://example.invalid/primary.json"
+    mirror_url = "https://example.test/mirror.json"
+    calls: list[str] = []
+
+    class FakeResponse:
+        def __init__(self) -> None:
+            self.stream = io.BytesIO(payload)
+
+        def __enter__(self) -> FakeResponse:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self, size: int = -1) -> bytes:
+            return self.stream.read(size)
+
+    def fake_urlopen(url: str, **_: object) -> FakeResponse:
+        calls.append(url)
+        if url == primary_url:
+            raise fetcher.urllib.error.URLError("primary unavailable")
+        return FakeResponse()
+
+    profile = fetcher.DatasetProfile(
+        name="mirror-fixture",
+        suite="hotpotqa",
+        url=primary_url,
+        output_name="mirror-sample.json",
+        description="Mirror test fixture",
+        license_note="Fixture license",
+        source_homepage="https://example.test",
+        sampler=lambda src, dest, limit: fetcher.write_json_list_sample(src, dest, limit),
+        mirror_urls=(mirror_url,),
+    )
+    monkeypatch.setattr(fetcher.urllib.request, "urlopen", fake_urlopen)
+
+    result = fetcher.fetch_profile(
+        profile=profile,
+        output_dir=tmp_path,
+        max_records=1,
+        download_retries=1,
+    )
+
+    assert calls == [primary_url, mirror_url]
+    assert result["source_url"] == mirror_url
+    assert json.loads(Path(result["path"]).read_text(encoding="utf-8")) == [{"_id": "case-1"}]
 
 
 def test_fetch_profile_can_write_nq_open_adapter_sample(
@@ -339,3 +395,27 @@ def test_fetch_profile_rejects_manual_and_invalid_profiles(tmp_path: Path) -> No
         assert "greater than zero" in str(exc)
     else:
         raise AssertionError("Expected non-positive max records to fail")
+
+    try:
+        fetcher.fetch_profile(
+            profile=fetcher.DATASET_PROFILES["squad-dev-v2"],
+            output_dir=tmp_path,
+            max_records=1,
+            download_timeout=0,
+        )
+    except fetcher.DatasetFetchError as exc:
+        assert "download-timeout" in str(exc)
+    else:
+        raise AssertionError("Expected invalid download timeout to fail")
+
+    try:
+        fetcher.fetch_profile(
+            profile=fetcher.DATASET_PROFILES["squad-dev-v2"],
+            output_dir=tmp_path,
+            max_records=1,
+            download_retries=0,
+        )
+    except fetcher.DatasetFetchError as exc:
+        assert "download-retries" in str(exc)
+    else:
+        raise AssertionError("Expected invalid download retries to fail")

@@ -4,6 +4,7 @@ import argparse
 import gzip
 import json
 import shutil
+import ssl
 import sys
 import tempfile
 import urllib.error
@@ -29,6 +30,7 @@ class DatasetProfile:
     license_note: str
     source_homepage: str
     sampler: Callable[[Path, Path, int], int] | None
+    mirror_urls: tuple[str, ...] = ()
 
 
 DATASET_PROFILES: dict[str, DatasetProfile] = {
@@ -51,6 +53,11 @@ DATASET_PROFILES: dict[str, DatasetProfile] = {
         license_note="HotpotQA is distributed under CC BY-SA 4.0.",
         source_homepage="https://hotpotqa.github.io/",
         sampler=lambda src, dest, limit: write_json_list_sample(src, dest, limit),
+        mirror_urls=(
+            "https://huggingface.co/datasets/namlh2004/hotpotqa/resolve/"
+            "7e54db4656209750ff487f6fdf8e39a66dba136b/"
+            "hotpot_dev_distractor_v1.json",
+        ),
     ),
     "nq-open-train": DatasetProfile(
         name="nq-open-train",
@@ -158,6 +165,18 @@ def parse_args() -> argparse.Namespace:
             "profiles such as nq-simplified-local."
         ),
     )
+    parser.add_argument(
+        "--download-timeout",
+        type=float,
+        default=60.0,
+        help="Per-attempt download timeout in seconds for networked profiles.",
+    )
+    parser.add_argument(
+        "--download-retries",
+        type=int,
+        default=2,
+        help="Attempts per source URL before trying the next mirror.",
+    )
     return parser.parse_args()
 
 
@@ -176,6 +195,8 @@ def main() -> int:
             max_records=args.max_records,
             force=args.force,
             source_path=args.source_path,
+            download_timeout=args.download_timeout,
+            download_retries=args.download_retries,
         )
     except DatasetFetchError as exc:
         print(f"Dataset fetch error: {exc}", file=sys.stderr)
@@ -203,9 +224,15 @@ def fetch_profile(
     max_records: int,
     force: bool = False,
     source_path: Path | None = None,
+    download_timeout: float = 60.0,
+    download_retries: int = 2,
 ) -> dict[str, object]:
     if max_records < 1:
         raise DatasetFetchError("--max-records must be greater than zero")
+    if download_timeout <= 0:
+        raise DatasetFetchError("--download-timeout must be greater than zero")
+    if download_retries < 1:
+        raise DatasetFetchError("--download-retries must be greater than zero")
     if source_path is not None:
         if profile.sampler is None:
             raise DatasetFetchError(f"{profile.name} cannot be sampled from a single source file")
@@ -221,6 +248,7 @@ def fetch_profile(
     if output_path.exists() and not force:
         raise DatasetFetchError(f"Refusing to overwrite existing dataset: {output_path}")
 
+    downloaded_url: str | None = None
     if source_path is not None:
         record_count = profile.sampler(source_path, output_path, max_records)
     else:
@@ -230,7 +258,12 @@ def fetch_profile(
                 raise DatasetFetchError(
                     f"{profile.name} requires manual download from {profile.source_homepage}"
                 )
-            download_file(profile.url, downloaded_path)
+            downloaded_url = download_first_available(
+                source_urls(profile),
+                downloaded_path,
+                timeout=download_timeout,
+                retries=download_retries,
+            )
             record_count = profile.sampler(downloaded_path, output_path, max_records)
 
     return {
@@ -239,23 +272,62 @@ def fetch_profile(
         "path": str(output_path),
         "records": record_count,
         "source": profile.source_homepage,
+        "source_url": downloaded_url,
         "source_path": str(source_path) if source_path is not None else None,
         "license_note": profile.license_note,
     }
 
 
-def download_file(url: str, output_path: Path) -> None:
+def source_urls(profile: DatasetProfile) -> tuple[str, ...]:
+    return (profile.url, *profile.mirror_urls) if profile.url is not None else ()
+
+
+def download_first_available(
+    urls: tuple[str, ...],
+    output_path: Path,
+    *,
+    timeout: float,
+    retries: int,
+) -> str:
+    if not urls:
+        raise DatasetFetchError("No dataset source URL configured")
+    failures: list[str] = []
+    for url in urls:
+        for attempt in range(1, retries + 1):
+            try:
+                download_file(url, output_path, timeout=timeout)
+                return url
+            except DatasetFetchError as exc:
+                output_path.unlink(missing_ok=True)
+                failures.append(f"{url} attempt {attempt}: {exc}")
+    joined_failures = "; ".join(failures)
+    raise DatasetFetchError(f"Could not download any configured dataset source: {joined_failures}")
+
+
+def download_file(url: str, output_path: Path, *, timeout: float = 60.0) -> None:
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"}:
         raise DatasetFetchError(f"Unsupported dataset URL scheme: {parsed.scheme}")
     try:
+        request_kwargs: dict[str, object] = {"timeout": timeout}
+        if parsed.scheme == "https":
+            request_kwargs["context"] = verified_ssl_context()
         with (
-            urllib.request.urlopen(url, timeout=60) as response,  # noqa: S310
+            urllib.request.urlopen(url, **request_kwargs) as response,  # noqa: S310
             output_path.open("wb") as destination,
         ):
             shutil.copyfileobj(response, destination)
     except (urllib.error.URLError, OSError) as exc:
         raise DatasetFetchError(f"Could not download {url}: {exc}") from exc
+
+
+def verified_ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
 
 
 def write_squad_sample(source_path: Path, output_path: Path, max_cases: int) -> int:

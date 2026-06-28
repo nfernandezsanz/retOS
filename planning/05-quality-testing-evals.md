@@ -106,8 +106,10 @@ and verifies visible suite history, report paths, and cross-run comparison.
 
 `make eval-fetch-dataset PROFILE=...` is the only supported networked dataset helper.
 It downloads bounded public samples into `evals/datasets/` for local research, refuses
-overwrites by default, and remains outside CI. Tests cover its samplers and overwrite
-guards with mocked/local payloads so quality gates do not depend on public endpoints.
+overwrites by default, records the effective `source_url`, supports retryable primary
+and mirror URLs, and remains outside CI. Tests cover its samplers, overwrite guards,
+local gzip sampling, and mirror fallback with mocked/local payloads so quality gates do
+not depend on public endpoints.
 The `nq-open-train-adapter` profile converts NQ-Open samples into the RetOS Natural
 Questions adapter shape with synthetic local evidence documents so real user-question
 samples can run through `make eval-natural-questions` without requiring the full

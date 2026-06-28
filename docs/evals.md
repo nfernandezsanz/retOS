@@ -353,13 +353,18 @@ make eval-fetch-dataset PROFILE=nq-simplified-local \
 ```
 
 The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
-unless `FORCE=1` is provided, and is never part of the default CI path. Available
-profiles:
+unless `FORCE=1` is provided, and is never part of the default CI path. Networked
+profiles support `--download-timeout` and `--download-retries`; the Make target can pass
+these through as `DOWNLOAD_TIMEOUT` and `DOWNLOAD_RETRIES` when an operator needs
+custom values. HTTPS downloads use the bundled `certifi` certificate store so local
+Python certificate configuration does not block real-dataset calibration. Fetch results
+include `source_url` so reports and release evidence can distinguish the official
+primary URL from a configured mirror. Available profiles:
 
 | Profile | Output | Notes |
 | --- | --- | --- |
 | `squad-dev-v2` | `squad-dev-v2-sample.json` | Directly usable with `make eval-squad SQUAD_PATH=evals/datasets/squad-dev-v2-sample.json`. |
-| `hotpotqa-dev-distractor` | `hotpotqa-dev-distractor-sample.json` | Directly usable with `make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json` or `make eval-hotpotqa-agent HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json` when the sample contains at least one case with two supporting documents and shared bridge terms. |
+| `hotpotqa-dev-distractor` | `hotpotqa-dev-distractor-sample.json` | Directly usable with `make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json` or `make eval-hotpotqa-agent HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json` when the sample contains at least one case with two supporting documents and shared bridge terms. The fetcher tries the official HotpotQA URL first and then a pinned Hugging Face mirror if the primary source is unavailable. |
 | `nq-open-train` | `nq-open-train-sample.jsonl` | Raw NQ-Open sample for research inspection. |
 | `nq-open-train-adapter` | `nq-open-train-adapter-sample.jsonl` | Converts NQ-Open questions and answers into the local RetOS Natural Questions adapter shape with synthetic evidence documents; directly usable with `make eval-natural-questions NQ_PATH=evals/datasets/nq-open-train-adapter-sample.jsonl`. |
 | `nq-simplified-local` | `nq-simplified-sample.jsonl` | Samples an operator-provided official simplified Natural Questions `.jsonl` or `.jsonl.gz` file without network access; directly usable with `make eval-natural-questions NQ_PATH=evals/datasets/nq-simplified-sample.jsonl`. |
@@ -535,6 +540,7 @@ CER/WER and optional key-value recall.
 - Adapters must be optional and skipped unless dataset paths are provided.
 - CI must not download public datasets by default.
 - Tests must use tiny fixtures or generated subsets.
+- Networked fetchers must keep configured mirrors auditable through `source_url`.
 - Paid LLM calls remain disabled unless a live-eval profile is explicitly enabled.
 - Reports should be written as JSON plus Markdown summaries under `evals/reports/`
   with explicit stems for named runs.
