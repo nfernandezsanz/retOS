@@ -198,6 +198,20 @@ def test_search_requires_existing_index(
     assert response.json()["detail"] == "Search index has not been built for this domain"
 
 
+def test_search_rejects_missing_domain(
+    search_client: TestClient,
+    search_admin_headers: dict[str, str],
+) -> None:
+    response = search_client.get(
+        "/domains/missing-domain/search",
+        params={"q": "apollo"},
+        headers=search_admin_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Domain not found"
+
+
 def test_rebuild_index_and_search_domain_inline(
     search_client: TestClient,
     search_admin_headers: dict[str, str],
@@ -279,6 +293,46 @@ def test_rebuild_index_includes_restored_documents(
     assert rebuild.status_code == 202
     assert response.status_code == 200
     assert response.json()["hits"][0]["document_id"] == document_id
+
+
+def test_rebuild_index_queues_worker_job_outside_test_env(
+    settings: Settings,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    queued_job_ids: list[str] = []
+    local_settings = settings.model_copy(
+        update={
+            "env": "development",
+            "database_url": f"sqlite+aiosqlite:///{tmp_path / 'retos-search-queue.db'}",
+            "database_create_all": True,
+            "index_root": str(tmp_path / "index"),
+        }
+    )
+    monkeypatch.setattr(
+        "retos.api.routes.search.enqueue_rebuild_index",
+        lambda job: queued_job_ids.append(job.id),
+    )
+    with TestClient(create_app(local_settings)) as client:
+        login = client.post(
+            "/auth/login",
+            json={"email": "admin@retos.dev", "password": "test-admin-password"},
+        )
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        domain_id, _, _ = create_search_fixture(client, headers)
+
+        response = client.post(
+            f"/domains/{domain_id}/index/rebuild",
+            json={"run_inline": False},
+            headers=headers,
+        )
+
+    assert login.status_code == 200
+    assert response.status_code == 202
+    body = response.json()
+    assert body["kind"] == "index.domain"
+    assert body["status"] == "queued"
+    assert queued_job_ids == [body["id"]]
 
 
 def test_rebuild_index_rejects_missing_domain(
