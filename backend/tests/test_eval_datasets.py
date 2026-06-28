@@ -216,7 +216,7 @@ def test_hotpotqa_agent_adapter_maps_supporting_facts_to_agent_cases(
         "HotpotQA: Vela",
     )
     assert set(case.expected_bridge_terms).issuperset({"force", "states", "united"})
-    assert case.max_evidence_tokens == 256
+    assert case.max_evidence_tokens == 512
     assert [document.title for document in case.documents] == [
         "HotpotQA: Vela",
         "HotpotQA: United States Air Force",

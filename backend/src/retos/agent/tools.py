@@ -221,7 +221,11 @@ def named_entity_followup_queries(
             if candidate_lower == question_lower:
                 continue
             candidate_terms = significant_query_terms(candidate)
-            already_in_question = bool(candidate_terms) and candidate_terms.issubset(question_terms)
+            already_in_question = (
+                source_rank != 5
+                and bool(candidate_terms)
+                and candidate_terms.issubset(question_terms)
+            )
             priority = 1 if already_in_question else 0
             compound_penalty = 1 if " and " in candidate.lower() else 0
             word_bonus = min(len(candidate.split()), 4)
@@ -237,17 +241,20 @@ def named_entity_followup_queries(
 
 def entity_sources(*, question: str, hits: list[SearchHit]) -> list[tuple[int, str]]:
     sources: list[tuple[int, str]] = []
-    for index, hit in enumerate(hits):
+    for index, hit in enumerate(hits[:2]):
         sources.append((index * 2, hit.title))
         sources.append((index * 2 + 1, hit.text))
-    sources.append((len(hits) * 2 + 10, question))
+    sources.append((5, question))
+    for index, hit in enumerate(hits[2:], start=3):
+        sources.append((index * 2, hit.title))
+        sources.append((index * 2 + 1, hit.text))
     return sources
 
 
 def entity_candidates_from_source(source: str) -> list[str]:
     candidates: list[str] = []
     patterns = (
-        r"\b(?:[A-Z][A-Za-z0-9'.-]*)(?:\s+(?:and|of|for|the|[A-Z][A-Za-z0-9'.-]*)){0,5}",
+        r"\b(?:[A-Z][A-Za-z0-9'.-]*)(?:\s+(?:and|or|of|for|the|[A-Z][A-Za-z0-9'.-]*)){0,5}",
         r"\b[A-Z][A-Za-z0-9'.-]*\s+(?:administration|presidency|government)\b",
     )
     for pattern in patterns:
@@ -287,7 +294,7 @@ def entity_candidate_variants(value: str) -> list[str]:
     if not cleaned:
         return []
     variants: list[str] = []
-    for separator in (" and The ", " and "):
+    for separator in (" and The ", " and ", " or The ", " or "):
         if separator in cleaned:
             variants.extend(
                 candidate

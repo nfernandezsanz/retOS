@@ -178,6 +178,36 @@ def test_named_entity_followup_queries_extract_administration_bridge() -> None:
     assert "Nixon administration" in queries
 
 
+def test_named_entity_followup_queries_keep_comparison_entities_near_front() -> None:
+    queries = named_entity_followup_queries(
+        question=(
+            "Which performance act has a higher instrument to person ratio, "
+            "Badly Drawn Boy or Wolf Alice?"
+        ),
+        hits=[
+            hit(
+                "segment-1",
+                "Wolf Alice are a four-piece alternative rock band from North London.",
+                title="HotpotQA: Wolf Alice",
+            ),
+            hit(
+                "segment-2",
+                "Something to Talk About is a song by British musical artist Badly Drawn Boy.",
+                title="HotpotQA: Something to Talk About (Badly Drawn Boy song)",
+            ),
+            hit(
+                "segment-3",
+                "Tom Rothrock has worked with many artists.",
+                title="HotpotQA: Tom Rothrock",
+            ),
+        ],
+        max_queries=8,
+    )
+
+    assert "Badly Drawn Boy" in queries
+    assert "Wolf Alice" in queries
+
+
 def test_corpus_toolbox_enforces_search_and_evidence_budgets() -> None:
     index = FakeSearchIndex([hit("segment-1", "alpha beta gamma")])
     toolbox = create_corpus_toolbox(

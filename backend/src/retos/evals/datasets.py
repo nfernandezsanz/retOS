@@ -257,7 +257,7 @@ def agent_case_from_hotpotqa_item(
         expected_citation_titles=tuple(f"HotpotQA: {title}" for title in sorted(supporting_titles)),
         expected_answer_terms=answer_terms,
         expected_bridge_terms=bridge_terms,
-        max_evidence_tokens=256,
+        max_evidence_tokens=512,
     )
 
 
