@@ -36,6 +36,7 @@ RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_size.sh
 
 ```bash
 scripts/check_release_workflow.sh
+scripts/check_versioned_release_notes.sh
 ```
 
 4. Run the complete local gate:
@@ -131,6 +132,8 @@ Images:
 ## Audit Expectations
 
 - `CHANGELOG.md` stays human-readable and ordered newest first.
+- `docs/releases/` stores versioned release notes or release-candidate notes with
+  validation evidence, migration notes, known limitations, and rollback guidance.
 - Every release note references the commit SHA and immutable image tags.
 - Every release candidate records `scripts/check_image_size.sh` output or the equivalent
   `make image-size-check` evidence. Default budgets can be overridden with

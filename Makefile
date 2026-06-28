@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-fetch-dataset eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke release-check release-notes-check release-workflow-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-fetch-dataset eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke release-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -32,6 +32,7 @@ help:
 	@printf "  make docker-smoke     Build and smoke the Docker stack\n"
 	@printf "  make release-check    Validate release docs, defaults, and Docker topology\n"
 	@printf "  make release-notes-check Validate changelog and release note guidance\n"
+	@printf "  make versioned-release-notes-check Validate versioned release note artifacts\n"
 	@printf "  make release-workflow-check Validate GHCR publishing and signing workflow\n"
 	@printf "  make image-size-check Validate built app image size budgets\n"
 	@printf "  make docker-up        Start the full local stack\n"
@@ -128,6 +129,9 @@ release-check:
 
 release-notes-check:
 	scripts/check_release_notes.sh
+
+versioned-release-notes-check:
+	scripts/check_versioned_release_notes.sh
 
 release-workflow-check:
 	scripts/check_release_workflow.sh

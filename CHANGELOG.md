@@ -24,6 +24,8 @@ tag in GitHub.
   budgets and Docker smoke enforcement.
 - GHCR release workflow for backend and web images with SBOM/provenance attestation
   requests and Cosign keyless signing.
+- Versioned release-candidate notes with validation evidence, pending publish evidence,
+  known limitations, migration notes, and rollback guidance.
 
 ### Changed
 

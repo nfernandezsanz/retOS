@@ -11,6 +11,8 @@ required_files=(
   "CONTRIBUTING.md"
   "LICENSE"
   "CHANGELOG.md"
+  "docs/releases/README.md"
+  "docs/releases/2026.06.28-alpha.1.md"
   ".env.example"
   "docker-compose.yml"
   "docs/release-process.md"
@@ -28,6 +30,7 @@ scripts/check_image_metadata.sh >/dev/null
 scripts/check_image_size.sh >/dev/null
 scripts/check_release_workflow.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
+scripts/check_versioned_release_notes.sh >/dev/null
 
 python3 - <<'PY'
 from __future__ import annotations

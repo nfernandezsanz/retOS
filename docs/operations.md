@@ -60,7 +60,9 @@ make docker-smoke
 
 Use [docs/release-process.md](release-process.md) and [CHANGELOG.md](../CHANGELOG.md)
 to prepare the human release notes, migration notes, validation evidence, and rollback
-summary before publishing a tag.
+summary before publishing a tag. Versioned release notes live in
+[docs/releases/](releases/); run `scripts/check_versioned_release_notes.sh` before
+promoting a release candidate.
 
 Use immutable image tags for shared environments. Avoid `local` and `latest` outside a
 developer workstation.

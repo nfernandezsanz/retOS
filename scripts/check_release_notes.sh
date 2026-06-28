@@ -16,8 +16,9 @@ changelog_path = Path("CHANGELOG.md")
 release_process_path = Path("docs/release-process.md")
 operations_path = Path("docs/operations.md")
 readme_path = Path("README.md")
+versioned_release_path = Path("docs/releases/2026.06.28-alpha.1.md")
 
-for path in (changelog_path, release_process_path):
+for path in (changelog_path, release_process_path, versioned_release_path):
     require(path.is_file() and path.stat().st_size > 0, f"missing or empty {path}")
 
 changelog = changelog_path.read_text(encoding="utf-8")

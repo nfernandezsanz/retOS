@@ -48,6 +48,7 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Release workflow validates GHCR publishing, SBOM/provenance, and Cosign signing.
 - Release note checks validate `CHANGELOG.md`, release-process guidance, and operator
   documentation links.
+- Versioned release note checks validate concrete notes under `docs/releases/`.
 - No secrets are baked into images.
 - Migrations work from an empty database.
 
@@ -57,6 +58,9 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
   development.
 - Release candidates must update `CHANGELOG.md` and follow `docs/release-process.md`
   before tagging.
+- Release candidates must add or update the matching `docs/releases/<version>.md` note
+  with validation evidence, pending publish evidence, known limitations, and rollback
+  guidance.
 - Release tags publish `retos-backend` and `retos-web` to GHCR through
   `.github/workflows/release.yml`; the backend image remains shared by API, worker, and
   migrations.
