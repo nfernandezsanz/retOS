@@ -3,7 +3,7 @@ PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 BRANCH_COVERAGE_MIN ?= 90.44
 
-.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -15,6 +15,7 @@ help:
 	@printf "  make typecheck        Run backend type checks\n"
 	@printf "  make dependency-audit Audit Python and Node dependency advisories\n"
 	@printf "  make security-policy-check Validate security policy and human review links\n"
+	@printf "  make ignore-hygiene-check Validate Git and Docker ignore rules\n"
 	@printf "  make db-upgrade       Apply Alembic migrations\n"
 	@printf "  make db-downgrade     Roll back the latest Alembic migration\n"
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
@@ -76,6 +77,9 @@ dependency-audit:
 
 security-policy-check:
 	scripts/check_security_policy.sh
+
+ignore-hygiene-check:
+	scripts/check_ignore_hygiene.sh
 
 db-upgrade:
 	cd backend && "$(BACKEND_PYTHON)" -m alembic upgrade head

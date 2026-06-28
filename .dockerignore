@@ -29,6 +29,7 @@ retos_ollama
 retos_postgres
 retos_rabbitmq
 retos_tmp
+backups
 evals/datasets
 evals/cache
 evals/reports

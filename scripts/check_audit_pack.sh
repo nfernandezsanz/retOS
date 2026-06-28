@@ -23,6 +23,7 @@ paths = {
     "ci_status_script": Path("scripts/check_ci_status.sh"),
     "dependency_audit_script": Path("scripts/check_dependency_audit.sh"),
     "security_policy_script": Path("scripts/check_security_policy.sh"),
+    "ignore_hygiene_script": Path("scripts/check_ignore_hygiene.sh"),
     "security_policy": Path("SECURITY.md"),
 }
 
@@ -57,6 +58,7 @@ for phrase in (
     "make docker-smoke",
     "make dependency-audit",
     "make security-policy-check",
+    "make ignore-hygiene-check",
     "make ci-status-check",
     "make production-preflight",
     "make release-evidence-check",
@@ -66,6 +68,7 @@ for phrase in (
     "scripts/check_branding_assets.sh",
     "scripts/check_dependency_audit.sh",
     "scripts/check_security_policy.sh",
+    "scripts/check_ignore_hygiene.sh",
     "scripts/check_ci_status.sh",
     "pip-audit",
     "npm audit --audit-level=high",
@@ -80,6 +83,7 @@ for phrase in (
     "/audit/export",
     "Branding assets",
     "SECURITY.md",
+    ".dockerignore",
 ):
     require(phrase in audit_pack, f"docs/production-readiness.md missing evidence phrase: {phrase}")
 
