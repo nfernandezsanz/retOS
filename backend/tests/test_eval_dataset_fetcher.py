@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+from retos.evals.datasets import load_natural_questions_cases
+
 
 def load_fetcher() -> ModuleType:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "fetch_eval_dataset.py"
@@ -25,6 +27,7 @@ def test_fetcher_lists_public_profiles() -> None:
     assert "squad-dev-v2" in table
     assert "hotpotqa-dev-distractor" in table
     assert "nq-open-train" in table
+    assert "nq-open-train-adapter" in table
     assert "funsd" in table
 
 
@@ -92,6 +95,52 @@ def test_fetcher_samples_json_list_and_jsonl(tmp_path: Path) -> None:
     ]
 
 
+def test_fetcher_converts_nq_open_to_adapter_shape(tmp_path: Path) -> None:
+    fetcher = load_fetcher()
+    source = tmp_path / "nq-open.jsonl"
+    destination = tmp_path / "nq-adapter.jsonl"
+    source.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "question": "who wrote the moon memo",
+                        "answer": ["Ada Lovelace"],
+                    }
+                ),
+                json.dumps({"question": "missing answer", "answer": []}),
+                json.dumps(
+                    {
+                        "question_text": "who reviewed the launch notes",
+                        "answers": ["Katherine Johnson"],
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    count = fetcher.write_nq_open_adapter_sample(source, destination, 2)
+
+    assert count == 2
+    records = [
+        json.loads(line)
+        for line in destination.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert records[0]["question_text"] == "who wrote the moon memo"
+    assert records[0]["document_text"] == "Answer: Ada Lovelace"
+    assert records[0]["annotations"][0]["long_answer"] == {
+        "start_token": 0,
+        "end_token": 3,
+    }
+    assert records[0]["annotations"][0]["short_answers"] == [{"start_token": 1, "end_token": 3}]
+    cases = load_natural_questions_cases(destination)
+    assert len(cases) == 2
+    assert cases[0].expected_answer_terms == ("Ada Lovelace",)
+
+
 def test_fetch_profile_downloads_and_samples_without_overwriting(
     tmp_path: Path,
     monkeypatch,
@@ -156,6 +205,42 @@ def test_fetch_profile_downloads_and_samples_without_overwriting(
         assert "overwrite" in str(exc)
     else:
         raise AssertionError("Expected overwrite protection to fail")
+
+
+def test_fetch_profile_can_write_nq_open_adapter_sample(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    fetcher = load_fetcher()
+    payload = (
+        json.dumps({"question": "who found the comet", "answer": ["Caroline Herschel"]}) + "\n"
+    ).encode()
+
+    class FakeResponse:
+        def __init__(self) -> None:
+            self.stream = io.BytesIO(payload)
+
+        def __enter__(self) -> FakeResponse:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self, size: int = -1) -> bytes:
+            return self.stream.read(size)
+
+    monkeypatch.setattr(fetcher.urllib.request, "urlopen", lambda *args, **kwargs: FakeResponse())
+
+    result = fetcher.fetch_profile(
+        profile=fetcher.DATASET_PROFILES["nq-open-train-adapter"],
+        output_dir=tmp_path,
+        max_records=1,
+    )
+
+    assert result["suite"] == "natural-questions"
+    output_path = Path(result["path"])
+    cases = load_natural_questions_cases(output_path)
+    assert cases[0].expected_answer_terms == ("Caroline Herschel",)
 
 
 def test_fetch_profile_rejects_manual_and_invalid_profiles(tmp_path: Path) -> None:

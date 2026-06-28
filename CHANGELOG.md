@@ -18,6 +18,8 @@ tag in GitHub.
   operator runbook coverage.
 - Deterministic agent evidence-route coverage that records segment, document, anchor,
   neighboring-context, and warning signals for each completed query.
+- NQ-Open dataset fetch profile that converts real question samples into the local
+  Natural Questions adapter shape for opt-in calibration without full corpus downloads.
 
 ### Changed
 

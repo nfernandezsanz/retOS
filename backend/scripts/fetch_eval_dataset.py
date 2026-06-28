@@ -68,6 +68,22 @@ DATASET_PROFILES: dict[str, DatasetProfile] = {
         source_homepage="https://github.com/google-research-datasets/natural-questions",
         sampler=lambda src, dest, limit: write_jsonl_sample(src, dest, limit),
     ),
+    "nq-open-train-adapter": DatasetProfile(
+        name="nq-open-train-adapter",
+        suite="natural-questions",
+        url=(
+            "https://raw.githubusercontent.com/google-research-datasets/"
+            "natural-questions/master/nq_open/NQ-open.train.jsonl"
+        ),
+        output_name="nq-open-train-adapter-sample.jsonl",
+        description=(
+            "Natural Questions Open training sample converted into the RetOS "
+            "Natural Questions adapter shape with synthetic local evidence documents."
+        ),
+        license_note="Natural Questions tooling is published by Google under Apache-2.0.",
+        source_homepage="https://github.com/google-research-datasets/natural-questions",
+        sampler=lambda src, dest, limit: write_nq_open_adapter_sample(src, dest, limit),
+    ),
     "funsd": DatasetProfile(
         name="funsd",
         suite="ocr-benchmark",
@@ -201,7 +217,7 @@ def download_file(url: str, output_path: Path) -> None:
         ):
             shutil.copyfileobj(response, destination)
     except (urllib.error.URLError, OSError) as exc:
-        raise DatasetFetchError(f"Could not download {url}") from exc
+        raise DatasetFetchError(f"Could not download {url}: {exc}") from exc
 
 
 def write_squad_sample(source_path: Path, output_path: Path, max_cases: int) -> int:
@@ -275,6 +291,104 @@ def write_jsonl_sample(source_path: Path, output_path: Path, max_records: int) -
     if count == 0:
         raise DatasetFetchError("JSONL payload produced no records")
     return count
+
+
+def write_nq_open_adapter_sample(source_path: Path, output_path: Path, max_records: int) -> int:
+    count = 0
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with (
+        source_path.open(encoding="utf-8") as source,
+        output_path.open("w", encoding="utf-8") as destination,
+    ):
+        for line_number, line in enumerate(source, start=1):
+            if count >= max_records:
+                break
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                item = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                raise DatasetFetchError(
+                    f"NQ-Open JSONL line {line_number} is not valid JSON"
+                ) from exc
+            if not isinstance(item, dict):
+                raise DatasetFetchError(f"NQ-Open JSONL line {line_number} is not an object")
+            converted = nq_open_item_to_adapter_record(item, fallback_id=count + 1)
+            if converted is None:
+                continue
+            destination.write(json.dumps(converted, ensure_ascii=False, sort_keys=True) + "\n")
+            count += 1
+    if count == 0:
+        raise DatasetFetchError("NQ-Open payload produced no answerable records")
+    return count
+
+
+def nq_open_item_to_adapter_record(
+    item: dict[str, Any],
+    *,
+    fallback_id: int,
+) -> dict[str, Any] | None:
+    question = first_string(item, "question", "question_text")
+    answer = first_answer(item)
+    if question is None or answer is None:
+        return None
+
+    answer_tokens = answer.split()
+    if not answer_tokens:
+        return None
+    prefix_tokens = ("Answer:",)
+    document_tokens = [*prefix_tokens, *answer_tokens]
+    example_id = str(item.get("example_id") or item.get("id") or f"nq-open-sample-{fallback_id}")
+    return {
+        "example_id": example_id,
+        "question_text": question,
+        "document_title": f"NQ Open: {question[:80]}",
+        "document_text": " ".join(document_tokens),
+        "annotations": [
+            {
+                "long_answer": {
+                    "start_token": 0,
+                    "end_token": len(document_tokens),
+                },
+                "short_answers": [
+                    {
+                        "start_token": len(prefix_tokens),
+                        "end_token": len(prefix_tokens) + len(answer_tokens),
+                    }
+                ],
+                "yes_no_answer": "NONE",
+            }
+        ],
+        "metadata": {
+            "source_profile": "nq-open-train-adapter",
+            "source_shape": "nq_open",
+        },
+    }
+
+
+def first_string(item: dict[str, Any], *keys: str) -> str | None:
+    for key in keys:
+        value = item.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def first_answer(item: dict[str, Any]) -> str | None:
+    value = item.get("answer")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    if isinstance(value, list):
+        for answer in value:
+            if isinstance(answer, str) and answer.strip():
+                return answer.strip()
+    value = item.get("answers")
+    if isinstance(value, list):
+        for answer in value:
+            if isinstance(answer, str) and answer.strip():
+                return answer.strip()
+    return None
 
 
 def read_json_object(path: Path) -> dict[str, Any]:

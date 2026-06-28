@@ -107,6 +107,10 @@ suite history, report paths, and cross-run comparison.
 It downloads bounded public samples into `evals/datasets/` for local research, refuses
 overwrites by default, and remains outside CI. Tests cover its samplers and overwrite
 guards with mocked/local payloads so quality gates do not depend on public endpoints.
+The `nq-open-train-adapter` profile converts NQ-Open samples into the RetOS Natural
+Questions adapter shape with synthetic local evidence documents so real user-question
+samples can run through `make eval-natural-questions` without requiring the full
+annotated Natural Questions corpus.
 
 ## Implemented OCR Quality Smoke
 
@@ -132,7 +136,7 @@ does not download public data or call paid providers.
 | --- | --- |
 | SQuAD 2.0 | Implemented as an opt-in local adapter and admin API run for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
 | HotpotQA | Implemented as an opt-in local adapter and admin API run for multi-hop retrieval and supporting-fact evaluation, with optional JSON/Markdown report export. |
-| Natural Questions | Implemented as an opt-in local adapter and admin API run for real user questions with Wikipedia evidence. |
+| Natural Questions | Implemented as an opt-in local adapter and admin API run for real user questions with Wikipedia evidence; NQ-Open samples can also be converted into adapter-compatible synthetic evidence for early query-shape calibration. |
 | FUNSD | Implemented as an opt-in OCR benchmark adapter for form image/text pressure; derives deterministic key-value recall and layout boxes from question/answer links and annotation boxes when present. |
 | ICDAR 2019 SROIE | Implemented as an opt-in OCR benchmark adapter for receipt OCR pressure; reads optional entity files for deterministic key-value recall and box files for reading-order/Layout IoU scoring. |
 | ISRI OCR Evaluation Tools | OCR scoring methodology reference for CER/WER-style checks. |

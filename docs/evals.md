@@ -254,6 +254,7 @@ Small public dataset samples can be prepared with:
 make eval-fetch-dataset PROFILE=squad-dev-v2 MAX_RECORDS=100
 make eval-fetch-dataset PROFILE=hotpotqa-dev-distractor MAX_RECORDS=100
 make eval-fetch-dataset PROFILE=nq-open-train MAX_RECORDS=100
+make eval-fetch-dataset PROFILE=nq-open-train-adapter MAX_RECORDS=100
 ```
 
 The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
@@ -264,7 +265,8 @@ profiles:
 | --- | --- | --- |
 | `squad-dev-v2` | `squad-dev-v2-sample.json` | Directly usable with `make eval-squad SQUAD_PATH=evals/datasets/squad-dev-v2-sample.json`. |
 | `hotpotqa-dev-distractor` | `hotpotqa-dev-distractor-sample.json` | Directly usable with `make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json`. |
-| `nq-open-train` | `nq-open-train-sample.jsonl` | Fetched for research inspection; full RetOS Natural Questions evals still use the annotated document-shape adapter input. |
+| `nq-open-train` | `nq-open-train-sample.jsonl` | Raw NQ-Open sample for research inspection. |
+| `nq-open-train-adapter` | `nq-open-train-adapter-sample.jsonl` | Converts NQ-Open questions and answers into the local RetOS Natural Questions adapter shape with synthetic evidence documents; directly usable with `make eval-natural-questions NQ_PATH=evals/datasets/nq-open-train-adapter-sample.jsonl`. |
 | `funsd` | Manual download | Listed with source/license notes; the dataset must be downloaded manually after reviewing the official license. |
 
 | Dataset | Use | Notes |
@@ -355,6 +357,13 @@ Adapter guarantees:
 - Malformed JSONL lines, missing annotations, invalid token spans, and missing document
   text fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.
+
+The `nq-open-train-adapter` fetch profile is a pragmatic bridge for early real-question
+calibration. NQ-Open does not include the full annotated Wikipedia document shape, so the
+fetcher creates a bounded JSONL sample with synthetic local evidence documents containing
+the provided answer. This is useful for query-shape and answer-term regression, while the
+full document-shape Natural Questions adapter remains the stronger retrieval benchmark
+when annotated data is available.
 
 ## OCR Benchmark Adapters
 
