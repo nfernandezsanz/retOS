@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -19,6 +19,7 @@ help:
 	@printf "  make eval-agent-multihop Run deterministic agent multi-hop evals\n"
 	@printf "  make eval-fetch-dataset Fetch an opt-in public eval dataset sample with PROFILE=...\n"
 	@printf "  make eval-calibration  Fetch bounded public samples and run real-dataset calibration\n"
+	@printf "  make eval-calibration-evidence Export path-safe Markdown evidence from a calibration manifest\n"
 	@printf "  make eval-ocr         Run opt-in local OCR quality evals\n"
 	@printf "  make eval-ocr-benchmark Run OCR benchmark evals with OCR_PATH=...\n"
 	@printf "  make eval-squad       Run opt-in SQuAD v2 evals with SQUAD_PATH=...\n"
@@ -83,6 +84,9 @@ endif
 
 eval-calibration:
 	cd backend && PYTHONPATH=src:./scripts "$(BACKEND_PYTHON)" scripts/run_eval_calibration.py --dataset-dir "../evals/datasets" --report-dir "../evals/reports/calibration" --max-records "$(or $(MAX_RECORDS),100)" --download-timeout "$(or $(DOWNLOAD_TIMEOUT),60)" --download-retries "$(or $(DOWNLOAD_RETRIES),2)" $(if $(MAX_CASES),--max-cases "$(MAX_CASES)",) $(if $(FORCE),--force-datasets,) $(if $(TARGET),--target "$(TARGET)",) $(foreach gate,$(METRIC_GATES),--metric-gate "$(gate)")
+
+eval-calibration-evidence:
+	cd backend && "$(BACKEND_PYTHON)" scripts/export_eval_calibration_evidence.py --manifest "$(abspath $(or $(MANIFEST),evals/reports/calibration/manifest.json))" $(if $(OUTPUT),--output "$(abspath $(OUTPUT))",) $(if $(TITLE),--title "$(TITLE)",) $(if $(COMMAND),--command "$(COMMAND)",) $(if $(ALLOW_FAILED),--allow-failed,)
 
 eval-ocr:
 	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite ocr-smoke --format markdown $(if $(REPORT_DIR),--report-dir "$(REPORT_DIR)",) $(if $(REPORT_STEM),--report-stem "$(REPORT_STEM)",)

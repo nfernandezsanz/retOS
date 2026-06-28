@@ -65,6 +65,7 @@ TARGETS_BY_KEY = {target.key: target for target in DEFAULT_TARGETS}
 class MetricGate:
     name: str
     minimum: float
+    target: str | None = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -202,7 +203,7 @@ def run_calibration(
         "target_count": len(results),
         "max_records": max_records,
         "max_cases": case_limit,
-        "metric_gates": [{"name": gate.name, "minimum": gate.minimum} for gate in metric_gates],
+        "metric_gates": [metric_gate_payload(gate) for gate in metric_gates],
         "targets": results,
     }
     manifest_path = report_dir / "manifest.json"
@@ -250,6 +251,7 @@ def run_target(
     )
     report_payload = report.to_dict()
     gate_results = evaluate_metric_gates(
+        target_key=target.key,
         metrics=report_payload["metrics"],
         metric_gates=metric_gates,
     )
@@ -282,15 +284,17 @@ def materialize_dataset(
     download_retries: int,
 ) -> dict[str, Any]:
     output_path = output_dir / profile.output_name
+    metadata_path = dataset_metadata_path(output_path)
     if output_path.exists() and not force:
+        metadata = read_dataset_metadata(metadata_path)
         return {
             "profile": profile.name,
             "suite": profile.suite,
             "path": str(output_path),
-            "records": None,
+            "records": metadata.get("records"),
             "source": profile.source_homepage,
-            "source_url": None,
-            "source_path": None,
+            "source_url": metadata.get("source_url"),
+            "source_path": metadata.get("source_path"),
             "license_note": profile.license_note,
             "reused": True,
         }
@@ -302,18 +306,50 @@ def materialize_dataset(
         download_timeout=download_timeout,
         download_retries=download_retries,
     )
+    write_dataset_metadata(metadata_path, result)
     return {**result, "reused": False}
+
+
+def dataset_metadata_path(dataset_path: Path) -> Path:
+    return dataset_path.with_name(f"{dataset_path.name}.metadata.json")
+
+
+def read_dataset_metadata(metadata_path: Path) -> dict[str, Any]:
+    if not metadata_path.is_file():
+        return {}
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise EvalCalibrationError(f"Dataset metadata is not valid JSON: {metadata_path}") from exc
+    if not isinstance(payload, dict):
+        raise EvalCalibrationError(f"Dataset metadata root must be an object: {metadata_path}")
+    return payload
+
+
+def write_dataset_metadata(metadata_path: Path, result: dict[str, object]) -> None:
+    metadata = {key: value for key, value in result.items() if key != "path"}
+    metadata_path.write_text(
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def parse_metric_gates(raw_gates: tuple[str, ...] | list[str]) -> tuple[MetricGate, ...]:
     gates: list[MetricGate] = []
     for raw_gate in raw_gates:
-        name, separator, raw_minimum = raw_gate.partition("=")
-        name = name.strip()
+        raw_name, separator, raw_minimum = raw_gate.partition("=")
+        raw_name = raw_name.strip()
         raw_minimum = raw_minimum.strip()
-        if separator != "=" or not name or not raw_minimum:
+        if separator != "=" or not raw_name or not raw_minimum:
             raise EvalCalibrationError(
-                "--metric-gate must use NAME=MINIMUM, for example retrieval_recall=0.80"
+                "--metric-gate must use NAME=MINIMUM or TARGET.NAME=MINIMUM, "
+                "for example retrieval_recall=0.80 or hotpotqa.retrieval_recall=0.80"
+            )
+        raw_target, dot, name = raw_name.partition(".")
+        target = raw_target.strip() if dot else None
+        name = name.strip() if dot else raw_name
+        if not name or target == "":
+            raise EvalCalibrationError(
+                "--metric-gate must include a metric name after the optional target scope"
             )
         try:
             minimum = float(raw_minimum)
@@ -321,28 +357,34 @@ def parse_metric_gates(raw_gates: tuple[str, ...] | list[str]) -> tuple[MetricGa
             raise EvalCalibrationError(
                 f"--metric-gate minimum for {name!r} must be numeric"
             ) from exc
-        gates.append(MetricGate(name=name, minimum=minimum))
+        gates.append(MetricGate(name=name, minimum=minimum, target=target))
     return tuple(gates)
 
 
 def evaluate_metric_gates(
     *,
+    target_key: str,
     metrics: dict[str, Any],
     metric_gates: tuple[MetricGate, ...],
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for gate in metric_gates:
+        if gate.target is not None and gate.target != target_key:
+            continue
         value = metrics.get(gate.name)
         numeric_value = value if isinstance(value, int | float) else None
-        results.append(
-            {
-                "name": gate.name,
-                "minimum": gate.minimum,
-                "actual": numeric_value,
-                "passed": numeric_value is not None and numeric_value >= gate.minimum,
-            }
-        )
+        gate_payload = metric_gate_payload(gate)
+        gate_payload["actual"] = numeric_value
+        gate_payload["passed"] = numeric_value is not None and numeric_value >= gate.minimum
+        results.append(gate_payload)
     return results
+
+
+def metric_gate_payload(gate: MetricGate) -> dict[str, Any]:
+    payload: dict[str, Any] = {"name": gate.name, "minimum": gate.minimum}
+    if gate.target is not None:
+        payload["target"] = gate.target
+    return payload
 
 
 if __name__ == "__main__":

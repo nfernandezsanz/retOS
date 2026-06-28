@@ -123,10 +123,15 @@ HotpotQA-agent, and the NQ-Open adapter. It fetches or reuses samples, runs each
 writes per-suite JSON/Markdown reports, and emits
 `evals/reports/calibration/manifest.json` with provenance, metrics, report paths,
 optional metric-gate decisions, and dataset reuse state. Release candidates can pass
-`METRIC_GATES="retrieval_recall=0.80 citation_validity=1.0"` to fail the manifest when
-selected real-dataset metrics fall below promotion thresholds. It remains opt-in because
-it can perform network downloads, while unit coverage mocks fetch and eval execution so
-CI stays deterministic and free.
+global gates such as `METRIC_GATES="retrieval_recall=0.80 citation_validity=1.0"` or
+target-scoped gates such as
+`METRIC_GATES="squad.retrieval_recall=0.80 hotpotqa-agent.multi_hop_support=0.70"` to
+fail the manifest when selected real-dataset metrics fall below promotion thresholds.
+`make eval-calibration-evidence` exports the ignored manifest into path-safe Markdown
+release evidence under `docs/releases/evidence/`; fetched samples also get ignored
+metadata sidecars so reused runs keep source URL, record count, source path, and license
+provenance. Calibration remains opt-in because it can perform network downloads, while
+unit coverage mocks fetch and eval execution so CI stays deterministic and free.
 
 ## Implemented OCR Quality Smoke
 

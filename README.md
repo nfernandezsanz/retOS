@@ -13,7 +13,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
-| Next milestone | Phase 5: larger real-dataset trend calibration, UI hardening, and release promotion evidence. |
+| Next milestone | Phase 5: improve measured HotpotQA grounding/multi-hop calibration gaps, expand real-dataset trends, and collect release promotion evidence. |
 
 This repository is intentionally being built as a staff-engineer-quality reference project: decisions are documented, quality gates are automated, integration checks hit real endpoints, UI smoke tests open the actual frontend, and every implementation phase is expected to leave behind tests, auditability, and operating notes.
 
@@ -222,6 +222,7 @@ Every meaningful change should pass these gates:
 | Agent multi-hop eval | `make eval-agent-multihop` | Runs deterministic query-plan, multi-hop audit, evidence-route, citation, grounding, and budget scorers without network or paid providers. |
 | Dataset fetch | `make eval-fetch-dataset PROFILE=squad-dev-v2` | Opt-in download or local sampling of bounded public dataset samples under `evals/datasets`; records the effective `source_url`, supports retryable mirrors, and never runs in CI by default. |
 | Real-dataset calibration | `make eval-calibration MAX_RECORDS=100 MAX_CASES=50 METRIC_GATES="retrieval_recall=0.80 citation_validity=1.0"` | Opt-in multi-suite public dataset calibration for SQuAD, HotpotQA, HotpotQA-agent, and NQ-Open adapter samples; writes JSON/Markdown reports plus a metric-gated manifest under `evals/reports/calibration`. |
+| Calibration evidence | `make eval-calibration-evidence OUTPUT=docs/releases/evidence/<release>-calibration.md` | Converts the ignored calibration manifest into path-safe Markdown evidence with metrics, gates, source URLs, records, and license notes. |
 | OCR eval | `make eval-ocr` | Runs opt-in local OCR quality checks over generated image-only PDFs with CER/WER scoring. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | HotpotQA eval | `make eval-hotpotqa HOTPOTQA_PATH=...` | Runs opt-in HotpotQA multi-hop evals from a user-provided dataset file and can write JSON/Markdown reports. |
@@ -262,4 +263,4 @@ evals/        Local evaluation reports and optional dataset caches
 
 ## Project Status
 
-The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: larger real-dataset trend calibration through `make eval-calibration`, continued UI hardening, and release promotion evidence.
+The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: improve measured HotpotQA grounding and multi-hop calibration gaps from `make eval-calibration`, expand real-dataset trend evidence, continue UI hardening, and collect release promotion evidence.

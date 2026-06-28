@@ -97,6 +97,11 @@ def test_eval_calibration_reuses_shared_dataset_and_writes_manifest(
     assert [call["max_cases"] for call in build_calls] == [2, 2]
     assert manifest["targets"][0]["dataset"]["reused"] is False
     assert manifest["targets"][1]["dataset"]["reused"] is True
+    assert manifest["targets"][1]["dataset"]["records"] == 3
+    assert (
+        manifest["targets"][1]["dataset"]["source_url"]
+        == cli.DATASET_PROFILES["hotpotqa-dev-distractor"].url
+    )
     assert manifest["targets"][0]["report_passed"] is True
     assert manifest["targets"][0]["gates_passed"] is True
     assert manifest["targets"][0]["gates"] == [
@@ -247,3 +252,73 @@ def test_eval_calibration_parser_accepts_repeated_metric_gates(
         cli.MetricGate(name="retrieval_recall", minimum=0.8),
         cli.MetricGate(name="citation_validity", minimum=1.0),
     )
+
+
+def test_eval_calibration_scoped_metric_gates_apply_to_matching_target(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    cli = load_calibration_cli()
+
+    def fake_fetch_profile(**kwargs: object) -> dict[str, object]:
+        profile = kwargs["profile"]
+        output_dir = kwargs["output_dir"]
+        assert hasattr(profile, "output_name")
+        assert isinstance(output_dir, Path)
+        output_path = output_dir / profile.output_name
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("[]\n", encoding="utf-8")
+        return {
+            "profile": profile.name,
+            "suite": profile.suite,
+            "path": str(output_path),
+            "records": kwargs["max_records"],
+            "source": profile.source_homepage,
+            "source_url": profile.url,
+            "source_path": None,
+            "license_note": profile.license_note,
+        }
+
+    def fake_build_report(**kwargs: object) -> FakeEvalReport:
+        return FakeEvalReport(str(kwargs["suite"]))
+
+    monkeypatch.setattr(cli, "fetch_profile", fake_fetch_profile)
+    monkeypatch.setattr(cli, "build_report", fake_build_report)
+
+    metric_gates = cli.parse_metric_gates(
+        (
+            "squad.retrieval_recall=0.9",
+            "hotpotqa-agent.query_plan=0.9",
+        )
+    )
+    manifest = cli.run_calibration(
+        targets=(cli.TARGETS_BY_KEY["squad"], cli.TARGETS_BY_KEY["hotpotqa-agent"]),
+        dataset_dir=tmp_path / "datasets",
+        report_dir=tmp_path / "reports",
+        max_records=2,
+        max_cases=2,
+        metric_gates=metric_gates,
+    )
+
+    assert manifest["metric_gates"] == [
+        {"name": "retrieval_recall", "minimum": 0.9, "target": "squad"},
+        {"name": "query_plan", "minimum": 0.9, "target": "hotpotqa-agent"},
+    ]
+    assert manifest["targets"][0]["gates"] == [
+        {
+            "name": "retrieval_recall",
+            "minimum": 0.9,
+            "target": "squad",
+            "actual": 1.0,
+            "passed": True,
+        }
+    ]
+    assert manifest["targets"][1]["gates"] == [
+        {
+            "name": "query_plan",
+            "minimum": 0.9,
+            "target": "hotpotqa-agent",
+            "actual": None,
+            "passed": False,
+        }
+    ]

@@ -72,6 +72,9 @@ tag in GitHub.
 - Viewers with explicit domain grants can now run dataset-backed evals, read
   domain-filtered eval history/trends, and rerun domain-scoped dataset eval jobs without
   gaining access to global evals, built-in evals, comparisons, or regression gates.
+- Real-dataset calibration gates can now be scoped per target, fetched samples preserve
+  ignored provenance sidecars, and manifests can be exported as path-safe Markdown
+  release evidence.
 - React eval controls now expose an explicit `Eval scope` selector that attaches
   dataset-backed SQuAD, HotpotQA, Natural Questions, and OCR benchmark runs to a domain
   and filters history, trends, comparison, and regression-gate workflows.

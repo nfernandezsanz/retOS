@@ -360,6 +360,12 @@ make eval-calibration MAX_RECORDS=100 MAX_CASES=50
 make eval-calibration TARGET=hotpotqa-agent MAX_RECORDS=100 MAX_CASES=25
 make eval-calibration MAX_RECORDS=100 MAX_CASES=50 \
   METRIC_GATES="retrieval_recall=0.80 citation_validity=1.0"
+make eval-calibration MAX_RECORDS=100 MAX_CASES=50 \
+  METRIC_GATES="squad.retrieval_recall=0.80 hotpotqa.retrieval_recall=0.70 hotpotqa-agent.multi_hop_support=0.70 natural-questions.retrieval_recall=0.80"
+make eval-calibration-evidence \
+  OUTPUT=docs/releases/evidence/2026.06.28-alpha.1-calibration.md \
+  TITLE="RetOS 2026.06.28-alpha.1 Calibration Evidence" \
+  COMMAND="make eval-calibration MAX_RECORDS=100 MAX_CASES=50 ..."
 ```
 
 The calibration command fetches or reuses bounded samples for SQuAD, HotpotQA,
@@ -367,11 +373,20 @@ HotpotQA-agent, and the NQ-Open adapter, then writes per-suite JSON/Markdown rep
 plus `evals/reports/calibration/manifest.json`. The manifest records pass/fail status,
 case counts, metrics, dataset provenance, report paths, optional metric-gate decisions,
 and whether an existing sample was reused. `METRIC_GATES` expands to repeated
-`--metric-gate NAME=MINIMUM` CLI flags; every selected target must report each metric at
-or above the configured threshold or the manifest fails. Use these gates when turning a
+`--metric-gate` CLI flags. Use `NAME=MINIMUM` for a global gate that applies to every
+selected target, or `TARGET.NAME=MINIMUM` for a suite-specific gate such as
+`hotpotqa-agent.multi_hop_support=0.70`. Every applicable gate must be present and at or
+above the configured threshold or the manifest fails. Use these gates when turning a
 larger real-dataset run into release-promotion evidence. The command is intentionally
 opt-in because it performs network downloads when samples are missing, but tests mock
 the fetch and eval layers so no CI run depends on public endpoints or paid providers.
+
+`make eval-calibration-evidence` converts the ignored manifest into a path-safe Markdown
+summary that can be committed under `docs/releases/evidence/`. The summary includes
+metrics, gate decisions, source URLs, records, and license notes, but intentionally omits
+local dataset/report paths. When a dataset sample is fetched, RetOS writes a small
+ignored `*.metadata.json` sidecar beside it so later reused-sample runs retain the
+effective source URL, record count, source path, and license provenance.
 
 The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
 unless `FORCE=1` is provided, and is never part of the default CI path. Networked
