@@ -38,7 +38,8 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 
 ## Release Checks
 
-- Backend tests pass with >= 90% line and branch coverage.
+- Backend tests pass with >= 90% total coverage and the current branch coverage ratchet;
+  release promotion should raise the ratchet toward the 90% branch-only target.
 - Frontend builds.
 - Compose config validates.
 - Compose topology validates that API, worker, and migrations share one backend image,

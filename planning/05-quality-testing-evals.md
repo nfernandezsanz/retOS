@@ -2,16 +2,23 @@
 
 ## Coverage Policy
 
-- Minimum 90% line coverage.
-- Minimum 90% branch coverage.
+- Minimum 90% total coverage.
+- Target minimum 90% branch coverage.
+- Current branch-only ratchet: 79.78%, enforced by CI until focused branch tests raise
+  the ratchet without hiding gaps.
 - Recommended 95% for auth, journals, identities, permissions, provider routing, and citation validation.
 
 Default command:
 
 ```bash
-cd backend
-pytest
+make test
 ```
+
+`make test` runs pytest with branch instrumentation, writes `backend/coverage.json`,
+and then runs `backend/scripts/check_branch_coverage.py`. CI runs the same branch
+ratchet after pytest so total coverage and branch coverage cannot drift silently; pass
+`BRANCH_COVERAGE_MIN=90 make test` when auditing readiness against the final branch
+coverage target.
 
 Reality-check commands:
 

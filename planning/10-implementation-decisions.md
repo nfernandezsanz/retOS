@@ -18,7 +18,7 @@ Last updated: 2026-06-27
 | OCR | Local OCR in the MVP |
 | Agent runtime | `deepagents.create_deep_agent` |
 | Local LLM | Ollama `gemma4` |
-| Tests | 90% line and branch coverage, no paid providers by default |
+| Tests | 90% total coverage, branch coverage ratchet toward 90%, no paid providers by default |
 
 ## Backend Decision
 

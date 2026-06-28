@@ -27,7 +27,8 @@ RetOS is an open source, Dockerized system for local document research with stro
 - Show answers with citations, evidence ledgers, and run timelines.
 - Stream scan, OCR, indexing, and agent progress through SSE.
 - Run with Docker Compose and persistent volumes.
-- Maintain at least 90% line and branch coverage.
+- Maintain at least 90% total coverage and drive branch coverage to 90% with an
+  explicit non-regression ratchet in CI.
 
 ## Non-Goals
 

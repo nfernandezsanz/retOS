@@ -103,6 +103,9 @@ tag in GitHub.
   the eval harness, preserving `rerun_from_job_id` for audit traceability.
 - API smoke now exercises generic retry for failed eval jobs and verifies the resulting
   rerun origin in persisted journal/progress events.
+- Backend tests now generate `coverage.json` and CI enforces a separate branch coverage
+  ratchet so branch coverage cannot regress while the project works toward the 90%
+  branch-only target.
 
 ### Changed
 
