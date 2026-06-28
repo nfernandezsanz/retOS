@@ -1,4 +1,8 @@
+import { mkdir } from "node:fs/promises";
+import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+
+const VISUAL_AUDIT_DIR = resolve(process.cwd(), "visual-audit");
 
 function jobFixture(
   id: string,
@@ -1520,6 +1524,21 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
     expect(hasHorizontalOverflow).toBe(false);
+  }
+
+  if (process.env.RETOS_VISUAL_AUDIT === "1") {
+    await mkdir(VISUAL_AUDIT_DIR, { recursive: true });
+    await page.locator("#overview").focus();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.screenshot({
+      fullPage: true,
+      path: resolve(VISUAL_AUDIT_DIR, "retos-console-desktop.png"),
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({
+      fullPage: true,
+      path: resolve(VISUAL_AUDIT_DIR, "retos-console-mobile.png"),
+    });
   }
 });
 

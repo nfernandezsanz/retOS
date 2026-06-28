@@ -40,6 +40,7 @@ frontend/node_modules
 frontend/dist
 frontend/.vite
 frontend/coverage
+frontend/visual-audit
 frontend/playwright-report
 frontend/test-results
 *.tsbuildinfo

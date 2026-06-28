@@ -3,7 +3,7 @@ PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 BRANCH_COVERAGE_MIN ?= 90.44
 
-.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-static-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-static-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -37,6 +37,7 @@ help:
 	@printf "  make frontend-install Install frontend dependencies\n"
 	@printf "  make frontend-test    Run frontend checks\n"
 	@printf "  make frontend-e2e     Run browser smoke tests against the UI\n"
+	@printf "  make frontend-visual-audit Generate local desktop/mobile UI audit screenshots\n"
 	@printf "  make integration      Run API and frontend smoke tests\n"
 	@printf "  make docker-config    Validate Docker Compose configuration\n"
 	@printf "  make docker-build     Build Docker images\n"
@@ -163,6 +164,9 @@ frontend-test:
 
 frontend-e2e:
 	cd frontend && npm run e2e
+
+frontend-visual-audit:
+	cd frontend && npm run visual-audit
 
 integration: api-smoke frontend-e2e
 

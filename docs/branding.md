@@ -68,6 +68,8 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
 - Automated coverage: `frontend/e2e/app.spec.ts` verifies brand tokens, favicon,
   responsive breakpoints, skip-link focus, reduced motion, mobile provider controls,
   and the full operational console flow.
+- Reproducible screenshots: run `make frontend-visual-audit` to write ignored local
+  desktop and mobile PNGs under `frontend/visual-audit/` for human design review.
 
 ## Assets
 

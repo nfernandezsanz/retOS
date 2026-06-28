@@ -18,9 +18,12 @@ paths = {
     "project_card": Path("docs/assets/retos-project-card.svg"),
     "mark": Path("frontend/public/retos-mark.svg"),
     "index": Path("frontend/index.html"),
+    "package_json": Path("frontend/package.json"),
     "styles": Path("frontend/src/styles.css"),
     "app": Path("frontend/src/App.tsx"),
     "e2e": Path("frontend/e2e/app.spec.ts"),
+    "gitignore": Path(".gitignore"),
+    "dockerignore": Path(".dockerignore"),
 }
 
 for name, path in paths.items():
@@ -31,9 +34,12 @@ branding = paths["branding"].read_text(encoding="utf-8")
 project_card = paths["project_card"].read_text(encoding="utf-8")
 mark = paths["mark"].read_text(encoding="utf-8")
 index = paths["index"].read_text(encoding="utf-8")
+package_json = paths["package_json"].read_text(encoding="utf-8")
 styles = paths["styles"].read_text(encoding="utf-8")
 app = paths["app"].read_text(encoding="utf-8")
 e2e = paths["e2e"].read_text(encoding="utf-8")
+gitignore = paths["gitignore"].read_text(encoding="utf-8")
+dockerignore = paths["dockerignore"].read_text(encoding="utf-8")
 
 for phrase in (
     "![RetOS project card](docs/assets/retos-project-card.svg)",
@@ -89,6 +95,19 @@ for phrase in (
 
 require("@media (prefers-reduced-motion: reduce)" in styles, "CSS must respect reduced motion")
 require("@media (max-width: 900px)" in styles, "CSS must define mobile responsive layout")
+require("visual-audit" in package_json, "frontend package must expose a visual audit script")
+for phrase in (
+    "RETOS_VISUAL_AUDIT",
+    "retos-console-desktop.png",
+    "retos-console-mobile.png",
+):
+    require(phrase in e2e, f"Playwright visual audit missing phrase: {phrase}")
+require(
+    "make frontend-visual-audit" in readme and "make frontend-visual-audit" in branding,
+    "README and branding guide must document the visual audit command",
+)
+require("frontend/visual-audit/" in gitignore, ".gitignore must exclude visual audit PNGs")
+require("frontend/visual-audit" in dockerignore, ".dockerignore must exclude visual audit PNGs")
 
 print("Branding assets OK: project image, mark, palette, docs, and UI smoke are aligned.")
 PY
