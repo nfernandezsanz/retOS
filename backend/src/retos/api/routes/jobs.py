@@ -4,9 +4,16 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 
-from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
+from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep
 from retos.api.routes.events import progress_store
 from retos.domain.jobs import Job, JobKind, JobStatus
+from retos.jobs.tasks import (
+    agent_query_job,
+    ingest_file_upload_job,
+    ingest_text_job,
+    rebuild_domain_index_job,
+    scan_source_job,
+)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -52,6 +59,10 @@ class JobTransitionRequest(BaseModel):
     error: str | None = Field(default=None, max_length=4000)
 
 
+class RetryDispatchPlan(BaseModel):
+    task_name: str
+
+
 TRANSITIONS: dict[JobStatus, tuple[JobStatus, ...]] = {
     "queued": ("running", "cancelled"),
     "running": ("succeeded", "failed", "cancelled"),
@@ -59,6 +70,68 @@ TRANSITIONS: dict[JobStatus, tuple[JobStatus, ...]] = {
     "failed": (),
     "cancelled": (),
 }
+
+
+def retry_dispatch_plan(job: Job) -> RetryDispatchPlan:
+    if job.kind == "index.domain":
+        if job.domain_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Index retry requires domain_id",
+            )
+        return RetryDispatchPlan(task_name="rebuild_domain_index")
+
+    if job.kind == "agent.query":
+        if job.domain_id is None or not str(job.payload.get("question") or "").strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Agent query retry requires domain_id and question",
+            )
+        return RetryDispatchPlan(task_name="agent_query")
+
+    if job.kind == "ingest.source":
+        ingestion_kind = job.payload.get("ingestion_kind")
+        if ingestion_kind == "file_upload":
+            if not isinstance(job.payload.get("file_path"), str):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="File upload retry requires file_path",
+                )
+            return RetryDispatchPlan(task_name="ingest_file_upload")
+        if ingestion_kind == "source_scan":
+            if job.domain_id is None or job.source_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Source scan retry requires domain_id and source_id",
+                )
+            return RetryDispatchPlan(task_name="scan_source")
+        if isinstance(job.payload.get("text"), str) and isinstance(job.payload.get("title"), str):
+            if job.domain_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Text ingestion retry requires domain_id",
+                )
+            return RetryDispatchPlan(task_name="ingest_text")
+
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail=f"Job kind {job.kind} cannot be retried by the generic job API",
+    )
+
+
+def dispatch_retry_job(job: Job, plan: RetryDispatchPlan) -> None:
+    if plan.task_name == "rebuild_domain_index":
+        rebuild_domain_index_job.delay(job.id)
+    elif plan.task_name == "agent_query":
+        agent_query_job.delay(job.id)
+    elif plan.task_name == "ingest_file_upload":
+        ingest_file_upload_job.delay(job.id)
+    elif plan.task_name == "scan_source":
+        scan_source_job.delay(job.id)
+    elif plan.task_name == "ingest_text":
+        ingest_text_job.delay(job.id)
+    else:
+        raise RuntimeError(f"Unsupported retry dispatch task: {plan.task_name}")
 
 
 def validate_transition(current: JobStatus, target: JobStatus) -> None:
@@ -119,6 +192,87 @@ async def transition_job(
             "kind": job.kind,
             "status": job.status,
             "error": job.error,
+        },
+    )
+    return JobRead.from_job(job)
+
+
+@router.post("/{job_id}/retry", response_model=JobRead, status_code=status.HTTP_202_ACCEPTED)
+async def retry_job(
+    actor: AdminSubjectDep,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+    job_id: Annotated[str, Path(min_length=1)],
+) -> JobRead:
+    now = datetime.now(UTC)
+    async with uow:
+        original = await uow.jobs.get(job_id)
+        if original is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        if original.status not in {"failed", "cancelled"}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cannot retry job from {original.status}",
+            )
+        plan = retry_dispatch_plan(original)
+        if original.domain_id is not None and await uow.domains.get(original.domain_id) is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        if original.source_id is not None:
+            source = await uow.sources.get(original.source_id)
+            if source is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="Source not found"
+                )
+            if original.domain_id is not None and source.domain_id != original.domain_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Source does not belong to domain",
+                )
+
+        retry_payload = {
+            **original.payload,
+            "retried_from_job_id": original.id,
+            "retry_requested_at": now.isoformat(),
+        }
+        job = await uow.jobs.add(
+            kind=original.kind,
+            status="queued",
+            domain_id=original.domain_id,
+            source_id=original.source_id,
+            payload=retry_payload,
+        )
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="job.retry_queued",
+            entity_type="job",
+            entity_id=job.id,
+            payload={
+                "from_job_id": original.id,
+                "kind": job.kind,
+                "dispatch_task": plan.task_name,
+            },
+        )
+        await uow.progress_events.add(
+            job_id=job.id,
+            event_type="job.retry_queued",
+            message=f"Queued retry for {job.kind}",
+            payload={
+                "from_job_id": original.id,
+                "dispatch_task": plan.task_name,
+                "status": job.status,
+            },
+        )
+        await uow.commit()
+
+    if settings.env != "test":
+        dispatch_retry_job(job, plan)
+    progress_store.append(
+        "job.retry_queued",
+        {
+            "job_id": job.id,
+            "from_job_id": original.id,
+            "kind": job.kind,
+            "status": job.status,
         },
     )
     return JobRead.from_job(job)

@@ -54,7 +54,14 @@ async function mockProviderApi(page: Page) {
       updated_at: "2026-06-27T00:00:00Z",
     },
   ];
-  const jobs = [jobFixture("job-seed-1", "ingest.source", "succeeded")];
+  const failedIndexJob = {
+    ...jobFixture("job-failed-index-1", "index.domain", "failed", {
+      requested_at: "fixture",
+    }),
+    error: "fixture failure",
+    completed_at: "2026-06-27T00:01:00Z",
+  };
+  const jobs = [jobFixture("job-seed-1", "ingest.source", "succeeded"), failedIndexJob];
   const journalEvents = [
     {
       id: "journal-seed-1",
@@ -601,6 +608,30 @@ async function mockProviderApi(page: Page) {
       json: job,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/jobs\/[^/]+\/retry$/, async (route) => {
+    const jobId = new URL(route.request().url()).pathname.split("/")[2];
+    const original = jobs.find((item) => item.id === jobId);
+    if (!original || !["failed", "cancelled"].includes(original.status)) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 409,
+        json: { detail: "Cannot retry job from queued" },
+      });
+      return;
+    }
+    const retried = jobFixture(`job-retry-${jobId}`, original.kind, "queued", {
+      ...original.payload,
+      retried_from_job_id: original.id,
+      retry_requested_at: "2026-06-27T00:06:00Z",
+    });
+    jobs.unshift(retried);
+    recordAudit(retried);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: retried,
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/audit\/journal-events\?limit=\d+/, async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -1102,6 +1133,17 @@ test("loads the operational console", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByLabel("Selected job detail").getByText("requested_at")).toBeVisible();
   await expect(page.getByLabel("Selected job detail").getByText("Queued index.domain")).toBeVisible();
+  await page
+    .getByLabel("Recent jobs")
+    .locator("article")
+    .filter({ hasText: "job-failed-index-1" })
+    .getByRole("button", { name: "Retry" })
+    .click();
+  await expect(page.getByLabel("Selected job detail").getByText("job-retry-job-failed-index-1")).toBeVisible();
+  await expect(page.getByLabel("Selected job detail").getByText("retried_from_job_id")).toBeVisible();
+  await expect(page.getByLabel("Selected job detail").locator("pre")).toContainText(
+    '"retried_from_job_id": "job-failed-index-1"',
+  );
 
   await page.getByRole("button", { name: "Connect live updates" }).click();
   await expect(page.getByLabel("Live progress events").getByText("job.queued")).toBeVisible();

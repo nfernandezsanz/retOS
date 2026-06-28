@@ -1018,6 +1018,21 @@ Allowed transitions:
 
 Each transition writes a journal event, a progress event, and a live SSE update.
 
+Retry a failed or cancelled worker-backed job:
+
+```bash
+curl --request POST --header "Authorization: Bearer <token>" \
+  http://localhost:8000/jobs/<job_id>/retry
+```
+
+Retry creates a new `queued` job with the original kind, domain/source IDs, and payload,
+adds `retried_from_job_id` plus `retry_requested_at`, writes `job.retry_queued`
+journal/progress events, and dispatches the matching Celery task outside
+`RETOS_ENV=test`. The generic retry endpoint supports worker-backed `ingest.source`,
+`index.domain`, and `agent.query` jobs only when their payload contains enough data for
+the worker to repeat the operation. It rejects active jobs, completed jobs, `eval.run`
+jobs, and manual jobs without a runnable payload.
+
 List jobs:
 
 ```bash

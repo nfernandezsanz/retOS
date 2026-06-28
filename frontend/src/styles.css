@@ -1226,6 +1226,12 @@ button:focus-visible {
   justify-self: start;
 }
 
+.job-retry-action {
+  justify-self: start;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
 .compact-action {
   min-height: 40px;
 }

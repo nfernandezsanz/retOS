@@ -513,6 +513,15 @@ async function loadJob(token: string, jobId: string): Promise<JobRead> {
   });
 }
 
+async function retryJob(token: string, jobId: string): Promise<JobRead> {
+  return requestJson<JobRead>(`/jobs/${jobId}/retry`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 async function loadJournalEvents(token: string): Promise<JournalEventRead[]> {
   return requestJson<JournalEventRead[]>("/audit/journal-events?limit=20", {
     headers: {
@@ -1014,6 +1023,7 @@ function App() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobRead | null>(null);
   const [isLoadingJobDetail, setIsLoadingJobDetail] = useState(false);
+  const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
   const [jobDetailError, setJobDetailError] = useState<string | null>(null);
   const [journalEvents, setJournalEvents] = useState<JournalEventRead[]>([]);
   const [auditProgressEvents, setAuditProgressEvents] = useState<ProgressEventRead[]>([]);
@@ -1170,6 +1180,25 @@ function App() {
     setSelectedJobId(null);
     setSelectedJob(null);
     setJobDetailError(null);
+  }
+
+  async function handleRetryJob(jobId: string) {
+    setRetryingJobId(jobId);
+    setAuditError(null);
+    try {
+      const accessToken = await getAdminToken();
+      const retried = await retryJob(accessToken, jobId);
+      setQueuedJobs((current) =>
+        [retried, ...current.filter((candidate) => candidate.id !== retried.id)].slice(0, 12),
+      );
+      setSelectedJobId(retried.id);
+      setSelectedJob(retried);
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setAuditError(error instanceof Error ? error.message : "Job retry failed");
+    } finally {
+      setRetryingJobId(null);
+    }
   }
 
   async function handleExportAudit() {
@@ -3327,6 +3356,17 @@ function App() {
                     <Eye aria-hidden="true" />
                     {isLoadingJobDetail && selectedJobId === job.id ? "Inspecting" : "Inspect"}
                   </button>
+                  {job.status === "failed" || job.status === "cancelled" ? (
+                    <button
+                      className="ghost-action job-retry-action"
+                      disabled={retryingJobId === job.id}
+                      type="button"
+                      onClick={() => void handleRetryJob(job.id)}
+                    >
+                      <RotateCcw aria-hidden="true" />
+                      {retryingJobId === job.id ? "Retrying" : "Retry"}
+                    </button>
+                  ) : null}
                 </article>
               ))}
               {filteredJobs.length === 0 ? (

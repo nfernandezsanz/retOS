@@ -955,6 +955,54 @@ def main() -> None:
                 "completed job should succeed",
             )
 
+            retry_seed = client.post(
+                "/jobs",
+                headers=auth_headers,
+                json={
+                    "kind": "index.domain",
+                    "domain_id": domain_id,
+                    "payload": {"requested_at": "api-smoke-retry"},
+                },
+            )
+            require(
+                retry_seed.status_code == 201,
+                f"retry seed create failed: {retry_seed.status_code} {retry_seed.text}",
+            )
+            retry_seed_body = retry_seed.json()
+            started_retry_seed = client.post(
+                f"/jobs/{retry_seed_body['id']}/start",
+                headers=auth_headers,
+            )
+            require(
+                started_retry_seed.status_code == 200,
+                "retry seed start failed: "
+                f"{started_retry_seed.status_code} {started_retry_seed.text}",
+            )
+            failed_retry_seed = client.post(
+                f"/jobs/{retry_seed_body['id']}/fail",
+                headers=auth_headers,
+                json={"error": "api smoke retry seed"},
+            )
+            require(
+                failed_retry_seed.status_code == 200,
+                "retry seed fail failed: "
+                f"{failed_retry_seed.status_code} {failed_retry_seed.text}",
+            )
+            retried_job = client.post(
+                f"/jobs/{retry_seed_body['id']}/retry",
+                headers=auth_headers,
+            )
+            require(
+                retried_job.status_code == 202,
+                f"job retry failed: {retried_job.status_code} {retried_job.text}",
+            )
+            retried_body = retried_job.json()
+            require(retried_body["status"] == "queued", "retried job should be queued")
+            require(
+                retried_body["payload"]["retried_from_job_id"] == retry_seed_body["id"],
+                "retried job did not link original job",
+            )
+
             listed_jobs = client.get("/jobs", headers=auth_headers)
             require(
                 listed_jobs.status_code == 200,
