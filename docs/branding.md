@@ -9,6 +9,24 @@ RetOS should feel like an operational research console: calm, auditable, local-f
 - Avoid decorative gradients, oversized marketing sections, and purely atmospheric imagery.
 - Keep every status readable with text plus color; color alone is never the signal.
 
+## Design-System Decision
+
+RetOS follows a flat SaaS operational-dashboard pattern: direct navigation, compact
+information density, explicit status text, Lucide icons, and restrained color accents.
+This is intentional for a repeated-use audit console; the first screen should expose the
+working system instead of a marketing landing page.
+
+The brand contract aligns with the selected design direction:
+
+- Pattern: minimal and direct operational console.
+- Style: flat design with crisp borders, no decorative gradients, and no heavy shadows.
+- Colors: trust blue primary (`#2563eb`), verification orange action (`#f97316`),
+  quiet canvas (`#f8fafc`), and high-contrast ink (`#0f172a`).
+- Typography: system UI fonts for offline Docker reliability, with a Plus Jakarta
+  Sans-compatible direction for future packaged font assets.
+- Anti-patterns: cluttered onboarding, hidden operational state, color-only status,
+  emoji icons, and hero/marketing layouts that delay the work surface.
+
 ## Palette
 
 | Role | Hex | Use |

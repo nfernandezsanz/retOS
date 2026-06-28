@@ -44,8 +44,14 @@ for phrase in (
 
 for phrase in (
     "operational research console",
+    "flat SaaS operational-dashboard pattern",
+    "minimal and direct operational console",
     "dense, scan-friendly layouts",
     "flat colors",
+    "trust blue primary",
+    "verification orange action",
+    "Plus Jakarta Sans-compatible",
+    "emoji icons",
     "color alone is never the signal",
     "frontend/public/retos-mark.svg",
     "docs/assets/retos-project-card.svg",
