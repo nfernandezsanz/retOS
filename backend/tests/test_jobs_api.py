@@ -412,6 +412,13 @@ def test_retry_dispatch_plan_rejects_unrunnable_jobs(job: Job, detail: str) -> N
     assert detail in str(exc_info.value)
 
 
+def test_retry_dispatch_plan_rejects_jobs_without_worker_payload() -> None:
+    with pytest.raises(Exception) as exc_info:
+        retry_dispatch_plan(job_fixture(kind="eval.run", payload={"suite_name": "retos-smoke"}))
+
+    assert "cannot be retried by the generic job API" in str(exc_info.value)
+
+
 def test_dispatch_retry_job_calls_matching_celery_task(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, str]] = []
 
@@ -463,6 +470,20 @@ def test_create_job_rejects_missing_domain(
     assert response.json()["detail"] == "Domain not found"
 
 
+def test_create_job_rejects_missing_source(
+    jobs_client: TestClient,
+    jobs_admin_headers: dict[str, str],
+) -> None:
+    response = jobs_client.post(
+        "/jobs",
+        json={"kind": "ingest.source", "source_id": "missing-source"},
+        headers=jobs_admin_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Source not found"
+
+
 def test_create_job_rejects_source_from_another_domain(
     jobs_client: TestClient,
     jobs_admin_headers: dict[str, str],
@@ -490,3 +511,46 @@ def test_create_job_rejects_source_from_another_domain(
 
     assert response.status_code == 422
     assert response.json()["detail"] == "Source does not belong to domain"
+
+
+def test_get_missing_job_returns_not_found(
+    jobs_client: TestClient,
+    jobs_admin_headers: dict[str, str],
+) -> None:
+    response = jobs_client.get("/jobs/missing-job", headers=jobs_admin_headers)
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Job not found"
+
+
+def test_global_job_requires_admin_viewer_access(
+    jobs_client: TestClient,
+    jobs_admin_headers: dict[str, str],
+) -> None:
+    created_viewer = jobs_client.post(
+        "/admin/users",
+        headers=jobs_admin_headers,
+        json={
+            "email": "jobs-viewer@retos.dev",
+            "password": "jobs-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    assert created_viewer.status_code == 201
+    login = jobs_client.post(
+        "/auth/login",
+        json={"email": "jobs-viewer@retos.dev", "password": "jobs-viewer-password"},
+    )
+    assert login.status_code == 200
+    viewer_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    created_job = jobs_client.post(
+        "/jobs",
+        json={"kind": "eval.run", "payload": {"suite_name": "retos-smoke"}},
+        headers=jobs_admin_headers,
+    )
+    assert created_job.status_code == 201
+
+    response = jobs_client.get(f"/jobs/{created_job.json()['id']}", headers=viewer_headers)
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Domain access required"
