@@ -45,6 +45,7 @@ scripts/check_versioned_release_notes.sh
 ```bash
 make release-check
 make audit-pack-check
+make ci-status-check
 make check
 make integration
 make frontend-test
@@ -52,7 +53,7 @@ make frontend-e2e
 make docker-smoke
 ```
 
-5. Confirm GitHub Actions is green for the release commit.
+5. Confirm GitHub Actions is green for the release commit with `make ci-status-check`.
 6. Push a `v<version>` tag or run `.github/workflows/release.yml` manually to publish
    `retos-backend` and `retos-web` to GHCR with SBOM, provenance, and Cosign signatures.
    The workflow reruns backend format/lint/type/test/eval-smoke and frontend checks before

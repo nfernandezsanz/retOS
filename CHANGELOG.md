@@ -13,6 +13,7 @@ tag in GitHub.
 
 - Production readiness audit pack with explicit promotion blockers, human review order,
   acceptance checks, and a CI-enforced guard.
+- Current-HEAD GitHub Actions status check for human release auditors.
 - Nullable audit `trace_id` columns for journal/progress correlation, including default
   job-id traces for job-backed events and trace-aware audit export hashes.
 - Durable audit hash-chain columns for journal/progress events, including migration

@@ -9,7 +9,7 @@ production pilot.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Product maturity | Pre-alpha candidate | `planning/04-process-tracker.md` keeps phases 0-6 in progress. |
-| CI health | Passing at the last recorded release-candidate run | `docs/releases/2026.06.28-alpha.1.md` records the GitHub Actions evidence URL. |
+| CI health | Must be checked against current `HEAD` | `make ci-status-check` queries GitHub Actions for the current commit; `docs/releases/2026.06.28-alpha.1.md` records release-candidate evidence. |
 | Backend coverage | Passing total coverage, branch ratchet in progress | `README.md` records 90.70% total and 80.73% branch-only coverage. |
 | Runtime topology | Guarded | `scripts/check_docker_topology.sh` and `scripts/check_backend_runtime_image.sh` protect the shared API/worker/migrate backend image model. |
 | Local cost safety | Guarded | `.env.example` keeps `RETOS_ALLOW_PAID_LLM=false`, `RETOS_PROVIDER=local`, and `RETOS_OLLAMA_MODEL=gemma4`. |
@@ -19,8 +19,8 @@ production pilot.
 
 ## Auditor Review Order
 
-1. Confirm the candidate commit and the latest successful GitHub Actions run match the
-   release note under `docs/releases/`.
+1. Confirm the candidate commit and the latest successful GitHub Actions run with
+   `make ci-status-check`; then reconcile the release note under `docs/releases/`.
 2. Run the local validation commands in `docs/release-process.md`.
 3. Review `docs/operations.md` for upgrade, backup, restore, rollback, and security
    defaults.
@@ -45,6 +45,7 @@ make frontend-e2e
 docker compose --env-file .env.example config
 docker compose --dry-run build
 make release-check
+make ci-status-check
 make release-notes-check
 make versioned-release-notes-check
 make docker-smoke
@@ -75,6 +76,7 @@ These items must be closed before a final production release:
 
 - [ ] Release note references the exact commit SHA under review.
 - [ ] Latest GitHub Actions run is green for that SHA.
+- [ ] `make ci-status-check` passes for the current `HEAD`.
 - [ ] `make check` passes with no paid providers.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test` and `make frontend-e2e` pass.
@@ -94,6 +96,7 @@ These items must be closed before a final production release:
 | Evidence | Location |
 | --- | --- |
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
+| Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check` |
 | Release procedure | `docs/release-process.md` |
 | Operations runbooks | `docs/operations.md` |
 | Docker topology | `docs/docker.md`, `docker-compose.yml`, `scripts/check_docker_topology.sh` |
@@ -102,4 +105,3 @@ These items must be closed before a final production release:
 | Calibration evidence | `docs/releases/evidence/` |
 | Audit model | `planning/06-auditability-journals.md`, `docs/database.md` |
 | Current project tracking | `planning/04-process-tracker.md` |
-

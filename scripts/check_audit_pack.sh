@@ -20,6 +20,7 @@ paths = {
     "tracker": Path("planning/04-process-tracker.md"),
     "release_note": Path("docs/releases/2026.06.28-alpha.1.md"),
     "ci": Path(".github/workflows/ci.yml"),
+    "ci_status_script": Path("scripts/check_ci_status.sh"),
 }
 
 for name, path in paths.items():
@@ -50,8 +51,10 @@ for phrase in (
     "make frontend-test",
     "make frontend-e2e",
     "make docker-smoke",
+    "make ci-status-check",
     "scripts/check_release_readiness.sh",
     "scripts/check_audit_pack.sh",
+    "scripts/check_ci_status.sh",
     "GHCR",
     "SBOM/provenance",
     "Cosign",
@@ -85,6 +88,10 @@ require(
 require(
     "80.73% branch" in readme,
     "README must record current branch coverage evidence",
+)
+require(
+    "make ci-status-check" in release_process,
+    "release process must require current HEAD CI verification",
 )
 require(
     "Final release promotion still requires" in tracker,
