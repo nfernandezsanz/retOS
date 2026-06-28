@@ -775,6 +775,11 @@ button:focus-visible {
   font-weight: 800;
 }
 
+.budget-meta span {
+  background: #f8fafc;
+  color: #334155;
+}
+
 .citation-list {
   display: grid;
   gap: 10px;

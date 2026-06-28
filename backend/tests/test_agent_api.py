@@ -7,8 +7,10 @@ from fastapi.testclient import TestClient
 from retos.agent.harness import create_research_harness
 from retos.agent.service import (
     AgentQueryError,
+    budget_from_payload,
     build_grounded_answer,
     fail_agent_query_job,
+    hits_within_budget,
     run_agent_query,
 )
 from retos.api.app import create_app
@@ -17,7 +19,7 @@ from retos.core.config import Settings
 from retos.domain.documents import utc_now
 from retos.domain.jobs import Job
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
-from retos.search.index import TantivySearchIndex
+from retos.search.index import SearchHit, TantivySearchIndex
 
 
 @pytest.fixture
@@ -79,6 +81,17 @@ def create_agent_fixture(client: TestClient, headers: dict[str, str]) -> str:
             "anchor": "paragraph=0",
             "token_count": 6,
             "content_hash": "sha256:bbbbbbbbbbbbbbbb",
+        },
+        headers=headers,
+    )
+    client.post(
+        f"/document-versions/{version_id}/segments",
+        json={
+            "ordinal": 1,
+            "text": "Apollo mission reviews required cited evidence and audit trails.",
+            "anchor": "paragraph=1",
+            "token_count": 8,
+            "content_hash": "sha256:cccccccccccccccc",
         },
         headers=headers,
     )
@@ -151,11 +164,81 @@ def test_agent_query_runs_inline_with_citations(
     assert body["job"]["kind"] == "agent.query"
     assert body["job"]["status"] == "succeeded"
     assert body["job"]["payload"]["result"]["provider"] == "local"
+    assert body["job"]["payload"]["budget"]["max_citations"] == 5
+    assert body["job"]["payload"]["result"]["usage"]["within_budget"] is True
     assert body["result"]["provider"] == "local"
     assert body["result"]["model"] == "ollama:gemma4"
+    assert body["result"]["usage"]["budget"]["max_searches"] == 8
+    assert body["result"]["usage"]["search_count"] == 1
     assert "Apollo guidance computers" in body["result"]["answer"]
     assert body["result"]["citations"][0]["title"] == "Apollo Guidance Memo"
     assert body["result"]["citations"][0]["anchor"] == "paragraph=0"
+
+
+def test_agent_query_applies_citation_budget(
+    agent_client: TestClient,
+    agent_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_agent_fixture(agent_client, agent_admin_headers)
+
+    response = agent_client.post(
+        f"/domains/{domain_id}/queries",
+        json={
+            "question": "What did Apollo reviews require?",
+            "limit": 5,
+            "run_inline": True,
+            "budget": {"max_citations": 1},
+        },
+        headers=agent_admin_headers,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert len(body["result"]["citations"]) == 1
+    assert body["result"]["usage"]["citation_count"] == 1
+    assert body["result"]["usage"]["budget"]["max_citations"] == 1
+
+
+def test_agent_query_applies_evidence_token_budget(
+    agent_client: TestClient,
+    agent_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_agent_fixture(agent_client, agent_admin_headers)
+
+    response = agent_client.post(
+        f"/domains/{domain_id}/queries",
+        json={
+            "question": "What evidence exists?",
+            "run_inline": True,
+            "budget": {"max_evidence_tokens": 1},
+        },
+        headers=agent_admin_headers,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["result"]["citations"] == []
+    assert body["result"]["usage"]["evidence_tokens"] == 0
+    assert "could not find enough indexed evidence" in body["result"]["answer"]
+
+
+def test_agent_query_rejects_invalid_budget(
+    agent_client: TestClient,
+    agent_admin_headers: dict[str, str],
+) -> None:
+    domain_response = agent_client.post(
+        "/domains",
+        json={"slug": "invalid-budget", "name": "Invalid Budget"},
+        headers=agent_admin_headers,
+    )
+
+    response = agent_client.post(
+        f"/domains/{domain_response.json()['id']}/queries",
+        json={"question": "What?", "budget": {"max_citations": 0}},
+        headers=agent_admin_headers,
+    )
+
+    assert response.status_code == 422
 
 
 def test_agent_query_can_queue_for_worker(
@@ -210,6 +293,61 @@ def test_build_grounded_answer_abstains_without_hits() -> None:
     answer = build_grounded_answer("What happened?", [])
 
     assert "could not find enough indexed evidence" in answer
+
+
+def test_agent_budget_defaults_and_validation() -> None:
+    budget = budget_from_payload({})
+
+    assert budget.max_searches == 8
+    assert budget.max_citations == 5
+    assert budget.max_evidence_tokens == 16_000
+    assert budget.max_runtime_seconds == 120
+    with pytest.raises(AgentQueryError, match="budget must be an object"):
+        budget_from_payload({"budget": "invalid"})
+    with pytest.raises(AgentQueryError, match="max_searches"):
+        budget_from_payload({"budget": {"max_searches": True}})
+    with pytest.raises(AgentQueryError, match="max_citations"):
+        budget_from_payload({"budget": {"max_citations": "many"}})
+
+
+def test_hits_within_budget_caps_citations_and_evidence() -> None:
+    budget = budget_from_payload({"budget": {"max_citations": 2, "max_evidence_tokens": 4}})
+    hits = [
+        SearchHit(
+            segment_id="s1",
+            document_id="d1",
+            document_version_id="v1",
+            title="One",
+            text="one two",
+            anchor=None,
+            ordinal=0,
+            score=3.0,
+        ),
+        SearchHit(
+            segment_id="s2",
+            document_id="d1",
+            document_version_id="v1",
+            title="Two",
+            text="three four",
+            anchor=None,
+            ordinal=1,
+            score=2.0,
+        ),
+        SearchHit(
+            segment_id="s3",
+            document_id="d1",
+            document_version_id="v1",
+            title="Three",
+            text="five six",
+            anchor=None,
+            ordinal=2,
+            score=1.0,
+        ),
+    ]
+
+    assert [hit.segment_id for hit in hits_within_budget(hits, budget)] == ["s1", "s2"]
+    tiny_budget = budget_from_payload({"budget": {"max_evidence_tokens": 1}})
+    assert hits_within_budget(hits, tiny_budget) == []
 
 
 @pytest.mark.asyncio

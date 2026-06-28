@@ -432,7 +432,13 @@ curl --request POST http://localhost:8000/domains/<domain_id>/queries \
   --data '{
     "question":"What evidence mentions search readiness?",
     "limit":5,
-    "run_inline":true
+    "run_inline":true,
+    "budget":{
+      "max_searches":8,
+      "max_citations":5,
+      "max_evidence_tokens":16000,
+      "max_runtime_seconds":120
+    }
   }'
 ```
 
@@ -450,6 +456,19 @@ The response always includes the durable job. When `run_inline=true`, or in
     "answer": "Grounded answer for: ...",
     "provider": "local",
     "model": "ollama:gemma4",
+    "usage": {
+      "budget": {
+        "max_searches": 8,
+        "max_citations": 5,
+        "max_evidence_tokens": 16000,
+        "max_runtime_seconds": 120
+      },
+      "search_count": 1,
+      "citation_count": 1,
+      "evidence_tokens": 6,
+      "runtime_ms": 24,
+      "within_budget": true
+    },
     "citations": [
       {
         "segment_id": "<segment_id>",
@@ -469,6 +488,12 @@ In Docker/runtime mode, omit `run_inline` to queue the job for the worker. The w
 stores the final result under `job.payload.result`, writes `agent.*` journal/progress
 events, and emits SSE progress. If the domain index has not been built, the API returns
 `409 Conflict` and marks the job failed.
+
+Agent budgets are persisted in the queued job payload and echoed in the final result
+usage. The current deterministic runtime performs one controlled BM25 search, caps
+citations with `max_citations`, caps retained evidence with `max_evidence_tokens`, and
+records `search_count`, `citation_count`, `evidence_tokens`, `runtime_ms`, and
+`within_budget` for audit and UI display.
 
 ## LLM Providers
 

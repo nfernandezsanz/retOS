@@ -128,10 +128,25 @@ type AgentCitation = {
   text: string;
 };
 
+type AgentBudgetUsage = {
+  budget: {
+    max_searches: number;
+    max_citations: number;
+    max_evidence_tokens: number;
+    max_runtime_seconds: number;
+  };
+  search_count: number;
+  citation_count: number;
+  evidence_tokens: number;
+  runtime_ms: number;
+  within_budget: boolean;
+};
+
 type AgentQueryResult = {
   answer: string;
   provider: string;
   model: string;
+  usage: AgentBudgetUsage;
   citations: AgentCitation[];
 };
 
@@ -2151,6 +2166,21 @@ function App() {
                     <span>Job {queryJob?.status ?? "unknown"}</span>
                     <span>{queryResult.model}</span>
                     <span>{queryResult.citations.length} citations</span>
+                  </div>
+                  <div className="result-meta budget-meta" aria-label="Query budget usage">
+                    <span>{queryResult.usage.within_budget ? "Within budget" : "Budget exceeded"}</span>
+                    <span>
+                      Searches {queryResult.usage.search_count}/
+                      {queryResult.usage.budget.max_searches}
+                    </span>
+                    <span>
+                      Citations {queryResult.usage.citation_count}/
+                      {queryResult.usage.budget.max_citations}
+                    </span>
+                    <span>
+                      Evidence {queryResult.usage.evidence_tokens}/
+                      {queryResult.usage.budget.max_evidence_tokens} tokens
+                    </span>
                   </div>
                   <p>{queryResult.answer}</p>
                   <div className="citation-list" aria-label="Query citations">

@@ -65,11 +65,14 @@ connected.
 
 ## Implemented Query Contract
 
-`POST /domains/{domain_id}/queries` creates a durable `agent.query` job. The first
+`POST /domains/{domain_id}/queries` creates a durable `agent.query` job. The current
 implementation searches the domain BM25 index, builds a grounded answer from retrieved
-segments, persists citations under `job.payload.result`, and writes `agent.queued`,
-`agent.started`, `agent.completed`, or `agent.failed` progress/journal events.
+segments, persists citations under `job.payload.result`, enforces query budgets for
+searches, citations, evidence tokens, and runtime, and writes `agent.queued`,
+`agent.started`, `agent.completed`, or `agent.failed` progress/journal events. Usage is
+persisted with `search_count`, `citation_count`, `evidence_tokens`, `runtime_ms`, and
+`within_budget`.
 
 The Deep Agents harness factory is present through `deepagents.create_deep_agent` with a
-RetOS-specific system prompt. Full model invocation, tool budgets, subagent execution,
-and evidence-checking middleware remain the next runtime slice.
+RetOS-specific system prompt. Full model invocation, controlled tool execution,
+subagent execution, and evidence-checking middleware remain future runtime slices.

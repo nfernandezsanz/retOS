@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Path, status
 from pydantic import BaseModel, Field
 
 from retos.agent.service import (
+    DEFAULT_AGENT_BUDGET,
     AgentQueryError,
     AgentQueryResult,
     fail_agent_query_job,
@@ -20,10 +21,26 @@ from retos.search.index import TantivySearchIndex
 router = APIRouter(tags=["agent"])
 
 
+class AgentBudgetRequest(BaseModel):
+    max_searches: int = Field(default=DEFAULT_AGENT_BUDGET["max_searches"], ge=1, le=50)
+    max_citations: int = Field(default=DEFAULT_AGENT_BUDGET["max_citations"], ge=1, le=20)
+    max_evidence_tokens: int = Field(
+        default=DEFAULT_AGENT_BUDGET["max_evidence_tokens"],
+        ge=1,
+        le=100_000,
+    )
+    max_runtime_seconds: int = Field(
+        default=DEFAULT_AGENT_BUDGET["max_runtime_seconds"],
+        ge=1,
+        le=3_600,
+    )
+
+
 class AgentQueryRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     limit: int = Field(default=5, ge=1, le=20)
     run_inline: bool = False
+    budget: AgentBudgetRequest = Field(default_factory=AgentBudgetRequest)
 
 
 class AgentCitationRead(BaseModel):
@@ -36,10 +53,27 @@ class AgentCitationRead(BaseModel):
     text: str
 
 
+class AgentBudgetRead(BaseModel):
+    max_searches: int
+    max_citations: int
+    max_evidence_tokens: int
+    max_runtime_seconds: int
+
+
+class AgentBudgetUsageRead(BaseModel):
+    budget: AgentBudgetRead
+    search_count: int
+    citation_count: int
+    evidence_tokens: int
+    runtime_ms: int
+    within_budget: bool
+
+
 class AgentQueryResultRead(BaseModel):
     answer: str
     provider: str
     model: str
+    usage: AgentBudgetUsageRead
     citations: list[AgentCitationRead]
 
     @classmethod
@@ -48,6 +82,19 @@ class AgentQueryResultRead(BaseModel):
             answer=result.answer,
             provider=result.provider,
             model=result.model,
+            usage=AgentBudgetUsageRead(
+                budget=AgentBudgetRead(
+                    max_searches=result.usage.budget.max_searches,
+                    max_citations=result.usage.budget.max_citations,
+                    max_evidence_tokens=result.usage.budget.max_evidence_tokens,
+                    max_runtime_seconds=result.usage.budget.max_runtime_seconds,
+                ),
+                search_count=result.usage.search_count,
+                citation_count=result.usage.citation_count,
+                evidence_tokens=result.usage.evidence_tokens,
+                runtime_ms=result.usage.runtime_ms,
+                within_budget=result.usage.within_budget,
+            ),
             citations=[
                 AgentCitationRead(
                     segment_id=citation.segment_id,
@@ -98,6 +145,7 @@ async def query_domain(
             payload={
                 "question": question,
                 "limit": payload.limit,
+                "budget": payload.budget.model_dump(),
                 "requested_at": datetime.now().isoformat(),
             },
         )
@@ -106,13 +154,22 @@ async def query_domain(
             event_type="agent.queued",
             entity_type="job",
             entity_id=job.id,
-            payload={"domain_id": domain_id, "question": question, "limit": payload.limit},
+            payload={
+                "domain_id": domain_id,
+                "question": question,
+                "limit": payload.limit,
+                "budget": payload.budget.model_dump(),
+            },
         )
         await uow.progress_events.add(
             job_id=job.id,
             event_type="agent.queued",
             message=f"Queued research query for {domain.slug}",
-            payload={"domain_id": domain_id, "domain_slug": domain.slug},
+            payload={
+                "domain_id": domain_id,
+                "domain_slug": domain.slug,
+                "budget": payload.budget.model_dump(),
+            },
         )
         await uow.commit()
 
