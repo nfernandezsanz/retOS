@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke release-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -30,6 +30,7 @@ help:
 	@printf "  make integration      Run API and frontend smoke tests\n"
 	@printf "  make docker-config    Validate Docker Compose configuration\n"
 	@printf "  make docker-build     Build Docker images\n"
+	@printf "  make docker-runtime-image-check Validate running backend roles share one image ID\n"
 	@printf "  make docker-smoke     Build and smoke the Docker stack\n"
 	@printf "  make release-check    Validate release docs, defaults, and Docker topology\n"
 	@printf "  make release-notes-check Validate changelog and release note guidance\n"
@@ -124,6 +125,9 @@ docker-config:
 
 docker-build:
 	docker compose build api web
+
+docker-runtime-image-check:
+	scripts/check_backend_runtime_image.sh
 
 docker-smoke:
 	scripts/run_docker_smoke.sh

@@ -11,7 +11,8 @@ tag in GitHub.
 
 ### Added
 
-- Shared backend Docker runtime for API, worker, and migrations with topology guards.
+- Shared backend Docker runtime for API, worker, and migrations with topology and
+  runtime image ID guards.
 - OCI image metadata labels for backend and web images, including source, license,
   version, revision, and build timestamp.
 - Release readiness checks for Docker topology, image metadata, safe local defaults, and
@@ -47,8 +48,9 @@ tag in GitHub.
 
 ### Changed
 
-- Docker smoke now inspects built application image metadata and image size budgets before
-  exercising the stack.
+- Docker smoke now verifies API, worker, and migrations run the same backend image ID,
+  then inspects built application image metadata and image size budgets before exercising
+  the stack.
 
 ### Security
 

@@ -42,6 +42,8 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Frontend builds.
 - Compose config validates.
 - Compose topology validates that API, worker, and migrations share one backend image.
+- Docker smoke validates that running API, worker, and migration containers share the
+  same backend image ID.
 - Docker images build.
 - Docker stack smoke starts core services and hits API/web endpoints.
 - Release readiness validates operations docs, safe defaults, and image topology.

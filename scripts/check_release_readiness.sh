@@ -96,6 +96,7 @@ for phrase in (
     "provenance",
     "docs/release-process.md",
     "docker compose --env-file .env.example config",
+    "make docker-runtime-image-check",
     "make docker-smoke",
 ):
     require(phrase in operations, f"docs/operations.md missing operational phrase: {phrase}")
@@ -107,6 +108,10 @@ require(
 require(
     "API, worker, and migrate share the same `retos-backend` image" in docker_docs,
     "docs/docker.md must document the shared backend runtime",
+)
+require(
+    "scripts/check_backend_runtime_image.sh" in docker_docs,
+    "docs/docker.md must document the backend runtime image ID guard",
 )
 require(
     "docs/operations.md" in readme,

@@ -112,6 +112,7 @@ Images:
 - Frontend build:
 - Browser smoke:
 - Docker topology:
+- Backend runtime image ID:
 - Image metadata:
 - Image size budgets:
 - GHCR publishing:

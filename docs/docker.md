@@ -51,7 +51,9 @@ CI enforces this topology with `scripts/check_docker_topology.sh`: `api`, `worke
 and `migrate` must resolve to the same backend image, only `api` may declare the
 shared backend build, the backend build must use `backend/Dockerfile` from the
 repository root, the target must be `backend-runtime`, and each role may differ
-only by command.
+only by command. Docker stack smoke also runs `scripts/check_backend_runtime_image.sh`
+after startup so the running `api`, `worker`, and `migrate` containers must share
+the exact same Docker image ID, not just equivalent source files.
 
 CI also runs `scripts/check_image_metadata.sh` so release images cannot lose their
 OCI labels. Docker smoke inspects the built `retos-backend` and `retos-web` images.
@@ -104,6 +106,12 @@ through the worker, BM25 index rebuild through the worker, search, local and
 dataset-backed eval endpoints with report export, job lifecycle transitions, persisted
 audit endpoints, SSE, and web over HTTP, then removes its temporary containers and
 volumes.
+
+When the stack is already running, validate the backend runtime image contract directly:
+
+```bash
+make docker-runtime-image-check
+```
 
 ## Run
 

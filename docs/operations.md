@@ -22,6 +22,13 @@ RETOS_IMAGE_TAG=2026.06.28 docker compose --env-file .env.example config
 scripts/check_docker_topology.sh
 ```
 
+After the stack is running, verify the runtime containers are using the same built image
+ID:
+
+```bash
+make docker-runtime-image-check
+```
+
 Application images must also carry `org.opencontainers.image.*` OCI metadata labels for
 source, documentation, license, version, revision, and build creation time:
 
