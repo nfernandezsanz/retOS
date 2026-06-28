@@ -135,7 +135,7 @@ docker-config:
 	scripts/check_docker_topology.sh
 
 docker-build:
-	docker compose build api web
+	docker compose build api worker migrate web
 
 docker-runtime-image-check:
 	scripts/check_backend_runtime_image.sh

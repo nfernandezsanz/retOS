@@ -36,6 +36,7 @@ x-app-volumes: &app-volumes
 services:
   migrate:
     image: *backend-image
+    build: *backend-build
     command: ["migrate"]
     init: true
     env_file:
@@ -77,6 +78,7 @@ services:
 
   worker:
     image: *backend-image
+    build: *backend-build
     command: ["worker"]
     init: true
     env_file:

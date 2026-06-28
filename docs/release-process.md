@@ -27,7 +27,7 @@ Do not use `latest` for shared environments. Local development may use the defau
 2. Build traceable images:
 
 ```bash
-docker compose build api web
+docker compose build api worker migrate web
 RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_metadata.sh
 RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_size.sh
 ```

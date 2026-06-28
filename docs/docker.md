@@ -19,7 +19,7 @@ docker compose build
 Build only application images:
 
 ```bash
-docker compose build api web
+docker compose build api worker migrate web
 make image-size-check
 ```
 
@@ -30,10 +30,13 @@ RETOS_IMAGE_TAG=2026.06.28 \
 RETOS_VERSION=2026.06.28 \
 RETOS_REVISION="$(git rev-parse HEAD)" \
 RETOS_CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-docker compose build api web
+docker compose build api worker migrate web
 ```
 
-The `worker` service intentionally does not have its own build or Dockerfile. It runs the exact same `retos-backend` image built by the `api` service from the `backend-runtime` target with `command: ["worker"]`.
+The `api`, `worker`, and `migrate` services intentionally declare the same build:
+repository-root context, `backend/Dockerfile`, and `backend-runtime` target. They
+also publish to the same `retos-backend` image tag, so each role can be built
+directly while still producing one shared backend runtime.
 
 The `migrate` service also uses `retos-backend` and runs `command: ["migrate"]`.
 It applies `alembic upgrade head` before API and worker start.
@@ -48,10 +51,10 @@ license, version, revision, and build creation time. Compose passes these build 
 | `RETOS_CREATED` | `unknown` | Build timestamp, preferably RFC 3339 UTC. |
 
 CI enforces this topology with `scripts/check_docker_topology.sh`: `api`, `worker`,
-and `migrate` must resolve to the same backend image, only `api` may declare the
-shared backend build, the backend build must use `backend/Dockerfile` from the
-repository root, the target must be `backend-runtime`, and each role may differ
-only by command. Docker stack smoke also runs `scripts/check_backend_runtime_image.sh`
+and `migrate` must resolve to the same backend image, each role must declare the
+same backend build using `backend/Dockerfile` from the repository root, the target
+must be `backend-runtime`, and each role may differ only by command. Docker stack
+smoke also runs `scripts/check_backend_runtime_image.sh`
 after startup so the running `api`, `worker`, and `migrate` containers must share
 the exact same Docker image ID, not just equivalent source files.
 
