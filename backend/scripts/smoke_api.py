@@ -1274,7 +1274,7 @@ def main() -> None:
             )
             audit_export_body = audit_export.json()
             require(
-                audit_export_body["schema_version"] == "retos.audit-export.v1",
+                audit_export_body["schema_version"] == "retos.audit-export.v2",
                 "unexpected audit export schema version",
             )
             require(
@@ -1290,6 +1290,33 @@ def main() -> None:
                     for item in audit_export_body["progress_events"]
                 ),
                 "created job missing from audit export progress events",
+            )
+            audit_integrity = audit_export_body["integrity"]
+            require(audit_integrity["algorithm"] == "sha256", "audit export hash algorithm changed")
+            require(
+                audit_integrity["canonicalization"] == "json-sort-keys-v1",
+                "audit export canonicalization changed",
+            )
+            require(audit_integrity["valid"] is True, "audit export integrity chain is invalid")
+            require(
+                audit_integrity["event_count"]
+                == len(audit_export_body["journal_events"])
+                + len(audit_export_body["progress_events"]),
+                "audit export integrity event count mismatch",
+            )
+            require(
+                audit_integrity["head_hash"] == audit_integrity["chain"][-1]["event_hash"],
+                "audit export head hash did not match the final chain event",
+            )
+            require(
+                audit_integrity["chain"][0]["prev_hash"] is None,
+                "audit export first chain event should not have a previous hash",
+            )
+            require(
+                all(
+                    item["payload_hash"] and item["event_hash"] for item in audit_integrity["chain"]
+                ),
+                "audit export integrity chain has empty hashes",
             )
 
             stream_timeout = httpx.Timeout(10, read=3)

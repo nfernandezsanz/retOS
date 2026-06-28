@@ -11,6 +11,8 @@ tag in GitHub.
 
 ### Added
 
+- Audit export integrity metadata with canonical payload hashes and a chronological
+  SHA-256 hash chain for offline review.
 - React document evidence inspection for latest versions, artifacts, and searchable
   segments directly from the document inventory.
 - Metric-gated real-dataset calibration manifests so release candidates can fail on

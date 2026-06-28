@@ -1105,7 +1105,11 @@ job-to-domain relationships.
 
 The export endpoint follows the same admin/viewer visibility rules, accepts `limit` from
 `1` to `1000`, returns `Content-Disposition: attachment;
-filename="retos-audit-export.json"`, and sets `Cache-Control: no-store`.
+filename="retos-audit-export.json"`, and sets `Cache-Control: no-store`. Export payloads
+also include an offline integrity section. RetOS canonicalizes each event payload with
+sorted JSON keys, hashes it with SHA-256, then builds a chronological hash chain across
+the exported journal and progress events. This does not replace database backups, but it
+lets operators detect accidental or malicious edits to an exported audit package.
 
 Journal event shape:
 
@@ -1143,11 +1147,19 @@ Audit export shape:
 
 ```json
 {
-  "schema_version": "retos.audit-export.v1",
+  "schema_version": "retos.audit-export.v2",
   "generated_at": "2026-06-27T00:00:00Z",
   "limit": 200,
   "journal_events": [],
-  "progress_events": []
+  "progress_events": [],
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "json-sort-keys-v1",
+    "valid": true,
+    "event_count": 0,
+    "head_hash": null,
+    "chain": []
+  }
 }
 ```
 

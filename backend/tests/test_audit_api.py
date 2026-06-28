@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from retos.api.app import create_app
+from retos.api.routes.audit import AuditHashChainEntryRead, validate_audit_chain
 from retos.core.config import Settings
 
 
@@ -166,7 +167,7 @@ def test_exports_audit_snapshot_with_download_headers(
     )
     assert response.headers["cache-control"] == "no-store"
     body = response.json()
-    assert body["schema_version"] == "retos.audit-export.v1"
+    assert body["schema_version"] == "retos.audit-export.v2"
     assert body["generated_at"]
     assert body["limit"] == 5
     assert any(
@@ -177,6 +178,50 @@ def test_exports_audit_snapshot_with_download_headers(
         event["event_type"] == "job.queued" and event["job_id"] == job_id
         for event in body["progress_events"]
     )
+    integrity = body["integrity"]
+    assert integrity["algorithm"] == "sha256"
+    assert integrity["canonicalization"] == "json-sort-keys-v1"
+    assert integrity["valid"] is True
+    assert integrity["event_count"] == len(body["journal_events"]) + len(body["progress_events"])
+    assert integrity["head_hash"] == integrity["chain"][-1]["event_hash"]
+    assert integrity["chain"][0]["prev_hash"] is None
+    assert all(entry["payload_hash"] for entry in integrity["chain"])
+    assert all(entry["event_hash"] for entry in integrity["chain"])
+    assert {entry["event_stream"] for entry in integrity["chain"]} == {"journal", "progress"}
+    assert any(entry["event_type"] == "job.created" for entry in integrity["chain"])
+    assert any(entry["event_type"] == "job.queued" for entry in integrity["chain"])
+    assert [
+        (entry["occurred_at"], entry["event_stream"], entry["event_id"])
+        for entry in integrity["chain"]
+    ] == sorted(
+        (entry["occurred_at"], entry["event_stream"], entry["event_id"])
+        for entry in integrity["chain"]
+    )
+
+
+def test_audit_hash_chain_validation_detects_tampering(
+    audit_client: TestClient,
+    audit_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_domain(audit_client, audit_admin_headers, "audit-chain")
+    create_index_job(audit_client, audit_admin_headers, domain_id)
+    response = audit_client.get(
+        "/audit/export?limit=5",
+        headers=audit_admin_headers,
+    )
+    assert response.status_code == 200
+    entries = [
+        AuditHashChainEntryRead.model_validate(entry)
+        for entry in response.json()["integrity"]["chain"]
+    ]
+    assert validate_audit_chain(entries) is True
+
+    tampered = [
+        entry.model_copy(update={"payload_hash": "0" * 64}) if index == 0 else entry
+        for index, entry in enumerate(entries)
+    ]
+
+    assert validate_audit_chain(tampered) is False
 
 
 def test_viewer_audit_is_scoped_to_granted_domains(

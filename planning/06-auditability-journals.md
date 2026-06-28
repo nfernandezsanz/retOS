@@ -26,20 +26,27 @@ Current read endpoints:
 
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`
+- `GET /audit/export?limit=200`
 
 Both require an authenticated bearer token. `admin` accounts can read the full local
 ledger. `viewer` accounts can read only events tied to their granted domains through
 event payload `domain_id`, domain entity IDs, or job-to-domain relationships. Audit-
 producing mutations remain admin-only. Results return newest events first.
 
+`/audit/export` returns `retos.audit-export.v2` snapshots with newest-first journal and
+progress event lists plus an offline integrity section. The integrity block uses
+SHA-256, sorted-key JSON canonicalization, per-event payload hashes, chronological
+`prev_hash`/`event_hash` links, a `head_hash`, and a `valid` flag computed before the
+download is returned. The chain covers the exported slice only; durable append-only
+hashes in the database remain a future hardening step.
+
 ## Future Hardening
 
 The next audit hardening pass should add:
 
 - `trace_id` correlation with OpenTelemetry.
-- Canonical payload hashes.
-- `prev_hash` plus `event_hash` chain validation.
-- Export endpoints for offline review.
+- Durable database-level `prev_hash` plus `event_hash` columns for append-only ledger
+  verification across exports.
 
 ## Base Events
 

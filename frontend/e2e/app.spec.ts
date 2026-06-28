@@ -934,11 +934,29 @@ async function mockProviderApi(page: Page) {
         "cache-control": "no-store",
       },
       json: {
-        schema_version: "retos.audit-export.v1",
+        schema_version: "retos.audit-export.v2",
         generated_at: "2026-06-27T00:02:00Z",
         limit: 200,
         journal_events: journalEvents,
         progress_events: progressEvents,
+        integrity: {
+          algorithm: "sha256",
+          canonicalization: "json-sort-keys-v1",
+          valid: true,
+          event_count: journalEvents.length + progressEvents.length,
+          head_hash: "hash-final",
+          chain: [
+            {
+              event_id: "journal-event-1",
+              event_stream: "journal",
+              event_type: "job.created",
+              occurred_at: "2026-06-27T00:00:00Z",
+              payload_hash: "hash-payload-1",
+              prev_hash: null,
+              event_hash: "hash-final",
+            },
+          ],
+        },
       },
     });
   });

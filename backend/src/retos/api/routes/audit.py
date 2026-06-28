@@ -1,3 +1,5 @@
+import hashlib
+import json
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
@@ -53,12 +55,113 @@ class ProgressEventRead(BaseModel):
         )
 
 
+class AuditHashChainEntryRead(BaseModel):
+    event_id: str
+    event_stream: str
+    event_type: str
+    occurred_at: datetime
+    payload_hash: str
+    prev_hash: str | None
+    event_hash: str
+
+
+class AuditExportIntegrityRead(BaseModel):
+    algorithm: str
+    canonicalization: str
+    valid: bool
+    event_count: int
+    head_hash: str | None
+    chain: list[AuditHashChainEntryRead]
+
+
 class AuditExportRead(BaseModel):
     schema_version: str
     generated_at: datetime
     limit: int
     journal_events: list[JournalEventRead]
     progress_events: list[ProgressEventRead]
+    integrity: AuditExportIntegrityRead
+
+
+def canonical_json_hash(payload: dict[str, Any]) -> str:
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def build_audit_integrity(
+    *,
+    journal_events: list[JournalEvent],
+    progress_events: list[ProgressEvent],
+) -> AuditExportIntegrityRead:
+    entries: list[AuditHashChainEntryRead] = []
+    prev_hash: str | None = None
+    chronological = sorted(
+        [
+            ("journal", event.id, event.occurred_at, event.event_type, event.payload)
+            for event in journal_events
+        ]
+        + [
+            ("progress", event.id, event.occurred_at, event.event_type, event.payload)
+            for event in progress_events
+        ],
+        key=lambda item: (item[2], item[0], item[1]),
+    )
+    for event_stream, event_id, occurred_at, event_type, payload in chronological:
+        payload_hash = canonical_json_hash(payload)
+        event_hash = canonical_json_hash(
+            {
+                "event_id": event_id,
+                "event_stream": event_stream,
+                "event_type": event_type,
+                "occurred_at": occurred_at.isoformat(),
+                "payload_hash": payload_hash,
+                "prev_hash": prev_hash,
+            }
+        )
+        entries.append(
+            AuditHashChainEntryRead(
+                event_id=event_id,
+                event_stream=event_stream,
+                event_type=event_type,
+                occurred_at=occurred_at,
+                payload_hash=payload_hash,
+                prev_hash=prev_hash,
+                event_hash=event_hash,
+            )
+        )
+        prev_hash = event_hash
+    return AuditExportIntegrityRead(
+        algorithm="sha256",
+        canonicalization="json-sort-keys-v1",
+        valid=validate_audit_chain(entries),
+        event_count=len(entries),
+        head_hash=prev_hash,
+        chain=entries,
+    )
+
+
+def validate_audit_chain(entries: list[AuditHashChainEntryRead]) -> bool:
+    prev_hash: str | None = None
+    for entry in entries:
+        expected_hash = canonical_json_hash(
+            {
+                "event_id": entry.event_id,
+                "event_stream": entry.event_stream,
+                "event_type": entry.event_type,
+                "occurred_at": entry.occurred_at.isoformat(),
+                "payload_hash": entry.payload_hash,
+                "prev_hash": prev_hash,
+            }
+        )
+        if entry.prev_hash != prev_hash or entry.event_hash != expected_hash:
+            return False
+        prev_hash = entry.event_hash
+    return True
 
 
 @router.get("/journal-events", response_model=list[JournalEventRead])
@@ -119,11 +222,15 @@ async def export_audit_events(
             )
 
     payload = AuditExportRead(
-        schema_version="retos.audit-export.v1",
+        schema_version="retos.audit-export.v2",
         generated_at=datetime.now(UTC),
         limit=limit,
         journal_events=[JournalEventRead.from_event(event) for event in journal_events],
         progress_events=[ProgressEventRead.from_event(event) for event in progress_events],
+        integrity=build_audit_integrity(
+            journal_events=journal_events,
+            progress_events=progress_events,
+        ),
     )
     return JSONResponse(
         content=payload.model_dump(mode="json"),
