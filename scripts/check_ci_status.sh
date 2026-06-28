@@ -110,6 +110,14 @@ expired_artifacts = [
 if expired_artifacts:
     fail(f"required CI artifact(s) expired: {', '.join(expired_artifacts)}")
 
+empty_artifacts = [
+    name
+    for name in sorted(required_artifacts)
+    if int(artifact_by_name[name].get("size_in_bytes") or 0) <= 0
+]
+if empty_artifacts:
+    fail(f"required CI artifact(s) are empty: {', '.join(empty_artifacts)}")
+
 print(
     "CI status OK: "
     f"{repo}@{sha[:7]} run {run['id']} completed success "

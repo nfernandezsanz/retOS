@@ -223,6 +223,8 @@ for phrase in (
     "retos-visual-audit-{sha}",
     "retos-audit-manifest-{sha}",
     "expired_artifacts",
+    "size_in_bytes",
+    "empty_artifacts",
 ):
     require(phrase in paths["ci_status_script"].read_text(encoding="utf-8"), f"CI status check must validate required artifacts: {phrase}")
 for phrase in (
