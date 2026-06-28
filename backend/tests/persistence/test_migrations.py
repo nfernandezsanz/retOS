@@ -8,6 +8,7 @@ from retos.persistence.models import Base
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_TABLES = {
+    "admin_user_domain_grants",
     "admin_users",
     "artifacts",
     "document_versions",
@@ -59,6 +60,9 @@ def test_initial_migration_creates_and_drops_catalog_schema(tmp_path: Path) -> N
         }
         admin_columns = {item["name"] for item in inspector.get_columns("admin_users")}
         assert "roles" in admin_columns
+        assert {
+            item["name"] for item in inspector.get_unique_constraints("admin_user_domain_grants")
+        } == {"uq_admin_user_domain_grants_user_domain"}
     finally:
         engine.dispose()
 

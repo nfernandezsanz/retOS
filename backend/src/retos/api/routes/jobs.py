@@ -4,7 +4,13 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 
-from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep, ViewerSubjectDep
+from retos.api.dependencies import (
+    AdminSubjectDep,
+    SettingsDep,
+    UnitOfWorkDep,
+    ViewerSubjectDep,
+    ensure_domain_access,
+)
 from retos.api.routes.events import progress_store
 from retos.domain.jobs import Job, JobKind, JobStatus
 from retos.jobs.tasks import (
@@ -345,23 +351,38 @@ async def create_job(
 
 @router.get("", response_model=list[JobRead])
 async def list_jobs(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[JobRead]:
     async with uow:
-        jobs = await uow.jobs.list(limit=limit)
+        admin = await uow.admin_users.get_by_email(actor)
+        if admin is not None and "admin" in admin.roles:
+            jobs = await uow.jobs.list(limit=limit)
+        elif admin is not None:
+            jobs = await uow.jobs.list_for_admin_user(admin_user_id=admin.id, limit=limit)
+        else:
+            jobs = []
     return [JobRead.from_job(job) for job in jobs]
 
 
 @router.get("/{job_id}", response_model=JobRead)
 async def get_job(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     job_id: Annotated[str, Path(min_length=1)],
 ) -> JobRead:
     async with uow:
         job = await uow.jobs.get(job_id)
+        if job is not None and job.domain_id is not None:
+            await ensure_domain_access(actor=actor, domain_id=job.domain_id, uow=uow)
+        elif job is not None:
+            admin = await uow.admin_users.get_by_email(actor)
+            if admin is None or "admin" not in admin.roles:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Domain access required",
+                )
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     return JobRead.from_job(job)

@@ -43,6 +43,12 @@ class AdminUserRecord(TimestampMixin, Base):
     roles: Mapped[list[str]] = mapped_column(JSON, default=lambda: ["admin"], nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    domain_grants: Mapped[list[AdminUserDomainGrantRecord]] = relationship(
+        back_populates="admin_user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
 
 class DomainRecord(TimestampMixin, Base):
     __tablename__ = "domains"
@@ -62,6 +68,42 @@ class DomainRecord(TimestampMixin, Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    admin_user_grants: Mapped[list[AdminUserDomainGrantRecord]] = relationship(
+        back_populates="domain",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class AdminUserDomainGrantRecord(Base):
+    __tablename__ = "admin_user_domain_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "admin_user_id",
+            "domain_id",
+            name="uq_admin_user_domain_grants_user_domain",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    admin_user_id: Mapped[str] = mapped_column(
+        ForeignKey("admin_users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    domain_id: Mapped[str] = mapped_column(
+        ForeignKey("domains.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
+
+    admin_user: Mapped[AdminUserRecord] = relationship(back_populates="domain_grants")
+    domain: Mapped[DomainRecord] = relationship(back_populates="admin_user_grants")
 
 
 class SourceRecord(TimestampMixin, Base):

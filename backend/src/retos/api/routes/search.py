@@ -4,7 +4,13 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 
-from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep, ViewerSubjectDep
+from retos.api.dependencies import (
+    AdminSubjectDep,
+    SettingsDep,
+    UnitOfWorkDep,
+    ViewerSubjectDep,
+    ensure_domain_access,
+)
 from retos.api.routes.events import progress_store
 from retos.api.routes.jobs import JobRead
 from retos.domain.jobs import Job
@@ -111,7 +117,7 @@ async def rebuild_index(
 
 @router.get("/domains/{domain_id}/search", response_model=SearchResponse)
 async def search_domain(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],
@@ -120,6 +126,8 @@ async def search_domain(
 ) -> SearchResponse:
     async with uow:
         domain = await uow.domains.get(domain_id)
+        if domain is not None:
+            await ensure_domain_access(actor=actor, domain_id=domain_id, uow=uow)
     if domain is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
 

@@ -1563,7 +1563,7 @@ button:focus-visible {
 
 .admin-user-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(0, 0.8fr) minmax(260px, 0.9fr) minmax(320px, 1fr);
   gap: 12px;
   align-items: center;
   border: 1px solid #dbe3ef;
@@ -1601,6 +1601,87 @@ button:focus-visible {
 
 .admin-user-actions .ghost-action {
   min-width: 128px;
+}
+
+.admin-domain-grants {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.grant-list {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.grant-chip {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 4px 0 8px;
+}
+
+.grant-chip button {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #1e40af;
+}
+
+.grant-chip button:hover {
+  background: #dbeafe;
+}
+
+.grant-chip button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.grant-chip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.grant-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.grant-form label {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.grant-form select {
+  min-height: 44px;
+  width: 100%;
+}
+
+.muted-inline {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .badge {
@@ -1690,6 +1771,8 @@ button:focus-visible {
   .provider-row,
   .admin-user-row,
   .admin-user-row > div:first-child,
+  .admin-domain-grants,
+  .grant-form,
   .admin-user-actions,
   .admin-user-actions form,
   .document-row,

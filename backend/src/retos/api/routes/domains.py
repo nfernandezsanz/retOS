@@ -5,7 +5,12 @@ from fastapi import APIRouter, HTTPException, Path, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
-from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep, ViewerSubjectDep
+from retos.api.dependencies import (
+    AdminSubjectDep,
+    UnitOfWorkDep,
+    ViewerSubjectDep,
+    ensure_domain_access,
+)
 from retos.domain.documents import Domain, Source, SourceKind
 
 router = APIRouter(prefix="/domains", tags=["domains"])
@@ -97,22 +102,29 @@ async def create_domain(
 
 
 @router.get("", response_model=list[DomainRead])
-async def list_domains(_: ViewerSubjectDep, uow: UnitOfWorkDep) -> list[DomainRead]:
+async def list_domains(actor: ViewerSubjectDep, uow: UnitOfWorkDep) -> list[DomainRead]:
     async with uow:
-        domains = await uow.domains.list()
+        admin = await uow.admin_users.get_by_email(actor)
+        if admin is not None and "admin" in admin.roles:
+            domains = await uow.domains.list()
+        elif admin is not None:
+            domains = await uow.domains.list_for_admin_user(admin.id)
+        else:
+            domains = []
     return [DomainRead.from_domain(domain) for domain in domains]
 
 
 @router.get("/{domain_id}", response_model=DomainRead)
 async def get_domain(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],
 ) -> DomainRead:
     async with uow:
         domain = await uow.domains.get(domain_id)
-    if domain is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        if domain is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        await ensure_domain_access(actor=actor, domain_id=domain_id, uow=uow)
     return DomainRead.from_domain(domain)
 
 
@@ -155,7 +167,7 @@ async def create_source(
 
 @router.get("/{domain_id}/sources", response_model=list[SourceRead])
 async def list_sources(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],
 ) -> list[SourceRead]:
@@ -163,5 +175,6 @@ async def list_sources(
         domain = await uow.domains.get(domain_id)
         if domain is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        await ensure_domain_access(actor=actor, domain_id=domain_id, uow=uow)
         sources = await uow.sources.list_for_domain(domain_id)
     return [SourceRead.from_source(source) for source in sources]

@@ -33,6 +33,7 @@ The first revision creates these tables:
 | Table | Purpose |
 | --- | --- |
 | `admin_users` | Persisted admin identities and roles used by login, active-token checks, bootstrap, and account management. |
+| `admin_user_domain_grants` | Per-domain read grants for `viewer` accounts. Admin accounts bypass grants. |
 | `domains` | User-managed research workspaces. |
 | `sources` | Upload, mounted path, or URL inputs attached to a domain. |
 | `documents` | Canonical document records keyed by domain and content hash. |
@@ -55,6 +56,8 @@ The first API-backed workflows are document registration and job creation:
   on every management request, and account mutations write `admin_user.*` journal events.
 - Read-only operational endpoints can accept `viewer` accounts, but state-changing
   endpoints and account management require a persisted active `admin` role.
+- Domain-scoped reads check `admin_user_domain_grants` for viewers. Admins retain full
+  access and use grant endpoints only to manage viewer scope.
 - `POST /domains/{domain_id}/documents` creates a document, writes version `1`,
   writes `document.created` journal/progress events, and emits a live SSE notification.
 - `PATCH /documents/{document_id}` updates mutable document title/metadata fields,

@@ -64,8 +64,8 @@ The UI is a working console, not a landing page. It must make background process
   call so the bearer token stays in headers and the exported JSON can be retained for
   review.
 - The admin panel reads `/admin/users`, creates `admin` or `viewer` accounts, renders
-  account roles, updates active state, and submits password resets without rendering
-  hashes or secrets.
+  account roles, updates active state, submits password resets, and manages per-domain
+  viewer grants without rendering hashes or secrets.
 - The eval panel posts to `/evals/smoke`, `/evals/squad`, and `/evals/hotpotqa`, reads `/evals/runs?limit=6`,
   compares reported runs through `/evals/runs/compare`, and renders the returned
   `eval.run` jobs, metric scorecards, per-case pass/failure rows, report paths,
@@ -78,7 +78,8 @@ The UI is a working console, not a landing page. It must make background process
 - Failed and cancelled worker-backed jobs expose a retry action. The UI posts to
   `/jobs/{job_id}/retry`, selects the new queued job, and shows its retry metadata in the
   detail panel.
-- Browser smoke tests mock the API contract and verify provider, admin user roles, domain
+- Browser smoke tests mock the API contract and verify provider, admin user roles,
+  per-domain viewer grants, domain
   creation, document/source inventory, document edit/archive/restore/history, file
   upload, text ingestion, scan/index queueing, job/audit filtering, persisted audit
   events, audit export, eval smoke execution, eval run history, query, and live

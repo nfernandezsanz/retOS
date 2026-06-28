@@ -302,6 +302,7 @@ def main() -> None:
                 smoke_viewer.status_code == 201,
                 f"viewer user create failed: {smoke_viewer.status_code} {smoke_viewer.text}",
             )
+            smoke_viewer_body = smoke_viewer.json()
             smoke_viewer_login = client.post(
                 "/auth/login",
                 json={
@@ -375,6 +376,17 @@ def main() -> None:
             )
             require(listed_sources.json()[0]["uri"] == scan_source_uri, "source missing")
             source_id = listed_sources.json()[0]["id"]
+
+            viewer_domain_grant = client.post(
+                f"/admin/users/{smoke_viewer_body['id']}/domain-grants",
+                headers=auth_headers,
+                json={"domain_id": domain_id},
+            )
+            require(
+                viewer_domain_grant.status_code == 201,
+                "viewer domain grant failed: "
+                f"{viewer_domain_grant.status_code} {viewer_domain_grant.text}",
+            )
 
             viewer_provider_catalog = client.get("/llm/providers", headers=viewer_headers)
             require(

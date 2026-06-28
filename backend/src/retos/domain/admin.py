@@ -16,6 +16,14 @@ class AdminUser:
     updated_at: datetime
 
 
+@dataclass(frozen=True)
+class AdminUserDomainGrant:
+    id: str
+    admin_user_id: str
+    domain_id: str
+    created_at: datetime
+
+
 def normalize_admin_roles(roles: tuple[str, ...] | list[str]) -> tuple[AdminRole, ...]:
     normalized = tuple(dict.fromkeys(role.strip().lower() for role in roles if role.strip()))
     if not normalized:

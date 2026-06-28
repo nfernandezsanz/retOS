@@ -1,12 +1,18 @@
 from datetime import datetime
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Path, status
 from pydantic import BaseModel, EmailStr, Field, SecretStr, field_validator
 from sqlalchemy.exc import IntegrityError
 
 from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep
 from retos.core.security import hash_password
-from retos.domain.admin import ALLOWED_ADMIN_ROLES, AdminUser, normalize_admin_roles
+from retos.domain.admin import (
+    ALLOWED_ADMIN_ROLES,
+    AdminUser,
+    AdminUserDomainGrant,
+    normalize_admin_roles,
+)
 
 router = APIRouter(prefix="/admin/users", tags=["admin-users"])
 
@@ -29,6 +35,26 @@ class AdminUserRead(BaseModel):
             created_at=admin.created_at,
             updated_at=admin.updated_at,
         )
+
+
+class AdminUserDomainGrantRead(BaseModel):
+    id: str
+    admin_user_id: str
+    domain_id: str
+    created_at: datetime
+
+    @classmethod
+    def from_grant(cls, grant: AdminUserDomainGrant) -> AdminUserDomainGrantRead:
+        return cls(
+            id=grant.id,
+            admin_user_id=grant.admin_user_id,
+            domain_id=grant.domain_id,
+            created_at=grant.created_at,
+        )
+
+
+class AdminUserDomainGrantCreate(BaseModel):
+    domain_id: str = Field(min_length=1, max_length=36)
 
 
 class AdminUserCreate(BaseModel):
@@ -184,6 +210,115 @@ async def update_admin_user_status(
         )
         await uow.commit()
     return AdminUserRead.from_admin(updated)
+
+
+@router.get("/{admin_user_id}/domain-grants", response_model=list[AdminUserDomainGrantRead])
+async def list_admin_user_domain_grants(
+    admin_user_id: Annotated[str, Path(min_length=1)],
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+) -> list[AdminUserDomainGrantRead]:
+    async with uow:
+        admin = await uow.admin_users.get(admin_user_id)
+        if admin is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Admin user not found",
+            )
+        grants = await uow.admin_users.list_domain_grants(admin_user_id)
+    return [AdminUserDomainGrantRead.from_grant(grant) for grant in grants]
+
+
+@router.post(
+    "/{admin_user_id}/domain-grants",
+    response_model=AdminUserDomainGrantRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_admin_user_domain_grant(
+    admin_user_id: Annotated[str, Path(min_length=1)],
+    payload: AdminUserDomainGrantCreate,
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+) -> AdminUserDomainGrantRead:
+    async with uow:
+        admin = await uow.admin_users.get(admin_user_id)
+        if admin is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Admin user not found",
+            )
+        domain = await uow.domains.get(payload.domain_id)
+        if domain is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        existing = await uow.admin_users.get_domain_grant(
+            admin_user_id=admin_user_id,
+            domain_id=payload.domain_id,
+        )
+        if existing is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Domain grant already exists",
+            )
+        grant = await uow.admin_users.add_domain_grant(
+            admin_user_id=admin_user_id,
+            domain_id=payload.domain_id,
+        )
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="admin_user.domain_grant_created",
+            entity_type="admin_user",
+            entity_id=admin_user_id,
+            payload={
+                "email": admin.email,
+                "domain_id": payload.domain_id,
+                "domain_slug": domain.slug,
+            },
+        )
+        try:
+            await uow.commit()
+        except IntegrityError as exc:
+            await uow.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Domain grant already exists",
+            ) from exc
+    return AdminUserDomainGrantRead.from_grant(grant)
+
+
+@router.delete(
+    "/{admin_user_id}/domain-grants/{domain_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_admin_user_domain_grant(
+    admin_user_id: Annotated[str, Path(min_length=1)],
+    domain_id: Annotated[str, Path(min_length=1)],
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+) -> None:
+    async with uow:
+        admin = await uow.admin_users.get(admin_user_id)
+        if admin is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Admin user not found",
+            )
+        removed = await uow.admin_users.remove_domain_grant(
+            admin_user_id=admin_user_id,
+            domain_id=domain_id,
+        )
+        if not removed:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Domain grant not found",
+            )
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="admin_user.domain_grant_deleted",
+            entity_type="admin_user",
+            entity_id=admin_user_id,
+            payload={"email": admin.email, "domain_id": domain_id},
+        )
+        await uow.commit()
 
 
 @router.patch("/{admin_user_id}/roles", response_model=AdminUserRead)

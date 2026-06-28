@@ -7,7 +7,12 @@ from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import IntegrityError
 
-from retos.api.dependencies import AdminSubjectDep, UnitOfWorkDep, ViewerSubjectDep
+from retos.api.dependencies import (
+    AdminSubjectDep,
+    UnitOfWorkDep,
+    ViewerSubjectDep,
+    ensure_domain_access,
+)
 from retos.api.routes.events import progress_store
 from retos.domain.documents import Artifact, Document, DocumentVersion, Segment
 from retos.domain.jobs import JournalEvent
@@ -278,7 +283,7 @@ async def create_document(
 
 @router.get("/domains/{domain_id}/documents", response_model=list[DocumentRead])
 async def list_documents(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     domain_id: Annotated[str, Path(min_length=1)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
@@ -288,6 +293,7 @@ async def list_documents(
         domain = await uow.domains.get(domain_id)
         if domain is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        await ensure_domain_access(actor=actor, domain_id=domain_id, uow=uow)
         documents = await uow.documents.list_for_domain(
             domain_id,
             limit=limit,
@@ -298,12 +304,14 @@ async def list_documents(
 
 @router.get("/documents/{document_id}", response_model=DocumentRead)
 async def get_document(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     document_id: Annotated[str, Path(min_length=1)],
 ) -> DocumentRead:
     async with uow:
         document = await uow.documents.get(document_id)
+        if document is not None:
+            await ensure_domain_access(actor=actor, domain_id=document.domain_id, uow=uow)
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return DocumentRead.from_document(document)
@@ -311,7 +319,7 @@ async def get_document(
 
 @router.get("/documents/{document_id}/history", response_model=DocumentHistoryRead)
 async def get_document_history(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     document_id: Annotated[str, Path(min_length=1)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
@@ -320,6 +328,7 @@ async def get_document_history(
         document = await uow.documents.get(document_id)
         if document is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        await ensure_domain_access(actor=actor, domain_id=document.domain_id, uow=uow)
         events: list[JournalEvent] = await uow.journal_events.list_for_entity(
             entity_type="document",
             entity_id=document_id,
@@ -518,7 +527,7 @@ async def restore_document(
 
 @router.get("/documents/{document_id}/versions", response_model=list[DocumentVersionRead])
 async def list_document_versions(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     document_id: Annotated[str, Path(min_length=1)],
 ) -> list[DocumentVersionRead]:
@@ -526,6 +535,7 @@ async def list_document_versions(
         document = await uow.documents.get(document_id)
         if document is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        await ensure_domain_access(actor=actor, domain_id=document.domain_id, uow=uow)
         versions = await uow.documents.list_versions(document_id)
     return [DocumentVersionRead.from_version(version) for version in versions]
 
@@ -600,7 +610,7 @@ async def create_artifact(
 
 @router.get("/document-versions/{version_id}/artifacts", response_model=list[ArtifactRead])
 async def list_artifacts(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     version_id: Annotated[str, Path(min_length=1)],
 ) -> list[ArtifactRead]:
@@ -611,6 +621,10 @@ async def list_artifacts(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Document version not found",
             )
+        document = await uow.documents.get(version.document_id)
+        if document is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        await ensure_domain_access(actor=actor, domain_id=document.domain_id, uow=uow)
         artifacts = await uow.documents.list_artifacts(version_id)
     return [ArtifactRead.from_artifact(artifact) for artifact in artifacts]
 
@@ -689,7 +703,7 @@ async def create_segment(
 
 @router.get("/document-versions/{version_id}/segments", response_model=list[SegmentRead])
 async def list_segments(
-    _: ViewerSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     version_id: Annotated[str, Path(min_length=1)],
 ) -> list[SegmentRead]:
@@ -700,5 +714,9 @@ async def list_segments(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Document version not found",
             )
+        document = await uow.documents.get(version.document_id)
+        if document is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        await ensure_domain_access(actor=actor, domain_id=document.domain_id, uow=uow)
         segments = await uow.documents.list_segments(version_id)
     return [SegmentRead.from_segment(segment) for segment in segments]

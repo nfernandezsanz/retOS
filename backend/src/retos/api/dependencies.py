@@ -96,5 +96,14 @@ async def require_admin(principal: Annotated[AuthPrincipal, Depends(require_prin
     return principal.subject
 
 
+async def ensure_domain_access(*, actor: str, domain_id: str, uow: SQLAlchemyUnitOfWork) -> None:
+    allowed = await uow.admin_users.can_access_domain(email=actor, domain_id=domain_id)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Domain access required",
+        )
+
+
 ViewerSubjectDep = Annotated[str, Depends(require_viewer)]
 AdminSubjectDep = Annotated[str, Depends(require_admin)]

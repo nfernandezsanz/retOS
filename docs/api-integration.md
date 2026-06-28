@@ -29,11 +29,12 @@ Roles are intentionally small:
 | Role | Allowed |
 | --- | --- |
 | `admin` | Full local administration: account management, domain/source/document mutations, ingestion, indexing, agent queries, eval execution, job transitions, job retry, and all read-only operations. |
-| `viewer` | Read-only operational visibility: provider catalog, domains, sources, documents, document history, versions, artifacts, segments, jobs, audit journal/progress/export, SSE progress, search, and eval run history/comparison. |
+| `viewer` | Read-only operational visibility. Domain-scoped resources require explicit domain grants. Provider catalog, audit journal/progress/export, SSE progress, and eval run history/comparison remain global observability surfaces. |
 
 Endpoints that mutate state, spend compute, enqueue work, or change account security
 require an `admin` token. Viewer-safe endpoints use the same `Authorization` header but
-accept either an `admin` or `viewer` token.
+accept either an `admin` or `viewer` token. Domain-scoped viewer access is granted per
+domain by an admin; without a grant, viewers receive `403 Domain access required`.
 
 ## Admin Users
 
@@ -85,6 +86,30 @@ The API never returns password hashes. It prevents self-deactivation, prevents r
 your own `admin` role, requires at least one active admin role, and writes
 `admin_user.created`, `admin_user.status_updated`, `admin_user.roles_updated`, and
 `admin_user.password_reset` journal events.
+
+Grant a viewer access to a domain:
+
+```bash
+curl --request POST http://localhost:8000/admin/users/<admin_user_id>/domain-grants \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"domain_id":"<domain_id>"}'
+```
+
+List or revoke grants:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  http://localhost:8000/admin/users/<admin_user_id>/domain-grants
+
+curl --request DELETE \
+  --header "Authorization: Bearer <token>" \
+  http://localhost:8000/admin/users/<admin_user_id>/domain-grants/<domain_id>
+```
+
+Domain grant changes write `admin_user.domain_grant_created` and
+`admin_user.domain_grant_deleted` journal events. Admin users do not need grants; they
+always have full local access.
 
 ## Domains
 

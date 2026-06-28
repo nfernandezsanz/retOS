@@ -211,6 +211,9 @@ async function mockProviderApi(page: Page) {
       updated_at: "2026-06-27T00:00:00Z",
     },
   ];
+  const domainGrants: Record<string, { id: string; admin_user_id: string; domain_id: string; created_at: string }[]> = {
+    "admin-user-1": [],
+  };
   const evalComparison = {
     baseline: {
       job_id: "job-eval-1",
@@ -288,6 +291,18 @@ async function mockProviderApi(page: Page) {
     });
   }
 
+  function recordDomainGrantAudit(adminUserId: string, eventType: string, domainId: string) {
+    journalEvents.unshift({
+      id: `journal-${eventType}-${adminUserId}-${domainId}`,
+      occurred_at: "2026-06-27T00:01:00Z",
+      actor: "admin@retos.dev",
+      event_type: eventType,
+      entity_type: "admin_user",
+      entity_id: adminUserId,
+      payload: { domain_id: domainId },
+    });
+  }
+
   await page.route("http://localhost:8000/auth/login", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -310,6 +325,7 @@ async function mockProviderApi(page: Page) {
         updated_at: "2026-06-27T00:02:00Z",
       };
       adminUsers.push(created);
+      domainGrants[created.id] = [];
       recordAdminAudit(created.id, "admin_user.created", created.email);
       await route.fulfill({
         contentType: "application/json",
@@ -321,6 +337,38 @@ async function mockProviderApi(page: Page) {
     await route.fulfill({
       contentType: "application/json",
       json: adminUsers,
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/admin\/users\/[^/]+\/domain-grants(?:\/[^/]+)?$/, async (route) => {
+    const parts = new URL(route.request().url()).pathname.split("/");
+    const adminUserId = parts[3];
+    const domainId = parts[5];
+    domainGrants[adminUserId] ??= [];
+    if (route.request().method() === "POST") {
+      const payload = route.request().postDataJSON() as { domain_id: string };
+      const grant = {
+        id: `grant-${adminUserId}-${payload.domain_id}`,
+        admin_user_id: adminUserId,
+        domain_id: payload.domain_id,
+        created_at: "2026-06-27T00:05:00Z",
+      };
+      domainGrants[adminUserId] = [
+        ...domainGrants[adminUserId].filter((item) => item.domain_id !== payload.domain_id),
+        grant,
+      ];
+      recordDomainGrantAudit(adminUserId, "admin_user.domain_grant_created", payload.domain_id);
+      await route.fulfill({ contentType: "application/json", status: 201, json: grant });
+      return;
+    }
+    if (route.request().method() === "DELETE" && domainId) {
+      domainGrants[adminUserId] = domainGrants[adminUserId].filter((item) => item.domain_id !== domainId);
+      recordDomainGrantAudit(adminUserId, "admin_user.domain_grant_deleted", domainId);
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    await route.fulfill({
+      contentType: "application/json",
+      json: domainGrants[adminUserId],
     });
   });
   await page.route(/http:\/\/localhost:8000\/admin\/users\/[^/]+\/status/, async (route) => {
@@ -972,6 +1020,10 @@ test("loads the operational console", async ({ page }) => {
     .filter({ hasText: "ui-admin@retos.dev" });
   await expect(uiAdminRow.getByText("ui-admin@retos.dev", { exact: true })).toBeVisible();
   await expect(uiAdminRow.getByText("viewer", { exact: true })).toBeVisible();
+  await expect(uiAdminRow.getByText("No domain grants")).toBeVisible();
+  await uiAdminRow.getByLabel("Grant domain to ui-admin@retos.dev").selectOption("domain-123");
+  await uiAdminRow.getByRole("button", { name: "Grant" }).click();
+  await expect(uiAdminRow.locator(".grant-chip").getByText("smoke-research")).toBeVisible();
   await uiAdminRow.getByPlaceholder("New password").fill("ui-admin-password-2");
   await uiAdminRow.getByRole("button", { name: "Reset" }).click();
   await expect(page.getByText("Updated password for ui-admin@retos.dev")).toBeVisible();

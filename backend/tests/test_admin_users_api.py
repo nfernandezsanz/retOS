@@ -120,6 +120,113 @@ def test_admin_user_create_viewer_role_and_reject_admin_endpoint(
     assert listed.json()["detail"] == "Admin role required"
 
 
+def test_admin_user_domain_grant_lifecycle(client: TestClient) -> None:
+    headers = admin_headers(client)
+    viewer = client.post(
+        "/admin/users",
+        headers=headers,
+        json={
+            "email": "grant-viewer@retos.dev",
+            "password": "grant-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    domain = client.post(
+        "/domains",
+        headers=headers,
+        json={"slug": "grant-domain", "name": "Grant Domain"},
+    )
+    assert viewer.status_code == 201
+    assert domain.status_code == 201
+    viewer_id = viewer.json()["id"]
+    domain_id = domain.json()["id"]
+
+    created = client.post(
+        f"/admin/users/{viewer_id}/domain-grants",
+        headers=headers,
+        json={"domain_id": domain_id},
+    )
+    duplicate = client.post(
+        f"/admin/users/{viewer_id}/domain-grants",
+        headers=headers,
+        json={"domain_id": domain_id},
+    )
+    listed = client.get(f"/admin/users/{viewer_id}/domain-grants", headers=headers)
+    removed = client.delete(
+        f"/admin/users/{viewer_id}/domain-grants/{domain_id}",
+        headers=headers,
+    )
+    listed_after_remove = client.get(f"/admin/users/{viewer_id}/domain-grants", headers=headers)
+
+    assert created.status_code == 201
+    assert created.json()["admin_user_id"] == viewer_id
+    assert created.json()["domain_id"] == domain_id
+    assert duplicate.status_code == 409
+    assert [grant["domain_id"] for grant in listed.json()] == [domain_id]
+    assert removed.status_code == 204
+    assert listed_after_remove.json() == []
+
+    journals = client.get("/audit/journal-events", headers=headers).json()
+    assert any(
+        event["event_type"] == "admin_user.domain_grant_created"
+        and event["entity_id"] == viewer_id
+        and event["payload"]["domain_id"] == domain_id
+        for event in journals
+    )
+    assert any(
+        event["event_type"] == "admin_user.domain_grant_deleted"
+        and event["entity_id"] == viewer_id
+        and event["payload"]["domain_id"] == domain_id
+        for event in journals
+    )
+
+
+def test_admin_user_domain_grants_validate_targets(client: TestClient) -> None:
+    headers = admin_headers(client)
+    viewer = client.post(
+        "/admin/users",
+        headers=headers,
+        json={
+            "email": "grant-errors@retos.dev",
+            "password": "grant-errors-password",
+            "roles": ["viewer"],
+        },
+    )
+    domain = client.post(
+        "/domains",
+        headers=headers,
+        json={"slug": "grant-errors", "name": "Grant Errors"},
+    )
+    assert viewer.status_code == 201
+    assert domain.status_code == 201
+
+    missing_user_list = client.get("/admin/users/missing/domain-grants", headers=headers)
+    missing_user_create = client.post(
+        "/admin/users/missing/domain-grants",
+        headers=headers,
+        json={"domain_id": domain.json()["id"]},
+    )
+    missing_domain_create = client.post(
+        f"/admin/users/{viewer.json()['id']}/domain-grants",
+        headers=headers,
+        json={"domain_id": "missing-domain"},
+    )
+    missing_user_delete = client.delete(
+        f"/admin/users/missing/domain-grants/{domain.json()['id']}",
+        headers=headers,
+    )
+    missing_grant_delete = client.delete(
+        f"/admin/users/{viewer.json()['id']}/domain-grants/{domain.json()['id']}",
+        headers=headers,
+    )
+
+    assert missing_user_list.status_code == 404
+    assert missing_user_create.status_code == 404
+    assert missing_domain_create.status_code == 404
+    assert missing_user_delete.status_code == 404
+    assert missing_grant_delete.status_code == 404
+
+
 def test_admin_user_create_rejects_unsupported_role(client: TestClient) -> None:
     response = client.post(
         "/admin/users",

@@ -65,6 +65,13 @@ type AdminUserRead = {
   updated_at: string;
 };
 
+type AdminUserDomainGrantRead = {
+  id: string;
+  admin_user_id: string;
+  domain_id: string;
+  created_at: string;
+};
+
 type TokenResponse = {
   access_token: string;
   token_type: "bearer";
@@ -374,6 +381,17 @@ async function loadAdminUsers(token: string): Promise<AdminUserRead[]> {
   });
 }
 
+async function loadAdminUserDomainGrants(
+  token: string,
+  adminUserId: string,
+): Promise<AdminUserDomainGrantRead[]> {
+  return requestJson<AdminUserDomainGrantRead[]>(`/admin/users/${adminUserId}/domain-grants`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 async function createAdminUser(
   token: string,
   payload: { email: string; password: string; roles: string[] },
@@ -385,6 +403,36 @@ async function createAdminUser(
     },
     body: JSON.stringify(payload),
   });
+}
+
+async function createAdminUserDomainGrant(
+  token: string,
+  adminUserId: string,
+  domainId: string,
+): Promise<AdminUserDomainGrantRead> {
+  return requestJson<AdminUserDomainGrantRead>(`/admin/users/${adminUserId}/domain-grants`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ domain_id: domainId }),
+  });
+}
+
+async function deleteAdminUserDomainGrant(
+  token: string,
+  adminUserId: string,
+  domainId: string,
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/admin/users/${adminUserId}/domain-grants/${domainId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed with ${response.status}`);
+  }
 }
 
 async function updateAdminUserStatus(
@@ -934,6 +982,10 @@ function App() {
   const [adminUserPassword, setAdminUserPassword] = useState("");
   const [adminUserRole, setAdminUserRole] = useState("admin");
   const [adminPasswordResets, setAdminPasswordResets] = useState<Record<string, string>>({});
+  const [adminDomainGrants, setAdminDomainGrants] = useState<
+    Record<string, AdminUserDomainGrantRead[]>
+  >({});
+  const [adminGrantDomainIds, setAdminGrantDomainIds] = useState<Record<string, string>>({});
   const [isCreatingAdminUser, setIsCreatingAdminUser] = useState(false);
   const [savingAdminUserId, setSavingAdminUserId] = useState<string | null>(null);
   const [adminUserError, setAdminUserError] = useState<string | null>(null);
@@ -1046,6 +1098,11 @@ function App() {
   const selectedDomain = useMemo(
     () => domains.find((domain) => domain.id === selectedDomainId) ?? null,
     [domains, selectedDomainId],
+  );
+
+  const domainById = useMemo(
+    () => new Map(domains.map((domain) => [domain.id, domain])),
+    [domains],
   );
 
   const activeJobs = useMemo(
@@ -1240,7 +1297,12 @@ function App() {
     setAdminUserError(null);
     try {
       const adminToken = accessToken ?? (await getAdminToken());
-      setAdminUsers(await loadAdminUsers(adminToken));
+      const users = await loadAdminUsers(adminToken);
+      setAdminUsers(users);
+      const grantsByUser = await Promise.all(
+        users.map(async (user) => [user.id, await loadAdminUserDomainGrants(adminToken, user.id)] as const),
+      );
+      setAdminDomainGrants(Object.fromEntries(grantsByUser));
     } catch (error) {
       setAdminUserError(error instanceof Error ? error.message : "Admin users refresh failed");
     }
@@ -1345,6 +1407,55 @@ function App() {
       await refreshAudit(accessToken);
     } catch (error) {
       setAdminUserError(error instanceof Error ? error.message : "Admin password reset failed");
+    } finally {
+      setSavingAdminUserId(null);
+    }
+  }
+
+  async function handleCreateDomainGrant(
+    event: React.FormEvent<HTMLFormElement>,
+    user: AdminUserRead,
+  ) {
+    event.preventDefault();
+    setSavingAdminUserId(user.id);
+    setAdminUserError(null);
+    setAdminUserMessage(null);
+    try {
+      const domainId = adminGrantDomainIds[user.id] ?? "";
+      if (!domainId) {
+        throw new Error("Select a domain grant");
+      }
+      const accessToken = await getAdminToken();
+      const grant = await createAdminUserDomainGrant(accessToken, user.id, domainId);
+      setAdminDomainGrants((current) => ({
+        ...current,
+        [user.id]: [...(current[user.id] ?? []).filter((item) => item.domain_id !== domainId), grant],
+      }));
+      setAdminGrantDomainIds((current) => ({ ...current, [user.id]: "" }));
+      setAdminUserMessage(`Granted ${user.email} access to ${domainById.get(domainId)?.slug ?? domainId}`);
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setAdminUserError(error instanceof Error ? error.message : "Domain grant failed");
+    } finally {
+      setSavingAdminUserId(null);
+    }
+  }
+
+  async function handleDeleteDomainGrant(user: AdminUserRead, domainId: string) {
+    setSavingAdminUserId(user.id);
+    setAdminUserError(null);
+    setAdminUserMessage(null);
+    try {
+      const accessToken = await getAdminToken();
+      await deleteAdminUserDomainGrant(accessToken, user.id, domainId);
+      setAdminDomainGrants((current) => ({
+        ...current,
+        [user.id]: (current[user.id] ?? []).filter((grant) => grant.domain_id !== domainId),
+      }));
+      setAdminUserMessage(`Revoked ${user.email} access to ${domainById.get(domainId)?.slug ?? domainId}`);
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setAdminUserError(error instanceof Error ? error.message : "Domain revoke failed");
     } finally {
       setSavingAdminUserId(null);
     }
@@ -1973,6 +2084,8 @@ function App() {
     setAdminUserPassword("");
     setAdminUserRole("admin");
     setAdminPasswordResets({});
+    setAdminDomainGrants({});
+    setAdminGrantDomainIds({});
     setAdminUserError(null);
     setAdminUserMessage(null);
     setSavingAdminUserId(null);
@@ -3212,6 +3325,62 @@ function App() {
                       <strong>{user.email}</strong>
                       <span>{user.roles.join(", ")}</span>
                       <span>{formatDateTime(user.updated_at)}</span>
+                    </div>
+                    <div className="admin-domain-grants" aria-label={`Domain grants for ${user.email}`}>
+                      <div className="grant-list">
+                        {(adminDomainGrants[user.id] ?? []).map((grant) => {
+                          const grantedDomain = domainById.get(grant.domain_id);
+                          return (
+                            <span className="grant-chip" key={grant.id}>
+                              {grantedDomain?.slug ?? grant.domain_id}
+                              <button
+                                type="button"
+                                aria-label={`Revoke ${grantedDomain?.slug ?? grant.domain_id} from ${user.email}`}
+                                disabled={savingAdminUserId === user.id}
+                                onClick={() => void handleDeleteDomainGrant(user, grant.domain_id)}
+                              >
+                                <X aria-hidden="true" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                        {(adminDomainGrants[user.id] ?? []).length === 0 ? (
+                          <span className="muted-inline">No domain grants</span>
+                        ) : null}
+                      </div>
+                      <form
+                        className="grant-form"
+                        onSubmit={(event) => void handleCreateDomainGrant(event, user)}
+                      >
+                        <label>
+                          <span>Grant domain</span>
+                          <select
+                            aria-label={`Grant domain to ${user.email}`}
+                            value={adminGrantDomainIds[user.id] ?? ""}
+                            onChange={(event) =>
+                              setAdminGrantDomainIds((current) => ({
+                                ...current,
+                                [user.id]: event.target.value,
+                              }))
+                            }
+                          >
+                            <option value="">Select domain</option>
+                            {domains.map((domain) => (
+                              <option key={domain.id} value={domain.id}>
+                                {domain.slug}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          className="ghost-action"
+                          disabled={savingAdminUserId === user.id || domains.length === 0}
+                          type="submit"
+                        >
+                          <Check aria-hidden="true" />
+                          Grant
+                        </button>
+                      </form>
                     </div>
                     <div className="admin-user-actions">
                       <button

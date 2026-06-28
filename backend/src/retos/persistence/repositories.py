@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from retos.domain.admin import AdminUser, normalize_admin_roles
+from retos.domain.admin import AdminUser, AdminUserDomainGrant, normalize_admin_roles
 from retos.domain.documents import (
     Artifact,
     Document,
@@ -19,6 +19,7 @@ from retos.domain.documents import (
 )
 from retos.domain.jobs import Job, JobKind, JobStatus, JournalEvent, ProgressEvent
 from retos.persistence.models import (
+    AdminUserDomainGrantRecord,
     AdminUserRecord,
     ArtifactRecord,
     DocumentRecord,
@@ -42,6 +43,17 @@ def admin_user_from_record(record: AdminUserRecord) -> AdminUser:
         is_active=record.is_active,
         created_at=record.created_at,
         updated_at=record.updated_at,
+    )
+
+
+def admin_user_domain_grant_from_record(
+    record: AdminUserDomainGrantRecord,
+) -> AdminUserDomainGrant:
+    return AdminUserDomainGrant(
+        id=record.id,
+        admin_user_id=record.admin_user_id,
+        domain_id=record.domain_id,
+        created_at=record.created_at,
     )
 
 
@@ -178,6 +190,18 @@ class DomainRepository:
         result = await self._session.scalars(select(DomainRecord).order_by(DomainRecord.slug))
         return [domain_from_record(record) for record in result]
 
+    async def list_for_admin_user(self, admin_user_id: str) -> builtins.list[Domain]:
+        result = await self._session.scalars(
+            select(DomainRecord)
+            .join(
+                AdminUserDomainGrantRecord,
+                AdminUserDomainGrantRecord.domain_id == DomainRecord.id,
+            )
+            .where(AdminUserDomainGrantRecord.admin_user_id == admin_user_id)
+            .order_by(DomainRecord.slug)
+        )
+        return [domain_from_record(record) for record in result]
+
     async def get(self, domain_id: str) -> Domain | None:
         record = await self._session.get(DomainRecord, domain_id)
         if record is None:
@@ -273,6 +297,69 @@ class AdminUserRepository:
         record.password_hash = password_hash
         await self._session.flush()
         return admin_user_from_record(record)
+
+    async def add_domain_grant(
+        self,
+        *,
+        admin_user_id: str,
+        domain_id: str,
+    ) -> AdminUserDomainGrant:
+        record = AdminUserDomainGrantRecord(
+            id=str(uuid4()),
+            admin_user_id=admin_user_id,
+            domain_id=domain_id,
+        )
+        self._session.add(record)
+        await self._session.flush()
+        return admin_user_domain_grant_from_record(record)
+
+    async def get_domain_grant(
+        self,
+        *,
+        admin_user_id: str,
+        domain_id: str,
+    ) -> AdminUserDomainGrant | None:
+        result = await self._session.scalars(
+            select(AdminUserDomainGrantRecord).where(
+                AdminUserDomainGrantRecord.admin_user_id == admin_user_id,
+                AdminUserDomainGrantRecord.domain_id == domain_id,
+            )
+        )
+        record = result.one_or_none()
+        if record is None:
+            return None
+        return admin_user_domain_grant_from_record(record)
+
+    async def list_domain_grants(self, admin_user_id: str) -> builtins.list[AdminUserDomainGrant]:
+        result = await self._session.scalars(
+            select(AdminUserDomainGrantRecord)
+            .where(AdminUserDomainGrantRecord.admin_user_id == admin_user_id)
+            .order_by(AdminUserDomainGrantRecord.created_at, AdminUserDomainGrantRecord.id)
+        )
+        return [admin_user_domain_grant_from_record(record) for record in result]
+
+    async def remove_domain_grant(self, *, admin_user_id: str, domain_id: str) -> bool:
+        result = await self._session.scalars(
+            select(AdminUserDomainGrantRecord).where(
+                AdminUserDomainGrantRecord.admin_user_id == admin_user_id,
+                AdminUserDomainGrantRecord.domain_id == domain_id,
+            )
+        )
+        record = result.one_or_none()
+        if record is None:
+            return False
+        await self._session.delete(record)
+        await self._session.flush()
+        return True
+
+    async def can_access_domain(self, *, email: str, domain_id: str) -> bool:
+        admin = await self.get_by_email(email)
+        if admin is None or not admin.is_active:
+            return False
+        if "admin" in admin.roles:
+            return True
+        grant = await self.get_domain_grant(admin_user_id=admin.id, domain_id=domain_id)
+        return grant is not None
 
 
 class SourceRepository:
@@ -648,6 +735,24 @@ class JobRepository:
     async def list(self, *, limit: int = 100) -> list[Job]:
         result = await self._session.scalars(
             select(JobRecord)
+            .order_by(JobRecord.created_at.desc(), JobRecord.id.desc())
+            .limit(limit)
+        )
+        return [job_from_record(record) for record in result]
+
+    async def list_for_admin_user(
+        self,
+        *,
+        admin_user_id: str,
+        limit: int = 100,
+    ) -> builtins.list[Job]:
+        result = await self._session.scalars(
+            select(JobRecord)
+            .join(
+                AdminUserDomainGrantRecord,
+                AdminUserDomainGrantRecord.domain_id == JobRecord.domain_id,
+            )
+            .where(AdminUserDomainGrantRecord.admin_user_id == admin_user_id)
             .order_by(JobRecord.created_at.desc(), JobRecord.id.desc())
             .limit(limit)
         )
