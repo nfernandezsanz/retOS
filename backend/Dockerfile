@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM python:3.14-slim AS runtime
+FROM python:3.14-slim AS backend-base
 
 ARG APP_UID=10001
 ARG APP_GID=10001
@@ -36,8 +36,8 @@ COPY backend/alembic /app/backend/alembic
 COPY backend/src /app/backend/src
 COPY infra/docker/backend-entrypoint.sh /usr/local/bin/retos-backend
 RUN chmod +x /usr/local/bin/retos-backend \
-    && groupadd --system --gid "${APP_GID}" retos \
-    && useradd --system --uid "${APP_UID}" --gid retos --home-dir /nonexistent retos \
+    && groupadd --gid "${APP_GID}" retos \
+    && useradd --uid "${APP_UID}" --gid retos --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin retos \
     && mkdir -p /var/lib/retos/storage /var/lib/retos/index /var/lib/retos/evals/datasets /var/lib/retos/evals/reports \
     && chown -R retos:retos /app /var/lib/retos
 
@@ -45,6 +45,8 @@ ENV PYTHONPATH=/app/backend/src
 
 USER retos
 EXPOSE 8000
+
+FROM backend-base AS backend-runtime
 
 ENTRYPOINT ["retos-backend"]
 CMD ["api"]

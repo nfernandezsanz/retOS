@@ -5,6 +5,7 @@ x-backend-image: &backend-image retos-backend:${RETOS_IMAGE_TAG:-local}
 x-backend-build: &backend-build
   context: .
   dockerfile: backend/Dockerfile
+  target: backend-runtime
 
 x-app-env: &app-env
   RETOS_DATABASE_URL: postgresql+asyncpg://retos:${RETOS_POSTGRES_PASSWORD:-retos}@postgres:5432/retos

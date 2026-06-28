@@ -10,7 +10,7 @@ RetOS publishes two application images per release:
 
 | Image | Built By | Runtime Role |
 | --- | --- | --- |
-| `retos-backend:${RETOS_IMAGE_TAG}` | `backend/Dockerfile` through the `api` Compose build | API, worker, and migrate commands from the same image. |
+| `retos-backend:${RETOS_IMAGE_TAG}` | `backend/Dockerfile` target `backend-runtime` through the `api` Compose build | API, worker, and migrate commands from the same image. |
 | `retos-web:${RETOS_IMAGE_TAG}` | `frontend/Dockerfile` | Static React console served by Nginx. |
 
 The backend image must stay shared. `api`, `worker`, and `migrate` must resolve to

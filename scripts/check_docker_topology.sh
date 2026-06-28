@@ -59,6 +59,12 @@ if api_build.get("dockerfile") != "backend/Dockerfile":
         f"{api_build.get('dockerfile')}"
     )
 
+if api_build.get("target") != "backend-runtime":
+    raise SystemExit(
+        "The shared backend build must target backend-runtime, got "
+        f"{api_build.get('target')}"
+    )
+
 commands = {role: services[role].get("command") for role in backend_roles}
 expected_commands = {
     "api": ["api"],
@@ -71,6 +77,7 @@ if commands != expected_commands:
 
 print(
     "Docker topology OK: api, worker, and migrate share "
-    f"{images['api']} from backend/Dockerfile with role-specific commands."
+    f"{images['api']} from backend/Dockerfile target backend-runtime "
+    "with role-specific commands."
 )
 PY
