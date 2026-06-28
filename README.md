@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.52% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.53% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -42,13 +42,13 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Opt-in HotpotQA-to-agent evals that convert local supporting-fact cases into
   multi-hop agent audit cases for query-plan, evidence-route, bridge-term, grounding,
   citation, and budget calibration through CLI, admin API, rerun, and React controls.
-- Opt-in SQuAD 2.0, HotpotQA, and Natural Questions adapters plus admin API endpoints
+- Opt-in SQuAD 2.0, HotpotQA, and Natural Questions adapters plus API endpoints
   for local dataset-backed evals without network or paid providers, with optional
-  JSON/Markdown report export.
+  JSON/Markdown report export and viewer-safe domain-scoped execution.
 - Opt-in OCR quality smoke suite for scanned PDFs, character error rate, and word error rate.
 - Cross-run eval comparison, trend, and rerun APIs with React controls for latest
-  reported runs, per-metric deltas, suite trend direction, and auditable
-  `rerun_from_job_id` traceability.
+  reported runs, domain-scoped viewer history/trends/reruns, per-metric deltas, suite
+  trend direction, and auditable `rerun_from_job_id` traceability.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for
   document inventory, edit/archive/restore/history actions, jobs, OCR, indexing, agent
   runs, local eval execution, and admin account management.

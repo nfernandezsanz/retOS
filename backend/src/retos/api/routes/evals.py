@@ -8,7 +8,13 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi import Path as PathParam
 from pydantic import BaseModel, Field, ValidationError
 
-from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep, ensure_domain_access
+from retos.api.dependencies import (
+    AdminSubjectDep,
+    SettingsDep,
+    UnitOfWorkDep,
+    ViewerSubjectDep,
+    ensure_domain_access,
+)
 from retos.api.routes.events import progress_store
 from retos.api.routes.jobs import JobRead
 from retos.domain.jobs import Job, JobStatus
@@ -195,12 +201,17 @@ class EvalRerunPlan(BaseModel):
 
 @router.get("/runs", response_model=list[EvalRunRead])
 async def list_eval_runs(
-    actor: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     domain_id: Annotated[str | None, Query(min_length=1, max_length=36)] = None,
 ) -> list[EvalRunRead]:
-    domain_filter = await validate_eval_domain(actor=actor, domain_id=domain_id, uow=uow)
+    domain_filter = await validate_eval_domain(
+        actor=actor,
+        domain_id=domain_id,
+        uow=uow,
+        require_domain_for_viewer=True,
+    )
     async with uow:
         jobs = await uow.jobs.list_by_kind(kind="eval.run", limit=limit)
     if domain_filter is not None:
@@ -216,13 +227,18 @@ async def list_eval_runs(
 
 @router.get("/runs/trends", response_model=list[EvalSuiteTrendRead])
 async def list_eval_run_trends(
-    actor: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=2, le=200)] = 100,
     suite_name: Annotated[str | None, Query(min_length=1, max_length=80)] = None,
     domain_id: Annotated[str | None, Query(min_length=1, max_length=36)] = None,
 ) -> list[EvalSuiteTrendRead]:
-    domain_filter = await validate_eval_domain(actor=actor, domain_id=domain_id, uow=uow)
+    domain_filter = await validate_eval_domain(
+        actor=actor,
+        domain_id=domain_id,
+        uow=uow,
+        require_domain_for_viewer=True,
+    )
     async with uow:
         jobs = await uow.jobs.list_by_kind(kind="eval.run", limit=limit)
     if domain_filter is not None:
@@ -306,7 +322,7 @@ async def eval_regression_gate(
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def rerun_eval(
-    actor: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
     job_id: Annotated[str, PathParam(min_length=1)],
@@ -314,6 +330,13 @@ async def rerun_eval(
     async with uow:
         original_job = await uow.jobs.get(job_id)
     plan = rerun_plan_from_eval_job(original_job)
+    plan_domain_id = plan.request.domain_id if plan.request is not None else None
+    await validate_eval_domain(
+        actor=actor,
+        domain_id=plan_domain_id,
+        uow=uow,
+        require_domain_for_viewer=True,
+    )
     if plan.suite_name == "retos-smoke":
         return await run_smoke_eval_plan(
             actor=actor,
@@ -514,7 +537,7 @@ async def run_agent_multihop_eval_plan(
 )
 async def run_squad_evals(
     request: SquadEvalRequest,
-    actor: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
 ) -> EvalRunResponse:
@@ -552,7 +575,7 @@ async def run_squad_eval_plan(
 )
 async def run_hotpotqa_evals(
     request: HotpotQAEvalRequest,
-    actor: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
 ) -> EvalRunResponse:
@@ -590,7 +613,7 @@ async def run_hotpotqa_eval_plan(
 )
 async def run_hotpotqa_agent_evals(
     request: HotpotQAEvalRequest,
-    actor: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
 ) -> EvalRunResponse:
@@ -633,7 +656,7 @@ async def run_hotpotqa_agent_eval_plan(
 )
 async def run_natural_questions_evals(
     request: NaturalQuestionsEvalRequest,
-    actor: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
 ) -> EvalRunResponse:
@@ -676,7 +699,7 @@ async def run_natural_questions_eval_plan(
 )
 async def run_ocr_benchmark_evals(
     request: OCRBenchmarkEvalRequest,
-    actor: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     settings: SettingsDep,
     uow: UnitOfWorkDep,
 ) -> EvalRunResponse:
@@ -696,7 +719,12 @@ async def run_ocr_benchmark_eval_plan(
     uow: UnitOfWorkDep,
     rerun_from_job_id: str | None = None,
 ) -> EvalRunResponse:
-    domain_id = await validate_eval_domain(actor=actor, domain_id=request.domain_id, uow=uow)
+    domain_id = await validate_eval_domain(
+        actor=actor,
+        domain_id=request.domain_id,
+        uow=uow,
+        require_domain_for_viewer=True,
+    )
     dataset_path = resolve_dataset_path(settings.eval_dataset_root, request.dataset_path)
     if not dataset_path.exists():
         raise HTTPException(
@@ -833,7 +861,12 @@ async def run_dataset_evals(
     rerun_from_job_id: str | None = None,
     load_cases: Callable[[Path], tuple[EvalCase, ...]],
 ) -> EvalRunResponse:
-    domain_id = await validate_eval_domain(actor=actor, domain_id=request.domain_id, uow=uow)
+    domain_id = await validate_eval_domain(
+        actor=actor,
+        domain_id=request.domain_id,
+        uow=uow,
+        require_domain_for_viewer=True,
+    )
     dataset_path = resolve_dataset_path(settings.eval_dataset_root, request.dataset_path)
     if not dataset_path.exists() or not dataset_path.is_file():
         raise HTTPException(
@@ -964,7 +997,12 @@ async def run_agent_dataset_evals(
     rerun_from_job_id: str | None = None,
     load_cases: Callable[[Path], tuple[AgentEvalCase, ...]],
 ) -> EvalRunResponse:
-    domain_id = await validate_eval_domain(actor=actor, domain_id=request.domain_id, uow=uow)
+    domain_id = await validate_eval_domain(
+        actor=actor,
+        domain_id=request.domain_id,
+        uow=uow,
+        require_domain_for_viewer=True,
+    )
     dataset_path = resolve_dataset_path(settings.eval_dataset_root, request.dataset_path)
     if not dataset_path.exists() or not dataset_path.is_file():
         raise HTTPException(
@@ -1106,10 +1144,18 @@ async def validate_eval_domain(
     actor: str,
     domain_id: str | None,
     uow: UnitOfWorkDep,
+    require_domain_for_viewer: bool = False,
 ) -> str | None:
-    if domain_id is None:
-        return None
     async with uow:
+        admin_user = await uow.admin_users.get_by_email(actor)
+        is_admin = admin_user is not None and "admin" in admin_user.roles
+        if domain_id is None:
+            if require_domain_for_viewer and not is_admin:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Domain-scoped eval requires domain_id",
+                )
+            return None
         domain = await uow.domains.get(domain_id)
         if domain is None:
             raise HTTPException(

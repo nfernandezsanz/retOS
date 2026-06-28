@@ -329,12 +329,13 @@ curl --request POST http://localhost:8000/evals/ocr-benchmark \
 `RETOS_EVAL_DATASET_ROOT`. Reports are written only when `write_report=true`, and
 always land under `RETOS_EVAL_REPORT_ROOT` as both JSON and Markdown. This keeps
 benchmark inputs and generated reports mounted, auditable, and outside the source tree.
-`domain_id` is optional for dataset-backed evals. When set, RetOS validates the domain,
-stores it on the durable eval job and audit/progress payloads, supports domain-filtered
-history/trends, preserves the scope on reruns, and prevents comparison or regression-gate
-checks across mixed global/domain scopes. The React console exposes the same contract
-through `Eval scope`, and each run-history row shows whether the persisted report is
-global or domain-owned.
+`domain_id` is optional for admins and required for viewers running dataset-backed evals.
+When set, RetOS validates the domain grant, stores the scope on the durable eval job and
+audit/progress payloads, supports domain-filtered history/trends, preserves the scope on
+reruns, and prevents comparison or regression-gate checks across mixed global/domain
+scopes. Built-in evals, global evals, comparison, and regression gates remain
+admin-only. The React console exposes the same contract through `Eval scope`, and each
+run-history row shows whether the persisted report is global or domain-owned.
 
 ## Public Dataset Roadmap
 

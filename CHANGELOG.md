@@ -69,6 +69,9 @@ tag in GitHub.
   supports tolerances, and flags candidate calibration drops without provider calls.
 - Dataset-backed eval runs can now be attached to a domain, filtered by domain in
   history/trends, rerun with the same scope, and guarded against mixed-scope comparisons.
+- Viewers with explicit domain grants can now run dataset-backed evals, read
+  domain-filtered eval history/trends, and rerun domain-scoped dataset eval jobs without
+  gaining access to global evals, built-in evals, comparisons, or regression gates.
 - React eval controls now expose an explicit `Eval scope` selector that attaches
   dataset-backed SQuAD, HotpotQA, Natural Questions, and OCR benchmark runs to a domain
   and filters history, trends, comparison, and regression-gate workflows.

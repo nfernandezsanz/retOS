@@ -124,6 +124,13 @@ def test_viewer_can_read_granted_operational_state(client: TestClient) -> None:
 def test_viewer_cannot_mutate_operational_state(client: TestClient) -> None:
     admin_headers = login_headers(client, "admin@retos.dev", "test-admin-password")
     domain_id, source_id, job_id = seed_operational_records(client, admin_headers)
+    eval_response = client.post(
+        "/jobs",
+        headers=admin_headers,
+        json={"kind": "eval.run", "payload": {"suite_name": "retos-smoke"}},
+    )
+    assert eval_response.status_code == 201
+    eval_job_id = eval_response.json()["id"]
     viewer_id, viewer_headers = create_viewer_account(client, admin_headers)
     grant_domain(
         client,
@@ -168,7 +175,7 @@ def test_viewer_cannot_mutate_operational_state(client: TestClient) -> None:
             {"json": {"question": "What is in the corpus?", "run_inline": False}},
         ),
         ("post", "/evals/smoke", {}),
-        ("post", "/evals/runs/job-eval-1/rerun", {}),
+        ("post", f"/evals/runs/{eval_job_id}/rerun", {}),
         ("get", "/admin/users", {}),
     ]
 

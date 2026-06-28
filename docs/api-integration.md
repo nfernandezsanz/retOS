@@ -29,7 +29,7 @@ Roles are intentionally small:
 | Role | Allowed |
 | --- | --- |
 | `admin` | Full local administration: account management, domain/source/document mutations, ingestion, indexing, agent queries, eval execution, job transitions, job retry, and all read-only operations. |
-| `viewer` | Read-only operational visibility. Domain-scoped resources, audit journal/progress/export, and persisted SSE replay require explicit domain grants. Provider catalog remains a global observability surface because it exposes readiness, not secrets. Eval execution, history, and comparison require an admin token. |
+| `viewer` | Read-only operational visibility. Domain-scoped resources, audit journal/progress/export, persisted SSE replay, and dataset-backed eval execution/history/trends/reruns require explicit domain grants plus `domain_id`. Provider catalog remains a global observability surface because it exposes readiness, not secrets. Global evals, built-in evals, comparison, and regression gates require an admin token. |
 
 Endpoints that mutate state, spend compute, enqueue work, or change account security
 require an `admin` token. Viewer-safe endpoints use the same `Authorization` header but
@@ -879,8 +879,9 @@ curl "http://localhost:8000/evals/runs?limit=6" \
   --header "Authorization: Bearer <token>"
 ```
 
-The endpoint requires an admin token. The response is ordered newest-first and includes
-runs that failed before a report was produced:
+Admins may list the full eval ledger or filter by `domain_id`. Viewers must provide a
+granted `domain_id`, and only receive runs owned by that domain. The response is ordered
+newest-first and includes runs that failed before a report was produced:
 
 ```json
 [
@@ -909,11 +910,12 @@ curl "http://localhost:8000/evals/runs/trends?limit=60" \
   --header "Authorization: Bearer <token>"
 ```
 
-The response is grouped by `suite_name` and contains chronological points, latest run
-summary, pass rate, and per-metric first/latest/min/max/average/delta values. Direction
-is metric-aware: higher scores improve normal eval metrics, while lower values improve
+Admins may trend the full eval ledger or filter by `domain_id`. Viewers must provide a
+granted `domain_id`, and trends are computed only from that domain's runs. The response
+is grouped by `suite_name` and contains chronological points, latest run summary, pass
+rate, and per-metric first/latest/min/max/average/delta values. Direction is
+metric-aware: higher scores improve normal eval metrics, while lower values improve
 `*_error_rate` OCR metrics. Use `suite_name=<name>` to narrow the trend to one suite.
-Use `domain_id=<domain_id>` to compute trends only from runs owned by that domain.
 
 Run the deterministic agent multi-hop eval suite:
 
@@ -935,12 +937,14 @@ curl --request POST "http://localhost:8000/evals/runs/<job_id>/rerun" \
   --header "Authorization: Bearer <token>"
 ```
 
-The endpoint requires an admin token and creates a new `eval.run` job using the
-original run's persisted suite, dataset path, case limit, report settings, OCR
-thresholds, and OCR page limit when present. The new job stores
-`rerun_from_job_id` in `job.payload` for audit traceability. Dataset-backed reruns
-preserve the original `domain_id`. Runs with missing dataset payloads or unknown suites
-return `422` instead of attempting a partial rerun.
+Admins may rerun any persisted runnable eval. Viewers may rerun dataset-backed evals
+only when the original run has a `domain_id` they can access; global and built-in reruns
+remain admin-only. The endpoint creates a new `eval.run` job using the original run's
+persisted suite, dataset path, case limit, report settings, OCR thresholds, and OCR page
+limit when present. The new job stores `rerun_from_job_id` in `job.payload` for audit
+traceability. Dataset-backed reruns preserve the original `domain_id`. Runs with
+missing dataset payloads or unknown suites return `422` instead of attempting a partial
+rerun.
 
 Compare two persisted eval runs:
 
@@ -1061,8 +1065,9 @@ The workspace can create domains, select an active domain, render its document a
 inventory, inspect latest-version artifact and segment evidence, create mounted sources,
 queue text and file upload ingestions, queue source
 scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/HotpotQA
-agent/Natural Questions/OCR benchmark evals, choose an eval domain scope for dataset-backed runs and
-filtered history/trends, read recent jobs, inspect a selected job's full
+agent/Natural Questions/OCR benchmark evals, choose an eval domain scope for
+dataset-backed runs, filtered history/trends, and viewer-safe domain reruns, read recent
+jobs, inspect a selected job's full
 payload/error/progress detail, read persisted audit/progress events, group progress by
 job, filter the job ledger by status/kind, and send queries against the selected domain.
 Query execution uses `run_inline=true` so the UI can render the answer, citations, query
@@ -1077,10 +1082,12 @@ Dataset-backed runs record the adapter, resolved dataset path, `max_cases`, and 
 source. The React console renders these values next to eval metrics, and the backend
 copies them into the persisted job result plus eval journal/progress payloads for audit
 reviews. In the `Local evals` panel, the `Eval scope` selector sends `domain_id` for
-dataset-backed SQuAD, HotpotQA, HotpotQA agent, Natural Questions, and OCR benchmark requests. Selecting
-a domain also adds `domain_id` to run-history and trend requests, so comparison and
+dataset-backed SQuAD, HotpotQA, HotpotQA agent, Natural Questions, and OCR benchmark
+requests. Selecting a domain also adds `domain_id` to run-history and trend requests,
+so viewer sessions stay within their granted domain scope and admin comparison or
 regression-gate actions operate on same-scope rows only. Leaving the selector on
-`All evals` saves new dataset runs as global evals and reads unfiltered history.
+`All evals` saves new dataset runs as global evals and reads unfiltered history, which
+requires an admin token.
 
 ## Audit Events
 

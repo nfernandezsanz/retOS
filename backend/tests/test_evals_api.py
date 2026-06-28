@@ -138,6 +138,37 @@ def create_eval_domain(
     return str(response.json()["id"])
 
 
+def create_eval_viewer_with_grant(
+    client: TestClient,
+    headers: dict[str, str],
+    *,
+    domain_id: str,
+    email: str = "evals-domain-viewer@retos.dev",
+) -> dict[str, str]:
+    created = client.post(
+        "/admin/users",
+        headers=headers,
+        json={
+            "email": email,
+            "password": "evals-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    assert created.status_code == 201
+    grant = client.post(
+        f"/admin/users/{created.json()['id']}/domain-grants",
+        headers=headers,
+        json={"domain_id": domain_id},
+    )
+    assert grant.status_code == 201
+    login = client.post(
+        "/auth/login",
+        json={"email": email, "password": "evals-viewer-password"},
+    )
+    assert login.status_code == 200
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
 def write_hotpotqa_api_fixture(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -298,29 +329,40 @@ def test_eval_rerun_requires_admin_token(evals_client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_eval_history_requires_admin_role(
+def test_viewer_eval_history_requires_domain_scope(
     evals_client: TestClient,
     evals_viewer_headers: dict[str, str],
 ) -> None:
     runs = evals_client.get("/evals/runs", headers=evals_viewer_headers)
+    trends = evals_client.get("/evals/runs/trends", headers=evals_viewer_headers)
+
+    assert runs.status_code == 403
+    assert runs.json()["detail"] == "Domain-scoped eval requires domain_id"
+    assert trends.status_code == 403
+    assert trends.json()["detail"] == "Domain-scoped eval requires domain_id"
+
+
+def test_viewer_eval_compare_and_global_rerun_stay_admin_only(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    evals_viewer_headers: dict[str, str],
+) -> None:
     comparison = evals_client.get(
         "/evals/runs/compare",
         headers=evals_viewer_headers,
         params={"baseline_job_id": "job-a", "candidate_job_id": "job-b"},
     )
-
-    assert runs.status_code == 403
-    assert runs.json()["detail"] == "Admin role required"
     assert comparison.status_code == 403
     assert comparison.json()["detail"] == "Admin role required"
 
-    trends = evals_client.get("/evals/runs/trends", headers=evals_viewer_headers)
-    assert trends.status_code == 403
-    assert trends.json()["detail"] == "Admin role required"
-
-    rerun = evals_client.post("/evals/runs/job-eval-1/rerun", headers=evals_viewer_headers)
+    original = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert original.status_code == 202
+    rerun = evals_client.post(
+        f"/evals/runs/{original.json()['job']['id']}/rerun",
+        headers=evals_viewer_headers,
+    )
     assert rerun.status_code == 403
-    assert rerun.json()["detail"] == "Admin role required"
+    assert rerun.json()["detail"] == "Domain-scoped eval requires domain_id"
 
 
 def test_smoke_eval_runs_and_persists_auditable_job(
@@ -573,6 +615,60 @@ def test_dataset_eval_can_be_owned_by_domain_and_filtered(
     assert filtered_trends.json()[0]["suite_name"] == "squad-v2"
 
 
+def test_viewer_can_run_and_read_domain_scoped_dataset_eval(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "viewer-squad.json")
+    domain_id = create_eval_domain(evals_client, evals_admin_headers, slug="viewer-evals")
+    viewer_headers = create_eval_viewer_with_grant(
+        evals_client,
+        evals_admin_headers,
+        domain_id=domain_id,
+    )
+
+    without_scope = evals_client.post(
+        "/evals/squad",
+        headers=viewer_headers,
+        json={"dataset_path": "viewer-squad.json", "max_cases": 1},
+    )
+    assert without_scope.status_code == 403
+    assert without_scope.json()["detail"] == "Domain-scoped eval requires domain_id"
+
+    response = evals_client.post(
+        "/evals/squad",
+        headers=viewer_headers,
+        json={
+            "dataset_path": "viewer-squad.json",
+            "domain_id": domain_id,
+            "max_cases": 1,
+        },
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job"]["domain_id"] == domain_id
+    assert body["job"]["payload"]["domain_id"] == domain_id
+    assert body["job"]["payload"]["result"]["metadata"]["domain_id"] == domain_id
+
+    runs = evals_client.get(
+        "/evals/runs",
+        headers=viewer_headers,
+        params={"domain_id": domain_id},
+    )
+    assert runs.status_code == 200
+    assert [run["job"]["id"] for run in runs.json()] == [body["job"]["id"]]
+
+    trends = evals_client.get(
+        "/evals/runs/trends",
+        headers=viewer_headers,
+        params={"domain_id": domain_id},
+    )
+    assert trends.status_code == 200
+    assert trends.json()[0]["suite_name"] == "squad-v2"
+
+
 def test_dataset_eval_rejects_unknown_domain(
     evals_client: TestClient,
     evals_admin_headers: dict[str, str],
@@ -615,6 +711,41 @@ def test_dataset_eval_rerun_preserves_domain_scope(
     rerun = evals_client.post(
         f"/evals/runs/{original.json()['job']['id']}/rerun",
         headers=evals_admin_headers,
+    )
+
+    assert rerun.status_code == 202
+    assert rerun.json()["job"]["domain_id"] == domain_id
+    assert rerun.json()["job"]["payload"]["domain_id"] == domain_id
+    assert rerun.json()["job"]["payload"]["rerun_from_job_id"] == original.json()["job"]["id"]
+
+
+def test_viewer_can_rerun_domain_scoped_dataset_eval(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "viewer-rerun-squad.json")
+    domain_id = create_eval_domain(evals_client, evals_admin_headers, slug="viewer-rerun")
+    viewer_headers = create_eval_viewer_with_grant(
+        evals_client,
+        evals_admin_headers,
+        domain_id=domain_id,
+        email="evals-rerun-viewer@retos.dev",
+    )
+    original = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "viewer-rerun-squad.json",
+            "domain_id": domain_id,
+            "max_cases": 1,
+        },
+    )
+    assert original.status_code == 202
+
+    rerun = evals_client.post(
+        f"/evals/runs/{original.json()['job']['id']}/rerun",
+        headers=viewer_headers,
     )
 
     assert rerun.status_code == 202
