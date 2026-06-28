@@ -38,6 +38,8 @@ jobs:
         run: cd backend && ruff check src tests scripts
       - name: Typecheck
         run: cd backend && mypy src
+      - name: Python dependency audit
+        run: python -m pip_audit -r backend/requirements.txt
       - name: Test
         env:
           RETOS_ENV: test
@@ -59,8 +61,22 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install dependencies
         run: cd frontend && npm ci
+      - name: Node dependency audit
+        run: cd frontend && npm audit --audit-level=high
       - name: Check
         run: cd frontend && npm run check
+      - name: Install browser
+        run: cd frontend && npx playwright install --with-deps chromium
+      - name: Browser smoke
+        run: cd frontend && npm run e2e
+      - name: Visual audit
+        run: cd frontend && npm run visual-audit
+      - name: Upload visual audit screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: retos-release-visual-audit-${{ github.sha }}
+          path: frontend/visual-audit/*.png
+          if-no-files-found: error
 
   publish:
     runs-on: ubuntu-latest

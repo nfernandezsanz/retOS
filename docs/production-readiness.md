@@ -100,7 +100,7 @@ production promotion:
 
 | Evidence | Source |
 | --- | --- |
-| GHCR digests | `.github/workflows/release.yml` run for the immutable release tag. |
+| GHCR digests | `.github/workflows/release.yml` run for the immutable release tag after dependency audits, browser smoke, and visual audit screenshots pass. |
 | SBOM/provenance | GitHub Actions build attestations requested by the release workflow. |
 | Cosign signature verification | `make release-evidence-check` / `scripts/check_published_release_evidence.sh` run with the workflow summary's backend and web digests. |
 | Broader calibration or accepted pilot scope | Additional public-slice trend evidence, or an explicit human acceptance of the bounded 200-record/40-case pilot scope. |
@@ -149,7 +149,7 @@ These items must be closed before a final production release:
 | Evidence | Location |
 | --- | --- |
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
-| Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit` |
+| Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit`, and the release workflow `retos-release-visual-audit-<commit>` artifact |
 | Human visual review | `docs/releases/evidence/production-promotion-template.md` |
 | Dependency advisory evidence | `scripts/check_dependency_audit.sh`, `make dependency-audit` |
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |

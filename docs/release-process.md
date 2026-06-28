@@ -63,8 +63,9 @@ make docker-smoke
 6. Push a `v<version>` tag or run `.github/workflows/release.yml` manually to publish
    `retos-backend` and `retos-web` to GHCR with SBOM, provenance, Cosign signatures, and
    Cosign signature verification for both published digests. The workflow reruns backend
-   format/lint/type/test/eval-smoke, frontend checks, release readiness, and production
-   preflight before any image is pushed.
+   format/lint/type/test/eval-smoke, Python and Node dependency audits, frontend build,
+   browser smoke, visual audit with downloadable screenshots, release readiness, and
+   production preflight before any image is pushed.
 7. Copy the backend and web digests from the workflow summary, then verify the published
    evidence independently:
 
@@ -175,6 +176,8 @@ Images:
 - `.github/workflows/release.yml` is the source of truth for publishing `retos-backend`
   and `retos-web` to GHCR. It must keep SBOM, provenance, Cosign signing, and Cosign
   signature verification enabled.
+- The release workflow must run dependency audits plus browser/visual smoke before
+  publishing images, and it must upload visual audit screenshots as release evidence.
 - `scripts/check_published_release_evidence.sh` is the independent post-publish verifier
   for immutable image digests. Run it through `make release-evidence-check` before final
   promotion evidence is accepted.
