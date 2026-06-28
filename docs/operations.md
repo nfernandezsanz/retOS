@@ -81,6 +81,9 @@ promoting a release candidate. Human production promotion review starts from
 [docs/production-readiness.md](production-readiness.md), which records the current
 evidence, blockers, and acceptance checklist. Security reporting, secure defaults, and
 target-environment review requirements live in [SECURITY.md](../SECURITY.md).
+Use [docs/releases/evidence/production-promotion-template.md](releases/evidence/production-promotion-template.md)
+to record machine evidence, release provenance, backup/restore rehearsal, security review,
+and rollback ownership for the target environment.
 
 Use immutable image tags for shared environments. Avoid `local` and `latest` outside a
 developer workstation.
@@ -122,6 +125,8 @@ docker compose up -d api worker web
 
 8. Run health and smoke checks. If a check fails, keep the backup, capture logs, and
 rollback to the previous `RETOS_IMAGE_TAG`.
+9. Record the upgrade, backup, restore, health check, and rollback evidence in
+   `docs/releases/evidence/production-promotion-template.md` or a completed copy of it.
 
 ## Backup Runbook
 

@@ -19,6 +19,7 @@ paths = {
     "release_process": Path("docs/release-process.md"),
     "tracker": Path("planning/04-process-tracker.md"),
     "release_note": Path("docs/releases/2026.06.28-alpha.1.md"),
+    "promotion_template": Path("docs/releases/evidence/production-promotion-template.md"),
     "ci": Path(".github/workflows/ci.yml"),
     "ci_status_script": Path("scripts/check_ci_status.sh"),
     "dependency_audit_script": Path("scripts/check_dependency_audit.sh"),
@@ -36,6 +37,7 @@ operations = paths["operations"].read_text(encoding="utf-8")
 release_process = paths["release_process"].read_text(encoding="utf-8")
 tracker = paths["tracker"].read_text(encoding="utf-8")
 release_note = paths["release_note"].read_text(encoding="utf-8")
+promotion_template = paths["promotion_template"].read_text(encoding="utf-8")
 ci = paths["ci"].read_text(encoding="utf-8")
 
 for heading in (
@@ -84,6 +86,7 @@ for phrase in (
     "Branding assets",
     "SECURITY.md",
     ".dockerignore",
+    "docs/releases/evidence/production-promotion-template.md",
 ):
     require(phrase in audit_pack, f"docs/production-readiness.md missing evidence phrase: {phrase}")
 
@@ -121,6 +124,19 @@ require(
     "make dependency-audit" in release_process,
     "release process must require dependency advisory verification",
 )
+require(
+    "production-promotion-template.md" in operations and "production-promotion-template.md" in release_process,
+    "operations and release process must link the promotion evidence template",
+)
+for heading in (
+    "## Machine Evidence",
+    "## Release Provenance",
+    "## Backup And Restore Rehearsal",
+    "## Security Review",
+    "## Rollback",
+    "## Decision",
+):
+    require(heading in promotion_template, f"promotion evidence template missing {heading}")
 require(
     "Final release promotion still requires" in tracker,
     "process tracker must keep final release blockers visible",

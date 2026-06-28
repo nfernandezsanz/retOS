@@ -34,6 +34,8 @@ production pilot.
 7. Review a fresh `/audit/export` snapshot and validate the hash-chain fields.
 8. Confirm no paid-provider calls are required for tests, eval smoke, browser smoke, API
    smoke, or Docker smoke.
+9. Complete `docs/releases/evidence/production-promotion-template.md` or a copy of it
+   for the target environment.
 
 ## Required Local Evidence
 
@@ -149,5 +151,6 @@ These items must be closed before a final production release:
 | Runtime image parity | `scripts/check_backend_runtime_image.sh` |
 | Versioned release notes | `docs/releases/` |
 | Calibration evidence | `docs/releases/evidence/` |
+| Promotion evidence template | `docs/releases/evidence/production-promotion-template.md` |
 | Audit model | `planning/06-auditability-journals.md`, `docs/database.md` |
 | Current project tracking | `planning/04-process-tracker.md` |

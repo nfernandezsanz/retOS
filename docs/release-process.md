@@ -95,6 +95,8 @@ make release-evidence-check
 Before production promotion, reconcile this release evidence with
 [docs/production-readiness.md](production-readiness.md) and close or explicitly accept
 every blocker there.
+Use [docs/releases/evidence/production-promotion-template.md](releases/evidence/production-promotion-template.md)
+for the final human promotion record.
 
 ## Release Notes Template
 

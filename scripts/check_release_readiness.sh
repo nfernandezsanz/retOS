@@ -14,6 +14,7 @@ required_files=(
   "CHANGELOG.md"
   "docs/releases/README.md"
   "docs/releases/2026.06.28-alpha.1.md"
+  "docs/releases/evidence/production-promotion-template.md"
   ".env.example"
   "docker-compose.yml"
   ".gitignore"
