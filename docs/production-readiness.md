@@ -90,7 +90,7 @@ auditor a stable local entry point:
 | Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 527 pytest cases, eval smoke, agent multi-hop eval, 95.20% total coverage, and 90.44% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
-| Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, and reproducible desktop/mobile screenshots. |
+| Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
 | Docker runtime | `make docker-smoke` | Built API/web images, Postgres, RabbitMQ, API, worker, migrate, web, HTTP smoke, worker-backed jobs, and one shared backend image ID. |
 | Static release guardrails | `make release-check` | Required docs, Docker topology, image metadata source, image size budgets, workflow contract, release notes, audit pack, branding assets, safe defaults, and a dry-run of the published evidence verifier. |
 | Production preflight | `make production-preflight` | Local evidence, branding, release docs, and external promotion blockers are aligned. |
@@ -164,7 +164,7 @@ These items must be closed before a final production release:
 | Evidence | Location |
 | --- | --- |
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
-| Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit`, and the release workflow `retos-release-visual-audit-<commit>` artifact |
+| Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit`, `frontend/visual-audit/manifest.json`, and the release workflow `retos-release-visual-audit-<commit>` artifact |
 | Human visual review | `docs/releases/evidence/production-promotion-template.md` |
 | Dependency advisory evidence | `scripts/check_dependency_audit.sh`, `make dependency-audit` |
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |

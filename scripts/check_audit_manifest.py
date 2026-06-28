@@ -156,6 +156,47 @@ def main() -> int:
         "retos-release-visual-audit-" in visual["release_artifact"],
         "visual release artifact name must be present",
     )
+    local_manifest = visual["local_manifest"]
+    require(
+        "frontend/visual-audit/manifest.json" == local_manifest["path"],
+        "visual audit manifest path must be stable",
+    )
+    if local_manifest["exists"]:
+        require(
+            len(local_manifest["sha256"]) == 64,
+            "visual audit manifest must have a sha256 hash",
+        )
+        require(
+            "json" in local_manifest and "json_error" not in local_manifest,
+            "visual audit manifest must be valid JSON when present",
+        )
+        screenshots = local_manifest["json"].get("screenshots", [])
+        by_name = {record.get("name"): record for record in screenshots}
+        require(
+            {"desktop", "mobile"} <= set(by_name),
+            "visual audit manifest must include desktop and mobile screenshots",
+        )
+        for name, expected_path in (
+            ("desktop", "visual-audit/retos-console-desktop.png"),
+            ("mobile", "visual-audit/retos-console-mobile.png"),
+        ):
+            record = by_name[name]
+            require(
+                record.get("path") == expected_path,
+                f"{name} screenshot path must be stable",
+            )
+            require(
+                len(record.get("sha256", "")) == 64,
+                f"{name} screenshot must include sha256",
+            )
+            require(
+                record.get("size_bytes", 0) > 0, f"{name} screenshot must not be empty"
+            )
+            viewport = record.get("viewport", {})
+            require(
+                viewport.get("width", 0) > 0 and viewport.get("height", 0) > 0,
+                f"{name} screenshot must record viewport dimensions",
+            )
 
     external = "\n".join(manifest["external_promotion_evidence_required"])
     for phrase in (

@@ -102,6 +102,17 @@ def file_record(relative_path: str) -> dict[str, Any]:
     }
 
 
+def json_record(relative_path: str) -> dict[str, Any]:
+    record = file_record(relative_path)
+    if not record.get("exists"):
+        return record
+    try:
+        record["json"] = json.loads((ROOT / relative_path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        record["json_error"] = str(exc)
+    return record
+
+
 def github_ci(repo: str, sha: str) -> dict[str, Any]:
     api_root = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
     headers = [
@@ -229,6 +240,7 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
         "schema_version": 1,
         "visual_audit": {
             "ci_artifact": f"retos-visual-audit-{sha}",
+            "local_manifest": json_record("frontend/visual-audit/manifest.json"),
             "local_screenshots": [
                 file_record("frontend/visual-audit/retos-console-desktop.png"),
                 file_record("frontend/visual-audit/retos-console-mobile.png"),

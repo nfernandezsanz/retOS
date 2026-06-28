@@ -1,8 +1,24 @@
-import { mkdir } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 
 const VISUAL_AUDIT_DIR = resolve(process.cwd(), "visual-audit");
+
+async function visualAuditRecord(
+  name: string,
+  path: string,
+  viewport: { width: number; height: number },
+) {
+  const [file, metadata] = await Promise.all([readFile(path), stat(path)]);
+  return {
+    name,
+    path: path.replace(`${process.cwd()}/`, ""),
+    sha256: createHash("sha256").update(file).digest("hex"),
+    size_bytes: metadata.size,
+    viewport,
+  };
+}
 
 function jobFixture(
   id: string,
@@ -1529,16 +1545,36 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
   if (process.env.RETOS_VISUAL_AUDIT === "1") {
     await mkdir(VISUAL_AUDIT_DIR, { recursive: true });
     await page.locator("#overview").focus();
-    await page.setViewportSize({ width: 1440, height: 900 });
+    const desktopViewport = { width: 1440, height: 900 };
+    const mobileViewport = { width: 390, height: 844 };
+    const desktopPath = resolve(VISUAL_AUDIT_DIR, "retos-console-desktop.png");
+    const mobilePath = resolve(VISUAL_AUDIT_DIR, "retos-console-mobile.png");
+
+    await page.setViewportSize(desktopViewport);
     await page.screenshot({
       fullPage: true,
-      path: resolve(VISUAL_AUDIT_DIR, "retos-console-desktop.png"),
+      path: desktopPath,
     });
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize(mobileViewport);
     await page.screenshot({
       fullPage: true,
-      path: resolve(VISUAL_AUDIT_DIR, "retos-console-mobile.png"),
+      path: mobilePath,
     });
+    await writeFile(
+      resolve(VISUAL_AUDIT_DIR, "manifest.json"),
+      `${JSON.stringify(
+        {
+          generated_by: "frontend/e2e/app.spec.ts",
+          screenshots: [
+            await visualAuditRecord("desktop", desktopPath, desktopViewport),
+            await visualAuditRecord("mobile", mobilePath, mobileViewport),
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
   }
 });
 

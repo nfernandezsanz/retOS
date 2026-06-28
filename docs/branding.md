@@ -69,10 +69,11 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
   responsive breakpoints, skip-link focus, reduced motion, mobile provider controls,
   and the full operational console flow.
 - Reproducible screenshots: run `make frontend-visual-audit` to write ignored local
-  desktop and mobile PNGs under `frontend/visual-audit/` for human design review.
+  desktop and mobile PNGs plus `frontend/visual-audit/manifest.json` with viewport,
+  size, and SHA-256 metadata for human design review.
 - CI evidence: the frontend workflow uploads those PNGs as a
-  `retos-visual-audit-<commit>` artifact so remote reviewers can download the
-  exact desktop and mobile screenshots produced by the run.
+  `retos-visual-audit-<commit>` artifact with the same manifest so remote reviewers can
+  download the exact desktop and mobile screenshots produced by the run.
 
 ## Assets
 
