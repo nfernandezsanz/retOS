@@ -59,6 +59,7 @@ make auditor-static-check
 make auditor-handoff-check
 make audit-manifest-check
 make audit-manifest OUTPUT=evals/reports/audit-manifest.json
+make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md
 make release-notes-check
 make versioned-release-notes-check
 make docker-smoke
@@ -103,6 +104,8 @@ auditor a stable local entry point:
 | Auditor handoff | `make auditor-handoff-check` | Runs local static auditor gates and exports an offline audit manifest for the promotion record. |
 | Audit manifest schema | `make audit-manifest-check` | Offline schema check for required manifest fields, gates, critical file hashes, visual artifact names, and external blockers. |
 | Audit manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | JSON handoff with current commit, dirty state, generation context, required gates, critical file hashes including the auditor evidence matrix and branding assets, local visual screenshots, release artifact names, and remaining external promotion evidence. CI also uploads `retos-audit-manifest-<commit>` as an in-run snapshot; treat that artifact as final evidence only with a later `make ci-status-check` success for the same commit. |
+| Audit handoff report | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Human-readable Markdown companion for the JSON manifest with candidate, verdict, local gates, blockers, hashes, and visual evidence. |
+| Audit handoff report schema | `make audit-handoff-report-check` | Offline check that the generated Markdown summary preserves key manifest evidence. |
 | Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, docker, final audit-evidence jobs, and required visual-audit/audit-manifest artifacts for the current commit. |
 
 ## External Promotion Evidence
@@ -145,6 +148,7 @@ These items must be closed before a final production release:
 - [ ] `make auditor-handoff-check` passes and writes the offline audit manifest for the promotion record.
 - [ ] `make audit-manifest-check` passes.
 - [ ] `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` was exported for the promotion record.
+- [ ] `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` was exported for human review.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
 - [ ] Desktop and mobile visual audit PNGs were reviewed and accepted or tracked.
@@ -173,6 +177,7 @@ These items must be closed before a final production release:
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
 | Operations runbook | `docs/operations.md`, `scripts/check_operations_runbook.sh`, `make operations-runbook-check` |
 | Audit manifest schema | `scripts/check_audit_manifest.py`, `make audit-manifest-check` |
+| Audit handoff report | `scripts/export_audit_handoff_report.py`, `scripts/check_audit_handoff_report.py`, `make audit-handoff-report` |
 | Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check`, the `retos-visual-audit-<commit>` artifact, and the `retos-audit-manifest-<commit>` artifact |
 | Audit handoff manifest | `scripts/export_audit_manifest.py`, `make audit-manifest` |
 | Release procedure | `docs/release-process.md` |

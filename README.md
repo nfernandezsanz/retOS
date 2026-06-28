@@ -43,9 +43,10 @@ make auditor-handoff-check
 make audit-manifest-check
 ```
 
-The offline manifest lands at `evals/reports/audit-manifest.json` and records the
-current commit, dirty state, local gates, critical file hashes, visual artifacts, and
-remaining production-promotion evidence.
+The offline manifest lands at `evals/reports/audit-manifest.json`, and the human-readable
+summary lands at `evals/reports/audit-handoff.md`. Together they record the current
+commit, dirty state, local gates, critical file hashes, visual artifacts, and remaining
+production-promotion evidence.
 
 </details>
 
@@ -101,10 +102,11 @@ For a local, auditor-friendly snapshot that does not depend on GitHub Actions:
 make auditor-handoff-check
 ```
 
-That command runs the static auditor gates and writes an offline manifest to
-`evals/reports/audit-manifest.json`. The manifest records the current commit, dirty
-state, required gates, critical file hashes, visual artifact names, and remaining
-external promotion evidence. It deliberately does not claim production promotion.
+That command runs the static auditor gates, writes an offline manifest to
+`evals/reports/audit-manifest.json`, and writes a human-readable summary to
+`evals/reports/audit-handoff.md`. The manifest and report record the current commit,
+dirty state, required gates, critical file hashes, visual artifact names, and remaining
+external promotion evidence. They deliberately do not claim production promotion.
 
 Remote CI evidence is separate:
 
@@ -346,6 +348,8 @@ Every meaningful change should pass these gates:
 | Auditor handoff | `make auditor-handoff-check` | Runs the local static auditor pack and exports an offline audit manifest to `evals/reports/audit-manifest.json`. |
 | Audit handoff manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | Exports commit state, generation context, required gates, critical file hashes including the auditor evidence matrix and branding assets, visual audit screenshot records, and remaining external promotion evidence as JSON. |
 | Audit manifest schema | `make audit-manifest-check` | Validates the audit manifest schema, required gates, critical file hashes, visual artifact names, and external blockers offline. |
+| Audit handoff report | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Exports a human-readable Markdown companion with candidate, verdict, local gates, blockers, hashes, and visual evidence. |
+| Audit handoff report schema | `make audit-handoff-report-check` | Validates that the generated Markdown report preserves the key manifest evidence. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | Agent multi-hop eval | `make eval-agent-multihop` | Runs deterministic query-plan, multi-hop audit, evidence-route, citation, grounding, and budget scorers without network or paid providers. |
 | Dataset fetch | `make eval-fetch-dataset PROFILE=squad-dev-v2` | Opt-in download or local sampling of bounded public dataset samples under `evals/datasets`; records the effective `source_url`, supports retryable mirrors, and never runs in CI by default. |

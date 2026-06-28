@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import subprocess
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise SystemExit(f"Audit handoff report failed: {message}")
+
+
+def main() -> int:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        manifest = tmp / "audit-manifest.json"
+        report = tmp / "audit-handoff.md"
+        subprocess.run(
+            [
+                "python3",
+                "scripts/export_audit_manifest.py",
+                "--skip-ci-lookup",
+                "--output",
+                str(manifest),
+            ],
+            cwd=ROOT,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "python3",
+                "scripts/export_audit_handoff_report.py",
+                "--manifest",
+                str(manifest),
+                "--output",
+                str(report),
+            ],
+            cwd=ROOT,
+            check=True,
+        )
+        content = report.read_text(encoding="utf-8")
+
+    for phrase in (
+        "# RetOS Audit Handoff Report",
+        "## Candidate",
+        "## Readiness Verdict",
+        "## Local Gates To Reproduce",
+        "## Remaining External Promotion Evidence",
+        "## Critical Evidence Hashes",
+        "## Visual Evidence",
+        "## Auditor Notes",
+        "Production promotion ready",
+        "make auditor-static-check",
+        "make ci-status-check",
+        "GHCR backend and web digests",
+        "SBOM/provenance",
+        "Cosign verification",
+        "docs/auditor-evidence-matrix.md",
+        "docs/assets/retos-project-card.svg",
+        "frontend/public/retos-mark.svg",
+        "retos-visual-audit-",
+        "production-promotion-template.md",
+    ):
+        require(phrase in content, f"generated report missing phrase: {phrase}")
+
+    print("Audit handoff report OK: Markdown summary preserves manifest evidence.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
