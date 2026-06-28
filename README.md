@@ -123,6 +123,7 @@ visual-audit/audit-manifest artifacts.
 | Operate, backup, restore, rollback | [docs/operations.md](docs/operations.md) |
 | Prepare a release | [docs/release-process.md](docs/release-process.md) |
 | Review production readiness | [docs/production-readiness.md](docs/production-readiness.md) |
+| Map requirements to evidence | [docs/auditor-evidence-matrix.md](docs/auditor-evidence-matrix.md) |
 | Read project changes | [CHANGELOG.md](CHANGELOG.md) |
 | Query/API examples | [docs/api-integration.md](docs/api-integration.md) |
 | Eval strategy | [docs/evals.md](docs/evals.md) |
@@ -340,6 +341,7 @@ Every meaningful change should pass these gates:
 | Security policy | `make security-policy-check` | Validates security reporting, secure defaults, human production review guidance, and links from operational docs. |
 | Ignore hygiene | `make ignore-hygiene-check` | Validates `.gitignore` and `.dockerignore` keep secrets, generated files, local volumes, public datasets, reports, and backups out of Git and Docker contexts. |
 | Operations runbook | `make operations-runbook-check` | Validates backup, restore, rollback, health-check, audit-export, and promotion-evidence fields. |
+| Auditor evidence matrix | `make auditor-evidence-matrix-check` | Validates the objective-to-evidence matrix so requirements, local gates, and external promotion blockers stay traceable. |
 | Auditor static pack | `make auditor-static-check` | Runs the non-destructive auditor gates for dependency advisories, security policy, ignore hygiene, operations runbooks, branding, release workflow, release notes, production preflight, and audit-pack alignment. |
 | Auditor handoff | `make auditor-handoff-check` | Runs the local static auditor pack and exports an offline audit manifest to `evals/reports/audit-manifest.json`. |
 | Audit handoff manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | Exports commit state, generation context, required gates, critical file hashes, visual audit screenshot records, and remaining external promotion evidence as JSON. |

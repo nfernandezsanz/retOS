@@ -11,6 +11,8 @@ tag in GitHub.
 
 ### Added
 
+- Auditor evidence matrix mapping the project objective to current evidence, local gates,
+  and remaining external promotion blockers.
 - Production readiness audit pack with explicit promotion blockers, human review order,
   acceptance checks, and a CI-enforced guard.
 - Current-HEAD GitHub Actions status check for human release auditors.

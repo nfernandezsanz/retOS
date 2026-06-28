@@ -106,6 +106,8 @@ jobs:
         run: scripts/check_audit_pack.sh
       - name: Production preflight
         run: scripts/check_production_preflight.sh
+      - name: Auditor evidence matrix
+        run: scripts/check_auditor_evidence_matrix.sh
       - name: Branding assets
         run: scripts/check_branding_assets.sh
       - name: Release workflow
