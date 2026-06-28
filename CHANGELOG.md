@@ -126,6 +126,8 @@ tag in GitHub.
 
 - Audit manifests now hash the auditor evidence matrix and record its local gate so the
   machine-readable handoff preserves objective-to-evidence traceability.
+- Audit manifests now hash the RetOS project card, favicon mark, frontend brand tokens,
+  and visual-audit smoke test so brand evidence is part of the machine-readable handoff.
 - README onboarding now uses live GitHub Actions status badges, action-oriented local
   workflow pills, and collapsible operator paths for try/audit/develop entry points.
 - The React console now uses a more explicit audit-console brand treatment with a
