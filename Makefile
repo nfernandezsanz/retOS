@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-fetch-dataset eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke release-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-fetch-dataset eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke release-check release-notes-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -31,6 +31,7 @@ help:
 	@printf "  make docker-build     Build Docker images\n"
 	@printf "  make docker-smoke     Build and smoke the Docker stack\n"
 	@printf "  make release-check    Validate release docs, defaults, and Docker topology\n"
+	@printf "  make release-notes-check Validate changelog and release note guidance\n"
 	@printf "  make docker-up        Start the full local stack\n"
 	@printf "  make docker-down      Stop the local stack\n"
 
@@ -122,6 +123,9 @@ docker-smoke:
 
 release-check:
 	scripts/check_release_readiness.sh
+
+release-notes-check:
+	scripts/check_release_notes.sh
 
 docker-up:
 	docker compose up --build

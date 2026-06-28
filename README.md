@@ -133,6 +133,8 @@ docker compose --profile models run --rm ollama-pull
 
 More Docker details are in [docs/docker.md](docs/docker.md).
 Operations, release, upgrade, backup, and restore details are in [docs/operations.md](docs/operations.md).
+Release candidate checklist and note templates are in [docs/release-process.md](docs/release-process.md).
+Project changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 API integration details are in [docs/api-integration.md](docs/api-integration.md).
 Evaluation details are in [docs/evals.md](docs/evals.md).
 Database and migration details are in [docs/database.md](docs/database.md).
@@ -192,6 +194,7 @@ make frontend-e2e
 docker compose --env-file .env.example config
 docker compose --dry-run build
 make release-check
+make release-notes-check
 make docker-smoke
 ```
 
@@ -217,6 +220,7 @@ Every meaningful change should pass these gates:
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
 | Release readiness | `make release-check` | Validates release docs, Docker image topology, safe defaults, and operations runbook coverage. |
+| Release notes | `make release-notes-check` | Validates changelog, release-process guidance, and docs links for auditable releases. |
 | Docker stack smoke | `make docker-smoke` | Builds the shared backend image plus web image, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, SQuAD/HotpotQA/Natural Questions/OCR benchmark evals, eval run comparison, job lifecycle, SSE, and web over HTTP. |
 
 ## Security Defaults

@@ -10,8 +10,10 @@ required_files=(
   "docs/database.md"
   "CONTRIBUTING.md"
   "LICENSE"
+  "CHANGELOG.md"
   ".env.example"
   "docker-compose.yml"
+  "docs/release-process.md"
 )
 
 for file in "${required_files[@]}"; do
@@ -23,6 +25,7 @@ done
 
 scripts/check_docker_topology.sh >/dev/null
 scripts/check_image_metadata.sh >/dev/null
+scripts/check_release_notes.sh >/dev/null
 
 python3 - <<'PY'
 from __future__ import annotations
@@ -79,6 +82,7 @@ for phrase in (
     "retos-web",
     "RETOS_IMAGE_TAG",
     "org.opencontainers.image",
+    "docs/release-process.md",
     "docker compose --env-file .env.example config",
     "make docker-smoke",
 ):
@@ -95,6 +99,10 @@ require(
 require(
     "docs/operations.md" in readme,
     "README must link the operations guide",
+)
+require(
+    "CHANGELOG.md" in readme,
+    "README must link the changelog",
 )
 
 print("Release readiness OK: docs, defaults, and Docker topology are aligned.")

@@ -45,6 +45,8 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Docker images build.
 - Docker stack smoke starts core services and hits API/web endpoints.
 - Release readiness validates operations docs, safe defaults, and image topology.
+- Release note checks validate `CHANGELOG.md`, release-process guidance, and operator
+  documentation links.
 - No secrets are baked into images.
 - Migrations work from an empty database.
 
@@ -52,6 +54,8 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 
 - Release images are tagged with `RETOS_IMAGE_TAG`; avoid mutable tags outside local
   development.
+- Release candidates must update `CHANGELOG.md` and follow `docs/release-process.md`
+  before tagging.
 - `api`, `worker`, and `migrate` must always share the backend image and may differ only
   by command.
 - Backups must include Postgres, storage, eval reports, eval datasets, and optionally the

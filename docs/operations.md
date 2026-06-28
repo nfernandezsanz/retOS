@@ -46,6 +46,10 @@ make frontend-e2e
 make docker-smoke
 ```
 
+Use [docs/release-process.md](release-process.md) and [CHANGELOG.md](../CHANGELOG.md)
+to prepare the human release notes, migration notes, validation evidence, and rollback
+summary before publishing a tag.
+
 Use immutable image tags for shared environments. Avoid `local` and `latest` outside a
 developer workstation.
 
