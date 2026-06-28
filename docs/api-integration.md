@@ -1032,6 +1032,9 @@ Current console calls:
 - `POST /evals/ocr-benchmark`
 - `GET /jobs?limit=12`
 - `GET /jobs/{job_id}`
+- `GET /documents/{document_id}/versions`
+- `GET /document-versions/{version_id}/artifacts`
+- `GET /document-versions/{version_id}/segments`
 - `GET /audit/journal-events?limit=20`
 - `GET /audit/progress-events?limit=20`
 
@@ -1047,7 +1050,8 @@ audited local accounts:
   state.
 
 The workspace can create domains, select an active domain, render its document and source
-inventory, create mounted sources, queue text and file upload ingestions, queue source
+inventory, inspect latest-version artifact and segment evidence, create mounted sources,
+queue text and file upload ingestions, queue source
 scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/HotpotQA
 agent/Natural Questions/OCR benchmark evals, choose an eval domain scope for dataset-backed runs and
 filtered history/trends, read recent jobs, inspect a selected job's full

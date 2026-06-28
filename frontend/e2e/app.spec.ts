@@ -60,6 +60,50 @@ async function mockProviderApi(page: Page) {
       updated_at: "2026-06-27T00:00:00Z",
     },
   ];
+  const documentVersions = [
+    {
+      id: "version-1",
+      document_id: "document-1",
+      version: 1,
+      source_uri: "memory://smoke-doc",
+      content_hash: "abcdef1234567890",
+      size_bytes: 128,
+      created_at: "2026-06-27T00:00:00Z",
+    },
+  ];
+  const artifacts = [
+    {
+      id: "artifact-1",
+      document_version_id: "version-1",
+      kind: "raw_text",
+      uri: "memory://smoke-doc#raw-text",
+      sha256: "abcdef1234567890",
+      size_bytes: 48,
+      created_at: "2026-06-27T00:00:00Z",
+    },
+  ];
+  const segments = [
+    {
+      id: "segment-1234567890",
+      document_version_id: "version-1",
+      ordinal: 1,
+      text: "Smoke segment text for search readiness.",
+      anchor: "page=1",
+      token_count: 6,
+      content_hash: "1234567890abcdef",
+      created_at: "2026-06-27T00:00:00Z",
+    },
+    {
+      id: "segment-neighbor-1",
+      document_version_id: "version-1",
+      ordinal: 2,
+      text: "Adjacent context explains who reviewed the search readiness evidence.",
+      anchor: "page=2",
+      token_count: 9,
+      content_hash: "fedcba0987654321",
+      created_at: "2026-06-27T00:00:00Z",
+    },
+  ];
   const failedIndexJob = {
     ...jobFixture("job-failed-index-1", "index.domain", "failed", {
       requested_at: "fixture",
@@ -707,6 +751,36 @@ async function mockProviderApi(page: Page) {
             payload: event.payload,
           })),
       },
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/documents\/[^/]+\/versions$/, async (route) => {
+    const documentId = new URL(route.request().url()).pathname.split("/")[2];
+    const document = documents.find((item) => item.id === documentId);
+    if (!document) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        json: { detail: "Document not found" },
+      });
+      return;
+    }
+    await route.fulfill({
+      contentType: "application/json",
+      json: documentVersions.filter((version) => version.document_id === documentId),
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/document-versions\/[^/]+\/artifacts$/, async (route) => {
+    const versionId = new URL(route.request().url()).pathname.split("/")[2];
+    await route.fulfill({
+      contentType: "application/json",
+      json: artifacts.filter((artifact) => artifact.document_version_id === versionId),
+    });
+  });
+  await page.route(/http:\/\/localhost:8000\/document-versions\/[^/]+\/segments$/, async (route) => {
+    const versionId = new URL(route.request().url()).pathname.split("/")[2];
+    await route.fulfill({
+      contentType: "application/json",
+      json: segments.filter((segment) => segment.document_version_id === versionId),
     });
   });
   await page.route(/http:\/\/localhost:8000\/documents\/[^/]+$/, async (route) => {
@@ -1388,6 +1462,16 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
   await expect(page.getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();
+  await page.getByRole("button", { name: "Evidence Smoke Document" }).click();
+  await expect(page.getByLabel("Evidence for Smoke Document").getByText("v1")).toBeVisible();
+  await expect(page.getByLabel("Artifacts for Smoke Document").getByText("raw_text")).toBeVisible();
+  await expect(
+    page.getByLabel("Artifacts for Smoke Document").getByText("memory://smoke-doc#raw-text"),
+  ).toBeVisible();
+  await expect(page.getByLabel("Segments for Smoke Document").getByText("page=1")).toBeVisible();
+  await expect(
+    page.getByLabel("Segments for Smoke Document").getByText("Smoke segment text for search readiness."),
+  ).toBeVisible();
 
   await page
     .getByRole("textbox", { name: "Question", exact: true })
@@ -1410,7 +1494,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Multi-hop audit").getByText("Bridge terms: search, readiness")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();
-  await expect(page.getByText("page=1")).toBeVisible();
+  await expect(page.getByLabel("Query citations").getByText("page=1")).toBeVisible();
 
   await page.getByLabel("Slug").fill("policy-research");
   await page.getByPlaceholder("Legal research").fill("Policy Research");

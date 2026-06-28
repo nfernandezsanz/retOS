@@ -590,6 +590,72 @@ button:focus-visible {
   padding: 5px 7px;
 }
 
+.document-evidence {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 12px;
+  border-top: 1px solid #dbe3ef;
+  padding-top: 12px;
+}
+
+.evidence-version {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.evidence-version div,
+.evidence-row {
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.evidence-version span,
+.evidence-row span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.evidence-version strong,
+.evidence-row strong,
+.evidence-row p {
+  overflow-wrap: anywhere;
+}
+
+.evidence-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 8px;
+}
+
+.evidence-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.evidence-row.vertical {
+  display: grid;
+}
+
+.evidence-row p {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .document-summary {
   min-width: 0;
 }
@@ -610,6 +676,7 @@ button:focus-visible {
 .document-actions {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -2092,6 +2159,8 @@ button:focus-visible {
   .job-detail-columns,
   .job-progress-meta,
   .admin-grid,
+  .evidence-version,
+  .evidence-columns,
   .provider-summary {
     grid-template-columns: 1fr;
   }
@@ -2112,6 +2181,10 @@ button:focus-visible {
   .eval-run-row,
   .eval-run-row > div:first-child {
     grid-template-columns: 1fr;
+  }
+
+  .document-meta {
+    justify-content: flex-start;
   }
 
   .audit-event-row > div {

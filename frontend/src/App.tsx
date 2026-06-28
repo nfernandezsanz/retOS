@@ -115,6 +115,43 @@ type DocumentRead = {
   updated_at: string;
 };
 
+type DocumentVersionRead = {
+  id: string;
+  document_id: string;
+  version: number;
+  source_uri: string;
+  content_hash: string;
+  size_bytes: number;
+  created_at: string;
+};
+
+type ArtifactRead = {
+  id: string;
+  document_version_id: string;
+  kind: string;
+  uri: string;
+  sha256: string;
+  size_bytes: number;
+  created_at: string;
+};
+
+type SegmentRead = {
+  id: string;
+  document_version_id: string;
+  ordinal: number;
+  text: string;
+  anchor: string | null;
+  token_count: number;
+  content_hash: string;
+  created_at: string;
+};
+
+type DocumentEvidenceRead = {
+  version: DocumentVersionRead | null;
+  artifacts: ArtifactRead[];
+  segments: SegmentRead[];
+};
+
 type SourceKind = "upload" | "mount" | "url";
 
 type SourceRead = {
@@ -696,6 +733,52 @@ async function loadDocumentHistory(token: string, documentId: string): Promise<D
   });
 }
 
+async function loadDocumentVersions(
+  token: string,
+  documentId: string,
+): Promise<DocumentVersionRead[]> {
+  return requestJson<DocumentVersionRead[]>(`/documents/${documentId}/versions`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function loadDocumentArtifacts(token: string, versionId: string): Promise<ArtifactRead[]> {
+  return requestJson<ArtifactRead[]>(`/document-versions/${versionId}/artifacts`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function loadDocumentSegments(token: string, versionId: string): Promise<SegmentRead[]> {
+  return requestJson<SegmentRead[]>(`/document-versions/${versionId}/segments`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function loadDocumentEvidence(
+  token: string,
+  documentId: string,
+): Promise<DocumentEvidenceRead> {
+  const versions = await loadDocumentVersions(token, documentId);
+  const latestVersion = versions.reduce<DocumentVersionRead | null>(
+    (latest, version) => (latest === null || version.version > latest.version ? version : latest),
+    null,
+  );
+  if (latestVersion === null) {
+    return { version: null, artifacts: [], segments: [] };
+  }
+  const [artifacts, segments] = await Promise.all([
+    loadDocumentArtifacts(token, latestVersion.id),
+    loadDocumentSegments(token, latestVersion.id),
+  ]);
+  return { version: latestVersion, artifacts, segments };
+}
+
 async function loadSources(token: string, domainId: string): Promise<SourceRead[]> {
   return requestJson<SourceRead[]>(`/domains/${domainId}/sources`, {
     headers: {
@@ -1250,6 +1333,9 @@ function App() {
   const [historyDocumentId, setHistoryDocumentId] = useState<string | null>(null);
   const [documentHistory, setDocumentHistory] = useState<DocumentHistoryRead | null>(null);
   const [isLoadingDocumentHistory, setIsLoadingDocumentHistory] = useState(false);
+  const [evidenceDocumentId, setEvidenceDocumentId] = useState<string | null>(null);
+  const [documentEvidence, setDocumentEvidence] = useState<DocumentEvidenceRead | null>(null);
+  const [isLoadingDocumentEvidence, setIsLoadingDocumentEvidence] = useState(false);
   const [isCreatingDomain, setIsCreatingDomain] = useState(false);
   const [isCreatingSource, setIsCreatingSource] = useState(false);
   const [sourceName, setSourceName] = useState("");
@@ -1444,10 +1530,17 @@ function App() {
           loadJobs(adminToken),
         ]);
         setDocuments(nextDocuments);
+        if (
+          evidenceDocumentId &&
+          !nextDocuments.some((document) => document.id === evidenceDocumentId)
+        ) {
+          clearDocumentEvidence();
+        }
         setSources(nextSources);
         setQueuedJobs(nextJobs);
       } else {
         setDocuments([]);
+        clearDocumentEvidence();
         setSources([]);
         setQueuedJobs(await loadJobs(adminToken));
       }
@@ -1749,6 +1842,7 @@ function App() {
     setTextSourceId("");
     handleCancelDocumentEdit();
     clearDocumentHistory();
+    clearDocumentEvidence();
     if (!nextDomainId) {
       setDocuments([]);
       setSources([]);
@@ -1844,6 +1938,11 @@ function App() {
     setDocumentHistory(null);
   }
 
+  function clearDocumentEvidence() {
+    setEvidenceDocumentId(null);
+    setDocumentEvidence(null);
+  }
+
   async function handleUpdateDocument(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setWorkspaceError(null);
@@ -1891,6 +1990,9 @@ function App() {
       if (historyDocumentId === archived.id) {
         setDocumentHistory(await loadDocumentHistory(accessToken, archived.id));
       }
+      if (evidenceDocumentId === archived.id && !showArchivedDocuments) {
+        clearDocumentEvidence();
+      }
       await refreshAudit(accessToken);
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Document archive failed");
@@ -1923,6 +2025,7 @@ function App() {
     const nextShowArchived = event.target.checked;
     setShowArchivedDocuments(nextShowArchived);
     handleCancelDocumentEdit();
+    clearDocumentEvidence();
     setWorkspaceError(null);
     if (!selectedDomainId) {
       return;
@@ -1960,6 +2063,26 @@ function App() {
       setWorkspaceError(error instanceof Error ? error.message : "Document history failed");
     } finally {
       setIsLoadingDocumentHistory(false);
+    }
+  }
+
+  async function handleDocumentEvidence(documentId: string) {
+    if (evidenceDocumentId === documentId) {
+      clearDocumentEvidence();
+      return;
+    }
+    setWorkspaceError(null);
+    setEvidenceDocumentId(documentId);
+    setDocumentEvidence(null);
+    setIsLoadingDocumentEvidence(true);
+    try {
+      const accessToken = await getAdminToken();
+      setDocumentEvidence(await loadDocumentEvidence(accessToken, documentId));
+    } catch (error) {
+      clearDocumentEvidence();
+      setWorkspaceError(error instanceof Error ? error.message : "Document evidence failed");
+    } finally {
+      setIsLoadingDocumentEvidence(false);
     }
   }
 
@@ -2481,6 +2604,7 @@ function App() {
     setRestoringDocumentId(null);
     setShowArchivedDocuments(false);
     clearDocumentHistory();
+    clearDocumentEvidence();
     setSources([]);
     setWorkspaceError(null);
     setLiveStatus("disconnected");
@@ -2637,6 +2761,7 @@ function App() {
                 const isArchiving = archivingDocumentId === document.id;
                 const isRestoring = restoringDocumentId === document.id;
                 const isHistoryOpen = historyDocumentId === document.id;
+                const isEvidenceOpen = evidenceDocumentId === document.id;
                 return (
                   <article className={`document-row${isArchived ? " archived" : ""}`} key={document.id}>
                     <div className="document-summary">
@@ -2707,6 +2832,20 @@ function App() {
                             <History aria-hidden="true" />
                           )}
                         </button>
+                        <button
+                          className="icon-button"
+                          disabled={isEditing || isLoadingDocumentEvidence}
+                          title="Inspect document evidence"
+                          type="button"
+                          aria-label={`Evidence ${document.title}`}
+                          onClick={() => void handleDocumentEvidence(document.id)}
+                        >
+                          {isEvidenceOpen && isLoadingDocumentEvidence ? (
+                            <RefreshCw aria-hidden="true" />
+                          ) : (
+                            <Eye aria-hidden="true" />
+                          )}
+                        </button>
                         {isArchived ? (
                           <button
                             className="icon-button"
@@ -2732,6 +2871,81 @@ function App() {
                         )}
                       </div>
                     </div>
+                    {isEvidenceOpen ? (
+                      <section className="document-evidence" aria-label={`Evidence for ${document.title}`}>
+                        {!documentEvidence || isLoadingDocumentEvidence ? (
+                          <p className="payload-summary">Loading document evidence</p>
+                        ) : documentEvidence.version ? (
+                          <>
+                            <div className="evidence-version">
+                              <div>
+                                <span>Latest version</span>
+                                <strong>v{documentEvidence.version.version}</strong>
+                              </div>
+                              <div>
+                                <span>Source</span>
+                                <strong>{documentEvidence.version.source_uri}</strong>
+                              </div>
+                              <div>
+                                <span>Hash</span>
+                                <strong>{documentEvidence.version.content_hash.slice(0, 16)}</strong>
+                              </div>
+                            </div>
+                            <div className="evidence-columns">
+                              <section aria-label={`Artifacts for ${document.title}`}>
+                                <div className="section-heading compact">
+                                  <h3>Artifacts</h3>
+                                  <span className="badge muted">{documentEvidence.artifacts.length}</span>
+                                </div>
+                                <div className="evidence-list">
+                                  {documentEvidence.artifacts.map((artifact) => (
+                                    <article className="evidence-row" key={artifact.id}>
+                                      <div>
+                                        <strong>{artifact.kind}</strong>
+                                        <span>{artifact.uri}</span>
+                                      </div>
+                                      <span className="badge muted">{artifact.size_bytes} bytes</span>
+                                    </article>
+                                  ))}
+                                  {documentEvidence.artifacts.length === 0 ? (
+                                    <p className="payload-summary">No artifacts registered yet.</p>
+                                  ) : null}
+                                </div>
+                              </section>
+                              <section aria-label={`Segments for ${document.title}`}>
+                                <div className="section-heading compact">
+                                  <h3>Segments</h3>
+                                  <span className="badge muted">{documentEvidence.segments.length}</span>
+                                </div>
+                                <div className="evidence-list">
+                                  {documentEvidence.segments.slice(0, 3).map((segment) => (
+                                    <article className="evidence-row vertical" key={segment.id}>
+                                      <div>
+                                        <strong>
+                                          #{segment.ordinal} {segment.anchor ?? "no anchor"}
+                                        </strong>
+                                        <span>{segment.token_count} tokens</span>
+                                      </div>
+                                      <p>{segment.text}</p>
+                                    </article>
+                                  ))}
+                                  {documentEvidence.segments.length > 3 ? (
+                                    <p className="payload-summary">
+                                      Showing first 3 of {documentEvidence.segments.length} segments.
+                                    </p>
+                                  ) : null}
+                                  {documentEvidence.segments.length === 0 ? (
+                                    <p className="payload-summary">No segments registered yet.</p>
+                                  ) : null}
+                                </div>
+                              </section>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="payload-summary">No versions registered for this document.</p>
+                        )}
+                      </section>
+                    ) : null}
                     {isHistoryOpen ? (
                       <section className="document-history" aria-label={`History for ${document.title}`}>
                         {!documentHistory || isLoadingDocumentHistory ? (
