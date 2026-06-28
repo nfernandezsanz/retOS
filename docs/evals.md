@@ -163,6 +163,19 @@ Comparison is local and deterministic. It reads already persisted `eval.run` rep
 payloads, returns baseline/candidate summaries, per-metric deltas, an average delta,
 and a coarse status of `improved`, `regressed`, or `unchanged`.
 
+Operator-facing trends are available through:
+
+```bash
+curl "http://localhost:8000/evals/runs/trends?limit=60" \
+  --header "Authorization: Bearer <token>"
+```
+
+The trend endpoint groups persisted reported runs by suite, returns chronological
+points, pass rate, latest run summary, and per-metric first/latest/min/max/average
+deltas. Metrics ending in `error_rate` are treated as lower-is-better when assigning
+`improved`, `regressed`, or `unchanged` direction. The React console renders these
+suite trends in the `Local evals` panel beside history, comparison, and rerun controls.
+
 Dataset-backed SQuAD evals are also available through the admin API:
 
 ```bash

@@ -1132,6 +1132,97 @@ button:focus-visible {
   color: #b91c1c;
 }
 
+.eval-trends {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.eval-trend-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.trend-heading {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.trend-heading div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.trend-heading strong,
+.trend-heading span {
+  overflow-wrap: anywhere;
+}
+
+.trend-heading strong {
+  color: #0f172a;
+}
+
+.trend-heading span,
+.trend-updated {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.trend-metric-list {
+  display: grid;
+  gap: 8px;
+}
+
+.trend-metric-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(54px, auto) minmax(62px, auto);
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+
+.trend-metric-row span,
+.trend-metric-row strong,
+.trend-metric-row small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trend-metric-row span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.trend-metric-row strong {
+  color: #0f172a;
+}
+
+.trend-metric-row .delta {
+  color: #64748b;
+  font-weight: 900;
+}
+
+.trend-metric-row .delta.improved {
+  color: #166534;
+}
+
+.trend-metric-row .delta.regressed {
+  color: #b91c1c;
+}
+
 .eval-run-list {
   display: grid;
   gap: 10px;
@@ -1761,6 +1852,8 @@ button:focus-visible {
   .audit-event-grid,
   .comparison-summary,
   .comparison-metric,
+  .eval-trends,
+  .trend-metric-row,
   .eval-toolbar,
   .eval-metrics,
   .job-row-grid,

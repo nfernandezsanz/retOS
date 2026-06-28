@@ -264,6 +264,35 @@ type EvalRunComparison = {
   status: string;
 };
 
+type EvalTrendPoint = {
+  job_id: string;
+  suite_name: string;
+  passed: boolean;
+  case_count: number;
+  completed_at: string | null;
+  metrics: EvalMetrics;
+};
+
+type EvalMetricTrend = {
+  name: string;
+  first: number;
+  latest: number;
+  delta: number;
+  minimum: number;
+  maximum: number;
+  average: number;
+  direction: string;
+};
+
+type EvalSuiteTrend = {
+  suite_name: string;
+  run_count: number;
+  pass_rate: number;
+  latest: EvalRunSummary;
+  metrics: EvalMetricTrend[];
+  points: EvalTrendPoint[];
+};
+
 type ProgressEvent = {
   id: string;
   event: string;
@@ -823,6 +852,14 @@ async function loadEvalRuns(token: string): Promise<EvalRunRead[]> {
   });
 }
 
+async function loadEvalTrends(token: string): Promise<EvalSuiteTrend[]> {
+  return requestJson<EvalSuiteTrend[]>("/evals/runs/trends?limit=60", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 async function compareEvalRuns(
   token: string,
   baselineJobId: string,
@@ -1044,6 +1081,7 @@ function App() {
   const [evalJob, setEvalJob] = useState<JobRead | null>(null);
   const [evalReportPaths, setEvalReportPaths] = useState<EvalReportPaths | null>(null);
   const [evalRuns, setEvalRuns] = useState<EvalRunRead[]>([]);
+  const [evalTrends, setEvalTrends] = useState<EvalSuiteTrend[]>([]);
   const [evalComparison, setEvalComparison] = useState<EvalRunComparison | null>(null);
   const [isRunningEval, setIsRunningEval] = useState(false);
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
@@ -1290,8 +1328,12 @@ function App() {
     setEvalError(null);
     try {
       const adminToken = accessToken ?? (await getAdminToken());
-      const runs = await loadEvalRuns(adminToken);
+      const [runs, trends] = await Promise.all([
+        loadEvalRuns(adminToken),
+        loadEvalTrends(adminToken),
+      ]);
       setEvalRuns(runs);
+      setEvalTrends(trends);
       const latestWithReport = runs.find((run) => run.report !== null);
       setEvalJob(runs[0]?.job ?? null);
       setEvalReport(latestWithReport?.report ?? null);
@@ -2123,6 +2165,7 @@ function App() {
     setEvalJob(null);
     setEvalReportPaths(null);
     setEvalRuns([]);
+    setEvalTrends([]);
     setEvalComparison(null);
     setEvalError(null);
     setDomains([]);
@@ -3192,6 +3235,37 @@ function App() {
                 </div>
               )}
             </section>
+            {evalTrends.length > 0 ? (
+              <section className="eval-trends" aria-label="Eval trends">
+                {evalTrends.map((trend) => (
+                  <article className="eval-trend-card" key={trend.suite_name}>
+                    <div className="trend-heading">
+                      <div>
+                        <strong>{trend.suite_name}</strong>
+                        <span>{trend.run_count} runs</span>
+                      </div>
+                      <span className={trend.latest.passed ? "badge success" : "badge warning"}>
+                        {formatScore(trend.pass_rate)} pass
+                      </span>
+                    </div>
+                    <div className="trend-metric-list">
+                      {trend.metrics.slice(0, 5).map((metric) => (
+                        <div className="trend-metric-row" key={metric.name}>
+                          <span>{metric.name.replaceAll("_", " ")}</span>
+                          <strong>{formatScore(metric.latest)}</strong>
+                          <small className={`delta ${metric.direction}`}>
+                            {formatDelta(metric.delta)}
+                          </small>
+                        </div>
+                      ))}
+                    </div>
+                    <span className="trend-updated">
+                      Latest {formatDateTime(trend.latest.completed_at)}
+                    </span>
+                  </article>
+                ))}
+              </section>
+            ) : null}
           </article>
 
           <article className="panel wide" id="admin">

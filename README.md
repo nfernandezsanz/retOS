@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.48% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.45% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -41,8 +41,9 @@ This repository is intentionally being built as a staff-engineer-quality referen
   for local dataset-backed evals without network or paid providers, with optional
   JSON/Markdown report export.
 - Opt-in OCR quality smoke suite for scanned PDFs, character error rate, and word error rate.
-- Cross-run eval comparison and rerun APIs with React controls for latest reported runs,
-  per-metric deltas, and auditable `rerun_from_job_id` traceability.
+- Cross-run eval comparison, trend, and rerun APIs with React controls for latest
+  reported runs, per-metric deltas, suite trend direction, and auditable
+  `rerun_from_job_id` traceability.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for
   document inventory, edit/archive/restore/history actions, jobs, OCR, indexing, agent
   runs, local eval execution, and admin account management.
@@ -210,9 +211,9 @@ Every meaningful change should pass these gates:
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | HotpotQA eval | `make eval-hotpotqa HOTPOTQA_PATH=...` | Runs opt-in HotpotQA multi-hop evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | Natural Questions eval | `make eval-natural-questions NQ_PATH=...` | Runs opt-in Natural Questions real-query evals from a user-provided JSONL/JSON dataset file and can write JSON/Markdown reports. |
-| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, SQuAD/HotpotQA/Natural Questions evals, eval rerun/comparison, job lifecycle, audit export, and SSE over HTTP. OCR benchmark API smoke is opt-in for Docker where Tesseract is present. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, SQuAD/HotpotQA/Natural Questions evals, eval rerun/comparison/trends, job lifecycle, audit export, and SSE over HTTP. OCR benchmark API smoke is opt-in for Docker where Tesseract is present. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
-| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state, including admin user management, document edit/archive/restore/history, dataset-backed evals, eval rerun, and eval comparison flows. |
+| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state, including admin user management, document edit/archive/restore/history, dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
 | Release readiness | `make release-check` | Validates release docs, Docker image topology, safe defaults, and operations runbook coverage. |

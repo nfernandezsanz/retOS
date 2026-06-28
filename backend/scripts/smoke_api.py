@@ -1022,6 +1022,28 @@ def main() -> None:
                 any(metric["name"] == "retrieval_recall" for metric in comparison_body["metrics"]),
                 "eval comparison did not include retrieval recall",
             )
+            eval_trends = client.get("/evals/runs/trends", headers=auth_headers)
+            require(
+                eval_trends.status_code == 200,
+                f"eval trends failed: {eval_trends.status_code} {eval_trends.text}",
+            )
+            trend_body = eval_trends.json()
+            require(
+                any(item["suite_name"] == "retos-smoke" for item in trend_body),
+                "eval trends did not include smoke suite",
+            )
+            require(
+                any(
+                    metric["name"] == "retrieval_recall"
+                    for item in trend_body
+                    for metric in item["metrics"]
+                ),
+                "eval trends did not include retrieval recall",
+            )
+            require(
+                any(item["run_count"] >= 2 for item in trend_body),
+                "eval trends did not include rerun history",
+            )
 
             created_job = client.post(
                 "/jobs",

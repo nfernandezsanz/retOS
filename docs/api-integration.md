@@ -791,6 +791,18 @@ runs that failed before a report was produced:
 ]
 ```
 
+Read trend summaries across persisted reported eval runs:
+
+```bash
+curl "http://localhost:8000/evals/runs/trends?limit=60" \
+  --header "Authorization: Bearer <token>"
+```
+
+The response is grouped by `suite_name` and contains chronological points, latest run
+summary, pass rate, and per-metric first/latest/min/max/average/delta values. Direction
+is metric-aware: higher scores improve normal eval metrics, while lower values improve
+`*_error_rate` OCR metrics. Use `suite_name=<name>` to narrow the trend to one suite.
+
 Rerun a persisted eval run:
 
 ```bash
@@ -873,6 +885,7 @@ Current console calls:
 - `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
 - `GET /evals/runs?limit=6`
+- `GET /evals/runs/trends?limit=60`
 - `GET /evals/runs/compare?baseline_job_id=...&candidate_job_id=...`
 - `POST /evals/runs/{job_id}/rerun`
 - `POST /evals/smoke`

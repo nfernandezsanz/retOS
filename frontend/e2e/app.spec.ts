@@ -241,6 +241,76 @@ async function mockProviderApi(page: Page) {
     status: "unchanged",
   };
 
+  function buildEvalTrends() {
+    const grouped = new Map<string, typeof evalRuns>();
+    for (const run of evalRuns.slice().reverse()) {
+      if (!run.report) {
+        continue;
+      }
+      const suiteName = String(run.report.suite_name);
+      grouped.set(suiteName, [...(grouped.get(suiteName) ?? []), run]);
+    }
+    return Array.from(grouped.entries()).map(([suiteName, runs]) => {
+      const latest = runs[runs.length - 1];
+      const metricNames = Array.from(
+        new Set(
+          runs.flatMap((run) =>
+            Object.keys((run.report?.metrics as Record<string, number> | undefined) ?? {}),
+          ),
+        ),
+      ).sort();
+      return {
+        suite_name: suiteName,
+        run_count: runs.length,
+        pass_rate: runs.filter((run) => run.report?.passed === true).length / runs.length,
+        latest: {
+          job_id: latest.job.id,
+          suite_name: suiteName,
+          passed: Boolean(latest.report?.passed),
+          case_count: Number(latest.report?.case_count ?? 0),
+          completed_at: latest.job.completed_at,
+        },
+        metrics: metricNames.map((name) => {
+          const values = runs
+            .map((run) => (run.report?.metrics as Record<string, number> | undefined)?.[name])
+            .filter((value): value is number => typeof value === "number");
+          const first = values[0];
+          const latestValue = values[values.length - 1];
+          const delta = latestValue - first;
+          const lowerIsBetter = name.includes("error_rate");
+          const direction =
+            delta === 0
+              ? "unchanged"
+              : lowerIsBetter
+                ? delta < 0
+                  ? "improved"
+                  : "regressed"
+                : delta > 0
+                  ? "improved"
+                  : "regressed";
+          return {
+            name,
+            first,
+            latest: latestValue,
+            delta,
+            minimum: Math.min(...values),
+            maximum: Math.max(...values),
+            average: values.reduce((total, value) => total + value, 0) / values.length,
+            direction,
+          };
+        }),
+        points: runs.map((run) => ({
+          job_id: run.job.id,
+          suite_name: suiteName,
+          passed: Boolean(run.report?.passed),
+          case_count: Number(run.report?.case_count ?? 0),
+          completed_at: run.job.completed_at,
+          metrics: run.report?.metrics ?? {},
+        })),
+      };
+    });
+  }
+
   function recordAudit(job: ReturnType<typeof jobFixture>) {
     const baseTime = "2026-06-27T00:01:";
     journalEvents.unshift({
@@ -962,6 +1032,12 @@ async function mockProviderApi(page: Page) {
       json: evalRuns,
     });
   });
+  await page.route("http://localhost:8000/evals/runs/trends?limit=60", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: buildEvalTrends(),
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/evals\/runs\/([^/]+)\/rerun/, async (route) => {
     const match = route.request().url().match(/\/evals\/runs\/([^/]+)\/rerun$/);
     const originalJobId = match ? decodeURIComponent(match[1]) : "";
@@ -1152,6 +1228,8 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.locator("#evals").getByText("eval.run succeeded")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("3 cases")).toBeVisible();
+  await expect(page.getByLabel("Eval trends").getByText("retos-smoke")).toBeVisible();
+  await expect(page.getByLabel("Eval trends").getByText("retrieval recall")).toBeVisible();
 
   await page.getByLabel("SQuAD dataset path").fill("ui-squad.json");
   await page.getByLabel("SQuAD max cases").fill("2");
@@ -1196,6 +1274,7 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Rerun ocr-manifest" }).click();
   await expect(page.getByLabel("Recent jobs").getByText("job-eval-rerun-1")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("ocr-manifest")).toHaveCount(2);
+  await expect(page.getByLabel("Eval trends").getByText("2 runs")).toBeVisible();
 
   await page.getByRole("button", { name: "Compare latest" }).click();
   await expect(page.getByLabel("Eval comparison").getByText("retos-smoke")).toBeVisible();

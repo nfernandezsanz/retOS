@@ -246,6 +246,12 @@ def test_eval_run_compare_requires_admin_token(evals_client: TestClient) -> None
     assert response.status_code == 401
 
 
+def test_eval_run_trends_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.get("/evals/runs/trends")
+
+    assert response.status_code == 401
+
+
 def test_eval_rerun_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post("/evals/runs/job-eval-1/rerun")
 
@@ -267,6 +273,10 @@ def test_eval_history_requires_admin_role(
     assert runs.json()["detail"] == "Admin role required"
     assert comparison.status_code == 403
     assert comparison.json()["detail"] == "Admin role required"
+
+    trends = evals_client.get("/evals/runs/trends", headers=evals_viewer_headers)
+    assert trends.status_code == 403
+    assert trends.json()["detail"] == "Admin role required"
 
     rerun = evals_client.post("/evals/runs/job-eval-1/rerun", headers=evals_viewer_headers)
     assert rerun.status_code == 403
@@ -841,6 +851,134 @@ def test_eval_run_compare_returns_metric_deltas(
         {"name": "abstention", "baseline": 1.0, "candidate": 1.0, "delta": 0.0},
         {"name": "budget_compliance", "baseline": 1.0, "candidate": 1.0, "delta": 0.0},
     ]
+
+
+def test_eval_run_trends_group_suites_and_metric_directions(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert first.status_code == 202
+
+    def regressed_smoke_suite(*, index_root: object) -> EvalSuiteReport:
+        return EvalSuiteReport(
+            suite_name="retos-smoke",
+            passed=False,
+            case_count=1,
+            retrieval_recall=0.0,
+            citation_validity=1.0,
+            grounded_answer=0.0,
+            abstention=1.0,
+            budget_compliance=1.0,
+            cases=(
+                EvalCaseResult(
+                    case_id="later-failing-case",
+                    question="What failed later?",
+                    passed=False,
+                    retrieval_recall=False,
+                    citation_validity=True,
+                    grounded_answer=False,
+                    abstention=True,
+                    budget_compliance=True,
+                    answer="No grounded answer.",
+                    citations=(),
+                    failures=("retrieval_recall", "grounded_answer"),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr("retos.api.routes.evals.run_smoke_eval_suite", regressed_smoke_suite)
+    second = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert second.status_code == 202
+
+    def stable_ocr_suite(**kwargs: object) -> OCRQualityReport:
+        return OCRQualityReport(
+            suite_name="ocr-manifest",
+            passed=True,
+            case_count=1,
+            character_error_rate=0.10,
+            word_error_rate=0.20,
+            key_value_recall=None,
+            cases=(
+                OCRCaseResult(
+                    case_id="receipt-trend",
+                    expected_text="Receipt total 42",
+                    actual_text="Receipt total 42",
+                    character_error_rate=0.10,
+                    word_error_rate=0.20,
+                    key_value_recall=None,
+                    passed=True,
+                    failures=(),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr("retos.api.routes.evals.run_ocr_quality_suite", stable_ocr_suite)
+    dataset_dir = squad_dataset_root / "ocr-trend"
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    (dataset_dir / "receipt.pdf").write_bytes(b"%PDF-1.7\n%%EOF\n")
+    (dataset_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "case_id": "receipt-trend",
+                        "input_path": "receipt.pdf",
+                        "expected_text": "Receipt total 42",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    ocr = evals_client.post(
+        "/evals/ocr-benchmark",
+        headers=evals_admin_headers,
+        json={"dataset_path": "ocr-trend/manifest.json", "dataset_format": "manifest"},
+    )
+    assert ocr.status_code == 202
+
+    trends = evals_client.get("/evals/runs/trends", headers=evals_admin_headers)
+
+    assert trends.status_code == 200
+    body = trends.json()
+    smoke_trend = next(item for item in body if item["suite_name"] == "retos-smoke")
+    assert smoke_trend["run_count"] == 2
+    assert smoke_trend["pass_rate"] == 0.5
+    assert smoke_trend["latest"]["job_id"] == second.json()["job"]["id"]
+    assert [point["job_id"] for point in smoke_trend["points"]] == [
+        first.json()["job"]["id"],
+        second.json()["job"]["id"],
+    ]
+    retrieval = next(
+        metric for metric in smoke_trend["metrics"] if metric["name"] == "retrieval_recall"
+    )
+    assert retrieval == {
+        "name": "retrieval_recall",
+        "first": 1.0,
+        "latest": 0.0,
+        "delta": -1.0,
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "average": 0.5,
+        "direction": "regressed",
+    }
+
+    ocr_trend = next(item for item in body if item["suite_name"] == "ocr-manifest")
+    character_error = next(
+        metric for metric in ocr_trend["metrics"] if metric["name"] == "character_error_rate"
+    )
+    assert character_error["direction"] == "unchanged"
+
+    filtered = evals_client.get(
+        "/evals/runs/trends",
+        headers=evals_admin_headers,
+        params={"suite_name": "ocr-manifest"},
+    )
+    assert filtered.status_code == 200
+    assert [item["suite_name"] for item in filtered.json()] == ["ocr-manifest"]
 
 
 def test_eval_run_compare_rejects_missing_or_unreported_runs(

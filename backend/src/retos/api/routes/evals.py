@@ -79,6 +79,35 @@ class EvalRunComparisonRead(BaseModel):
     status: str
 
 
+class EvalTrendPointRead(BaseModel):
+    job_id: str
+    suite_name: str
+    passed: bool
+    case_count: int
+    completed_at: datetime | None
+    metrics: dict[str, float]
+
+
+class EvalMetricTrendRead(BaseModel):
+    name: str
+    first: float
+    latest: float
+    delta: float
+    minimum: float
+    maximum: float
+    average: float
+    direction: str
+
+
+class EvalSuiteTrendRead(BaseModel):
+    suite_name: str
+    run_count: int
+    pass_rate: float
+    latest: EvalRunSummaryRead
+    metrics: list[EvalMetricTrendRead]
+    points: list[EvalTrendPointRead]
+
+
 def report_from_payload(payload: dict[str, Any]) -> EvalReportRead | None:
     result = payload.get("result")
     if not isinstance(result, dict):
@@ -147,6 +176,18 @@ async def list_eval_runs(
         )
         for job in jobs
     ]
+
+
+@router.get("/runs/trends", response_model=list[EvalSuiteTrendRead])
+async def list_eval_run_trends(
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    limit: Annotated[int, Query(ge=2, le=200)] = 100,
+    suite_name: Annotated[str | None, Query(min_length=1, max_length=80)] = None,
+) -> list[EvalSuiteTrendRead]:
+    async with uow:
+        jobs = await uow.jobs.list_by_kind(kind="eval.run", limit=limit)
+    return eval_trends_from_jobs(jobs=jobs, suite_name=suite_name)
 
 
 @router.get("/runs/compare", response_model=EvalRunComparisonRead)
@@ -842,6 +883,91 @@ def comparison_status(average_delta: float) -> str:
     if average_delta < 0:
         return "regressed"
     return "unchanged"
+
+
+def eval_trends_from_jobs(
+    *,
+    jobs: list[Job],
+    suite_name: str | None = None,
+) -> list[EvalSuiteTrendRead]:
+    grouped: dict[str, list[tuple[Job, EvalReportRead]]] = {}
+    for job in jobs:
+        if job.kind != "eval.run":
+            continue
+        report = report_from_payload(job.payload)
+        if report is None:
+            continue
+        if suite_name is not None and report.suite_name != suite_name:
+            continue
+        grouped.setdefault(report.suite_name, []).append((job, report))
+
+    trends: list[EvalSuiteTrendRead] = []
+    for suite, runs in grouped.items():
+        chronological = sorted(
+            runs, key=lambda item: (item[0].completed_at or item[0].updated_at, item[0].id)
+        )
+        latest_job, latest_report = chronological[-1]
+        points = [
+            EvalTrendPointRead(
+                job_id=job.id,
+                suite_name=report.suite_name,
+                passed=report.passed,
+                case_count=report.case_count,
+                completed_at=job.completed_at,
+                metrics=report.metrics,
+            )
+            for job, report in chronological
+        ]
+        trends.append(
+            EvalSuiteTrendRead(
+                suite_name=suite,
+                run_count=len(chronological),
+                pass_rate=sum(1 for _, report in chronological if report.passed)
+                / len(chronological),
+                latest=summary_from_eval_run(latest_job, latest_report),
+                metrics=metric_trends_for_points(points),
+                points=points,
+            )
+        )
+    return sorted(
+        trends,
+        key=lambda trend: (trend.latest.completed_at or datetime.min.replace(tzinfo=UTC)),
+        reverse=True,
+    )
+
+
+def metric_trends_for_points(points: list[EvalTrendPointRead]) -> list[EvalMetricTrendRead]:
+    metric_names = sorted({name for point in points for name in point.metrics})
+    trends: list[EvalMetricTrendRead] = []
+    for name in metric_names:
+        values = [point.metrics[name] for point in points if name in point.metrics]
+        if not values:
+            continue
+        first = values[0]
+        latest = values[-1]
+        delta = latest - first
+        trends.append(
+            EvalMetricTrendRead(
+                name=name,
+                first=first,
+                latest=latest,
+                delta=delta,
+                minimum=min(values),
+                maximum=max(values),
+                average=sum(values) / len(values),
+                direction=metric_trend_direction(name=name, delta=delta),
+            )
+        )
+    return trends
+
+
+def metric_trend_direction(*, name: str, delta: float) -> str:
+    if delta == 0:
+        return "unchanged"
+    lower_is_better = name.endswith("_error_rate") or "error_rate" in name
+    if lower_is_better:
+        return "improved" if delta < 0 else "regressed"
+    return "improved" if delta > 0 else "regressed"
 
 
 async def queue_eval_job(
