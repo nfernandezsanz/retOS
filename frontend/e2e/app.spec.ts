@@ -1464,6 +1464,65 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
+test("keeps the RetOS brand system accessible and responsive", async ({ page }) => {
+  await expect(page).toHaveTitle("RetOS");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#0f172a");
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/retos-mark.svg");
+
+  const brandMark = page.locator(".brand img");
+  await expect(brandMark).toHaveAttribute("src", "/retos-mark.svg");
+  await expect(page.locator(".brand")).toContainText("RetOS");
+  await expect(page.locator(".brand")).toContainText("Audit console");
+
+  await expect(page.locator(".brand-brief")).toContainText("Docker-first runtime");
+  await expect(page.locator(".brand-brief")).toContainText("Hash-chained journals");
+  await expect(page.locator(".brand-brief")).toContainText("No paid calls in tests");
+
+  const theme = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const sidebar = getComputedStyle(document.querySelector(".sidebar") as HTMLElement);
+    const primaryAction = getComputedStyle(document.querySelector(".primary-action") as HTMLElement);
+    const panel = getComputedStyle(document.querySelector(".panel") as HTMLElement);
+    return {
+      ink: root.getPropertyValue("--retos-ink").trim(),
+      primary: root.getPropertyValue("--retos-primary").trim(),
+      action: root.getPropertyValue("--retos-action").trim(),
+      canvas: root.getPropertyValue("--retos-canvas").trim(),
+      sidebarBackground: sidebar.backgroundColor,
+      actionBackground: primaryAction.backgroundColor,
+      panelRadius: panel.borderRadius,
+    };
+  });
+
+  expect(theme).toEqual({
+    ink: "#0f172a",
+    primary: "#2563eb",
+    action: "#f97316",
+    canvas: "#f8fafc",
+    sidebarBackground: "rgb(15, 23, 42)",
+    actionBackground: "rgb(249, 115, 22)",
+    panelRadius: "8px",
+  });
+
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to workspace" })).toBeFocused();
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const transitionDurationMs = await page.locator(".primary-action").evaluate((element) => {
+    const duration = getComputedStyle(element).transitionDuration;
+    return duration.endsWith("ms") ? Number.parseFloat(duration) : Number.parseFloat(duration) * 1000;
+  });
+  expect(transitionDurationMs).toBeLessThanOrEqual(0.01);
+
+  for (const width of [375, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalOverflow).toBe(false);
+  }
+});
+
 test("loads the operational console", async ({ page }) => {
   test.setTimeout(45_000);
 
