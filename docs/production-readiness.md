@@ -53,6 +53,7 @@ make production-preflight
 make dependency-audit
 make security-policy-check
 make ignore-hygiene-check
+make auditor-static-check
 make ci-status-check
 make release-notes-check
 make versioned-release-notes-check
@@ -85,6 +86,7 @@ auditor a stable local entry point:
 | Dependency advisories | `make dependency-audit` | Python runtime and frontend lockfile dependency advisory checks pass without paid providers. |
 | Security policy | `make security-policy-check` | Security reporting, secure defaults, human review scope, and operational links are aligned. |
 | Ignore hygiene | `make ignore-hygiene-check` | Git and Docker contexts exclude secrets, generated files, local volumes, public datasets, reports, and backups. |
+| Auditor static pack | `make auditor-static-check` | Non-destructive dependency, security, ignore, branding, release, preflight, and audit-pack guards pass together. |
 | Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, and docker jobs for the current commit. |
 
 ## External Promotion Evidence
@@ -122,6 +124,7 @@ These items must be closed before a final production release:
 - [ ] `make dependency-audit` reports no known Python runtime advisories and no high-severity Node advisories.
 - [ ] `make security-policy-check` passes.
 - [ ] `make ignore-hygiene-check` passes.
+- [ ] `make auditor-static-check` passes.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test` and `make frontend-e2e` pass.
 - [ ] `make docker-smoke` passes with API, worker, migrate, web, Postgres, RabbitMQ, and Ollama services.
