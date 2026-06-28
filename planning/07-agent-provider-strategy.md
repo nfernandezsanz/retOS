@@ -69,7 +69,8 @@ connected.
 implementation uses controlled corpus tools (`search_corpus`, `read_citation`,
 `map_sources`, and `inspect_evidence_table`) over already-indexed domain evidence,
 builds a grounded answer from retrieved segments, persists citations, `evidence_audit`,
-`contradiction_audit`, and bounded adjacent `neighbor_context` under
+`contradiction_audit`, deterministic `evidence_route`, and bounded adjacent
+`neighbor_context` under
 `job.payload.result`, enforces query budgets for searches, citations, neighboring
 context, evidence tokens, and runtime, and writes `agent.queued`, `agent.started`,
 `agent.completed`, or `agent.failed` progress/journal events. Usage is persisted with
@@ -86,5 +87,7 @@ ledger when the model does not explicitly cite returned segment ids. The contrad
 audit flags opposite-polarity citation pairs for operator review. The Deep Agents
 harness now registers named `evidence_checker` and `contradiction_checker` subagents
 with the same controlled RetOS corpus tools. The `source_mapper` and `table_inspector`
-runtime roles are served by `map_sources` and `inspect_evidence_table`; richer
-multi-hop planning and broader evidence-routing heuristics remain future slices.
+runtime roles are served by `map_sources` and `inspect_evidence_table`, while
+`evidence_route` gives operators a deterministic coverage view across citations,
+documents, anchors, and neighboring context. Richer multi-hop planning remains a future
+slice.

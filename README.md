@@ -35,7 +35,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Mounted source scanner for `.txt`, `.md`, digital `.pdf`, and OCR fallback for image-only PDFs with idempotent duplicate-hash skips, extracted-text artifacts, page-level OCR text artifacts, deterministic segments, and scan progress.
 - Tantivy BM25 search adapter with durable `index.domain` jobs, rebuildable domain indexes, searchable segments, and citation anchors.
 - LLM provider catalog API with local Ollama `gemma4` as the default profile and paid providers blocked unless explicitly enabled.
-- Auditable `agent.query` jobs that use controlled corpus search/read tools, persist grounded answers, citations, bounded neighboring context, and budget usage, and emit journal/progress events.
+- Auditable `agent.query` jobs that use controlled corpus search/read tools, persist grounded answers, citations, deterministic evidence-route coverage, bounded neighboring context, and budget usage, and emit journal/progress events.
 - Deterministic local eval smoke for retrieval recall, citation validity, grounded answers, abstention, and budget compliance.
 - Opt-in SQuAD 2.0, HotpotQA, and Natural Questions adapters plus admin API endpoints
   for local dataset-backed evals without network or paid providers, with optional

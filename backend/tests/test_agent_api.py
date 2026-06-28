@@ -179,6 +179,10 @@ def test_agent_query_runs_inline_with_citations(
     assert body["job"]["payload"]["result"]["runtime"] == "deterministic"
     assert body["job"]["payload"]["result"]["evidence_audit"]["grounded"] is True
     assert body["job"]["payload"]["result"]["contradiction_audit"]["conflict_count"] == 0
+    assert body["job"]["payload"]["result"]["evidence_route"]["coverage_level"] in {
+        "single_segment",
+        "single_document",
+    }
     assert isinstance(body["job"]["payload"]["result"]["neighbor_context"], list)
     assert body["job"]["payload"]["budget"]["max_citations"] == 5
     assert body["job"]["payload"]["result"]["usage"]["within_budget"] is True
@@ -191,6 +195,11 @@ def test_agent_query_runs_inline_with_citations(
     ]
     assert body["result"]["contradiction_audit"]["checked"] is True
     assert body["result"]["contradiction_audit"]["conflict_count"] == 0
+    assert body["result"]["evidence_route"]["segment_count"] == len(body["result"]["citations"])
+    assert body["result"]["evidence_route"]["document_count"] == 1
+    assert body["result"]["evidence_route"]["has_neighbor_context"] is bool(
+        body["result"]["neighbor_context"]
+    )
     assert body["result"]["usage"]["budget"]["max_searches"] == 8
     assert body["result"]["usage"]["search_count"] == 1
     assert isinstance(body["result"]["neighbor_context"], list)
@@ -230,6 +239,11 @@ def test_agent_query_expands_neighbor_context_within_evidence_budget(
     )
     assert body["result"]["neighbor_context"][0]["distance"] == 1
     assert "audit trails" in body["result"]["neighbor_context"][0]["text"]
+    assert body["result"]["evidence_route"]["has_neighbor_context"] is True
+    assert body["result"]["evidence_route"]["warnings"] == [
+        "single_citation",
+        "single_document",
+    ]
     assert body["result"]["usage"]["evidence_tokens"] > body["result"]["citations"][0][
         "text"
     ].count(" ")
@@ -279,6 +293,8 @@ def test_agent_query_applies_evidence_token_budget(
     body = response.json()
     assert body["result"]["citations"] == []
     assert body["result"]["neighbor_context"] == []
+    assert body["result"]["evidence_route"]["coverage_level"] == "no_evidence"
+    assert body["result"]["evidence_route"]["warnings"] == ["no_citations"]
     assert body["result"]["evidence_audit"]["grounded"] is True
     assert body["result"]["usage"]["evidence_tokens"] == 0
     assert "could not find enough indexed evidence" in body["result"]["answer"]
@@ -345,6 +361,10 @@ def test_agent_query_can_use_mocked_deepagents_runtime(
         citation["segment_id"] for citation in body["result"]["citations"]
     ]
     assert body["result"]["contradiction_audit"]["conflict_count"] == 0
+    assert body["result"]["evidence_route"]["coverage_level"] in {
+        "single_segment",
+        "single_document",
+    }
     assert body["result"]["usage"]["search_count"] == 1
     assert tool_names == [
         "search_corpus",

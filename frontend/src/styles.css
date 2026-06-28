@@ -797,6 +797,45 @@ button:focus-visible {
   background: #ffffff;
 }
 
+.evidence-route {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.route-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.route-documents {
+  display: grid;
+  gap: 8px;
+}
+
+.route-document {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+
+.route-document strong,
+.route-document span {
+  overflow-wrap: anywhere;
+}
+
+.route-document span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .citation-row {
   display: grid;
   gap: 8px;

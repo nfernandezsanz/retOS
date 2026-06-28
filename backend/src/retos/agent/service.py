@@ -7,10 +7,13 @@ from datetime import UTC, datetime
 from retos.agent.audits import (
     ContradictionAudit,
     EvidenceAudit,
+    EvidenceRoute,
     audit_contradictions,
+    audit_evidence_route,
     contradiction_audit_to_payload,
     ensure_evidence_ledger,
     evidence_audit_to_payload,
+    evidence_route_to_payload,
 )
 from retos.agent.harness import create_research_harness
 from retos.agent.tools import (
@@ -89,6 +92,7 @@ class AgentQueryResult:
     runtime: str
     evidence_audit: EvidenceAudit
     contradiction_audit: ContradictionAudit
+    evidence_route: EvidenceRoute
     usage: AgentBudgetUsage
     neighbor_context: list[NeighborContext]
 
@@ -358,6 +362,7 @@ def result_payload(
             "runtime": result.runtime,
             "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
             "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
+            "evidence_route": evidence_route_to_payload(result.evidence_route),
             "usage": usage_to_payload(result.usage),
             "citations": [
                 {
@@ -521,6 +526,7 @@ async def run_agent_query(
         citations = [citation_from_hit(hit) for hit in hits]
         answer, evidence_audit = ensure_evidence_ledger(answer, citations)
         contradiction_audit = audit_contradictions(citations)
+        evidence_route = audit_evidence_route(citations, neighbor_context)
         runtime_ms = int((datetime.now(UTC) - started_at).total_seconds() * 1000)
         usage = AgentBudgetUsage(
             search_count=toolbox.search_count,
@@ -554,6 +560,7 @@ async def run_agent_query(
             runtime=settings.agent_runtime,
             evidence_audit=evidence_audit,
             contradiction_audit=contradiction_audit,
+            evidence_route=evidence_route,
             usage=usage,
             neighbor_context=neighbor_context,
         )
@@ -580,6 +587,7 @@ async def run_agent_query(
                 "runtime": result.runtime,
                 "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
                 "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
+                "evidence_route": evidence_route_to_payload(result.evidence_route),
                 "usage": usage_to_payload(result.usage),
                 "neighbor_context_count": len(result.neighbor_context),
             },
@@ -603,6 +611,7 @@ async def run_agent_query(
                 "runtime": result.runtime,
                 "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
                 "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
+                "evidence_route": evidence_route_to_payload(result.evidence_route),
                 "usage": usage_to_payload(result.usage),
                 "neighbor_context_count": len(result.neighbor_context),
             },
@@ -618,6 +627,8 @@ async def run_agent_query(
             "runtime": result.runtime,
             "grounded": result.evidence_audit.grounded,
             "contradiction_count": result.contradiction_audit.conflict_count,
+            "evidence_coverage_level": result.evidence_route.coverage_level,
+            "evidence_document_count": result.evidence_route.document_count,
             "within_budget": result.usage.within_budget,
             "search_count": result.usage.search_count,
             "evidence_tokens": result.usage.evidence_tokens,

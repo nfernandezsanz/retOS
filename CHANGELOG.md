@@ -16,6 +16,8 @@ tag in GitHub.
   version, revision, and build timestamp.
 - Release readiness checks for Docker topology, image metadata, safe local defaults, and
   operator runbook coverage.
+- Deterministic agent evidence-route coverage that records segment, document, anchor,
+  neighboring-context, and warning signals for each completed query.
 
 ### Changed
 

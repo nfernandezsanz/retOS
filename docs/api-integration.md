@@ -514,6 +514,23 @@ The response always includes the durable job. When `run_inline=true`, or in
       "conflict_count": 0,
       "findings": []
     },
+    "evidence_route": {
+      "coverage_level": "single_segment",
+      "segment_count": 1,
+      "document_count": 1,
+      "anchor_count": 1,
+      "multi_document": false,
+      "has_neighbor_context": true,
+      "warnings": ["single_citation", "single_document"],
+      "documents": [
+        {
+          "document_id": "<document_id>",
+          "title": "Fixture Document",
+          "segment_ids": ["<segment_id>"],
+          "anchors": ["page=1"]
+        }
+      ]
+    },
     "usage": {
       "budget": {
         "max_searches": 8,
@@ -566,6 +583,14 @@ The `contradiction_audit` is a deterministic first-pass reviewer over returned
 citations. It flags citation pairs with opposite polarity markers and overlapping
 domain terms so operators can review conflicting evidence. It is intentionally
 conservative and does not replace deeper named subagent review.
+
+The `evidence_route` is a deterministic coverage map for the answer. It records the
+coverage level (`no_evidence`, `single_segment`, `single_document`, or
+`multi_document`), citation segment count, document count, anchor count, per-document
+segment ids and anchors, whether adjacent context was expanded, and operator warnings
+such as `single_citation`, `single_document`, or `no_neighbor_context`. This gives the
+UI and audit logs a quick way to distinguish a narrow answer from broader multi-source
+evidence.
 
 Completed query payloads also include `neighbor_context`. These are non-cited segments
 adjacent to returned citations, selected from the same document version with ordinal
@@ -921,8 +946,9 @@ scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA/Natural Questions/
 benchmark evals, read recent jobs, inspect a selected job's full payload/error/progress
 detail, read persisted audit/progress events, group progress by job, filter the job
 ledger by status/kind, and send queries against the selected domain. Query execution
-uses `run_inline=true` so the UI can render the answer, citations, neighbor context,
-provider metadata, budget usage, evidence audit, and contradiction audit immediately.
+uses `run_inline=true` so the UI can render the answer, citations, evidence route,
+neighbor context, provider metadata, budget usage, evidence audit, and contradiction
+audit immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.

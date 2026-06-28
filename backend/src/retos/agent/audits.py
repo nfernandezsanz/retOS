@@ -11,7 +11,24 @@ class AuditedCitation(Protocol):
     def segment_id(self) -> str: ...
 
     @property
+    def document_id(self) -> str: ...
+
+    @property
+    def title(self) -> str: ...
+
+    @property
+    def anchor(self) -> str | None: ...
+
+    @property
     def text(self) -> str: ...
+
+
+class AuditedNeighborContext(Protocol):
+    @property
+    def segment_id(self) -> str: ...
+
+    @property
+    def source_segment_id(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -33,6 +50,26 @@ class ContradictionAudit:
     checked: bool
     conflict_count: int
     findings: list[ContradictionFinding]
+
+
+@dataclass(frozen=True)
+class EvidenceRouteDocument:
+    document_id: str
+    title: str
+    segment_ids: list[str]
+    anchors: list[str]
+
+
+@dataclass(frozen=True)
+class EvidenceRoute:
+    coverage_level: str
+    segment_count: int
+    document_count: int
+    anchor_count: int
+    multi_document: bool
+    has_neighbor_context: bool
+    documents: list[EvidenceRouteDocument]
+    warnings: list[str]
 
 
 NEGATION_TERMS = frozenset({"no", "not", "never", "without", "absent", "false", "failed"})
@@ -131,6 +168,65 @@ def audit_contradictions(citations: Sequence[AuditedCitation]) -> ContradictionA
     )
 
 
+def audit_evidence_route(
+    citations: Sequence[AuditedCitation],
+    neighbor_context: Sequence[AuditedNeighborContext] = (),
+) -> EvidenceRoute:
+    documents: dict[str, EvidenceRouteDocument] = {}
+    anchors: set[str] = set()
+    for citation in citations:
+        route_document = documents.setdefault(
+            citation.document_id,
+            EvidenceRouteDocument(
+                document_id=citation.document_id,
+                title=citation.title,
+                segment_ids=[],
+                anchors=[],
+            ),
+        )
+        route_document.segment_ids.append(citation.segment_id)
+        if citation.anchor:
+            route_document.anchors.append(citation.anchor)
+            anchors.add(f"{citation.document_id}:{citation.anchor}")
+
+    document_list = sorted(
+        documents.values(),
+        key=lambda document: (-len(document.segment_ids), document.title, document.document_id),
+    )
+    segment_count = len(citations)
+    document_count = len(document_list)
+    has_neighbor_context = bool(neighbor_context)
+    if segment_count == 0:
+        coverage_level = "no_evidence"
+    elif segment_count == 1:
+        coverage_level = "single_segment"
+    elif document_count == 1:
+        coverage_level = "single_document"
+    else:
+        coverage_level = "multi_document"
+
+    warnings: list[str] = []
+    if segment_count == 0:
+        warnings.append("no_citations")
+    elif segment_count == 1:
+        warnings.append("single_citation")
+    if segment_count > 0 and document_count == 1:
+        warnings.append("single_document")
+    if segment_count > 0 and not has_neighbor_context:
+        warnings.append("no_neighbor_context")
+
+    return EvidenceRoute(
+        coverage_level=coverage_level,
+        segment_count=segment_count,
+        document_count=document_count,
+        anchor_count=len(anchors),
+        multi_document=document_count > 1,
+        has_neighbor_context=has_neighbor_context,
+        documents=document_list,
+        warnings=warnings,
+    )
+
+
 def evidence_audit_to_payload(audit: EvidenceAudit) -> dict[str, object]:
     return {
         "grounded": audit.grounded,
@@ -150,5 +246,26 @@ def contradiction_audit_to_payload(audit: ContradictionAudit) -> dict[str, objec
                 "summary": finding.summary,
             }
             for finding in audit.findings
+        ],
+    }
+
+
+def evidence_route_to_payload(route: EvidenceRoute) -> dict[str, object]:
+    return {
+        "coverage_level": route.coverage_level,
+        "segment_count": route.segment_count,
+        "document_count": route.document_count,
+        "anchor_count": route.anchor_count,
+        "multi_document": route.multi_document,
+        "has_neighbor_context": route.has_neighbor_context,
+        "warnings": route.warnings,
+        "documents": [
+            {
+                "document_id": document.document_id,
+                "title": document.title,
+                "segment_ids": document.segment_ids,
+                "anchors": document.anchors,
+            }
+            for document in route.documents
         ],
     }

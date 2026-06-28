@@ -164,6 +164,22 @@ type AgentBudgetUsage = {
   within_budget: boolean;
 };
 
+type AgentEvidenceRoute = {
+  coverage_level: string;
+  segment_count: number;
+  document_count: number;
+  anchor_count: number;
+  multi_document: boolean;
+  has_neighbor_context: boolean;
+  warnings: string[];
+  documents: {
+    document_id: string;
+    title: string;
+    segment_ids: string[];
+    anchors: string[];
+  }[];
+};
+
 type AgentQueryResult = {
   answer: string;
   provider: string;
@@ -183,6 +199,7 @@ type AgentQueryResult = {
       summary: string;
     }[];
   } | null;
+  evidence_route?: AgentEvidenceRoute | null;
   usage: AgentBudgetUsage;
   citations: AgentCitation[];
   neighbor_context?: AgentNeighborContext[];
@@ -209,6 +226,31 @@ function contradictionAuditFor(result: AgentQueryResult) {
       checked: false,
       conflict_count: 0,
       findings: [],
+    }
+  );
+}
+
+function evidenceRouteFor(result: AgentQueryResult): AgentEvidenceRoute {
+  return (
+    result.evidence_route ?? {
+      coverage_level:
+        result.citations.length === 0
+          ? "no_evidence"
+          : result.citations.length === 1
+            ? "single_segment"
+            : "single_document",
+      segment_count: result.citations.length,
+      document_count: new Set(result.citations.map((citation) => citation.document_id)).size,
+      anchor_count: new Set(
+        result.citations
+          .filter((citation) => Boolean(citation.anchor))
+          .map((citation) => `${citation.document_id}:${citation.anchor}`),
+      ).size,
+      multi_document:
+        new Set(result.citations.map((citation) => citation.document_id)).size > 1,
+      has_neighbor_context: (result.neighbor_context ?? []).length > 0,
+      warnings: result.citations.length === 0 ? ["no_citations"] : [],
+      documents: [],
     }
   );
 }
@@ -2695,6 +2737,7 @@ function App() {
                 (() => {
                   const evidenceAudit = evidenceAuditFor(queryResult);
                   const contradictionAudit = contradictionAuditFor(queryResult);
+                  const evidenceRoute = evidenceRouteFor(queryResult);
                   return (
                 <>
                   <div className="result-meta">
@@ -2724,6 +2767,13 @@ function App() {
                       {queryResult.usage.budget.max_citations}
                     </span>
                     <span>
+                      Route {evidenceRoute.coverage_level.replaceAll("_", " ")}
+                    </span>
+                    <span>
+                      Documents {evidenceRoute.document_count} / anchors{" "}
+                      {evidenceRoute.anchor_count}
+                    </span>
+                    <span>
                       Evidence {queryResult.usage.evidence_tokens}/
                       {queryResult.usage.budget.max_evidence_tokens} tokens
                     </span>
@@ -2743,6 +2793,34 @@ function App() {
                         </span>
                       </article>
                     ))}
+                  </div>
+                  <div className="evidence-route" aria-label="Evidence route">
+                    <div className="route-summary">
+                      <span className={evidenceRoute.multi_document ? "badge success" : "badge muted"}>
+                        {evidenceRoute.multi_document ? "multi document" : "single document"}
+                      </span>
+                      <span className={evidenceRoute.has_neighbor_context ? "badge success" : "badge muted"}>
+                        {evidenceRoute.has_neighbor_context ? "context expanded" : "no context"}
+                      </span>
+                      {evidenceRoute.warnings.map((warning) => (
+                        <span className="badge warning" key={warning}>
+                          {warning.replaceAll("_", " ")}
+                        </span>
+                      ))}
+                    </div>
+                    {evidenceRoute.documents.length > 0 ? (
+                      <div className="route-documents">
+                        {evidenceRoute.documents.map((document) => (
+                          <article className="route-document" key={document.document_id}>
+                            <strong>{document.title}</strong>
+                            <span>
+                              {document.segment_ids.length} segments /{" "}
+                              {document.anchors.length} anchors
+                            </span>
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                   {(queryResult.neighbor_context ?? []).length > 0 ? (
                     <div className="citation-list neighbor-list" aria-label="Neighbor context">

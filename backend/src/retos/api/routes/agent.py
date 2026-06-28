@@ -100,6 +100,24 @@ class AgentContradictionAuditRead(BaseModel):
     findings: list[AgentContradictionFindingRead]
 
 
+class AgentEvidenceRouteDocumentRead(BaseModel):
+    document_id: str
+    title: str
+    segment_ids: list[str]
+    anchors: list[str]
+
+
+class AgentEvidenceRouteRead(BaseModel):
+    coverage_level: str
+    segment_count: int
+    document_count: int
+    anchor_count: int
+    multi_document: bool
+    has_neighbor_context: bool
+    warnings: list[str]
+    documents: list[AgentEvidenceRouteDocumentRead]
+
+
 class AgentQueryResultRead(BaseModel):
     answer: str
     provider: str
@@ -107,6 +125,7 @@ class AgentQueryResultRead(BaseModel):
     runtime: str
     evidence_audit: AgentEvidenceAuditRead
     contradiction_audit: AgentContradictionAuditRead
+    evidence_route: AgentEvidenceRouteRead
     usage: AgentBudgetUsageRead
     citations: list[AgentCitationRead]
     neighbor_context: list[AgentNeighborContextRead]
@@ -133,6 +152,24 @@ class AgentQueryResultRead(BaseModel):
                         summary=finding.summary,
                     )
                     for finding in result.contradiction_audit.findings
+                ],
+            ),
+            evidence_route=AgentEvidenceRouteRead(
+                coverage_level=result.evidence_route.coverage_level,
+                segment_count=result.evidence_route.segment_count,
+                document_count=result.evidence_route.document_count,
+                anchor_count=result.evidence_route.anchor_count,
+                multi_document=result.evidence_route.multi_document,
+                has_neighbor_context=result.evidence_route.has_neighbor_context,
+                warnings=result.evidence_route.warnings,
+                documents=[
+                    AgentEvidenceRouteDocumentRead(
+                        document_id=document.document_id,
+                        title=document.title,
+                        segment_ids=document.segment_ids,
+                        anchors=document.anchors,
+                    )
+                    for document in result.evidence_route.documents
                 ],
             ),
             usage=AgentBudgetUsageRead(

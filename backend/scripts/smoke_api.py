@@ -687,6 +687,14 @@ def main() -> None:
                 "neighbor_context" in agent_result,
                 "agent result did not include neighbor context",
             )
+            require(
+                agent_result["evidence_route"]["segment_count"] == len(agent_result["citations"]),
+                "agent evidence route did not account for citations",
+            )
+            require(
+                agent_result["evidence_route"]["document_count"] >= 1,
+                "agent evidence route did not account for documents",
+            )
 
             updated_document = client.patch(
                 f"/documents/{document['id']}",

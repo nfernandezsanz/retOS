@@ -901,6 +901,23 @@ async function mockProviderApi(page: Page) {
             conflict_count: 0,
             findings: [],
           },
+          evidence_route: {
+            coverage_level: "single_segment",
+            segment_count: 1,
+            document_count: 1,
+            anchor_count: 1,
+            multi_document: false,
+            has_neighbor_context: true,
+            warnings: ["single_citation", "single_document"],
+            documents: [
+              {
+                document_id: "document-1",
+                title: "Smoke Document",
+                segment_ids: ["segment-1234567890"],
+                anchors: ["page=1"],
+              },
+            ],
+          },
           usage: {
             budget: {
               max_searches: 8,
@@ -1161,6 +1178,9 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Query budget usage").getByText("Evidence linked 1/1")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Contradictions 0")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Citations 1/5")).toBeVisible();
+  await expect(page.getByLabel("Query budget usage").getByText("Route single segment")).toBeVisible();
+  await expect(page.getByLabel("Evidence route").getByText("single citation")).toBeVisible();
+  await expect(page.getByLabel("Evidence route").getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();
   await expect(page.getByText("page=1")).toBeVisible();
