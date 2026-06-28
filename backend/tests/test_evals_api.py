@@ -451,6 +451,7 @@ def test_ocr_benchmark_eval_runs_and_exports_report(
             case_count=1,
             character_error_rate=0.0,
             word_error_rate=0.0,
+            key_value_recall=None,
             cases=(
                 OCRCaseResult(
                     case_id="receipt-001",
@@ -458,6 +459,7 @@ def test_ocr_benchmark_eval_runs_and_exports_report(
                     actual_text="Receipt total 42",
                     character_error_rate=0.0,
                     word_error_rate=0.0,
+                    key_value_recall=None,
                     passed=True,
                     failures=(),
                 ),

@@ -128,8 +128,8 @@ does not download public data or call paid providers.
 | SQuAD 2.0 | Implemented as an opt-in local adapter and admin API run for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
 | HotpotQA | Implemented as an opt-in local adapter and admin API run for multi-hop retrieval and supporting-fact evaluation, with optional JSON/Markdown report export. |
 | Natural Questions | Implemented as an opt-in local adapter and admin API run for real user questions with Wikipedia evidence. |
-| FUNSD | Implemented as an opt-in OCR benchmark adapter for form image/text pressure; layout-aware scoring remains future work. |
-| ICDAR 2019 SROIE | Implemented as an opt-in OCR benchmark adapter for receipt OCR pressure; key-value extraction scoring remains future work. |
+| FUNSD | Implemented as an opt-in OCR benchmark adapter for form image/text pressure; derives deterministic key-value recall from question/answer links when annotations include them. Geometric layout scoring remains future work. |
+| ICDAR 2019 SROIE | Implemented as an opt-in OCR benchmark adapter for receipt OCR pressure; reads optional entity files for deterministic key-value recall. Geometric layout scoring remains future work. |
 | ISRI OCR Evaluation Tools | OCR scoring methodology reference for CER/WER-style checks. |
 
 Dataset adapters must be opt-in and must not make CI depend on network downloads.

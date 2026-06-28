@@ -743,7 +743,8 @@ curl --request POST http://localhost:8000/evals/ocr-benchmark \
 
 The response shape matches the other eval endpoints; `report.suite_name` is
 `ocr-<dataset_format>`, `report.metrics` contains `character_error_rate` and
-`word_error_rate`, and report exports are written under `RETOS_EVAL_REPORT_ROOT`.
+`word_error_rate`, plus `key_value_recall` when the dataset supplies expected fields.
+Report exports are written under `RETOS_EVAL_REPORT_ROOT`.
 
 Security and runtime notes:
 

@@ -23,6 +23,7 @@ class OCRCaseResult:
     actual_text: str
     character_error_rate: float
     word_error_rate: float
+    key_value_recall: float | None
     passed: bool
     failures: tuple[str, ...]
 
@@ -34,6 +35,7 @@ class OCRQualityReport:
     case_count: int
     character_error_rate: float
     word_error_rate: float
+    key_value_recall: float | None
     cases: tuple[OCRCaseResult, ...]
 
     def to_dict(self) -> dict[str, object]:
@@ -44,6 +46,11 @@ class OCRQualityReport:
             "metrics": {
                 "character_error_rate": self.character_error_rate,
                 "word_error_rate": self.word_error_rate,
+                **(
+                    {"key_value_recall": self.key_value_recall}
+                    if self.key_value_recall is not None
+                    else {}
+                ),
             },
             "cases": [
                 {
@@ -52,6 +59,7 @@ class OCRQualityReport:
                     "actual_text": case.actual_text,
                     "character_error_rate": case.character_error_rate,
                     "word_error_rate": case.word_error_rate,
+                    "key_value_recall": case.key_value_recall,
                     "passed": case.passed,
                     "failures": list(case.failures),
                 }
@@ -69,14 +77,21 @@ class OCRQualityReport:
             "| --- | ---: |",
             f"| Character error rate | {self.character_error_rate:.4f} |",
             f"| Word error rate | {self.word_error_rate:.4f} |",
-            "",
-            "| Case | Status | CER | WER | Failures |",
-            "| --- | --- | ---: | ---: | --- |",
         ]
+        if self.key_value_recall is not None:
+            rows.append(f"| Key-value recall | {self.key_value_recall:.4f} |")
+        rows.extend(
+            [
+                "",
+                "| Case | Status | CER | WER | KV recall | Failures |",
+                "| --- | --- | ---: | ---: | ---: | --- |",
+            ]
+        )
         rows.extend(
             (
                 f"| {case.case_id} | {'PASS' if case.passed else 'FAIL'} | "
                 f"{case.character_error_rate:.4f} | {case.word_error_rate:.4f} | "
+                f"{format_optional_metric(case.key_value_recall)} | "
                 f"{', '.join(case.failures) if case.failures else '-'} |"
             )
             for case in self.cases
@@ -89,6 +104,7 @@ class OCRQualityCase:
     case_id: str
     expected_text: str
     input_path: Path | None = None
+    expected_key_values: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -138,6 +154,35 @@ def error_rate(expected: Sequence[str], actual: Sequence[str]) -> float:
     return edit_distance(expected, actual) / len(expected)
 
 
+def format_optional_metric(value: float | None) -> str:
+    return "-" if value is None else f"{value:.4f}"
+
+
+def normalize_key_value_map(values: dict[str, str] | None) -> dict[str, str]:
+    if values is None:
+        return {}
+    normalized: dict[str, str] = {}
+    for key, value in values.items():
+        normalized_key = normalize_ocr_text(str(key))
+        normalized_value = normalize_ocr_text(str(value))
+        if normalized_key and normalized_value:
+            normalized[normalized_key] = normalized_value
+    return normalized
+
+
+def key_value_recall(expected_key_values: dict[str, str] | None, actual_text: str) -> float | None:
+    expected = normalize_key_value_map(expected_key_values)
+    if not expected:
+        return None
+    actual = normalize_ocr_text(actual_text)
+    matched = sum(
+        1
+        for key, value in expected.items()
+        if key in actual and value in actual and actual.find(key) <= actual.find(value)
+    )
+    return matched / len(expected)
+
+
 def score_ocr_text(
     *,
     case_id: str,
@@ -145,6 +190,7 @@ def score_ocr_text(
     actual_text: str,
     max_character_error_rate: float,
     max_word_error_rate: float,
+    expected_key_values: dict[str, str] | None = None,
 ) -> OCRCaseResult:
     normalized_expected = normalize_ocr_text(expected_text)
     normalized_actual = normalize_ocr_text(actual_text)
@@ -153,17 +199,21 @@ def score_ocr_text(
         normalize_ocr_tokens(expected_text),
         normalize_ocr_tokens(actual_text),
     )
+    key_values_recall = key_value_recall(expected_key_values, actual_text)
     failures: list[str] = []
     if character_error_rate > max_character_error_rate:
         failures.append("character_error_rate")
     if word_error_rate > max_word_error_rate:
         failures.append("word_error_rate")
+    if key_values_recall is not None and key_values_recall < 1.0:
+        failures.append("key_value_recall")
     return OCRCaseResult(
         case_id=case_id,
         expected_text=expected_text,
         actual_text=actual_text,
         character_error_rate=character_error_rate,
         word_error_rate=word_error_rate,
+        key_value_recall=key_values_recall,
         passed=not failures,
         failures=tuple(failures),
     )
@@ -216,8 +266,14 @@ def load_manifest_cases(dataset_path: Path) -> tuple[OCRQualityCase, ...]:
         case_id = require_string(item, "case_id")
         expected_text = require_string(item, "expected_text")
         input_path = resolve_case_path(root, require_string(item, "input_path"))
+        expected_key_values = optional_string_map(item, "expected_key_values")
         cases.append(
-            OCRQualityCase(case_id=case_id, expected_text=expected_text, input_path=input_path)
+            OCRQualityCase(
+                case_id=case_id,
+                expected_text=expected_text,
+                input_path=input_path,
+                expected_key_values=expected_key_values,
+            )
         )
     return tuple(cases)
 
@@ -249,6 +305,7 @@ def load_funsd_cases(dataset_path: Path) -> tuple[OCRQualityCase, ...]:
                 case_id=f"funsd-{annotation_path.stem}",
                 expected_text=expected_text,
                 input_path=image_path,
+                expected_key_values=key_values_from_funsd_form(form),
             )
         )
     return tuple(cases)
@@ -269,6 +326,7 @@ def load_sroie_cases(dataset_path: Path) -> tuple[OCRQualityCase, ...]:
                 case_id=f"sroie-{text_path.stem}",
                 expected_text=expected_text,
                 input_path=image_path,
+                expected_key_values=key_values_from_sroie_entities(root, text_path.stem),
             )
         )
     return tuple(cases)
@@ -311,6 +369,7 @@ def run_ocr_quality_suite(
                 actual_text=actual_text,
                 max_character_error_rate=max_character_error_rate,
                 max_word_error_rate=max_word_error_rate,
+                expected_key_values=case.expected_key_values,
             )
         )
 
@@ -321,12 +380,19 @@ def run_ocr_quality_suite(
     word_error_rate = (
         sum(case.word_error_rate for case in results) / case_count if case_count else 0.0
     )
+    key_value_results = [
+        case.key_value_recall for case in results if case.key_value_recall is not None
+    ]
+    average_key_value_recall = (
+        sum(key_value_results) / len(key_value_results) if key_value_results else None
+    )
     return OCRQualityReport(
         suite_name=suite_name,
         passed=all(case.passed for case in results),
         case_count=case_count,
         character_error_rate=character_error_rate,
         word_error_rate=word_error_rate,
+        key_value_recall=average_key_value_recall,
         cases=tuple(results),
     )
 
@@ -345,6 +411,21 @@ def require_string(payload: dict[str, Any], key: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise OCRBenchmarkAdapterError(f"Expected {key!r} to be a non-empty string")
     return value.strip()
+
+
+def optional_string_map(payload: dict[str, Any], key: str) -> dict[str, str] | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise OCRBenchmarkAdapterError(f"Expected {key!r} to be an object")
+    result: dict[str, str] = {}
+    for raw_key, raw_value in value.items():
+        if not isinstance(raw_key, str) or not isinstance(raw_value, str):
+            raise OCRBenchmarkAdapterError(f"Expected {key!r} keys and values to be strings")
+        if raw_key.strip() and raw_value.strip():
+            result[raw_key.strip()] = raw_value.strip()
+    return result or None
 
 
 def resolve_case_path(root: Path, value: str) -> Path:
@@ -385,6 +466,81 @@ def text_from_sroie_boxes(path: Path) -> str:
         if text:
             lines.append(text)
     return " ".join(lines)
+
+
+def key_values_from_funsd_form(form: list[Any]) -> dict[str, str] | None:
+    by_id = {
+        item["id"]: item
+        for item in form
+        if isinstance(item, dict) and isinstance(item.get("id"), int)
+    }
+    key_values: dict[str, str] = {}
+    for item in by_id.values():
+        if item.get("label") != "question":
+            continue
+        key = str(item.get("text", "")).strip()
+        if not key:
+            continue
+        linked_values = []
+        for link in item.get("linking", []):
+            if not isinstance(link, list) or len(link) != 2:
+                continue
+            target = by_id.get(link[1])
+            if target is None or target.get("label") != "answer":
+                continue
+            value = str(target.get("text", "")).strip()
+            if value:
+                linked_values.append(value)
+        if linked_values:
+            key_values[key] = " ".join(linked_values)
+    return key_values or None
+
+
+def key_values_from_sroie_entities(root: Path, stem: str) -> dict[str, str] | None:
+    entities_root = first_existing_directory_or_none(
+        root,
+        ("entities", "entity", "key", "keys"),
+    )
+    if entities_root is None:
+        return None
+    for extension in (".json", ".txt"):
+        candidate = entities_root / f"{stem}{extension}"
+        if candidate.exists() and candidate.is_file():
+            if extension == ".json":
+                payload = read_json(candidate)
+                if not isinstance(payload, dict):
+                    raise OCRBenchmarkAdapterError(
+                        f"SROIE entity file {candidate.name} must contain an object"
+                    )
+                return {
+                    str(key).strip(): str(value).strip()
+                    for key, value in payload.items()
+                    if str(key).strip() and str(value).strip()
+                } or None
+            return key_values_from_sroie_text_entities(candidate)
+    return None
+
+
+def key_values_from_sroie_text_entities(path: Path) -> dict[str, str] | None:
+    key_values: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+        elif "," in line:
+            key, value = line.split(",", 1)
+        else:
+            continue
+        if key.strip() and value.strip():
+            key_values[key.strip()] = value.strip()
+    return key_values or None
+
+
+def first_existing_directory_or_none(root: Path, names: tuple[str, ...]) -> Path | None:
+    for name in names:
+        candidate = root / name
+        if candidate.exists() and candidate.is_dir():
+            return candidate
+    return None
 
 
 def ocr_input_pdf_bytes(input_path: Path, *, work_dir: Path) -> bytes:

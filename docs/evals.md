@@ -115,6 +115,7 @@ function used by ingestion, and scores the extracted text with:
 | --- | --- |
 | Character error rate | Edit distance over normalized characters, useful for punctuation and spelling drift. |
 | Word error rate | Edit distance over normalized word tokens, useful for searchable evidence quality. |
+| Key-value recall | Optional field-level recall for forms and receipts. A case contributes this metric when it declares expected key/value pairs. |
 
 The suite is opt-in because real OCR depends on local Tesseract availability and
 host-specific rendering behavior. Unit tests mock the OCR adapter so CI coverage stays
@@ -323,12 +324,18 @@ Supported formats:
 
 | Format | Input path | Contract |
 | --- | --- | --- |
-| `manifest` | JSON file | Root object with `cases[]`, or a root list. Each case requires `case_id`, `input_path`, and `expected_text`. Relative `input_path` values resolve beside the manifest. |
-| `funsd` | Dataset directory | Reads `annotations/*.json`, joins non-empty `form[].text`, and resolves matching `.pdf`, `.png`, `.jpg`, `.jpeg`, `.tif`, or `.tiff` files from `images/`. |
-| `sroie` | Dataset directory | Reads text files from `box/`, `boxes/`, `ocr/`, or `text/`, extracts text after the eighth comma on each line, and resolves matching files from `img/` or `images/`. |
+| `manifest` | JSON file | Root object with `cases[]`, or a root list. Each case requires `case_id`, `input_path`, and `expected_text`. Cases may include `expected_key_values` as an object of string labels to string values. Relative `input_path` values resolve beside the manifest. |
+| `funsd` | Dataset directory | Reads `annotations/*.json`, joins non-empty `form[].text`, derives key/value pairs from `question` to `answer` links when present, and resolves matching `.pdf`, `.png`, `.jpg`, `.jpeg`, `.tif`, or `.tiff` files from `images/`. |
+| `sroie` | Dataset directory | Reads text files from `box/`, `boxes/`, `ocr/`, or `text/`, extracts text after the eighth comma on each line, reads optional entities from `entities/`, `entity/`, `key/`, or `keys/`, and resolves matching files from `img/` or `images/`. |
 
 Images are converted to temporary PDFs before OCR so the adapter reuses the ingestion
 OCR path rather than introducing a parallel image OCR implementation.
+
+Key-value recall is intentionally deterministic and local. The scorer normalizes OCR
+text, labels, and values; a field counts as found when both label and value appear in
+the OCR text and the label appears before the value. This is not a geometric layout
+metric yet, but it catches the first class of receipt/form regressions without adding
+paid models or dataset-specific inference code.
 
 ## Adapter Rules
 
@@ -342,5 +349,5 @@ OCR path rather than introducing a parallel image OCR implementation.
 
 ## Next Implementation Step
 
-Add layout-aware OCR metrics and key-value extraction evals that score page-level
-`ocr_page_text` artifacts alongside plain CER/WER.
+Add geometric layout metrics that score page-level `ocr_page_text` artifacts and
+bounding-box order alongside CER/WER/key-value recall.

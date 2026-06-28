@@ -8,6 +8,7 @@ from retos.evals.ocr import (
     OCRQualityCase,
     edit_distance,
     error_rate,
+    key_value_recall,
     load_ocr_benchmark_cases,
     normalize_ocr_text,
     normalize_ocr_tokens,
@@ -60,6 +61,31 @@ def test_ocr_score_reports_word_failures() -> None:
     assert result.failures == ("word_error_rate",)
 
 
+def test_ocr_score_reports_key_value_recall() -> None:
+    matched = score_ocr_text(
+        case_id="receipt",
+        expected_text="Store ACME Total 42",
+        actual_text="Store ACME Total 42",
+        max_character_error_rate=0.0,
+        max_word_error_rate=0.0,
+        expected_key_values={"Store": "ACME", "Total": "42"},
+    )
+    missed = score_ocr_text(
+        case_id="receipt",
+        expected_text="Store ACME Total 42",
+        actual_text="Store ACME Total",
+        max_character_error_rate=1.0,
+        max_word_error_rate=1.0,
+        expected_key_values={"Store": "ACME", "Total": "42"},
+    )
+
+    assert key_value_recall({"Store": "ACME"}, "store acme total 42") == 1.0
+    assert matched.key_value_recall == 1.0
+    assert matched.passed is True
+    assert missed.key_value_recall == 0.5
+    assert missed.failures == ("key_value_recall",)
+
+
 def test_ocr_quality_suite_can_generate_synthetic_cases(
     tmp_path: Path,
     monkeypatch,
@@ -103,6 +129,7 @@ def test_ocr_quality_suite_uses_pipeline_ocr_and_reports_metrics(
     assert report.case_count == 1
     assert report.character_error_rate == 0
     assert report.word_error_rate == 0
+    assert report.key_value_recall is None
     assert report.to_dict()["metrics"] == {
         "character_error_rate": 0.0,
         "word_error_rate": 0.0,
@@ -150,7 +177,8 @@ def test_ocr_manifest_adapter_loads_cases_and_converts_image_inputs(
             {
               "case_id": "receipt-total",
               "input_path": "receipt.png",
-              "expected_text": "Total due 42"
+              "expected_text": "Total due 42",
+              "expected_key_values": {"Total due": "42", "Ignored": "  "}
             }
           ]
         }
@@ -173,8 +201,52 @@ def test_ocr_manifest_adapter_loads_cases_and_converts_image_inputs(
 
     assert cases[0].case_id == "receipt-total"
     assert cases[0].input_path == image_path
+    assert cases[0].expected_key_values == {"Total due": "42"}
     assert report.passed is True
+    assert report.key_value_recall == 1.0
+    assert "| Key-value recall | 1.0000 |" in report.to_markdown()
     assert seen_pdf is True
+
+
+def test_ocr_manifest_adapter_rejects_invalid_key_value_shapes(tmp_path: Path) -> None:
+    image_path = tmp_path / "case.pdf"
+    write_image_only_pdf(image_path, "Total 42")
+    manifest_path = tmp_path / "ocr-manifest.json"
+    manifest_path.write_text(
+        """
+        {
+          "cases": [
+            {
+              "case_id": "receipt-total",
+              "input_path": "case.pdf",
+              "expected_text": "Total 42",
+              "expected_key_values": ["Total", "42"]
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(OCRBenchmarkAdapterError, match="expected_key_values"):
+        load_ocr_benchmark_cases(manifest_path)
+
+    manifest_path.write_text(
+        """
+        {
+          "cases": [
+            {
+              "case_id": "receipt-total",
+              "input_path": "case.pdf",
+              "expected_text": "Total 42",
+              "expected_key_values": {"Total": 42}
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(OCRBenchmarkAdapterError, match="keys and values"):
+        load_ocr_benchmark_cases(manifest_path)
 
 
 def test_ocr_funsd_adapter_reads_annotation_text(tmp_path: Path) -> None:
@@ -188,9 +260,9 @@ def test_ocr_funsd_adapter_reads_annotation_text(tmp_path: Path) -> None:
         """
         {
           "form": [
-            {"text": "Name"},
-            {"text": "Alice"},
-            {"text": "total 42"}
+            {"id": 1, "label": "question", "text": "Name", "linking": [[1, 2]]},
+            {"id": 2, "label": "answer", "text": "Alice", "linking": [[1, 2]]},
+            {"id": 3, "label": "other", "text": "total 42"}
           ]
         }
         """,
@@ -207,21 +279,55 @@ def test_ocr_funsd_adapter_reads_annotation_text(tmp_path: Path) -> None:
             case_id="funsd-form-1",
             expected_text="Name Alice total 42",
             input_path=images / "form-1.pdf",
+            expected_key_values={"Name": "Alice"},
         ),
     )
+
+
+def test_ocr_funsd_adapter_ignores_unusable_key_value_links(tmp_path: Path) -> None:
+    dataset_root = tmp_path / "funsd"
+    annotations = dataset_root / "annotations"
+    images = dataset_root / "images"
+    annotations.mkdir(parents=True)
+    images.mkdir(parents=True)
+    write_image_only_pdf(images / "form-1.pdf", "Name Alice total 42")
+    (annotations / "form-1.json").write_text(
+        """
+        {
+          "form": [
+            {"id": 1, "label": "question", "text": " ", "linking": [[1, 2]]},
+            {"id": 2, "label": "question", "text": "Total", "linking": ["bad", [2, 99], [2, 3]]},
+            {"id": 3, "label": "other", "text": "42"},
+            {"id": 4, "label": "answer", "text": "unused"}
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    cases = load_ocr_benchmark_cases(
+        dataset_root,
+        OCRBenchmarkOptions(dataset_format="funsd"),
+    )
+
+    assert cases[0].expected_text == "Total 42 unused"
+    assert cases[0].expected_key_values is None
 
 
 def test_ocr_sroie_adapter_reads_box_text(tmp_path: Path) -> None:
     dataset_root = tmp_path / "sroie"
     box_root = dataset_root / "box"
     image_root = dataset_root / "img"
+    entities_root = dataset_root / "entities"
     box_root.mkdir(parents=True)
     image_root.mkdir(parents=True)
+    entities_root.mkdir(parents=True)
     write_image_only_pdf(image_root / "receipt-1.pdf", "STORE TOTAL 42")
     (box_root / "receipt-1.txt").write_text(
         "0,0,10,0,10,10,0,10,STORE\n0,20,10,20,10,30,0,30,TOTAL 42\n",
         encoding="utf-8",
     )
+    (entities_root / "receipt-1.txt").write_text("company: STORE\ntotal: 42\n", encoding="utf-8")
 
     cases = load_ocr_benchmark_cases(
         dataset_root,
@@ -233,8 +339,65 @@ def test_ocr_sroie_adapter_reads_box_text(tmp_path: Path) -> None:
             case_id="sroie-receipt-1",
             expected_text="STORE TOTAL 42",
             input_path=image_root / "receipt-1.pdf",
+            expected_key_values={"company": "STORE", "total": "42"},
         ),
     )
+
+
+def test_ocr_sroie_adapter_reads_json_entities_and_allows_missing_entities(
+    tmp_path: Path,
+) -> None:
+    dataset_root = tmp_path / "sroie"
+    box_root = dataset_root / "box"
+    image_root = dataset_root / "img"
+    entities_root = dataset_root / "entities"
+    box_root.mkdir(parents=True)
+    image_root.mkdir(parents=True)
+    entities_root.mkdir(parents=True)
+    write_image_only_pdf(image_root / "receipt-1.pdf", "STORE TOTAL 42")
+    write_image_only_pdf(image_root / "receipt-2.pdf", "PLAIN TEXT")
+    (box_root / "receipt-1.txt").write_text(
+        "0,0,10,0,10,10,0,10,STORE\n0,20,10,20,10,30,0,30,TOTAL 42\n",
+        encoding="utf-8",
+    )
+    (box_root / "receipt-2.txt").write_text(
+        "0,0,10,0,10,10,0,10,PLAIN TEXT\n",
+        encoding="utf-8",
+    )
+    (entities_root / "receipt-1.json").write_text(
+        '{"company": "STORE", "total": "42", "empty": " "}',
+        encoding="utf-8",
+    )
+
+    cases = load_ocr_benchmark_cases(
+        dataset_root,
+        OCRBenchmarkOptions(dataset_format="sroie"),
+    )
+
+    assert cases[0].expected_key_values == {"company": "STORE", "total": "42"}
+    assert cases[1].expected_key_values is None
+
+
+def test_ocr_sroie_adapter_rejects_invalid_json_entities(tmp_path: Path) -> None:
+    dataset_root = tmp_path / "sroie"
+    box_root = dataset_root / "box"
+    image_root = dataset_root / "img"
+    entities_root = dataset_root / "entities"
+    box_root.mkdir(parents=True)
+    image_root.mkdir(parents=True)
+    entities_root.mkdir(parents=True)
+    write_image_only_pdf(image_root / "receipt-1.pdf", "STORE")
+    (box_root / "receipt-1.txt").write_text(
+        "0,0,10,0,10,10,0,10,STORE\n",
+        encoding="utf-8",
+    )
+    (entities_root / "receipt-1.json").write_text('["not", "object"]', encoding="utf-8")
+
+    with pytest.raises(OCRBenchmarkAdapterError, match="must contain an object"):
+        load_ocr_benchmark_cases(
+            dataset_root,
+            OCRBenchmarkOptions(dataset_format="sroie"),
+        )
 
 
 def test_ocr_benchmark_adapter_rejects_path_escape(tmp_path: Path) -> None:
