@@ -51,11 +51,13 @@ for phrase in (
     "make integration",
     "make frontend-test",
     "make frontend-e2e",
+    "make brand-check",
     "make docker-smoke",
     "make dependency-audit",
     "make ci-status-check",
     "scripts/check_release_readiness.sh",
     "scripts/check_audit_pack.sh",
+    "scripts/check_branding_assets.sh",
     "scripts/check_dependency_audit.sh",
     "scripts/check_ci_status.sh",
     "pip-audit",
@@ -69,6 +71,7 @@ for phrase in (
     "RETOS_ALLOW_PAID_LLM=false",
     "RETOS_OLLAMA_MODEL=gemma4",
     "/audit/export",
+    "Branding assets",
 ):
     require(phrase in audit_pack, f"docs/production-readiness.md missing evidence phrase: {phrase}")
 

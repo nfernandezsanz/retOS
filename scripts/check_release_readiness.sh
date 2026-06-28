@@ -33,6 +33,7 @@ scripts/check_release_workflow.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
 scripts/check_audit_pack.sh >/dev/null
+scripts/check_branding_assets.sh >/dev/null
 
 python3 - <<'PY'
 from __future__ import annotations

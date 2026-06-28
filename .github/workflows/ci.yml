@@ -89,6 +89,8 @@ jobs:
         run: scripts/check_release_readiness.sh
       - name: Production audit pack
         run: scripts/check_audit_pack.sh
+      - name: Branding assets
+        run: scripts/check_branding_assets.sh
       - name: Release workflow
         run: scripts/check_release_workflow.sh
       - name: Release notes
