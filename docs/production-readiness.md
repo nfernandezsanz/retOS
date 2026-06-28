@@ -71,7 +71,6 @@ These items must be closed before a final production release:
 | GHCR publish evidence missing | Run `.github/workflows/release.yml` for the immutable release tag and record backend/web image digests. |
 | SBOM/provenance evidence missing | Link or copy the attestation evidence from the release workflow into the versioned release note. |
 | Cosign signature evidence missing | Record successful keyless signature verification for both published image digests. |
-| Branch coverage below final target | Raise the branch coverage ratchet to 90% or document an accepted release exception. |
 | Broader public calibration pending | Add trend evidence beyond the current 200-record/40-case public slices or document the pilot scope limit. |
 | Human security review pending | Review auth, secrets, exposed ports, CORS, backup handling, and provider key handling for the target environment. |
 

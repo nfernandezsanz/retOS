@@ -28,6 +28,29 @@ RetOS should feel like an operational research console: calm, auditable, local-f
 
 The app uses system UI fonts by default for Docker/offline reliability. The intended brand direction is Plus Jakarta Sans-compatible: geometric, readable, and professional. Avoid decorative typefaces.
 
+## UI Contract
+
+- Primary product surface: React operational console, not a marketing landing page.
+- Pattern: dense, scan-friendly SaaS dashboard with flat color, crisp borders, and
+  stable 8px-radius controls.
+- Icons: Lucide SVG icons only; no emoji-as-icon UI.
+- Accessibility: visible focus rings, skip link, text labels beside color states,
+  44px primary controls, and `prefers-reduced-motion` support.
+- Responsive behavior: single-column workspace below 900px with no horizontal page
+  overflow at 375px, 768px, 1024px, or 1440px.
+
+## Latest Visual Audit
+
+- Desktop 1440x900: sidebar brand, first-viewport heading, operating-posture band,
+  metrics, domain management, query workspace, and primary action render without
+  overlap or horizontal overflow.
+- Mobile 390x844: navigation wraps into a two-row grid, the heading remains readable,
+  the primary action fills the content width, and the page reports no horizontal
+  overflow.
+- Automated coverage: `frontend/e2e/app.spec.ts` verifies brand tokens, favicon,
+  responsive breakpoints, skip-link focus, reduced motion, mobile provider controls,
+  and the full operational console flow.
+
 ## Assets
 
 - Frontend mark: `frontend/public/retos-mark.svg`

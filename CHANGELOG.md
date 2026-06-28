@@ -16,8 +16,9 @@ tag in GitHub.
 - Current-HEAD GitHub Actions status check for human release auditors.
 - CI-enforced Python and Node dependency advisory audits, plus patched `orjson` and
   `Pillow` runtime pins.
-- Focused ingestion and indexing service branch tests, raising backend coverage evidence
-  to 94.17% total and the CI branch ratchet to 87.96%.
+- Focused branch coverage tests for ingestion, indexing, agent, audit, and dataset
+  adapters, raising backend coverage evidence to 95.20% total and the CI branch
+  ratchet to 90.44%.
 - Nullable audit `trace_id` columns for journal/progress correlation, including default
   job-id traces for job-backed events and trace-aware audit export hashes.
 - Durable audit hash-chain columns for journal/progress events, including migration
