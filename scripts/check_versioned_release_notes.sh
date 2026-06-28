@@ -82,6 +82,18 @@ for path in versioned_files:
         current_backend_coverage in content,
         f"{path} must record current backend coverage evidence",
     )
+    evidence_match = re.search(
+        r"Current draft evidence commit: `([0-9a-f]{7,40})`",
+        content,
+    )
+    require(
+        evidence_match is not None,
+        f"{path} must record a concrete draft evidence commit SHA",
+    )
+    require(
+        f"retos-audit-manifest-{evidence_match.group(1)}" in content,
+        f"{path} must align the audit manifest artifact with the draft evidence commit",
+    )
 
 print(f"Versioned release notes OK: {len(versioned_files)} release note(s) validated.")
 PY
