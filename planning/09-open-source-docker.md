@@ -41,7 +41,8 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Backend tests pass with >= 90% line and branch coverage.
 - Frontend builds.
 - Compose config validates.
-- Compose topology validates that API, worker, and migrations share one backend image.
+- Compose topology validates that API, worker, and migrations share one backend image,
+  and that API and worker share the same app environment plus persistent state volumes.
 - Docker smoke validates that running API, worker, and migration containers share the
   same backend image ID.
 - Docker images build.
@@ -67,7 +68,7 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
   `.github/workflows/release.yml`; the backend image remains shared by API, worker, and
   migrations.
 - `api`, `worker`, and `migrate` must always share the backend image and may differ only
-  by command.
+  by command; `api` and `worker` must also share the same backend state volume mounts.
 - Backups must include Postgres, storage, eval reports, eval datasets, and optionally the
   rebuildable index volume.
 - Restores must stop API/worker first, restore Postgres and volumes, run migrations, and

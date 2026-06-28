@@ -15,7 +15,9 @@ RetOS publishes two application images per release:
 
 The backend image must stay shared. `api`, `worker`, and `migrate` must resolve to
 the same `retos-backend` image. Only `api` declares the backend build; `worker` and
-`migrate` reuse the built tag and differ only by command:
+`migrate` reuse the built tag and differ only by command. The API and worker must also
+share the same application environment and persistent state volumes so uploaded files,
+indexes, eval datasets, and eval reports cannot drift between runtime roles:
 
 ```bash
 RETOS_IMAGE_TAG=2026.06.28 docker compose build api web

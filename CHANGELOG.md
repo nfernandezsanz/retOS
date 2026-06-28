@@ -31,6 +31,8 @@ tag in GitHub.
   eval, and audit surfaces.
 - Shared backend Docker runtime for API, worker, and migrations with topology and
   runtime image ID guards.
+- Docker topology guard now fails if API and worker drift in application environment or
+  persistent backend state volumes while sharing the backend image.
 - OCI image metadata labels for backend and web images, including source, license,
   version, revision, and build timestamp.
 - Release readiness checks for Docker topology, image metadata, safe local defaults, and

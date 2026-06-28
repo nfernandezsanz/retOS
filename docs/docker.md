@@ -54,8 +54,10 @@ license, version, revision, and build creation time. Compose passes these build 
 CI enforces this topology with `scripts/check_docker_topology.sh`: `api`, `worker`,
 and `migrate` must resolve to the same backend image, only `api` may declare the
 backend build using `backend/Dockerfile` from the repository root, the target must
-be `backend-runtime`, and each role may differ only by command. Docker stack smoke
-also runs `scripts/check_backend_runtime_image.sh`
+be `backend-runtime`, and each role may differ only by command. The same guard also
+checks that `api` and `worker` share the same application environment, init setting,
+and persistent state volume mounts for storage, search indexes, eval datasets, and
+eval reports. Docker stack smoke also runs `scripts/check_backend_runtime_image.sh`
 after startup so the running `api`, `worker`, and `migrate` containers must share
 the exact same Docker image ID, not just equivalent source files.
 

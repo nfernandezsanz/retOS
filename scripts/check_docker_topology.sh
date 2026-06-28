@@ -73,9 +73,44 @@ if commands != expected_commands:
     details = ", ".join(f"{role}={command}" for role, command in commands.items())
     raise SystemExit(f"Backend role commands changed unexpectedly: {details}")
 
+api_service = services["api"]
+worker_service = services["worker"]
+migrate_service = services["migrate"]
+
+shared_service_keys = ("environment", "volumes", "init")
+for key in shared_service_keys:
+    if api_service.get(key) != worker_service.get(key):
+        raise SystemExit(
+            "API and worker must share the same runtime context for "
+            f"{key}: api={api_service.get(key)!r}, worker={worker_service.get(key)!r}"
+        )
+
+if migrate_service.get("environment") != api_service.get("environment"):
+    raise SystemExit(
+        "Migrate must use the same backend application environment as api and worker: "
+        f"api={api_service.get('environment')!r}, migrate={migrate_service.get('environment')!r}"
+    )
+
+expected_backend_volume_targets = {
+    "/var/lib/retos/storage",
+    "/var/lib/retos/index",
+    "/var/lib/retos/evals/datasets",
+    "/var/lib/retos/evals/reports",
+}
+actual_backend_volume_targets = {
+    volume.get("target") for volume in api_service.get("volumes", [])
+}
+if actual_backend_volume_targets != expected_backend_volume_targets:
+    raise SystemExit(
+        "API and worker must mount the complete shared backend state volumes: "
+        f"expected={sorted(expected_backend_volume_targets)}, "
+        f"actual={sorted(actual_backend_volume_targets)}"
+    )
+
 print(
     "Docker topology OK: api, worker, and migrate share "
     f"{images['api']}; api builds backend/Dockerfile target backend-runtime, "
-    "worker and migrate reuse that image with role-specific commands."
+    "worker and migrate reuse that image with role-specific commands; "
+    "api and worker also share environment and persistent state volumes."
 )
 PY
