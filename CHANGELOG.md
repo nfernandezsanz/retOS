@@ -17,7 +17,7 @@ tag in GitHub.
 - CI-enforced Python and Node dependency advisory audits, plus patched `orjson` and
   `Pillow` runtime pins.
 - Focused ingestion and indexing service branch tests, raising backend coverage evidence
-  to 92.72% total and the CI branch ratchet to 85.26%.
+  to 93.03% total and the CI branch ratchet to 85.69%.
 - Nullable audit `trace_id` columns for journal/progress correlation, including default
   job-id traces for job-backed events and trace-aware audit export hashes.
 - Durable audit hash-chain columns for journal/progress events, including migration
