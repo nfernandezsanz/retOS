@@ -1080,6 +1080,102 @@ def main() -> None:
                 eval_runs_after_rerun.json()[0]["job"]["id"] == eval_rerun_body["job"]["id"],
                 "latest eval run did not match rerun job",
             )
+            failed_eval_seed = client.post(
+                "/jobs",
+                headers=auth_headers,
+                json={"kind": "eval.run", "payload": {"suite_name": "retos-smoke"}},
+            )
+            require(
+                failed_eval_seed.status_code == 201,
+                (
+                    "failed eval retry seed create failed: "
+                    f"{failed_eval_seed.status_code} {failed_eval_seed.text}"
+                ),
+            )
+            failed_eval_seed_body = failed_eval_seed.json()
+            failed_eval_start = client.post(
+                f"/jobs/{failed_eval_seed_body['id']}/start",
+                headers=auth_headers,
+            )
+            require(
+                failed_eval_start.status_code == 200,
+                (
+                    "failed eval retry seed start failed: "
+                    f"{failed_eval_start.status_code} {failed_eval_start.text}"
+                ),
+            )
+            failed_eval = client.post(
+                f"/jobs/{failed_eval_seed_body['id']}/fail",
+                headers=auth_headers,
+                json={"error": "api smoke eval retry seed"},
+            )
+            require(
+                failed_eval.status_code == 200,
+                f"failed eval retry seed failed: {failed_eval.status_code} {failed_eval.text}",
+            )
+            retried_eval = client.post(
+                f"/jobs/{failed_eval_seed_body['id']}/retry",
+                headers=auth_headers,
+            )
+            require(
+                retried_eval.status_code == 202,
+                f"generic eval retry failed: {retried_eval.status_code} {retried_eval.text}",
+            )
+            retried_eval_body = retried_eval.json()
+            require(
+                retried_eval_body["kind"] == "eval.run",
+                "generic eval retry did not create an eval job",
+            )
+            require(
+                retried_eval_body["status"] == "succeeded",
+                "generic eval retry did not complete through the eval harness",
+            )
+            require(
+                retried_eval_body["payload"]["rerun_from_job_id"] == failed_eval_seed_body["id"],
+                "generic eval retry did not persist rerun origin",
+            )
+            retried_eval_journal = client.get(
+                "/audit/journal-events",
+                headers=auth_headers,
+                params={"limit": 100},
+            )
+            require(
+                retried_eval_journal.status_code == 200,
+                (
+                    "generic eval retry journal lookup failed: "
+                    f"{retried_eval_journal.status_code} {retried_eval_journal.text}"
+                ),
+            )
+            require(
+                any(
+                    item["entity_id"] == retried_eval_body["id"]
+                    and item["event_type"] == "eval.queued"
+                    and item["payload"].get("rerun_from_job_id") == failed_eval_seed_body["id"]
+                    for item in retried_eval_journal.json()
+                ),
+                "generic eval retry journal event did not include rerun origin",
+            )
+            retried_eval_progress = client.get(
+                "/audit/progress-events",
+                headers=auth_headers,
+                params={"limit": 100},
+            )
+            require(
+                retried_eval_progress.status_code == 200,
+                (
+                    "generic eval retry progress lookup failed: "
+                    f"{retried_eval_progress.status_code} {retried_eval_progress.text}"
+                ),
+            )
+            require(
+                any(
+                    item["job_id"] == retried_eval_body["id"]
+                    and item["event_type"] == "eval.started"
+                    and item["payload"].get("rerun_from_job_id") == failed_eval_seed_body["id"]
+                    for item in retried_eval_progress.json()
+                ),
+                "generic eval retry progress event did not include rerun origin",
+            )
             eval_comparison = client.get(
                 "/evals/runs/compare",
                 headers=auth_headers,

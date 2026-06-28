@@ -101,6 +101,8 @@ tag in GitHub.
   parser rejects punctuation from real user questions.
 - The generic job retry endpoint now reruns failed or cancelled `eval.run` jobs through
   the eval harness, preserving `rerun_from_job_id` for audit traceability.
+- API smoke now exercises generic retry for failed eval jobs and verifies the resulting
+  rerun origin in persisted journal/progress events.
 
 ### Changed
 
