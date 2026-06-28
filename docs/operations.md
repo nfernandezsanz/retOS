@@ -72,7 +72,9 @@ Use [docs/release-process.md](release-process.md) and [CHANGELOG.md](../CHANGELO
 to prepare the human release notes, migration notes, validation evidence, and rollback
 summary before publishing a tag. Versioned release notes live in
 [docs/releases/](releases/); run `scripts/check_versioned_release_notes.sh` before
-promoting a release candidate.
+promoting a release candidate. Human production promotion review starts from
+[docs/production-readiness.md](production-readiness.md), which records the current
+evidence, blockers, and acceptance checklist.
 
 Use immutable image tags for shared environments. Avoid `local` and `latest` outside a
 developer workstation.

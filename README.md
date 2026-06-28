@@ -145,6 +145,7 @@ docker compose --profile models run --rm ollama-pull
 More Docker details are in [docs/docker.md](docs/docker.md).
 Operations, release, upgrade, backup, and restore details are in [docs/operations.md](docs/operations.md).
 Release candidate checklist and note templates are in [docs/release-process.md](docs/release-process.md).
+Production readiness evidence, blockers, and auditor checklist live in [docs/production-readiness.md](docs/production-readiness.md).
 Project changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 Versioned release notes and release-candidate notes live in [docs/releases](docs/releases).
 API integration details are in [docs/api-integration.md](docs/api-integration.md).
@@ -238,6 +239,7 @@ Every meaningful change should pass these gates:
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
 | Release readiness | `make release-check` | Validates release docs, Docker image topology, safe defaults, and operations runbook coverage. |
+| Production audit pack | `make audit-pack-check` | Validates that production readiness evidence, blockers, and auditor links stay current. |
 | Release notes | `make release-notes-check` | Validates changelog, release-process guidance, and docs links for auditable releases. |
 | Versioned release notes | `make versioned-release-notes-check` | Validates concrete release note artifacts with evidence, limits, and rollback details. |
 | Release workflow | `make release-workflow-check` | Validates GHCR publishing, SBOM/provenance, and Cosign signing workflow documentation. |
@@ -267,4 +269,4 @@ evals/        Local evaluation reports and optional dataset caches
 
 ## Project Status
 
-The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: keep the 200-record/40-case bounded real-dataset calibration green, expand trend evidence across larger public slices, continue UI hardening, and collect release promotion evidence.
+The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation and is not production-promoted. The current milestone is Phase 5: keep the 200-record/40-case bounded real-dataset calibration green, expand trend evidence across larger public slices, continue UI hardening, and collect release promotion evidence. Human promotion review should start from [docs/production-readiness.md](docs/production-readiness.md).

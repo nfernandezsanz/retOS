@@ -2,7 +2,8 @@
 
 RetOS releases should be boring, reproducible, and easy to audit. A release candidate is
 ready only when the code, images, documentation, and validation evidence all point to the
-same revision.
+same revision. Production promotion is a separate human decision tracked through
+[docs/production-readiness.md](production-readiness.md).
 
 ## Versioning
 
@@ -43,6 +44,7 @@ scripts/check_versioned_release_notes.sh
 
 ```bash
 make release-check
+make audit-pack-check
 make check
 make integration
 make frontend-test
@@ -73,6 +75,10 @@ make docker-smoke
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
+
+Before production promotion, reconcile this release evidence with
+[docs/production-readiness.md](production-readiness.md) and close or explicitly accept
+every blocker there.
 
 ## Release Notes Template
 
@@ -143,4 +149,5 @@ Images:
 - `.github/workflows/release.yml` is the source of truth for publishing `retos-backend`
   and `retos-web` to GHCR. It must keep SBOM, provenance, and Cosign signing enabled.
 - CI validates release docs through `make release-check`.
+- CI validates the production readiness audit pack through `make audit-pack-check`.
 - Operators use `docs/operations.md` for upgrade, backup, restore, and rollback.

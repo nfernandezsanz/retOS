@@ -16,6 +16,7 @@ required_files=(
   ".env.example"
   "docker-compose.yml"
   "docs/release-process.md"
+  "docs/production-readiness.md"
 )
 
 for file in "${required_files[@]}"; do
@@ -31,6 +32,7 @@ scripts/check_image_size.sh >/dev/null
 scripts/check_release_workflow.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
+scripts/check_audit_pack.sh >/dev/null
 
 python3 - <<'PY'
 from __future__ import annotations
@@ -58,6 +60,7 @@ env = parse_env(Path(".env.example"))
 operations = Path("docs/operations.md").read_text(encoding="utf-8")
 docker_docs = Path("docs/docker.md").read_text(encoding="utf-8")
 readme = Path("README.md").read_text(encoding="utf-8")
+audit_pack = Path("docs/production-readiness.md").read_text(encoding="utf-8")
 
 require(env.get("RETOS_ALLOW_PAID_LLM") == "false", "paid LLMs must be disabled by default")
 require(env.get("RETOS_PROVIDER") == "local", "local provider must be the default")
@@ -120,6 +123,18 @@ require(
 require(
     "CHANGELOG.md" in readme,
     "README must link the changelog",
+)
+require(
+    "docs/production-readiness.md" in readme,
+    "README must link the production readiness audit pack",
+)
+require(
+    "RetOS is not production-promoted yet" in audit_pack,
+    "production readiness pack must avoid overclaiming production promotion",
+)
+require(
+    "Promotion Blockers" in audit_pack,
+    "production readiness pack must list promotion blockers",
 )
 
 print("Release readiness OK: docs, defaults, and Docker topology are aligned.")

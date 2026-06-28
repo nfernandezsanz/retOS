@@ -83,6 +83,8 @@ jobs:
         run: scripts/check_docker_topology.sh
       - name: Release readiness
         run: scripts/check_release_readiness.sh
+      - name: Production audit pack
+        run: scripts/check_audit_pack.sh
       - name: Release workflow
         run: scripts/check_release_workflow.sh
       - name: Release notes
