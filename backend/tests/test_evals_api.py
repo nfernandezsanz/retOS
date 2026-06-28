@@ -232,6 +232,12 @@ def test_hotpotqa_eval_requires_admin_token(evals_client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def test_hotpotqa_agent_eval_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.post("/evals/hotpotqa-agent", json={"dataset_path": "fixture.json"})
+
+    assert response.status_code == 401
+
+
 def test_natural_questions_eval_requires_admin_token(evals_client: TestClient) -> None:
     response = evals_client.post(
         "/evals/natural-questions",
@@ -728,6 +734,57 @@ def test_hotpotqa_eval_runs_and_exports_report(
     assert eval_runs.status_code == 200
     assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
     assert eval_runs.json()[0]["report"]["suite_name"] == "hotpotqa"
+
+
+def test_hotpotqa_agent_eval_runs_exports_report_and_reruns(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+    squad_report_root: Path,
+) -> None:
+    write_hotpotqa_api_fixture(squad_dataset_root / "tiny-hotpot-agent.json")
+
+    response = evals_client.post(
+        "/evals/hotpotqa-agent",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "tiny-hotpot-agent.json",
+            "max_cases": 1,
+            "write_report": True,
+            "report_stem": "nightly/hotpotqa-agent",
+        },
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job"]["kind"] == "eval.run"
+    assert body["job"]["status"] == "succeeded"
+    assert body["report"]["suite_name"] == "hotpotqa-agent"
+    assert body["report"]["passed"] is True
+    assert body["report"]["case_count"] == 1
+    assert body["report"]["metrics"]["multi_hop_support"] == 1.0
+    assert body["report"]["metadata"] == {
+        "adapter": "hotpotqa-agent",
+        "dataset_path": str(squad_dataset_root / "tiny-hotpot-agent.json"),
+        "max_cases": 1,
+        "source": "api",
+    }
+    assert body["report_paths"] == {
+        "json": str(squad_report_root / "nightly-hotpotqa-agent.json"),
+        "markdown": str(squad_report_root / "nightly-hotpotqa-agent.md"),
+    }
+
+    rerun = evals_client.post(
+        f"/evals/runs/{body['job']['id']}/rerun",
+        headers=evals_admin_headers,
+    )
+
+    assert rerun.status_code == 202
+    rerun_body = rerun.json()
+    assert rerun_body["job"]["id"] != body["job"]["id"]
+    assert rerun_body["job"]["payload"]["suite_name"] == "hotpotqa-agent"
+    assert rerun_body["job"]["payload"]["rerun_from_job_id"] == body["job"]["id"]
+    assert rerun_body["report"]["suite_name"] == "hotpotqa-agent"
 
 
 def test_natural_questions_eval_runs_and_exports_report(
@@ -1471,6 +1528,25 @@ def test_eval_rerun_plan_recovers_legacy_dataset_payload() -> None:
     assert plan.request.max_cases == 7
     assert plan.request.write_report is True
     assert plan.request.report_stem is None
+
+
+def test_eval_rerun_plan_recovers_hotpotqa_agent_payload() -> None:
+    plan = rerun_plan_from_eval_job(
+        eval_job(
+            {
+                "suite_name": "hotpotqa-agent",
+                "dataset_path": "legacy-hotpot-agent.json",
+                "max_cases": "5",
+                "write_report": False,
+            }
+        )
+    )
+
+    assert plan.suite_name == "hotpotqa-agent"
+    assert isinstance(plan.request, HotpotQAEvalRequest)
+    assert plan.request.dataset_path == "legacy-hotpot-agent.json"
+    assert plan.request.max_cases == 5
+    assert plan.request.write_report is False
 
 
 def test_eval_rerun_plan_recovers_legacy_ocr_payload_defaults() -> None:

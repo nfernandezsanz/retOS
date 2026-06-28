@@ -216,6 +216,24 @@ async function mockProviderApi(page: Page) {
       },
     ],
   };
+  const hotpotqaAgentReport = {
+    ...agentMultihopReport,
+    suite_name: "hotpotqa-agent",
+    case_count: 1,
+    metadata: {
+      adapter: "hotpotqa-agent",
+      dataset_path: "/var/lib/retos/evals/datasets/ui-hotpotqa.json",
+      max_cases: 1,
+      source: "api",
+    },
+    cases: [
+      {
+        ...agentMultihopReport.cases[0],
+        case_id: "hotpotqa-agent-vela-air-force",
+        question: "Compare HotpotQA supporting facts for Vela and United States Air Force.",
+      },
+    ],
+  };
   const naturalQuestionsReport = {
     ...evalReport,
     suite_name: "natural-questions",
@@ -1150,6 +1168,36 @@ async function mockProviderApi(page: Page) {
       json: { job, report: hotpotqaReport, report_paths: reportPaths },
     });
   });
+  await page.route("http://localhost:8000/evals/hotpotqa-agent", async (route) => {
+    const payload = route.request().postDataJSON() as Record<string, unknown>;
+    expect(payload.domain_id).toBe("domain-123");
+    const domainId = typeof payload.domain_id === "string" ? payload.domain_id : null;
+    const reportPaths = {
+      json: "/var/lib/retos/evals/reports/ui-hotpotqa-agent.json",
+      markdown: "/var/lib/retos/evals/reports/ui-hotpotqa-agent.md",
+    };
+    const job = jobFixture(
+      "job-eval-hotpotqa-agent-1",
+      "eval.run",
+      "succeeded",
+      {
+        dataset_path: "/var/lib/retos/evals/datasets/ui-hotpotqa.json",
+        max_cases: 1,
+        domain_id: payload.domain_id ?? null,
+        report_paths: reportPaths,
+        result: hotpotqaAgentReport,
+      },
+      domainId,
+    );
+    jobs.unshift(job);
+    evalRuns.unshift({ job, report: hotpotqaAgentReport });
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: { job, report: hotpotqaAgentReport, report_paths: reportPaths },
+    });
+  });
   await page.route("http://localhost:8000/evals/natural-questions", async (route) => {
     const payload = route.request().postDataJSON() as Record<string, unknown>;
     const domainId = typeof payload.domain_id === "string" ? payload.domain_id : null;
@@ -1492,6 +1540,14 @@ test("loads the operational console", async ({ page }) => {
   await expect(hotpotqaEvalRunRow.getByText("1 cases")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.md")).toBeVisible();
+
+  await page.getByLabel("HotpotQA report stem").fill("ui-hotpotqa-agent");
+  await page.getByRole("button", { name: "Run HotpotQA agent" }).click();
+  await expect(page.getByLabel("Eval cases").getByText("hotpotqa-agent-vela-air-force")).toBeVisible();
+  await expect(page.getByLabel("Eval metadata").getByText("hotpotqa-agent")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("hotpotqa-agent")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa-agent.json")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa-agent.md")).toBeVisible();
 
   await page.getByLabel("Natural Questions dataset path").fill("ui-nq.jsonl");
   await page.getByLabel("Natural Questions max cases").fill("1");

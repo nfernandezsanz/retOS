@@ -95,13 +95,14 @@ Current metrics:
 - Citation budget compliance.
 
 The smoke suite is included in `make check` and GitHub Actions. API smoke also
-creates a tiny SQuAD 2.0 fixture, posts it to `/evals/squad`, verifies the durable
-`eval.run` response, checks that JSON/Markdown reports were written, and compares the
-smoke run against the SQuAD run over HTTP. Docker smoke additionally runs the OCR
+creates tiny SQuAD 2.0 and HotpotQA fixtures, posts them to `/evals/squad`,
+`/evals/hotpotqa`, and `/evals/hotpotqa-agent`, verifies the durable `eval.run`
+responses, checks that JSON/Markdown reports were written, and compares the smoke run
+against the SQuAD run over HTTP. Docker smoke additionally runs the OCR
 benchmark endpoint against a generated manifest fixture and checks report export in the
-shared eval report volume. Browser smoke exercises the React SQuAD, HotpotQA, Natural
-Questions, and OCR benchmark controls with mocked API responses and verifies visible
-suite history, report paths, and cross-run comparison.
+shared eval report volume. Browser smoke exercises the React SQuAD, HotpotQA,
+HotpotQA-agent, Natural Questions, and OCR benchmark controls with mocked API responses
+and verifies visible suite history, report paths, and cross-run comparison.
 
 `make eval-fetch-dataset PROFILE=...` is the only supported networked dataset helper.
 It downloads bounded public samples into `evals/datasets/` for local research, refuses
@@ -138,7 +139,7 @@ does not download public data or call paid providers.
 | Dataset | Fit |
 | --- | --- |
 | SQuAD 2.0 | Implemented as an opt-in local adapter and admin API run for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
-| HotpotQA | Implemented as an opt-in local adapter and admin API run for multi-hop retrieval and supporting-fact evaluation, with optional JSON/Markdown report export. A CLI-only `hotpotqa-agent` profile converts eligible supporting-fact cases into deterministic agent audit cases for query-plan, evidence-route, bridge-term, grounding, citation, and budget calibration. |
+| HotpotQA | Implemented as an opt-in local adapter and admin API run for multi-hop retrieval and supporting-fact evaluation, with optional JSON/Markdown report export. `hotpotqa-agent` converts eligible supporting-fact cases into deterministic agent audit cases for query-plan, evidence-route, bridge-term, grounding, citation, and budget calibration through CLI, admin API, rerun, and React controls. |
 | Natural Questions | Implemented as an opt-in local adapter and admin API run for real user questions with Wikipedia evidence; NQ-Open samples can also be converted into adapter-compatible synthetic evidence for early query-shape calibration, and official simplified NQ `.jsonl(.gz)` files can be sampled locally for full document-shape retrieval pressure. |
 | FUNSD | Implemented as an opt-in OCR benchmark adapter for form image/text pressure; derives deterministic key-value recall and layout boxes from question/answer links and annotation boxes when present. |
 | ICDAR 2019 SROIE | Implemented as an opt-in OCR benchmark adapter for receipt OCR pressure; reads optional entity files for deterministic key-value recall and box files for reading-order/Layout IoU scoring. |

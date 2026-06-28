@@ -27,6 +27,7 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/domains/{domain_id}/ingestions/upload" in route_paths
     assert "/evals/smoke" in route_paths
     assert "/evals/squad" in route_paths
+    assert "/evals/hotpotqa-agent" in route_paths
     assert "/evals/runs" in route_paths
     assert "/evals/runs/compare" in route_paths
     assert "/audit/journal-events" in route_paths

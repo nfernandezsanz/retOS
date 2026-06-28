@@ -892,6 +892,54 @@ def main() -> None:
                     "HotpotQA Markdown report was not written",
                 )
 
+            hotpotqa_agent_eval = client.post(
+                "/evals/hotpotqa-agent",
+                headers=auth_headers,
+                json={
+                    "dataset_path": "smoke-hotpotqa.json",
+                    "max_cases": 1,
+                    "write_report": True,
+                    "report_stem": "api-smoke-hotpotqa-agent",
+                },
+            )
+            require(
+                hotpotqa_agent_eval.status_code == 202,
+                (
+                    "HotpotQA agent eval failed: "
+                    f"{hotpotqa_agent_eval.status_code} {hotpotqa_agent_eval.text}"
+                ),
+            )
+            hotpotqa_agent_body = hotpotqa_agent_eval.json()
+            require(
+                hotpotqa_agent_body["job"]["kind"] == "eval.run",
+                "invalid HotpotQA agent eval job kind",
+            )
+            require(
+                hotpotqa_agent_body["job"]["status"] == "succeeded",
+                "HotpotQA agent eval did not succeed",
+            )
+            require(
+                hotpotqa_agent_body["report"]["suite_name"] == "hotpotqa-agent",
+                "invalid HotpotQA agent suite",
+            )
+            require(
+                hotpotqa_agent_body["report"]["case_count"] == 1,
+                "unexpected HotpotQA agent case count",
+            )
+            require(
+                hotpotqa_agent_body["report_paths"],
+                "HotpotQA agent eval did not return report paths",
+            )
+            if check_report_files:
+                require(
+                    Path(hotpotqa_agent_body["report_paths"]["json"]).exists(),
+                    "HotpotQA agent JSON report was not written",
+                )
+                require(
+                    Path(hotpotqa_agent_body["report_paths"]["markdown"]).exists(),
+                    "HotpotQA agent Markdown report was not written",
+                )
+
             nq_eval = client.post(
                 "/evals/natural-questions",
                 headers=auth_headers,

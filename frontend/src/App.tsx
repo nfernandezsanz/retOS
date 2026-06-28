@@ -948,6 +948,25 @@ async function runHotpotQAEval(
   });
 }
 
+async function runHotpotQAAgentEval(
+  token: string,
+  payload: {
+    dataset_path: string;
+    max_cases: number;
+    write_report: boolean;
+    report_stem: string | null;
+    domain_id: string | null;
+  },
+): Promise<EvalRunResponse> {
+  return requestJson<EvalRunResponse>("/evals/hotpotqa-agent", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 async function runNaturalQuestionsEval(
   token: string,
   payload: {
@@ -1268,6 +1287,7 @@ function App() {
   const [isRunningAgentMultihopEval, setIsRunningAgentMultihopEval] = useState(false);
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
   const [isRunningHotpotQAEval, setIsRunningHotpotQAEval] = useState(false);
+  const [isRunningHotpotQAAgentEval, setIsRunningHotpotQAAgentEval] = useState(false);
   const [isRunningNaturalQuestionsEval, setIsRunningNaturalQuestionsEval] = useState(false);
   const [isRunningOcrBenchmarkEval, setIsRunningOcrBenchmarkEval] = useState(false);
   const [isComparingEvals, setIsComparingEvals] = useState(false);
@@ -1379,6 +1399,7 @@ function App() {
     isRunningAgentMultihopEval ||
     isRunningSquadEval ||
     isRunningHotpotQAEval ||
+    isRunningHotpotQAAgentEval ||
     isRunningNaturalQuestionsEval ||
     isRunningOcrBenchmarkEval ||
     isRunningRegressionGate ||
@@ -2177,6 +2198,36 @@ function App() {
       setEvalError(error instanceof Error ? error.message : "HotpotQA eval failed");
     } finally {
       setIsRunningHotpotQAEval(false);
+    }
+  }
+
+  async function handleRunHotpotQAAgentEval() {
+    setIsRunningHotpotQAAgentEval(true);
+    setEvalError(null);
+    try {
+      const datasetPath = hotpotqaDatasetPath.trim();
+      const parsedMaxCases = Number.parseInt(hotpotqaMaxCases, 10);
+      if (!datasetPath) {
+        throw new Error("HotpotQA dataset path is required");
+      }
+      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+        throw new Error("HotpotQA max cases must be between 1 and 1000");
+      }
+      const accessToken = await getAdminToken();
+      const response = await runHotpotQAAgentEval(accessToken, {
+        dataset_path: datasetPath,
+        max_cases: parsedMaxCases,
+        write_report: hotpotqaWriteReport,
+        report_stem: hotpotqaReportStem.trim() || null,
+        domain_id: evalDomainId || null,
+      });
+      applyEvalResponse(response);
+      await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "HotpotQA agent eval failed");
+    } finally {
+      setIsRunningHotpotQAAgentEval(false);
     }
   }
 
@@ -3349,6 +3400,17 @@ function App() {
               >
                 <FileSearch aria-hidden="true" />
                 {isRunningHotpotQAEval ? "Running HotpotQA eval" : "Run HotpotQA eval"}
+              </button>
+              <button
+                className="secondary-action"
+                disabled={isAnyEvalRunning}
+                type="button"
+                onClick={() => void handleRunHotpotQAAgentEval()}
+              >
+                <GitCompare aria-hidden="true" />
+                {isRunningHotpotQAAgentEval
+                  ? "Running HotpotQA agent"
+                  : "Run HotpotQA agent"}
               </button>
             </form>
             <form

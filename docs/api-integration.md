@@ -803,6 +803,25 @@ curl --request POST http://localhost:8000/evals/hotpotqa \
 The response shape matches `/evals/squad`; `report.suite_name` is `hotpotqa`, and
 report exports are written under `RETOS_EVAL_REPORT_ROOT`.
 
+Run the HotpotQA supporting-fact agent audit harness from the same mounted file:
+
+```bash
+curl --request POST http://localhost:8000/evals/hotpotqa-agent \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "dataset_path":"hotpot_dev_distractor_v1.json",
+    "domain_id":"<optional_domain_id>",
+    "max_cases":50,
+    "write_report":true,
+    "report_stem":"hotpotqa-agent-dev-50"
+  }'
+```
+
+The response shape matches `/evals/hotpotqa`; `report.suite_name` is
+`hotpotqa-agent`, and reruns reconstruct the durable dataset payload without calling
+paid providers.
+
 Run an opt-in OCR benchmark eval from a mounted local manifest, FUNSD directory, or
 SROIE directory:
 
@@ -1008,6 +1027,7 @@ Current console calls:
 - `POST /evals/agent-multihop`
 - `POST /evals/squad`
 - `POST /evals/hotpotqa`
+- `POST /evals/hotpotqa-agent`
 - `POST /evals/natural-questions`
 - `POST /evals/ocr-benchmark`
 - `GET /jobs?limit=12`
@@ -1028,8 +1048,8 @@ audited local accounts:
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source
-scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/Natural
-Questions/OCR benchmark evals, choose an eval domain scope for dataset-backed runs and
+scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/HotpotQA
+agent/Natural Questions/OCR benchmark evals, choose an eval domain scope for dataset-backed runs and
 filtered history/trends, read recent jobs, inspect a selected job's full
 payload/error/progress detail, read persisted audit/progress events, group progress by
 job, filter the job ledger by status/kind, and send queries against the selected domain.
@@ -1045,7 +1065,7 @@ Dataset-backed runs record the adapter, resolved dataset path, `max_cases`, and 
 source. The React console renders these values next to eval metrics, and the backend
 copies them into the persisted job result plus eval journal/progress payloads for audit
 reviews. In the `Local evals` panel, the `Eval scope` selector sends `domain_id` for
-dataset-backed SQuAD, HotpotQA, Natural Questions, and OCR benchmark requests. Selecting
+dataset-backed SQuAD, HotpotQA, HotpotQA agent, Natural Questions, and OCR benchmark requests. Selecting
 a domain also adds `domain_id` to run-history and trend requests, so comparison and
 regression-gate actions operate on same-scope rows only. Leaving the selector on
 `All evals` saves new dataset runs as global evals and reads unfiltered history.

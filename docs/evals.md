@@ -273,6 +273,22 @@ curl --request POST http://localhost:8000/evals/hotpotqa \
   }'
 ```
 
+HotpotQA supporting-fact agent audit evals use the same request body against
+`/evals/hotpotqa-agent`:
+
+```bash
+curl --request POST http://localhost:8000/evals/hotpotqa-agent \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "dataset_path":"hotpot_dev_distractor_v1.json",
+    "domain_id":"<optional_domain_id>",
+    "max_cases":50,
+    "write_report":true,
+    "report_stem":"hotpotqa-agent-dev-50"
+  }'
+```
+
 Dataset-backed Natural Questions evals use the same request body against
 `/evals/natural-questions`:
 
@@ -413,11 +429,12 @@ Adapter guarantees:
 
 ## HotpotQA Agent Adapter
 
-`make eval-hotpotqa-agent` reads the same local HotpotQA JSON shape, but converts
-eligible cases into `AgentEvalCase` records for the deterministic agent audit harness.
-It keeps only cases with at least two supporting documents and shared bridge terms
-between those supporting documents, then wraps the original question in a comparison
-prompt so RetOS must exercise the multi-hop query planner.
+`make eval-hotpotqa-agent` and `POST /evals/hotpotqa-agent` read the same local
+HotpotQA JSON shape, but convert eligible cases into `AgentEvalCase` records for the
+deterministic agent audit harness. The adapter keeps only cases with at least two
+supporting documents and shared bridge terms between those supporting documents, then
+wraps the original question in a comparison prompt so RetOS must exercise the
+multi-hop query planner.
 
 The resulting report uses the `hotpotqa-agent` suite name and scores:
 
@@ -428,8 +445,10 @@ The resulting report uses the `hotpotqa-agent` suite name and scores:
 - grounded answer terms
 - search/citation/evidence-token budget compliance
 
-This profile is CLI-only for now. It is intended for local calibration and release
-evidence before wiring a durable API endpoint. It remains cost-safe: no network access,
+API runs persist durable `eval.run` jobs, report paths, dataset provenance, domain
+scope, journal/progress events, and `rerun_from_job_id` traceability. The React eval
+panel exposes this profile beside the standard HotpotQA retrieval eval. It remains
+cost-safe: no network access,
 no paid provider calls, bounded `MAX_CASES`, and reproducible JSON/Markdown reports.
 
 ## Natural Questions Adapter
@@ -523,5 +542,5 @@ CER/WER and optional key-value recall.
 
 ## Next Implementation Step
 
-Expand real-dataset eval profiles and connect HotpotQA supporting facts to persisted
-agent query audits.
+Expand real-dataset eval trend calibration and connect persisted eval evidence to
+release promotion gates.

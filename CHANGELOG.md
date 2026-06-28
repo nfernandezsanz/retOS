@@ -56,7 +56,7 @@ tag in GitHub.
   and filters history, trends, comparison, and regression-gate workflows.
 - HotpotQA supporting facts can now be converted into a local `hotpotqa-agent` eval
   profile for deterministic agent query-plan, evidence-route, bridge-term, grounding,
-  citation, and budget calibration.
+  citation, and budget calibration through CLI, admin API, rerun, and React controls.
 
 ### Changed
 

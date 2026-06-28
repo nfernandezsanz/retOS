@@ -66,7 +66,9 @@ The UI is a working console, not a landing page. It must make background process
 - The admin panel reads `/admin/users`, creates `admin` or `viewer` accounts, renders
   account roles, updates active state, submits password resets, and manages per-domain
   viewer grants without rendering hashes or secrets.
-- The eval panel posts to `/evals/smoke`, `/evals/squad`, and `/evals/hotpotqa`, reads `/evals/runs?limit=6`,
+- The eval panel posts to `/evals/smoke`, `/evals/agent-multihop`, `/evals/squad`,
+  `/evals/hotpotqa`, `/evals/hotpotqa-agent`, `/evals/natural-questions`, and
+  `/evals/ocr-benchmark`, reads `/evals/runs?limit=6`,
   compares reported runs through `/evals/runs/compare`, and renders the returned
   `eval.run` jobs, metric scorecards, per-case pass/failure rows, report paths,
   newest-first run history, and per-metric deltas.

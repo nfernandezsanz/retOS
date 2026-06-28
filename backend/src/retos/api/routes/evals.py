@@ -12,12 +12,13 @@ from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep, 
 from retos.api.routes.events import progress_store
 from retos.api.routes.jobs import JobRead
 from retos.domain.jobs import Job, JobStatus
-from retos.evals.agent import AgentEvalSuiteReport, run_agent_multihop_eval_suite
+from retos.evals.agent import AgentEvalCase, AgentEvalSuiteReport, run_agent_multihop_eval_suite
 from retos.evals.datasets import (
     DatasetAdapterError,
     HotpotQAAdapterOptions,
     NaturalQuestionsAdapterOptions,
     SquadAdapterOptions,
+    load_hotpotqa_agent_cases,
     load_hotpotqa_cases,
     load_natural_questions_cases,
     load_squad_v2_cases,
@@ -343,6 +344,14 @@ async def rerun_eval(
             uow=uow,
             rerun_from_job_id=job_id,
         )
+    if plan.suite_name == "hotpotqa-agent" and isinstance(plan.request, HotpotQAEvalRequest):
+        return await run_hotpotqa_agent_eval_plan(
+            request=plan.request,
+            actor=actor,
+            settings=settings,
+            uow=uow,
+            rerun_from_job_id=job_id,
+        )
     if plan.suite_name == "natural-questions" and isinstance(
         plan.request,
         NaturalQuestionsEvalRequest,
@@ -568,6 +577,49 @@ async def run_hotpotqa_eval_plan(
         index_namespace="hotpotqa",
         rerun_from_job_id=rerun_from_job_id,
         load_cases=lambda dataset_path: load_hotpotqa_cases(
+            dataset_path,
+            HotpotQAAdapterOptions(max_cases=request.max_cases),
+        ),
+    )
+
+
+@router.post(
+    "/hotpotqa-agent",
+    response_model=EvalRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def run_hotpotqa_agent_evals(
+    request: HotpotQAEvalRequest,
+    actor: AdminSubjectDep,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+) -> EvalRunResponse:
+    return await run_hotpotqa_agent_eval_plan(
+        request=request,
+        actor=actor,
+        settings=settings,
+        uow=uow,
+    )
+
+
+async def run_hotpotqa_agent_eval_plan(
+    *,
+    request: HotpotQAEvalRequest,
+    actor: str,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+    rerun_from_job_id: str | None = None,
+) -> EvalRunResponse:
+    return await run_agent_dataset_evals(
+        request=request,
+        actor=actor,
+        settings=settings,
+        uow=uow,
+        suite_name="hotpotqa-agent",
+        suite_label="HotpotQA agent",
+        index_namespace="hotpotqa-agent",
+        rerun_from_job_id=rerun_from_job_id,
+        load_cases=lambda dataset_path: load_hotpotqa_agent_cases(
             dataset_path,
             HotpotQAAdapterOptions(max_cases=request.max_cases),
         ),
@@ -900,6 +952,135 @@ async def run_dataset_evals(
     )
 
 
+async def run_agent_dataset_evals(
+    *,
+    request: HotpotQAEvalRequest,
+    actor: str,
+    settings: SettingsDep,
+    uow: UnitOfWorkDep,
+    suite_name: str,
+    suite_label: str,
+    index_namespace: str,
+    rerun_from_job_id: str | None = None,
+    load_cases: Callable[[Path], tuple[AgentEvalCase, ...]],
+) -> EvalRunResponse:
+    domain_id = await validate_eval_domain(actor=actor, domain_id=request.domain_id, uow=uow)
+    dataset_path = resolve_dataset_path(settings.eval_dataset_root, request.dataset_path)
+    if not dataset_path.exists() or not dataset_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Eval dataset file not found",
+        )
+
+    now = datetime.now(UTC)
+    job = await queue_eval_job(
+        actor=actor,
+        uow=uow,
+        suite_name=suite_name,
+        domain_id=domain_id,
+        requested_at=now,
+        queued_message=f"Queued {suite_label} eval suite",
+        started_message=f"Started {suite_label} eval suite",
+        payload={
+            "dataset_path": str(dataset_path),
+            "domain_id": domain_id,
+            "max_cases": request.max_cases,
+            "write_report": request.write_report,
+            "report_stem": request.report_stem,
+            **rerun_payload(rerun_from_job_id),
+        },
+    )
+    try:
+        cases = load_cases(dataset_path)
+        if not cases:
+            raise DatasetAdapterError(f"{suite_label} dataset produced no eval cases")
+        report = run_agent_multihop_eval_suite(
+            index_root=Path(settings.index_root) / "evals" / index_namespace,
+            suite_name=suite_name,
+            cases=cases,
+            metadata={
+                "adapter": suite_name,
+                "dataset_path": str(dataset_path),
+                "max_cases": request.max_cases,
+                "source": "api",
+                **({"domain_id": domain_id} if domain_id is not None else {}),
+            },
+        )
+    except DatasetAdapterError as exc:
+        await mark_eval_failed(
+            job_id=job.id,
+            actor=actor,
+            uow=uow,
+            domain_id=domain_id,
+            error=str(exc),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        await mark_eval_failed(
+            job_id=job.id,
+            actor=actor,
+            uow=uow,
+            domain_id=domain_id,
+            error=str(exc),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{suite_label} eval suite failed to run",
+        ) from exc
+
+    report_paths: dict[str, str] | None = None
+    if request.write_report:
+        try:
+            json_path, markdown_path = write_report_files(
+                report=report,
+                report_dir=Path(settings.eval_report_root),
+                report_stem=request.report_stem,
+            )
+        except Exception as exc:
+            await mark_eval_failed(
+                job_id=job.id,
+                actor=actor,
+                uow=uow,
+                domain_id=domain_id,
+                error=str(exc),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"{suite_label} eval report failed to write",
+            ) from exc
+        report_paths = {
+            "json": str(json_path),
+            "markdown": str(markdown_path),
+        }
+
+    completed = await complete_eval_job(
+        actor=actor,
+        uow=uow,
+        job_id=job.id,
+        domain_id=domain_id,
+        requested_at=now,
+        report=report,
+        failure_error=f"{suite_label} eval suite failed",
+        payload={
+            "dataset_path": str(dataset_path),
+            "domain_id": domain_id,
+            "max_cases": request.max_cases,
+            "write_report": request.write_report,
+            "report_stem": request.report_stem,
+            "report_paths": report_paths,
+            **rerun_payload(rerun_from_job_id),
+        },
+    )
+    return EvalRunResponse(
+        job=JobRead.from_job(completed),
+        report=EvalReportRead.from_report(report),
+        report_paths=report_paths,
+    )
+
+
 def with_eval_metadata(
     report: EvalSuiteReport,
     metadata: dict[str, Any],
@@ -969,7 +1150,7 @@ def rerun_plan_from_eval_job(job: Job | None) -> EvalRerunPlan:
     if suite_name in {"retos-smoke", "agent-multihop"}:
         return EvalRerunPlan(suite_name=suite_name)
 
-    if suite_name in {"squad-v2", "hotpotqa", "natural-questions"}:
+    if suite_name in {"squad-v2", "hotpotqa", "hotpotqa-agent", "natural-questions"}:
         request_payload: dict[str, Any] = {
             "dataset_path": required_string_from_payload(payload, "dataset_path"),
             "domain_id": optional_string_from_payload(payload, "domain_id"),
@@ -984,7 +1165,7 @@ def rerun_plan_from_eval_job(job: Job | None) -> EvalRerunPlan:
         request_type: type[SquadEvalRequest | HotpotQAEvalRequest | NaturalQuestionsEvalRequest]
         if suite_name == "squad-v2":
             request_type = SquadEvalRequest
-        elif suite_name == "hotpotqa":
+        elif suite_name in {"hotpotqa", "hotpotqa-agent"}:
             request_type = HotpotQAEvalRequest
         else:
             request_type = NaturalQuestionsEvalRequest
