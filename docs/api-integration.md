@@ -29,7 +29,7 @@ Roles are intentionally small:
 | Role | Allowed |
 | --- | --- |
 | `admin` | Full local administration: account management, domain/source/document mutations, ingestion, indexing, agent queries, eval execution, job transitions, job retry, and all read-only operations. |
-| `viewer` | Read-only operational visibility. Domain-scoped resources, audit journal/progress/export, persisted SSE replay, and dataset-backed eval execution/history/trends/reruns require explicit domain grants plus `domain_id`. Provider catalog remains a global observability surface because it exposes readiness, not secrets. Global evals, built-in evals, comparison, and regression gates require an admin token. |
+| `viewer` | Read-only operational visibility. Domain-scoped resources, audit journal/progress/export, persisted SSE replay, and dataset-backed eval execution/history/trends/reruns/comparison/regression gates require explicit domain grants plus `domain_id`. Provider catalog remains a global observability surface because it exposes readiness, not secrets. Global evals and built-in evals require an admin token. |
 
 Endpoints that mutate state, spend compute, enqueue work, or change account security
 require an `admin` token. Viewer-safe endpoints use the same `Authorization` header but
@@ -953,10 +953,11 @@ curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&cand
   --header "Authorization: Bearer <token>"
 ```
 
-The endpoint requires an admin token, reads reports already stored in `job.payload.result`,
-does not call providers, and returns per-metric deltas. Baseline and candidate runs must
-share the same `domain_id` scope; comparing a global run with a domain-owned run returns
-`409`.
+Admins may compare any same-scope eval runs. Viewers must provide a granted
+`domain_id`, and both requested jobs must belong to that same domain. The endpoint reads
+reports already stored in `job.payload.result`, does not call providers, and returns
+per-metric deltas. Baseline and candidate runs must share the same `domain_id` scope;
+comparing a global run with a domain-owned run returns `409`.
 
 ```json
 {
@@ -991,6 +992,10 @@ Gate a candidate run against a baseline before promoting a calibration:
 curl "http://localhost:8000/evals/runs/regression-gate?baseline_job_id=<old_job_id>&candidate_job_id=<new_job_id>&metric_drop_tolerance=0.02&average_drop_tolerance=0.01" \
   --header "Authorization: Bearer <token>"
 ```
+
+The regression gate uses the same access rules as comparison: admins may evaluate
+same-scope runs globally, while viewers must pass a granted `domain_id` and can only
+gate runs owned by that domain.
 
 The gate reads persisted reports only. For normal metrics, negative deltas are
 regressions. For `*_error_rate` metrics, positive deltas are regressions. The response
@@ -1083,9 +1088,9 @@ source. The React console renders these values next to eval metrics, and the bac
 copies them into the persisted job result plus eval journal/progress payloads for audit
 reviews. In the `Local evals` panel, the `Eval scope` selector sends `domain_id` for
 dataset-backed SQuAD, HotpotQA, HotpotQA agent, Natural Questions, and OCR benchmark
-requests. Selecting a domain also adds `domain_id` to run-history and trend requests,
-so viewer sessions stay within their granted domain scope and admin comparison or
-regression-gate actions operate on same-scope rows only. Leaving the selector on
+requests. Selecting a domain also adds `domain_id` to run-history, trend, comparison,
+and regression-gate requests, so viewer sessions stay within their granted domain scope
+and cross-run review actions operate on same-scope rows only. Leaving the selector on
 `All evals` saves new dataset runs as global evals and reads unfiltered history, which
 requires an admin token.
 

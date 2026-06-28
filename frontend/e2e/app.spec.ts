@@ -1428,12 +1428,14 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route(/http:\/\/localhost:8000\/evals\/runs\/compare.*/, async (route) => {
+    expect(new URL(route.request().url()).searchParams.get("domain_id")).toBe("domain-123");
     await route.fulfill({
       contentType: "application/json",
       json: evalComparison,
     });
   });
   await page.route(/http:\/\/localhost:8000\/evals\/runs\/regression-gate.*/, async (route) => {
+    expect(new URL(route.request().url()).searchParams.get("domain_id")).toBe("domain-123");
     await route.fulfill({
       contentType: "application/json",
       json: evalRegressionGate,

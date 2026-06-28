@@ -46,9 +46,10 @@ This repository is intentionally being built as a staff-engineer-quality referen
   for local dataset-backed evals without network or paid providers, with optional
   JSON/Markdown report export and viewer-safe domain-scoped execution.
 - Opt-in OCR quality smoke suite for scanned PDFs, character error rate, and word error rate.
-- Cross-run eval comparison, trend, and rerun APIs with React controls for latest
-  reported runs, domain-scoped viewer history/trends/reruns, per-metric deltas, suite
-  trend direction, and auditable `rerun_from_job_id` traceability.
+- Cross-run eval comparison, trend, gate, and rerun APIs with React controls for latest
+  reported runs, domain-scoped viewer history/trends/comparison/regression gates/reruns,
+  per-metric deltas, suite trend direction, and auditable `rerun_from_job_id`
+  traceability.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for
   document inventory, edit/archive/restore/history actions, jobs, OCR, indexing, agent
   runs, local eval execution, and admin account management.

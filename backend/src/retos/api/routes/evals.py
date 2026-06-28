@@ -248,11 +248,18 @@ async def list_eval_run_trends(
 
 @router.get("/runs/compare", response_model=EvalRunComparisonRead)
 async def compare_eval_runs(
-    _: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     baseline_job_id: Annotated[str, Query(min_length=1)],
     candidate_job_id: Annotated[str, Query(min_length=1)],
+    domain_id: Annotated[str | None, Query(min_length=1, max_length=36)] = None,
 ) -> EvalRunComparisonRead:
+    domain_filter = await validate_eval_domain(
+        actor=actor,
+        domain_id=domain_id,
+        uow=uow,
+        require_domain_for_viewer=True,
+    )
     async with uow:
         baseline_job = await uow.jobs.get(baseline_job_id)
         candidate_job = await uow.jobs.get(candidate_job_id)
@@ -262,6 +269,11 @@ async def compare_eval_runs(
     assert baseline_job is not None
     assert candidate_job is not None
     ensure_eval_jobs_share_scope(baseline_job, candidate_job)
+    validate_eval_run_review_scope(
+        domain_filter=domain_filter,
+        baseline_job=baseline_job,
+        candidate_job=candidate_job,
+    )
     baseline_metrics = baseline_report.metrics
     candidate_metrics = candidate_report.metrics
     common_names = [name for name in baseline_metrics if name in candidate_metrics]
@@ -290,13 +302,20 @@ async def compare_eval_runs(
 
 @router.get("/runs/regression-gate", response_model=EvalRegressionGateRead)
 async def eval_regression_gate(
-    _: AdminSubjectDep,
+    actor: ViewerSubjectDep,
     uow: UnitOfWorkDep,
     baseline_job_id: Annotated[str, Query(min_length=1)],
     candidate_job_id: Annotated[str, Query(min_length=1)],
+    domain_id: Annotated[str | None, Query(min_length=1, max_length=36)] = None,
     metric_drop_tolerance: Annotated[float, Query(ge=0, le=1)] = 0.0,
     average_drop_tolerance: Annotated[float, Query(ge=0, le=1)] = 0.0,
 ) -> EvalRegressionGateRead:
+    domain_filter = await validate_eval_domain(
+        actor=actor,
+        domain_id=domain_id,
+        uow=uow,
+        require_domain_for_viewer=True,
+    )
     async with uow:
         baseline_job = await uow.jobs.get(baseline_job_id)
         candidate_job = await uow.jobs.get(candidate_job_id)
@@ -306,6 +325,11 @@ async def eval_regression_gate(
     assert baseline_job is not None
     assert candidate_job is not None
     ensure_eval_jobs_share_scope(baseline_job, candidate_job)
+    validate_eval_run_review_scope(
+        domain_filter=domain_filter,
+        baseline_job=baseline_job,
+        candidate_job=candidate_job,
+    )
     return regression_gate_for_reports(
         baseline_job=baseline_job,
         baseline_report=baseline_report,
@@ -1185,6 +1209,19 @@ def ensure_eval_jobs_share_scope(baseline_job: Job, candidate_job: Job) -> None:
         status_code=status.HTTP_409_CONFLICT,
         detail="Eval runs must belong to the same domain scope",
     )
+
+
+def validate_eval_run_review_scope(
+    *,
+    domain_filter: str | None,
+    baseline_job: Job,
+    candidate_job: Job,
+) -> None:
+    if domain_filter is None:
+        return
+    if baseline_job.domain_id == domain_filter and candidate_job.domain_id == domain_filter:
+        return
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eval run not found")
 
 
 def rerun_plan_from_eval_job(job: Job | None) -> EvalRerunPlan:

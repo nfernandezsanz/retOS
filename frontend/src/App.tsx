@@ -1143,11 +1143,15 @@ async function compareEvalRuns(
   token: string,
   baselineJobId: string,
   candidateJobId: string,
+  domainId?: string,
 ): Promise<EvalRunComparison> {
   const query = new URLSearchParams({
     baseline_job_id: baselineJobId,
     candidate_job_id: candidateJobId,
   });
+  if (domainId) {
+    query.set("domain_id", domainId);
+  }
   return requestJson<EvalRunComparison>(`/evals/runs/compare?${query.toString()}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -1159,6 +1163,7 @@ async function runEvalRegressionGate(
   token: string,
   baselineJobId: string,
   candidateJobId: string,
+  domainId?: string,
 ): Promise<EvalRegressionGate> {
   const query = new URLSearchParams({
     baseline_job_id: baselineJobId,
@@ -1166,6 +1171,9 @@ async function runEvalRegressionGate(
     metric_drop_tolerance: "0.02",
     average_drop_tolerance: "0.01",
   });
+  if (domainId) {
+    query.set("domain_id", domainId);
+  }
   return requestJson<EvalRegressionGate>(
     `/evals/runs/regression-gate?${query.toString()}`,
     {
@@ -2456,7 +2464,12 @@ function App() {
         throw new Error("At least two reported eval runs are required for comparison");
       }
       const accessToken = await getAdminToken();
-      const comparison = await compareEvalRuns(accessToken, baseline.job.id, candidate.job.id);
+      const comparison = await compareEvalRuns(
+        accessToken,
+        baseline.job.id,
+        candidate.job.id,
+        evalDomainId || undefined,
+      );
       setEvalComparison(comparison);
       setEvalRegressionGate(null);
     } catch (error) {
@@ -2475,7 +2488,12 @@ function App() {
         throw new Error("At least two reported eval runs are required for regression gating");
       }
       const accessToken = await getAdminToken();
-      const gate = await runEvalRegressionGate(accessToken, baseline.job.id, candidate.job.id);
+      const gate = await runEvalRegressionGate(
+        accessToken,
+        baseline.job.id,
+        candidate.job.id,
+        evalDomainId || undefined,
+      );
       setEvalRegressionGate(gate);
       setEvalComparison(null);
     } catch (error) {

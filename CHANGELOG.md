@@ -71,7 +71,9 @@ tag in GitHub.
   history/trends, rerun with the same scope, and guarded against mixed-scope comparisons.
 - Viewers with explicit domain grants can now run dataset-backed evals, read
   domain-filtered eval history/trends, and rerun domain-scoped dataset eval jobs without
-  gaining access to global evals, built-in evals, comparisons, or regression gates.
+  gaining access to global evals or built-in evals.
+- Viewers with explicit domain grants can now compare and regression-gate same-domain
+  persisted eval runs when they pass the granted `domain_id`.
 - Real-dataset calibration gates can now be scoped per target, fetched samples preserve
   ignored provenance sidecars, and manifests can be exported as path-safe Markdown
   release evidence.

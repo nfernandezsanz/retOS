@@ -342,7 +342,7 @@ def test_viewer_eval_history_requires_domain_scope(
     assert trends.json()["detail"] == "Domain-scoped eval requires domain_id"
 
 
-def test_viewer_eval_compare_and_global_rerun_stay_admin_only(
+def test_viewer_eval_compare_and_global_rerun_require_domain_scope(
     evals_client: TestClient,
     evals_admin_headers: dict[str, str],
     evals_viewer_headers: dict[str, str],
@@ -353,7 +353,7 @@ def test_viewer_eval_compare_and_global_rerun_stay_admin_only(
         params={"baseline_job_id": "job-a", "candidate_job_id": "job-b"},
     )
     assert comparison.status_code == 403
-    assert comparison.json()["detail"] == "Admin role required"
+    assert comparison.json()["detail"] == "Domain-scoped eval requires domain_id"
 
     original = evals_client.post("/evals/smoke", headers=evals_admin_headers)
     assert original.status_code == 202
@@ -667,6 +667,98 @@ def test_viewer_can_run_and_read_domain_scoped_dataset_eval(
     )
     assert trends.status_code == 200
     assert trends.json()[0]["suite_name"] == "squad-v2"
+
+
+def test_viewer_can_compare_and_gate_domain_scoped_eval_runs(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "viewer-compare-squad.json")
+    domain_id = create_eval_domain(evals_client, evals_admin_headers, slug="viewer-compare")
+    viewer_headers = create_eval_viewer_with_grant(
+        evals_client,
+        evals_admin_headers,
+        domain_id=domain_id,
+        email="evals-compare-viewer@retos.dev",
+    )
+    baseline = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "viewer-compare-squad.json",
+            "domain_id": domain_id,
+            "max_cases": 1,
+        },
+    )
+    candidate = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "viewer-compare-squad.json",
+            "domain_id": domain_id,
+            "max_cases": 1,
+        },
+    )
+    assert baseline.status_code == 202
+    assert candidate.status_code == 202
+
+    params = {
+        "baseline_job_id": baseline.json()["job"]["id"],
+        "candidate_job_id": candidate.json()["job"]["id"],
+        "domain_id": domain_id,
+    }
+    comparison = evals_client.get(
+        "/evals/runs/compare",
+        headers=viewer_headers,
+        params=params,
+    )
+    gate = evals_client.get(
+        "/evals/runs/regression-gate",
+        headers=viewer_headers,
+        params=params,
+    )
+
+    assert comparison.status_code == 200
+    assert comparison.json()["baseline"]["job_id"] == baseline.json()["job"]["id"]
+    assert comparison.json()["candidate"]["job_id"] == candidate.json()["job"]["id"]
+    assert comparison.json()["status"] == "unchanged"
+    assert gate.status_code == 200
+    assert gate.json()["passed"] is True
+    assert gate.json()["baseline"]["job_id"] == baseline.json()["job"]["id"]
+    assert gate.json()["candidate"]["job_id"] == candidate.json()["job"]["id"]
+
+
+def test_viewer_compare_rejects_runs_outside_granted_domain(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "viewer-outside-squad.json")
+    domain_id = create_eval_domain(evals_client, evals_admin_headers, slug="viewer-outside")
+    viewer_headers = create_eval_viewer_with_grant(
+        evals_client,
+        evals_admin_headers,
+        domain_id=domain_id,
+        email="evals-outside-viewer@retos.dev",
+    )
+    global_baseline = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    global_candidate = evals_client.post("/evals/agent-multihop", headers=evals_admin_headers)
+    assert global_baseline.status_code == 202
+    assert global_candidate.status_code == 202
+
+    response = evals_client.get(
+        "/evals/runs/compare",
+        headers=viewer_headers,
+        params={
+            "baseline_job_id": global_baseline.json()["job"]["id"],
+            "candidate_job_id": global_candidate.json()["job"]["id"],
+            "domain_id": domain_id,
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Eval run not found"
 
 
 def test_dataset_eval_rejects_unknown_domain(

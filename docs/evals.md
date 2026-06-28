@@ -332,10 +332,11 @@ benchmark inputs and generated reports mounted, auditable, and outside the sourc
 `domain_id` is optional for admins and required for viewers running dataset-backed evals.
 When set, RetOS validates the domain grant, stores the scope on the durable eval job and
 audit/progress payloads, supports domain-filtered history/trends, preserves the scope on
-reruns, and prevents comparison or regression-gate checks across mixed global/domain
-scopes. Built-in evals, global evals, comparison, and regression gates remain
-admin-only. The React console exposes the same contract through `Eval scope`, and each
-run-history row shows whether the persisted report is global or domain-owned.
+reruns, permits viewer-safe comparison and regression-gate checks only inside that same
+granted domain, and prevents checks across mixed global/domain scopes. Built-in evals
+and global eval review remain admin-only. The React console exposes the same contract
+through `Eval scope`, and each run-history row shows whether the persisted report is
+global or domain-owned.
 
 ## Public Dataset Roadmap
 
