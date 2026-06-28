@@ -59,6 +59,7 @@ required_phrases = (
     "Cosign signatures",
     "signature verification",
     "make release-evidence-check",
+    "make frontend-visual-audit",
     "Rollback",
 )
 

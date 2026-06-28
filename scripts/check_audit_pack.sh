@@ -147,6 +147,10 @@ require(
     "process tracker must keep final release blockers visible",
 )
 require(
+    "make frontend-visual-audit" in tracker and "visual audit evidence" in tracker,
+    "process tracker must keep visual audit promotion evidence visible",
+)
+require(
     "pip_audit" in ci and "npm audit --audit-level=high" in ci,
     "CI must run Python and Node dependency audits",
 )
