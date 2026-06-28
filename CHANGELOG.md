@@ -49,6 +49,8 @@ tag in GitHub.
   decisions, tolerances, and per-metric regression evidence.
 - Persisted eval runs now expose a regression gate that normalizes metric direction,
   supports tolerances, and flags candidate calibration drops without provider calls.
+- Dataset-backed eval runs can now be attached to a domain, filtered by domain in
+  history/trends, rerun with the same scope, and guarded against mixed-scope comparisons.
 
 ### Changed
 

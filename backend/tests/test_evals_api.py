@@ -119,6 +119,25 @@ def write_squad_api_fixture(path: Path) -> Path:
     return path
 
 
+def create_eval_domain(
+    client: TestClient,
+    headers: dict[str, str],
+    *,
+    slug: str = "eval-domain",
+) -> str:
+    response = client.post(
+        "/domains",
+        headers=headers,
+        json={
+            "slug": slug,
+            "name": f"Eval Domain {slug}",
+            "description": "Eval ownership fixture",
+        },
+    )
+    assert response.status_code == 201
+    return str(response.json()["id"])
+
+
 def write_hotpotqa_api_fixture(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -503,6 +522,132 @@ def test_squad_eval_runs_and_exports_report(
     assert eval_runs.status_code == 200
     assert eval_runs.json()[0]["job"]["id"] == body["job"]["id"]
     assert eval_runs.json()[0]["report"]["suite_name"] == "squad-v2"
+
+
+def test_dataset_eval_can_be_owned_by_domain_and_filtered(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "tiny-squad.json")
+    domain_id = create_eval_domain(evals_client, evals_admin_headers)
+    unowned = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert unowned.status_code == 202
+
+    response = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "tiny-squad.json",
+            "domain_id": domain_id,
+            "max_cases": 2,
+        },
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job"]["domain_id"] == domain_id
+    assert body["job"]["payload"]["domain_id"] == domain_id
+    assert body["job"]["payload"]["result"]["metadata"]["domain_id"] == domain_id
+
+    filtered_runs = evals_client.get(
+        "/evals/runs",
+        headers=evals_admin_headers,
+        params={"domain_id": domain_id},
+    )
+    assert filtered_runs.status_code == 200
+    assert [run["job"]["id"] for run in filtered_runs.json()] == [body["job"]["id"]]
+
+    filtered_trends = evals_client.get(
+        "/evals/runs/trends",
+        headers=evals_admin_headers,
+        params={"domain_id": domain_id},
+    )
+    assert filtered_trends.status_code == 200
+    assert filtered_trends.json()[0]["suite_name"] == "squad-v2"
+
+
+def test_dataset_eval_rejects_unknown_domain(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "tiny-squad.json")
+
+    response = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "tiny-squad.json",
+            "domain_id": "missing-domain",
+            "max_cases": 2,
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Domain not found"
+
+
+def test_dataset_eval_rerun_preserves_domain_scope(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "tiny-squad.json")
+    domain_id = create_eval_domain(evals_client, evals_admin_headers)
+    original = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "tiny-squad.json",
+            "domain_id": domain_id,
+            "max_cases": 2,
+        },
+    )
+    assert original.status_code == 202
+
+    rerun = evals_client.post(
+        f"/evals/runs/{original.json()['job']['id']}/rerun",
+        headers=evals_admin_headers,
+    )
+
+    assert rerun.status_code == 202
+    assert rerun.json()["job"]["domain_id"] == domain_id
+    assert rerun.json()["job"]["payload"]["domain_id"] == domain_id
+    assert rerun.json()["job"]["payload"]["rerun_from_job_id"] == original.json()["job"]["id"]
+
+
+def test_eval_comparison_rejects_mixed_domain_scopes(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    squad_dataset_root: Path,
+) -> None:
+    write_squad_api_fixture(squad_dataset_root / "tiny-squad.json")
+    domain_id = create_eval_domain(evals_client, evals_admin_headers)
+    baseline = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    candidate = evals_client.post(
+        "/evals/squad",
+        headers=evals_admin_headers,
+        json={
+            "dataset_path": "tiny-squad.json",
+            "domain_id": domain_id,
+            "max_cases": 2,
+        },
+    )
+    assert baseline.status_code == 202
+    assert candidate.status_code == 202
+
+    response = evals_client.get(
+        "/evals/runs/compare",
+        headers=evals_admin_headers,
+        params={
+            "baseline_job_id": baseline.json()["job"]["id"],
+            "candidate_job_id": candidate.json()["job"]["id"],
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Eval runs must belong to the same domain scope"
 
 
 def test_squad_eval_rerun_reuses_persisted_dataset_payload(

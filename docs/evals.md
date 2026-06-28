@@ -231,7 +231,8 @@ direction so lower-is-better OCR error rates are handled correctly, and returns
 `passed=false` when any metric exceeds the allowed drop or when the average normalized
 delta drops beyond tolerance. The React console exposes this as `Regression gate` using
 the same newest candidate and previous baseline pair, with a default 2% per-metric
-tolerance and 1% average tolerance.
+tolerance and 1% average tolerance. Baseline and candidate runs must share the same
+domain scope.
 
 Dataset-backed SQuAD evals are also available through the admin API:
 
@@ -241,6 +242,7 @@ curl --request POST http://localhost:8000/evals/squad \
   --header "Content-Type: application/json" \
   --data '{
     "dataset_path":"dev-v2.0.json",
+    "domain_id":"<optional_domain_id>",
     "max_cases":50,
     "write_report":true,
     "report_stem":"squad-v2-dev-50"
@@ -255,6 +257,7 @@ curl --request POST http://localhost:8000/evals/hotpotqa \
   --header "Content-Type: application/json" \
   --data '{
     "dataset_path":"hotpot_dev_distractor_v1.json",
+    "domain_id":"<optional_domain_id>",
     "max_cases":50,
     "write_report":true,
     "report_stem":"hotpotqa-dev-50"
@@ -270,6 +273,7 @@ curl --request POST http://localhost:8000/evals/natural-questions \
   --header "Content-Type: application/json" \
   --data '{
     "dataset_path":"nq-dev-sample.jsonl",
+    "domain_id":"<optional_domain_id>",
     "max_cases":50,
     "write_report":true,
     "report_stem":"natural-questions-dev-50"
@@ -285,6 +289,7 @@ curl --request POST http://localhost:8000/evals/ocr-benchmark \
   --header "Content-Type: application/json" \
   --data '{
     "dataset_path":"ocr-benchmark/manifest.json",
+    "domain_id":"<optional_domain_id>",
     "dataset_format":"manifest",
     "max_cases":25,
     "write_report":true,
@@ -299,6 +304,10 @@ curl --request POST http://localhost:8000/evals/ocr-benchmark \
 `RETOS_EVAL_DATASET_ROOT`. Reports are written only when `write_report=true`, and
 always land under `RETOS_EVAL_REPORT_ROOT` as both JSON and Markdown. This keeps
 benchmark inputs and generated reports mounted, auditable, and outside the source tree.
+`domain_id` is optional for dataset-backed evals. When set, RetOS validates the domain,
+stores it on the durable eval job and audit/progress payloads, supports domain-filtered
+history/trends, preserves the scope on reruns, and prevents comparison or regression-gate
+checks across mixed global/domain scopes.
 
 ## Public Dataset Roadmap
 

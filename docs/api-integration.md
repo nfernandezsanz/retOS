@@ -756,6 +756,7 @@ curl --request POST http://localhost:8000/evals/squad \
   --header "Content-Type: application/json" \
   --data '{
     "dataset_path":"dev-v2.0.json",
+    "domain_id":"<optional_domain_id>",
     "max_cases":50,
     "write_report":true,
     "report_stem":"squad-v2-dev-50"
@@ -792,6 +793,7 @@ curl --request POST http://localhost:8000/evals/hotpotqa \
   --header "Content-Type: application/json" \
   --data '{
     "dataset_path":"hotpot_dev_distractor_v1.json",
+    "domain_id":"<optional_domain_id>",
     "max_cases":50,
     "write_report":true,
     "report_stem":"hotpotqa-dev-50"
@@ -810,6 +812,7 @@ curl --request POST http://localhost:8000/evals/ocr-benchmark \
   --header "Content-Type: application/json" \
   --data '{
     "dataset_path":"ocr-benchmark/manifest.json",
+    "domain_id":"<optional_domain_id>",
     "dataset_format":"manifest",
     "max_cases":25,
     "write_report":true,
@@ -831,6 +834,9 @@ Security and runtime notes:
 
 - `dataset_path` must resolve inside `RETOS_EVAL_DATASET_ROOT`; traversal and
   absolute paths outside that root return `422`.
+- `domain_id` is optional for dataset-backed evals. When present, the domain must exist
+  and be accessible to the caller; RetOS stores it on the `eval.run` job, payload,
+  journal events, progress events, and SSE payloads.
 - Missing dataset files return `404` before any job is created.
 - Adapter or schema errors return `422` and mark the created eval job failed.
 - Reports are written under `RETOS_EVAL_REPORT_ROOT`; clients receive paths for
@@ -866,6 +872,9 @@ runs that failed before a report was produced:
 ]
 ```
 
+Use `domain_id=<domain_id>` to list only eval runs owned by a domain. Global built-in
+eval runs have `job.domain_id=null` and are omitted from domain-filtered history.
+
 Read trend summaries across persisted reported eval runs:
 
 ```bash
@@ -877,6 +886,7 @@ The response is grouped by `suite_name` and contains chronological points, lates
 summary, pass rate, and per-metric first/latest/min/max/average/delta values. Direction
 is metric-aware: higher scores improve normal eval metrics, while lower values improve
 `*_error_rate` OCR metrics. Use `suite_name=<name>` to narrow the trend to one suite.
+Use `domain_id=<domain_id>` to compute trends only from runs owned by that domain.
 
 Run the deterministic agent multi-hop eval suite:
 
@@ -901,9 +911,9 @@ curl --request POST "http://localhost:8000/evals/runs/<job_id>/rerun" \
 The endpoint requires an admin token and creates a new `eval.run` job using the
 original run's persisted suite, dataset path, case limit, report settings, OCR
 thresholds, and OCR page limit when present. The new job stores
-`rerun_from_job_id` in `job.payload` for audit traceability. Runs with missing
-dataset payloads or unknown suites return `422` instead of attempting a partial
-rerun.
+`rerun_from_job_id` in `job.payload` for audit traceability. Dataset-backed reruns
+preserve the original `domain_id`. Runs with missing dataset payloads or unknown suites
+return `422` instead of attempting a partial rerun.
 
 Compare two persisted eval runs:
 
@@ -913,7 +923,9 @@ curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&cand
 ```
 
 The endpoint requires an admin token, reads reports already stored in `job.payload.result`,
-does not call providers, and returns per-metric deltas:
+does not call providers, and returns per-metric deltas. Baseline and candidate runs must
+share the same `domain_id` scope; comparing a global run with a domain-owned run returns
+`409`.
 
 ```json
 {
@@ -952,7 +964,8 @@ curl "http://localhost:8000/evals/runs/regression-gate?baseline_job_id=<old_job_
 The gate reads persisted reports only. For normal metrics, negative deltas are
 regressions. For `*_error_rate` metrics, positive deltas are regressions. The response
 includes normalized deltas, per-metric regression flags, the average normalized delta,
-and an overall `passed` boolean. The React console calls this endpoint from the
+and an overall `passed` boolean. Baseline and candidate runs must share the same
+`domain_id` scope. The React console calls this endpoint from the
 `Regression gate` action in the local eval history panel and renders the promote/block
 decision beside the metric-level gate evidence.
 

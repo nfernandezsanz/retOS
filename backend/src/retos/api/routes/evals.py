@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi import Path as PathParam
 from pydantic import BaseModel, Field, ValidationError
 
-from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep
+from retos.api.dependencies import AdminSubjectDep, SettingsDep, UnitOfWorkDep, ensure_domain_access
 from retos.api.routes.events import progress_store
 from retos.api.routes.jobs import JobRead
 from retos.domain.jobs import Job, JobStatus
@@ -147,6 +147,7 @@ def report_from_payload(payload: dict[str, Any]) -> EvalReportRead | None:
 
 class SquadEvalRequest(BaseModel):
     dataset_path: str = Field(min_length=1, max_length=500)
+    domain_id: str | None = Field(default=None, min_length=1, max_length=36)
     max_cases: int = Field(default=50, ge=1, le=1000)
     write_report: bool = False
     report_stem: str | None = Field(default=None, max_length=120)
@@ -154,6 +155,7 @@ class SquadEvalRequest(BaseModel):
 
 class HotpotQAEvalRequest(BaseModel):
     dataset_path: str = Field(min_length=1, max_length=500)
+    domain_id: str | None = Field(default=None, min_length=1, max_length=36)
     max_cases: int = Field(default=50, ge=1, le=1000)
     write_report: bool = False
     report_stem: str | None = Field(default=None, max_length=120)
@@ -161,6 +163,7 @@ class HotpotQAEvalRequest(BaseModel):
 
 class NaturalQuestionsEvalRequest(BaseModel):
     dataset_path: str = Field(min_length=1, max_length=500)
+    domain_id: str | None = Field(default=None, min_length=1, max_length=36)
     max_cases: int = Field(default=50, ge=1, le=1000)
     write_report: bool = False
     report_stem: str | None = Field(default=None, max_length=120)
@@ -168,6 +171,7 @@ class NaturalQuestionsEvalRequest(BaseModel):
 
 class OCRBenchmarkEvalRequest(BaseModel):
     dataset_path: str = Field(min_length=1, max_length=500)
+    domain_id: str | None = Field(default=None, min_length=1, max_length=36)
     dataset_format: str = Field(default="manifest", pattern="^(manifest|funsd|sroie)$")
     max_cases: int = Field(default=50, ge=1, le=1000)
     write_report: bool = False
@@ -190,12 +194,16 @@ class EvalRerunPlan(BaseModel):
 
 @router.get("/runs", response_model=list[EvalRunRead])
 async def list_eval_runs(
-    _: AdminSubjectDep,
+    actor: AdminSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    domain_id: Annotated[str | None, Query(min_length=1, max_length=36)] = None,
 ) -> list[EvalRunRead]:
+    domain_filter = await validate_eval_domain(actor=actor, domain_id=domain_id, uow=uow)
     async with uow:
         jobs = await uow.jobs.list_by_kind(kind="eval.run", limit=limit)
+    if domain_filter is not None:
+        jobs = [job for job in jobs if job.domain_id == domain_filter]
     return [
         EvalRunRead(
             job=JobRead.from_job(job),
@@ -207,13 +215,17 @@ async def list_eval_runs(
 
 @router.get("/runs/trends", response_model=list[EvalSuiteTrendRead])
 async def list_eval_run_trends(
-    _: AdminSubjectDep,
+    actor: AdminSubjectDep,
     uow: UnitOfWorkDep,
     limit: Annotated[int, Query(ge=2, le=200)] = 100,
     suite_name: Annotated[str | None, Query(min_length=1, max_length=80)] = None,
+    domain_id: Annotated[str | None, Query(min_length=1, max_length=36)] = None,
 ) -> list[EvalSuiteTrendRead]:
+    domain_filter = await validate_eval_domain(actor=actor, domain_id=domain_id, uow=uow)
     async with uow:
         jobs = await uow.jobs.list_by_kind(kind="eval.run", limit=limit)
+    if domain_filter is not None:
+        jobs = [job for job in jobs if job.domain_id == domain_filter]
     return eval_trends_from_jobs(jobs=jobs, suite_name=suite_name)
 
 
@@ -232,6 +244,7 @@ async def compare_eval_runs(
     candidate_report = report_from_eval_job(candidate_job)
     assert baseline_job is not None
     assert candidate_job is not None
+    ensure_eval_jobs_share_scope(baseline_job, candidate_job)
     baseline_metrics = baseline_report.metrics
     candidate_metrics = candidate_report.metrics
     common_names = [name for name in baseline_metrics if name in candidate_metrics]
@@ -275,6 +288,7 @@ async def eval_regression_gate(
     candidate_report = report_from_eval_job(candidate_job)
     assert baseline_job is not None
     assert candidate_job is not None
+    ensure_eval_jobs_share_scope(baseline_job, candidate_job)
     return regression_gate_for_reports(
         baseline_job=baseline_job,
         baseline_report=baseline_report,
@@ -393,6 +407,7 @@ async def run_smoke_eval_plan(
         actor=actor,
         uow=uow,
         suite_name=suite_name,
+        domain_id=None,
         requested_at=now,
         queued_message="Queued local smoke eval suite",
         started_message="Started local smoke eval suite",
@@ -404,7 +419,13 @@ async def run_smoke_eval_plan(
             {"source": "built-in", "dataset": "retos-smoke-fixtures"},
         )
     except Exception as exc:
-        await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+        await mark_eval_failed(
+            job_id=job.id,
+            actor=actor,
+            uow=uow,
+            domain_id=None,
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Eval smoke suite failed to run",
@@ -414,6 +435,7 @@ async def run_smoke_eval_plan(
         actor=actor,
         uow=uow,
         job_id=job.id,
+        domain_id=None,
         requested_at=now,
         report=report,
         failure_error="Eval smoke suite failed",
@@ -437,6 +459,7 @@ async def run_agent_multihop_eval_plan(
         actor=actor,
         uow=uow,
         suite_name=suite_name,
+        domain_id=None,
         requested_at=now,
         queued_message="Queued agent multi-hop eval suite",
         started_message="Started agent multi-hop eval suite",
@@ -448,7 +471,13 @@ async def run_agent_multihop_eval_plan(
             metadata={"source": "built-in", "dataset": "agent-multihop-fixtures"},
         )
     except Exception as exc:
-        await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+        await mark_eval_failed(
+            job_id=job.id,
+            actor=actor,
+            uow=uow,
+            domain_id=None,
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Agent multi-hop eval suite failed to run",
@@ -458,6 +487,7 @@ async def run_agent_multihop_eval_plan(
         actor=actor,
         uow=uow,
         job_id=job.id,
+        domain_id=None,
         requested_at=now,
         report=report,
         failure_error="Agent multi-hop eval suite failed",
@@ -614,6 +644,7 @@ async def run_ocr_benchmark_eval_plan(
     uow: UnitOfWorkDep,
     rerun_from_job_id: str | None = None,
 ) -> EvalRunResponse:
+    domain_id = await validate_eval_domain(actor=actor, domain_id=request.domain_id, uow=uow)
     dataset_path = resolve_dataset_path(settings.eval_dataset_root, request.dataset_path)
     if not dataset_path.exists():
         raise HTTPException(
@@ -627,11 +658,13 @@ async def run_ocr_benchmark_eval_plan(
         actor=actor,
         uow=uow,
         suite_name=suite_name,
+        domain_id=domain_id,
         requested_at=now,
         queued_message="Queued OCR benchmark eval suite",
         started_message="Started OCR benchmark eval suite",
         payload={
             "dataset_path": str(dataset_path),
+            "domain_id": domain_id,
             "dataset_format": request.dataset_format,
             "max_cases": request.max_cases,
             "write_report": request.write_report,
@@ -661,13 +694,25 @@ async def run_ocr_benchmark_eval_plan(
             max_pages=request.max_pages,
         )
     except OCRBenchmarkAdapterError as exc:
-        await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+        await mark_eval_failed(
+            job_id=job.id,
+            actor=actor,
+            uow=uow,
+            domain_id=domain_id,
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
         ) from exc
     except Exception as exc:
-        await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+        await mark_eval_failed(
+            job_id=job.id,
+            actor=actor,
+            uow=uow,
+            domain_id=domain_id,
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OCR benchmark eval suite failed to run",
@@ -682,7 +727,13 @@ async def run_ocr_benchmark_eval_plan(
                 report_stem=request.report_stem,
             )
         except Exception as exc:
-            await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+            await mark_eval_failed(
+                job_id=job.id,
+                actor=actor,
+                uow=uow,
+                domain_id=domain_id,
+                error=str(exc),
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="OCR benchmark eval report failed to write",
@@ -693,11 +744,13 @@ async def run_ocr_benchmark_eval_plan(
         actor=actor,
         uow=uow,
         job_id=job.id,
+        domain_id=domain_id,
         requested_at=now,
         report=report,
         failure_error="OCR benchmark eval suite failed",
         payload={
             "dataset_path": str(dataset_path),
+            "domain_id": domain_id,
             "dataset_format": request.dataset_format,
             "max_cases": request.max_cases,
             "write_report": request.write_report,
@@ -728,6 +781,7 @@ async def run_dataset_evals(
     rerun_from_job_id: str | None = None,
     load_cases: Callable[[Path], tuple[EvalCase, ...]],
 ) -> EvalRunResponse:
+    domain_id = await validate_eval_domain(actor=actor, domain_id=request.domain_id, uow=uow)
     dataset_path = resolve_dataset_path(settings.eval_dataset_root, request.dataset_path)
     if not dataset_path.exists() or not dataset_path.is_file():
         raise HTTPException(
@@ -740,11 +794,13 @@ async def run_dataset_evals(
         actor=actor,
         uow=uow,
         suite_name=suite_name,
+        domain_id=domain_id,
         requested_at=now,
         queued_message=f"Queued {suite_label} eval suite",
         started_message=f"Started {suite_label} eval suite",
         payload={
             "dataset_path": str(dataset_path),
+            "domain_id": domain_id,
             "max_cases": request.max_cases,
             "write_report": request.write_report,
             "report_stem": request.report_stem,
@@ -766,16 +822,29 @@ async def run_dataset_evals(
                 "dataset_path": str(dataset_path),
                 "max_cases": request.max_cases,
                 "source": "api",
+                **({"domain_id": domain_id} if domain_id is not None else {}),
             },
         )
     except DatasetAdapterError as exc:
-        await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+        await mark_eval_failed(
+            job_id=job.id,
+            actor=actor,
+            uow=uow,
+            domain_id=domain_id,
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
         ) from exc
     except Exception as exc:
-        await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+        await mark_eval_failed(
+            job_id=job.id,
+            actor=actor,
+            uow=uow,
+            domain_id=domain_id,
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{suite_label} eval suite failed to run",
@@ -790,7 +859,13 @@ async def run_dataset_evals(
                 report_stem=request.report_stem,
             )
         except Exception as exc:
-            await mark_eval_failed(job_id=job.id, actor=actor, uow=uow, error=str(exc))
+            await mark_eval_failed(
+                job_id=job.id,
+                actor=actor,
+                uow=uow,
+                domain_id=domain_id,
+                error=str(exc),
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"{suite_label} eval report failed to write",
@@ -804,11 +879,13 @@ async def run_dataset_evals(
         actor=actor,
         uow=uow,
         job_id=job.id,
+        domain_id=domain_id,
         requested_at=now,
         report=report,
         failure_error=f"{suite_label} eval suite failed",
         payload={
             "dataset_path": str(dataset_path),
+            "domain_id": domain_id,
             "max_cases": request.max_cases,
             "write_report": request.write_report,
             "report_stem": request.report_stem,
@@ -843,6 +920,25 @@ def resolve_dataset_path(dataset_root: str, dataset_path: str) -> Path:
     return resolved
 
 
+async def validate_eval_domain(
+    *,
+    actor: str,
+    domain_id: str | None,
+    uow: UnitOfWorkDep,
+) -> str | None:
+    if domain_id is None:
+        return None
+    async with uow:
+        domain = await uow.domains.get(domain_id)
+        if domain is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Domain not found",
+            )
+        await ensure_domain_access(actor=actor, domain_id=domain_id, uow=uow)
+    return domain_id
+
+
 def report_from_eval_job(job: Job | None) -> EvalReportRead:
     if job is None or job.kind != "eval.run":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eval run not found")
@@ -855,6 +951,15 @@ def report_from_eval_job(job: Job | None) -> EvalReportRead:
     return report
 
 
+def ensure_eval_jobs_share_scope(baseline_job: Job, candidate_job: Job) -> None:
+    if baseline_job.domain_id == candidate_job.domain_id:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Eval runs must belong to the same domain scope",
+    )
+
+
 def rerun_plan_from_eval_job(job: Job | None) -> EvalRerunPlan:
     if job is None or job.kind != "eval.run":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eval run not found")
@@ -865,8 +970,9 @@ def rerun_plan_from_eval_job(job: Job | None) -> EvalRerunPlan:
         return EvalRerunPlan(suite_name=suite_name)
 
     if suite_name in {"squad-v2", "hotpotqa", "natural-questions"}:
-        request_payload = {
+        request_payload: dict[str, Any] = {
             "dataset_path": required_string_from_payload(payload, "dataset_path"),
+            "domain_id": optional_string_from_payload(payload, "domain_id"),
             "max_cases": int_from_payload(payload, "max_cases", default=50),
             "write_report": bool_from_payload(
                 payload,
@@ -891,8 +997,9 @@ def rerun_plan_from_eval_job(job: Job | None) -> EvalRerunPlan:
         dataset_format = optional_string_from_payload(payload, "dataset_format")
         if dataset_format is None:
             dataset_format = suite_name.removeprefix("ocr-") or "manifest"
-        request_payload = {
+        ocr_request_payload: dict[str, Any] = {
             "dataset_path": required_string_from_payload(payload, "dataset_path"),
+            "domain_id": optional_string_from_payload(payload, "domain_id"),
             "dataset_format": dataset_format,
             "max_cases": int_from_payload(payload, "max_cases", default=50),
             "write_report": bool_from_payload(
@@ -915,7 +1022,7 @@ def rerun_plan_from_eval_job(job: Job | None) -> EvalRerunPlan:
         }
         return EvalRerunPlan(
             suite_name=suite_name,
-            request=validated_rerun_request(OCRBenchmarkEvalRequest, request_payload),
+            request=validated_rerun_request(OCRBenchmarkEvalRequest, ocr_request_payload),
         )
 
     raise HTTPException(
@@ -1159,6 +1266,7 @@ async def queue_eval_job(
     actor: str,
     uow: UnitOfWorkDep,
     suite_name: str,
+    domain_id: str | None,
     requested_at: datetime,
     queued_message: str,
     started_message: str,
@@ -1166,6 +1274,7 @@ async def queue_eval_job(
 ) -> Job:
     job_payload = {
         "suite_name": suite_name,
+        "domain_id": domain_id,
         "requested_at": requested_at.isoformat(),
         **(payload or {}),
     }
@@ -1173,7 +1282,7 @@ async def queue_eval_job(
         job = await uow.jobs.add(
             kind="eval.run",
             status="queued",
-            domain_id=None,
+            domain_id=domain_id,
             source_id=None,
             payload=job_payload,
         )
@@ -1182,13 +1291,13 @@ async def queue_eval_job(
             event_type="eval.queued",
             entity_type="job",
             entity_id=job.id,
-            payload={"suite_name": suite_name},
+            payload={"suite_name": suite_name, "domain_id": domain_id},
         )
         await uow.progress_events.add(
             job_id=job.id,
             event_type="eval.queued",
             message=queued_message,
-            payload={"suite_name": suite_name},
+            payload={"suite_name": suite_name, "domain_id": domain_id},
         )
         running = await uow.jobs.update_status(
             job_id=job.id,
@@ -1202,17 +1311,24 @@ async def queue_eval_job(
             event_type="job.running",
             entity_type="job",
             entity_id=job.id,
-            payload={"from_status": "queued", "to_status": "running"},
+            payload={
+                "from_status": "queued",
+                "to_status": "running",
+                "domain_id": domain_id,
+            },
         )
         await uow.progress_events.add(
             job_id=job.id,
             event_type="eval.started",
             message=started_message,
-            payload={"suite_name": suite_name},
+            payload={"suite_name": suite_name, "domain_id": domain_id},
         )
         await uow.commit()
 
-    progress_store.append("eval.started", {"job_id": job.id, "suite_name": suite_name})
+    progress_store.append(
+        "eval.started",
+        {"job_id": job.id, "suite_name": suite_name, "domain_id": domain_id},
+    )
     return job
 
 
@@ -1221,6 +1337,7 @@ async def complete_eval_job(
     actor: str,
     uow: UnitOfWorkDep,
     job_id: str,
+    domain_id: str | None,
     requested_at: datetime,
     report: EvalSuiteReport | OCRQualityReport | AgentEvalSuiteReport,
     failure_error: str,
@@ -1231,6 +1348,7 @@ async def complete_eval_job(
     report_payload = report.to_dict()
     job_payload = {
         "suite_name": report.suite_name,
+        "domain_id": domain_id,
         "requested_at": requested_at.isoformat(),
         "result": report_payload,
         **(payload or {}),
@@ -1257,6 +1375,7 @@ async def complete_eval_job(
                 "suite_name": report.suite_name,
                 "passed": report.passed,
                 "case_count": report.case_count,
+                "domain_id": domain_id,
                 "metrics": report_payload["metrics"],
                 "metadata": report_payload.get("metadata", {}),
             },
@@ -1266,7 +1385,11 @@ async def complete_eval_job(
             event_type=f"job.{next_status}",
             entity_type="job",
             entity_id=job_id,
-            payload={"from_status": "running", "to_status": next_status},
+            payload={
+                "from_status": "running",
+                "to_status": next_status,
+                "domain_id": domain_id,
+            },
         )
         await uow.progress_events.add(
             job_id=job_id,
@@ -1276,6 +1399,7 @@ async def complete_eval_job(
                 "suite_name": report.suite_name,
                 "passed": report.passed,
                 "case_count": report.case_count,
+                "domain_id": domain_id,
                 "metadata": report_payload.get("metadata", {}),
             },
         )
@@ -1288,6 +1412,7 @@ async def complete_eval_job(
             "suite_name": report.suite_name,
             "passed": report.passed,
             "case_count": report.case_count,
+            "domain_id": domain_id,
             "metadata": report_payload.get("metadata", {}),
         },
     )
@@ -1299,6 +1424,7 @@ async def mark_eval_failed(
     job_id: str,
     actor: str,
     uow: UnitOfWorkDep,
+    domain_id: str | None,
     error: str,
 ) -> None:
     completed_at = datetime.now(UTC)
@@ -1314,13 +1440,16 @@ async def mark_eval_failed(
             event_type="eval.failed",
             entity_type="job",
             entity_id=job_id,
-            payload={"error": error},
+            payload={"error": error, "domain_id": domain_id},
         )
         await uow.progress_events.add(
             job_id=job_id,
             event_type="eval.failed",
             message="Local smoke eval suite failed",
-            payload={"error": error},
+            payload={"error": error, "domain_id": domain_id},
         )
         await uow.commit()
-    progress_store.append("eval.failed", {"job_id": job_id, "error": error})
+    progress_store.append(
+        "eval.failed",
+        {"job_id": job_id, "error": error, "domain_id": domain_id},
+    )
