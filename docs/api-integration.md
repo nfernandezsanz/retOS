@@ -462,6 +462,11 @@ The response always includes the durable job. When `run_inline=true`, or in
       "cited_segment_ids": ["<segment_id>"],
       "unreferenced_citation_ids": []
     },
+    "contradiction_audit": {
+      "checked": true,
+      "conflict_count": 0,
+      "findings": []
+    },
     "usage": {
       "budget": {
         "max_searches": 8,
@@ -507,6 +512,11 @@ Every completed query also persists `evidence_audit`. If citations exist but the
 does not reference returned segment ids, RetOS appends an `Evidence ledger` to the final
 answer and records which citation ids are now linked. This keeps Deep Agents output
 auditable without granting the model host filesystem access.
+
+The `contradiction_audit` is a deterministic first-pass reviewer over returned
+citations. It flags citation pairs with opposite polarity markers and overlapping
+domain terms so operators can review conflicting evidence. It is intentionally
+conservative and does not replace deeper named subagent review.
 
 `RETOS_AGENT_RUNTIME=deterministic` is the default for CI, Docker smoke, and local
 development without downloaded model weights. It performs the controlled corpus search

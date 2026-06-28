@@ -75,12 +75,25 @@ class AgentEvidenceAuditRead(BaseModel):
     unreferenced_citation_ids: list[str]
 
 
+class AgentContradictionFindingRead(BaseModel):
+    segment_ids: list[str]
+    shared_terms: list[str]
+    summary: str
+
+
+class AgentContradictionAuditRead(BaseModel):
+    checked: bool
+    conflict_count: int
+    findings: list[AgentContradictionFindingRead]
+
+
 class AgentQueryResultRead(BaseModel):
     answer: str
     provider: str
     model: str
     runtime: str
     evidence_audit: AgentEvidenceAuditRead
+    contradiction_audit: AgentContradictionAuditRead
     usage: AgentBudgetUsageRead
     citations: list[AgentCitationRead]
 
@@ -95,6 +108,18 @@ class AgentQueryResultRead(BaseModel):
                 grounded=result.evidence_audit.grounded,
                 cited_segment_ids=result.evidence_audit.cited_segment_ids,
                 unreferenced_citation_ids=result.evidence_audit.unreferenced_citation_ids,
+            ),
+            contradiction_audit=AgentContradictionAuditRead(
+                checked=result.contradiction_audit.checked,
+                conflict_count=result.contradiction_audit.conflict_count,
+                findings=[
+                    AgentContradictionFindingRead(
+                        segment_ids=finding.segment_ids,
+                        shared_terms=finding.shared_terms,
+                        summary=finding.summary,
+                    )
+                    for finding in result.contradiction_audit.findings
+                ],
             ),
             usage=AgentBudgetUsageRead(
                 budget=AgentBudgetRead(

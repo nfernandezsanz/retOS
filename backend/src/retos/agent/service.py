@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -52,6 +53,20 @@ class EvidenceAudit:
 
 
 @dataclass(frozen=True)
+class ContradictionFinding:
+    segment_ids: list[str]
+    shared_terms: list[str]
+    summary: str
+
+
+@dataclass(frozen=True)
+class ContradictionAudit:
+    checked: bool
+    conflict_count: int
+    findings: list[ContradictionFinding]
+
+
+@dataclass(frozen=True)
 class Citation:
     segment_id: str
     document_id: str
@@ -73,6 +88,7 @@ class AgentQueryResult:
     model: str
     runtime: str
     evidence_audit: EvidenceAudit
+    contradiction_audit: ContradictionAudit
     usage: AgentBudgetUsage
 
 
@@ -224,6 +240,79 @@ def ensure_evidence_ledger(answer: str, citations: list[Citation]) -> tuple[str,
     return updated_answer, audit_evidence(updated_answer, citations)
 
 
+NEGATION_TERMS = frozenset({"no", "not", "never", "without", "absent", "false", "failed"})
+STOPWORDS = frozenset(
+    {
+        "about",
+        "after",
+        "again",
+        "against",
+        "before",
+        "being",
+        "between",
+        "could",
+        "every",
+        "found",
+        "from",
+        "should",
+        "their",
+        "there",
+        "these",
+        "those",
+        "through",
+        "using",
+        "were",
+        "which",
+        "with",
+        "would",
+    }
+)
+
+
+def significant_terms(value: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", value.lower())
+        if len(token) >= 5 and token not in STOPWORDS and token not in NEGATION_TERMS
+    }
+
+
+def has_negation(value: str) -> bool:
+    tokens = set(re.findall(r"[a-z0-9]+", value.lower()))
+    return bool(tokens & NEGATION_TERMS)
+
+
+def audit_contradictions(citations: list[Citation]) -> ContradictionAudit:
+    findings: list[ContradictionFinding] = []
+    for left_index, left in enumerate(citations):
+        left_terms = significant_terms(left.text)
+        if not left_terms:
+            continue
+        left_negative = has_negation(left.text)
+        for right in citations[left_index + 1 :]:
+            right_negative = has_negation(right.text)
+            if left_negative == right_negative:
+                continue
+            shared_terms = sorted(left_terms & significant_terms(right.text))
+            if len(shared_terms) < 2:
+                continue
+            findings.append(
+                ContradictionFinding(
+                    segment_ids=[left.segment_id, right.segment_id],
+                    shared_terms=shared_terms[:6],
+                    summary=(
+                        "Potential contradiction: cited segments share terms with "
+                        "opposite polarity markers."
+                    ),
+                )
+            )
+    return ContradictionAudit(
+        checked=True,
+        conflict_count=len(findings),
+        findings=findings,
+    )
+
+
 def parse_positive_int_budget(
     payload: dict[str, object],
     key: str,
@@ -315,6 +404,21 @@ def evidence_audit_to_payload(audit: EvidenceAudit) -> dict[str, object]:
     }
 
 
+def contradiction_audit_to_payload(audit: ContradictionAudit) -> dict[str, object]:
+    return {
+        "checked": audit.checked,
+        "conflict_count": audit.conflict_count,
+        "findings": [
+            {
+                "segment_ids": finding.segment_ids,
+                "shared_terms": finding.shared_terms,
+                "summary": finding.summary,
+            }
+            for finding in audit.findings
+        ],
+    }
+
+
 def result_payload(
     *,
     original_payload: dict[str, object],
@@ -328,6 +432,7 @@ def result_payload(
             "model": result.model,
             "runtime": result.runtime,
             "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
+            "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
             "usage": usage_to_payload(result.usage),
             "citations": [
                 {
@@ -435,6 +540,7 @@ async def run_agent_query(
         hits = toolbox.selected_hits
         citations = [citation_from_hit(hit) for hit in hits]
         answer, evidence_audit = ensure_evidence_ledger(answer, citations)
+        contradiction_audit = audit_contradictions(citations)
         runtime_ms = int((datetime.now(UTC) - started_at).total_seconds() * 1000)
         usage = AgentBudgetUsage(
             search_count=toolbox.search_count,
@@ -460,6 +566,7 @@ async def run_agent_query(
             model=provider.model,
             runtime=settings.agent_runtime,
             evidence_audit=evidence_audit,
+            contradiction_audit=contradiction_audit,
             usage=usage,
         )
         completed_at = datetime.now(UTC)
@@ -484,6 +591,7 @@ async def run_agent_query(
                 "model": result.model,
                 "runtime": result.runtime,
                 "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
+                "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
                 "usage": usage_to_payload(result.usage),
             },
         )
@@ -505,6 +613,7 @@ async def run_agent_query(
                 "model": result.model,
                 "runtime": result.runtime,
                 "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
+                "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
                 "usage": usage_to_payload(result.usage),
             },
         )
@@ -518,6 +627,7 @@ async def run_agent_query(
             "citation_count": len(result.citations),
             "runtime": result.runtime,
             "grounded": result.evidence_audit.grounded,
+            "contradiction_count": result.contradiction_audit.conflict_count,
             "within_budget": result.usage.within_budget,
             "search_count": result.usage.search_count,
             "evidence_tokens": result.usage.evidence_tokens,

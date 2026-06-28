@@ -147,11 +147,20 @@ type AgentQueryResult = {
   provider: string;
   model: string;
   runtime: string;
-  evidence_audit: {
+  evidence_audit?: {
     grounded: boolean;
     cited_segment_ids: string[];
     unreferenced_citation_ids: string[];
-  };
+  } | null;
+  contradiction_audit?: {
+    checked: boolean;
+    conflict_count: number;
+    findings: {
+      segment_ids: string[];
+      shared_terms: string[];
+      summary: string;
+    }[];
+  } | null;
   usage: AgentBudgetUsage;
   citations: AgentCitation[];
 };
@@ -167,6 +176,16 @@ function evidenceAuditFor(result: AgentQueryResult) {
       grounded: result.citations.length === 0,
       cited_segment_ids: [],
       unreferenced_citation_ids: result.citations.map((citation) => citation.segment_id),
+    }
+  );
+}
+
+function contradictionAuditFor(result: AgentQueryResult) {
+  return (
+    result.contradiction_audit ?? {
+      checked: false,
+      conflict_count: 0,
+      findings: [],
     }
   );
 }
@@ -2179,6 +2198,7 @@ function App() {
               {queryResult ? (
                 (() => {
                   const evidenceAudit = evidenceAuditFor(queryResult);
+                  const contradictionAudit = contradictionAuditFor(queryResult);
                   return (
                 <>
                   <div className="result-meta">
@@ -2193,6 +2213,11 @@ function App() {
                       {evidenceAudit.grounded ? "Evidence linked" : "Evidence missing"}{" "}
                       {evidenceAudit.cited_segment_ids.length}/
                       {queryResult.citations.length}
+                    </span>
+                    <span>
+                      {contradictionAudit.conflict_count === 0
+                        ? "Contradictions 0"
+                        : `Review ${contradictionAudit.conflict_count}`}
                     </span>
                     <span>
                       Searches {queryResult.usage.search_count}/

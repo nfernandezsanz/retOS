@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from retos.agent.harness import create_research_harness
 from retos.agent.service import (
     AgentQueryError,
+    audit_contradictions,
     audit_evidence,
     budget_from_payload,
     build_grounded_answer,
@@ -169,6 +170,7 @@ def test_agent_query_runs_inline_with_citations(
     assert body["job"]["payload"]["result"]["provider"] == "local"
     assert body["job"]["payload"]["result"]["runtime"] == "deterministic"
     assert body["job"]["payload"]["result"]["evidence_audit"]["grounded"] is True
+    assert body["job"]["payload"]["result"]["contradiction_audit"]["conflict_count"] == 0
     assert body["job"]["payload"]["budget"]["max_citations"] == 5
     assert body["job"]["payload"]["result"]["usage"]["within_budget"] is True
     assert body["result"]["provider"] == "local"
@@ -178,6 +180,8 @@ def test_agent_query_runs_inline_with_citations(
     assert body["result"]["evidence_audit"]["cited_segment_ids"] == [
         citation["segment_id"] for citation in body["result"]["citations"]
     ]
+    assert body["result"]["contradiction_audit"]["checked"] is True
+    assert body["result"]["contradiction_audit"]["conflict_count"] == 0
     assert body["result"]["usage"]["budget"]["max_searches"] == 8
     assert body["result"]["usage"]["search_count"] == 1
     assert "Apollo guidance computers" in body["result"]["answer"]
@@ -292,6 +296,7 @@ def test_agent_query_can_use_mocked_deepagents_runtime(
     assert body["result"]["evidence_audit"]["cited_segment_ids"] == [
         citation["segment_id"] for citation in body["result"]["citations"]
     ]
+    assert body["result"]["contradiction_audit"]["conflict_count"] == 0
     assert body["result"]["usage"]["search_count"] == 1
     assert tool_names == ["search_corpus", "read_citation"]
     assert invocations[0]["config"] == {"recursion_limit": 25}
@@ -400,6 +405,42 @@ def test_evidence_audit_marks_uncited_answers() -> None:
     assert audit.grounded is False
     assert audit.cited_segment_ids == []
     assert audit.unreferenced_citation_ids == ["segment-known"]
+
+
+def test_contradiction_audit_flags_opposite_polarity_citations() -> None:
+    positive = citation_from_hit(
+        SearchHit(
+            segment_id="segment-positive",
+            document_id="document-1",
+            document_version_id="version-1",
+            title="Positive",
+            text="Apollo checklist validation confirmed guidance readiness.",
+            anchor=None,
+            ordinal=0,
+            score=2.0,
+        )
+    )
+    negative = citation_from_hit(
+        SearchHit(
+            segment_id="segment-negative",
+            document_id="document-2",
+            document_version_id="version-2",
+            title="Negative",
+            text="Apollo checklist validation did not confirm guidance readiness.",
+            anchor=None,
+            ordinal=1,
+            score=1.0,
+        )
+    )
+
+    audit = audit_contradictions([positive, negative])
+
+    assert audit.checked is True
+    assert audit.conflict_count == 1
+    assert audit.findings[0].segment_ids == ["segment-positive", "segment-negative"]
+    assert {"apollo", "checklist", "validation", "confirm", "guidance", "readiness"}.issuperset(
+        set(audit.findings[0].shared_terms)
+    )
 
 
 def test_agent_budget_defaults_and_validation() -> None:
