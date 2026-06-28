@@ -1,11 +1,23 @@
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 
 from retos.api.app import create_app
+from retos.api.routes.domains import (
+    DomainCreate,
+    SourceCreate,
+    create_domain,
+    create_source,
+    list_domains,
+)
 from retos.core.config import Settings
+from retos.domain.admin import AdminUser
+from retos.domain.documents import Domain, Source
 
 
 @pytest.fixture
@@ -29,6 +41,119 @@ def admin_headers(domain_client: TestClient) -> dict[str, str]:
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+NOW = datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def domain_fixture(domain_id: str = "domain-1") -> Domain:
+    return Domain(
+        id=domain_id,
+        slug="domain-one",
+        name="Domain One",
+        description=None,
+        created_at=NOW,
+        updated_at=NOW,
+    )
+
+
+def source_fixture(domain_id: str = "domain-1") -> Source:
+    return Source(
+        id="source-1",
+        domain_id=domain_id,
+        kind="upload",
+        name="Source One",
+        uri="upload://source-one",
+        created_at=NOW,
+        updated_at=NOW,
+    )
+
+
+class FakeAdminUsers:
+    def __init__(self, admin: AdminUser | None = None) -> None:
+        self.admin = admin
+
+    async def get_by_email(self, email: str) -> AdminUser | None:
+        return self.admin if self.admin is not None and self.admin.email == email else None
+
+
+class FakeDomains:
+    def __init__(self, domain: Domain | None = None) -> None:
+        self.domain = domain
+
+    async def get_by_slug(self, slug: str) -> Domain | None:
+        return self.domain if self.domain is not None and self.domain.slug == slug else None
+
+    async def add(self, *, slug: str, name: str, description: str | None) -> Domain:
+        self.domain = Domain(
+            id="domain-created",
+            slug=slug,
+            name=name,
+            description=description,
+            created_at=NOW,
+            updated_at=NOW,
+        )
+        return self.domain
+
+    async def list(self) -> list[Domain]:
+        return [self.domain] if self.domain is not None else []
+
+    async def list_for_admin_user(self, admin_id: str) -> list[Domain]:
+        return [self.domain] if self.domain is not None else []
+
+    async def get(self, domain_id: str) -> Domain | None:
+        return self.domain if self.domain is not None and self.domain.id == domain_id else None
+
+
+class FakeSources:
+    def __init__(self, source: Source | None = None) -> None:
+        self.source = source
+
+    async def get_by_domain_and_uri(self, domain_id: str, uri: str) -> Source | None:
+        if (
+            self.source is not None
+            and self.source.domain_id == domain_id
+            and self.source.uri == uri
+        ):
+            return self.source
+        return None
+
+    async def add(self, *, domain_id: str, kind: str, name: str, uri: str) -> Source:
+        self.source = Source(
+            id="source-created",
+            domain_id=domain_id,
+            kind=kind,  # type: ignore[arg-type]
+            name=name,
+            uri=uri,
+            created_at=NOW,
+            updated_at=NOW,
+        )
+        return self.source
+
+
+class FakeDomainUnitOfWork:
+    def __init__(
+        self,
+        *,
+        domain: Domain | None = None,
+        source: Source | None = None,
+        admin: AdminUser | None = None,
+        fail_commit: bool = False,
+    ) -> None:
+        self.domains = FakeDomains(domain)
+        self.sources = FakeSources(source)
+        self.admin_users = FakeAdminUsers(admin)
+        self.fail_commit = fail_commit
+
+    async def __aenter__(self) -> FakeDomainUnitOfWork:
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        return None
+
+    async def commit(self) -> None:
+        if self.fail_commit:
+            raise IntegrityError("statement", {}, Exception("duplicate"))
 
 
 def test_domains_require_admin_token(domain_client: TestClient) -> None:
@@ -87,6 +212,33 @@ def test_rejects_duplicate_domain_slug(
 
     assert first.status_code == 201
     assert second.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_create_domain_rolls_integrity_race_into_conflict() -> None:
+    uow = FakeDomainUnitOfWork(fail_commit=True)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await create_domain(
+            DomainCreate(slug="race-domain", name="Race Domain"),
+            _="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+        )
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail == "Domain slug already exists"
+
+
+@pytest.mark.asyncio
+async def test_list_domains_returns_empty_for_unknown_authenticated_actor() -> None:
+    uow = FakeDomainUnitOfWork(domain=domain_fixture())
+
+    response = await list_domains(
+        actor="missing-actor@retos.dev",
+        uow=uow,  # type: ignore[arg-type]
+    )
+
+    assert response == []
 
 
 def test_create_and_list_domain_source(
@@ -157,6 +309,23 @@ def test_rejects_duplicate_source_uri_within_domain(
 
     assert first.status_code == 201
     assert second.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_create_source_rolls_integrity_race_into_conflict() -> None:
+    domain = domain_fixture("domain-race")
+    uow = FakeDomainUnitOfWork(domain=domain, fail_commit=True)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await create_source(
+            SourceCreate(kind="upload", name="Race Source", uri="upload://race"),
+            _="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id=domain.id,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail == "Source URI already exists for domain"
 
 
 def test_source_requires_existing_domain(

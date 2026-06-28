@@ -312,6 +312,35 @@ def test_file_upload_endpoint_rejects_unsupported_file_type(
     assert response.json()["detail"] == "Upload file type is not supported"
 
 
+def test_file_upload_endpoint_marks_failed_when_inline_runner_crashes(
+    upload_client: TestClient,
+    upload_admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    domain_id = create_upload_domain(upload_client, upload_admin_headers)
+    failures: list[dict[str, object]] = []
+
+    async def broken_runner(**_: object) -> None:
+        raise RuntimeError("inline upload crashed")
+
+    async def fake_fail_job(**kwargs: object) -> None:
+        failures.append(dict(kwargs))
+
+    monkeypatch.setattr("retos.ingestion.upload.run_file_upload_ingestion", broken_runner)
+    monkeypatch.setattr("retos.api.routes.ingestions.fail_file_upload_ingestion_job", fake_fail_job)
+
+    response = upload_client.post(
+        f"/domains/{domain_id}/ingestions/upload",
+        headers=upload_admin_headers,
+        files={"file": ("crash.txt", b"crash content", "text/plain")},
+    )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Upload ingestion failed"
+    assert failures
+    assert failures[0]["error"] == "inline upload crashed"
+
+
 def test_file_upload_endpoint_can_queue_without_inline_in_development(
     settings: Settings,
     tmp_path: Path,

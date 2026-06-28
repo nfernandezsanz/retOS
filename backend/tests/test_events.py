@@ -9,6 +9,7 @@ from retos.api.routes.events import (
     parse_last_event_id,
     persisted_event_id,
     persisted_replay_events,
+    progress_store,
 )
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
@@ -108,6 +109,41 @@ async def test_event_stream_replays_persisted_progress_events(client: TestClient
 
     assert any(event["id"].startswith("progress:") for event in events)
     assert any(event["event"] == "job.queued" and job_id in event["data"] for event in events)
+
+
+@pytest.mark.asyncio
+async def test_event_stream_stops_when_disconnected_during_persisted_replay(
+    client: TestClient,
+) -> None:
+    login = client.post(
+        "/auth/login",
+        json={"email": "admin@retos.dev", "password": "test-admin-password"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    domain = client.post(
+        "/domains",
+        headers=headers,
+        json={"slug": "events-disconnect", "name": "Events Disconnect"},
+    )
+    client.post(
+        "/jobs",
+        headers=headers,
+        json={"kind": "index.domain", "domain_id": domain.json()["id"], "payload": {}},
+    )
+
+    class Request:
+        async def is_disconnected(self) -> bool:
+            return True
+
+    stream = event_stream(
+        Request(),  # type: ignore[arg-type]
+        "admin@retos.dev",
+        None,
+        SQLAlchemyUnitOfWork(client.app.state.session_factory),
+    )
+
+    with pytest.raises(StopAsyncIteration):
+        await anext(stream)
 
 
 @pytest.mark.asyncio
@@ -360,6 +396,43 @@ async def test_event_stream_continues_live_events_after_progress_cursor(
     event = await anext(stream)
 
     assert event["id"].startswith("live:")
+
+
+@pytest.mark.asyncio
+async def test_event_stream_skips_live_events_hidden_from_actor(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    progress_store.reset()
+    progress_store.append("job.queued", {"domain_id": "hidden-domain"})
+    visible = progress_store.append("job.queued", {"domain_id": "visible-domain"})
+
+    async def fake_replay(**_: object) -> list[ProgressEvent]:
+        return []
+
+    async def fake_visibility(*, item: ProgressEvent, actor: str, uow: object) -> bool:
+        return item.id == visible.id
+
+    class Request:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def is_disconnected(self) -> bool:
+            self.calls += 1
+            return self.calls > 2
+
+    monkeypatch.setattr("retos.api.routes.events.persisted_replay_events", fake_replay)
+    monkeypatch.setattr("retos.api.routes.events.live_event_visible_to_actor", fake_visibility)
+
+    stream = event_stream(
+        Request(),  # type: ignore[arg-type]
+        "viewer@retos.dev",
+        "live:1",
+        SQLAlchemyUnitOfWork(client.app.state.session_factory),
+    )
+    event = await anext(stream)
+
+    assert event["id"] == visible.id
 
 
 @pytest.mark.asyncio

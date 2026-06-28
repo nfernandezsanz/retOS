@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from retos.core.config import Settings
-from retos.llm.providers import active_provider, list_provider_profiles
+from retos.llm.providers import active_provider, list_provider_profiles, provider_is_configured
 
 
 def auth_headers(client: TestClient) -> dict[str, str]:
@@ -71,6 +71,40 @@ def test_paid_provider_can_be_enabled_explicitly() -> None:
     assert provider.can_call is True
 
 
+def test_active_provider_falls_back_to_profile_default_model() -> None:
+    settings = Settings(
+        env="test",
+        provider="azure",
+        model="",
+        allow_paid_llm=True,
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+        azure_openai_api_key=SecretStr("az-test"),
+        azure_openai_endpoint="https://retos.openai.azure.com",
+        azure_openai_deployment="retos-deployment",
+    )
+
+    provider = active_provider(settings)
+
+    assert provider.provider == "azure"
+    assert provider.model == "retos-deployment"
+    assert provider.can_call is True
+
+
+def test_active_provider_rejects_unknown_profile() -> None:
+    settings = Settings(
+        env="test",
+        provider="unknown",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+    )
+
+    try:
+        active_provider(settings)
+    except ValueError as exc:
+        assert str(exc) == "Unknown provider profile"
+    else:  # pragma: no cover - defensive assertion for explicit branch semantics
+        raise AssertionError("active_provider accepted an unknown profile")
+
+
 def test_azure_provider_reports_each_missing_runtime_setting() -> None:
     settings = Settings(
         env="test",
@@ -87,6 +121,17 @@ def test_azure_provider_reports_each_missing_runtime_setting() -> None:
         "RETOS_AZURE_OPENAI_ENDPOINT",
         "RETOS_AZURE_OPENAI_DEPLOYMENT",
     ]
+
+
+def test_provider_is_configured_matches_missing_config() -> None:
+    settings = Settings(
+        env="test",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+        ollama_model="gemma4",
+    )
+
+    assert provider_is_configured(settings, "local") is True
+    assert provider_is_configured(settings, "openai") is False
 
 
 def test_llm_providers_endpoint_requires_admin(client: TestClient) -> None:
