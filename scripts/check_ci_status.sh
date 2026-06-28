@@ -66,7 +66,7 @@ curl_cmd = [
 ]
 subprocess.run(curl_cmd, check=True)
 jobs = json.loads(jobs_path.read_text(encoding="utf-8")).get("jobs", [])
-required_jobs = {"backend", "frontend", "docker"}
+required_jobs = {"backend", "frontend", "docker", "audit-evidence"}
 seen = {job.get("name"): job for job in jobs}
 missing = sorted(required_jobs - set(seen))
 if missing:
@@ -83,6 +83,6 @@ if failed:
 print(
     "CI status OK: "
     f"{repo}@{sha[:7]} run {run['id']} completed success "
-    f"with backend, frontend, and docker jobs. {run.get('html_url')}"
+    f"with backend, frontend, docker, and audit-evidence jobs. {run.get('html_url')}"
 )
 PY

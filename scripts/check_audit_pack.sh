@@ -195,6 +195,11 @@ require(
     "CI must run the consolidated auditor static pack",
 )
 for phrase in (
+    "audit-evidence:",
+    "needs:",
+    "- backend",
+    "- frontend",
+    "- docker",
     "make audit-manifest OUTPUT=retos-audit-manifest.json",
     "retos-audit-manifest-${{ github.sha }}",
     "path: retos-audit-manifest.json",

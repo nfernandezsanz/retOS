@@ -92,7 +92,7 @@ auditor a stable local entry point:
 | Operations runbook | `make operations-runbook-check` | Backup, restore, rollback, health-check, audit-export, and promotion-evidence fields are aligned. |
 | Auditor static pack | `make auditor-static-check` | Non-destructive dependency, security, ignore, operations, branding, release, preflight, and audit-pack guards pass together. |
 | Audit manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | JSON handoff with current commit, dirty state, CI run, required gates, critical file hashes, local visual screenshots, CI/release artifact names, and remaining external promotion evidence; CI also uploads `retos-audit-manifest-<commit>`. |
-| Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, and docker jobs for the current commit. |
+| Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, docker, and final audit-evidence jobs for the current commit. |
 
 ## External Promotion Evidence
 
@@ -123,7 +123,7 @@ These items must be closed before a final production release:
 ## Production Pilot Acceptance Checklist
 
 - [ ] Release note references the exact commit SHA under review.
-- [ ] Latest GitHub Actions run is green for that SHA.
+- [ ] Latest GitHub Actions run is green for that SHA, including the final `audit-evidence` artifact job.
 - [ ] `make ci-status-check` passes for the current `HEAD`.
 - [ ] `make check` passes with no paid providers.
 - [ ] `make dependency-audit` reports no known Python runtime advisories and no high-severity Node advisories.
@@ -158,7 +158,7 @@ These items must be closed before a final production release:
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
 | Operations runbook | `docs/operations.md`, `scripts/check_operations_runbook.sh`, `make operations-runbook-check` |
-| Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check` |
+| Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check`, and the `retos-audit-manifest-<commit>` artifact |
 | Audit handoff manifest | `scripts/export_audit_manifest.py`, `make audit-manifest` |
 | Release procedure | `docs/release-process.md` |
 | Operations runbooks | `docs/operations.md` |
