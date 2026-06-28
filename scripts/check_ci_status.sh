@@ -12,14 +12,15 @@ fi
 
 tmp_run="$(mktemp)"
 tmp_jobs="$(mktemp)"
-trap 'rm -f "${tmp_run}" "${tmp_jobs}"' EXIT
+tmp_artifacts="$(mktemp)"
+trap 'rm -f "${tmp_run}" "${tmp_jobs}" "${tmp_artifacts}"' EXIT
 
 curl -fsSL "${auth_args[@]+"${auth_args[@]}"}" \
   -H "Accept: application/vnd.github+json" \
   "${api_root}/repos/${repo}/actions/runs?head_sha=${sha}&per_page=10" \
   -o "${tmp_run}"
 
-python3 - "${tmp_run}" "${tmp_jobs}" "${api_root}" "${repo}" "${sha}" "${auth_args[@]+"${auth_args[@]}"}" <<'PY'
+python3 - "${tmp_run}" "${tmp_jobs}" "${tmp_artifacts}" "${api_root}" "${repo}" "${sha}" "${auth_args[@]+"${auth_args[@]}"}" <<'PY'
 from __future__ import annotations
 
 import json
@@ -34,10 +35,11 @@ def fail(message: str) -> None:
 
 run_path = Path(sys.argv[1])
 jobs_path = Path(sys.argv[2])
-api_root = sys.argv[3].rstrip("/")
-repo = sys.argv[4]
-sha = sys.argv[5]
-auth_args = sys.argv[6:]
+artifacts_path = Path(sys.argv[3])
+api_root = sys.argv[4].rstrip("/")
+repo = sys.argv[5]
+sha = sys.argv[6]
+auth_args = sys.argv[7:]
 
 runs = json.loads(run_path.read_text(encoding="utf-8")).get("workflow_runs", [])
 matching = [run for run in runs if run.get("head_sha") == sha and run.get("name") == "CI"]
@@ -80,9 +82,38 @@ failed = [
 if failed:
     fail(f"required CI job(s) are not successful: {', '.join(failed)}")
 
+artifacts_url = f"{api_root}/repos/{repo}/actions/runs/{run['id']}/artifacts?per_page=50"
+curl_cmd = [
+    "curl",
+    "-fsSL",
+    *auth_args,
+    "-H",
+    "Accept: application/vnd.github+json",
+    artifacts_url,
+    "-o",
+    str(artifacts_path),
+]
+subprocess.run(curl_cmd, check=True)
+artifacts = json.loads(artifacts_path.read_text(encoding="utf-8")).get("artifacts", [])
+artifact_by_name = {artifact.get("name"): artifact for artifact in artifacts}
+required_artifacts = {
+    f"retos-visual-audit-{sha}",
+    f"retos-audit-manifest-{sha}",
+}
+missing_artifacts = sorted(required_artifacts - set(artifact_by_name))
+if missing_artifacts:
+    fail(f"CI run {run['id']} is missing required artifact(s): {', '.join(missing_artifacts)}")
+
+expired_artifacts = [
+    name for name in sorted(required_artifacts) if artifact_by_name[name].get("expired") is True
+]
+if expired_artifacts:
+    fail(f"required CI artifact(s) expired: {', '.join(expired_artifacts)}")
+
 print(
     "CI status OK: "
     f"{repo}@{sha[:7]} run {run['id']} completed success "
-    f"with backend, frontend, docker, and audit-evidence jobs. {run.get('html_url')}"
+    "with backend, frontend, docker, audit-evidence jobs, "
+    f"and required artifacts. {run.get('html_url')}"
 )
 PY

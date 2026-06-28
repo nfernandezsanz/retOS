@@ -219,6 +219,13 @@ require(
     "CI must run the consolidated auditor static pack",
 )
 for phrase in (
+    "artifacts?per_page=50",
+    "retos-visual-audit-{sha}",
+    "retos-audit-manifest-{sha}",
+    "expired_artifacts",
+):
+    require(phrase in paths["ci_status_script"].read_text(encoding="utf-8"), f"CI status check must validate required artifacts: {phrase}")
+for phrase in (
     "audit-evidence:",
     "needs:",
     "- backend",
