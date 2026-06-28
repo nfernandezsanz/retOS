@@ -468,6 +468,7 @@ type LiveStatus = "disconnected" | "connecting" | "connected";
 
 const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
 const TOKEN_STORAGE_KEY = "retos.adminToken";
+const JOB_LEDGER_LIMIT = 16;
 
 const pipelineSteps = [
   { label: "Scan", value: "Discover mounted files and uploads", state: "ready" },
@@ -879,6 +880,15 @@ async function runSmokeEval(token: string): Promise<EvalRunResponse> {
   });
 }
 
+async function runAgentMultihopEval(token: string): Promise<EvalRunResponse> {
+  return requestJson<EvalRunResponse>("/evals/agent-multihop", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 async function runSquadEval(
   token: string,
   payload: {
@@ -1198,6 +1208,7 @@ function App() {
   const [evalTrends, setEvalTrends] = useState<EvalSuiteTrend[]>([]);
   const [evalComparison, setEvalComparison] = useState<EvalRunComparison | null>(null);
   const [isRunningEval, setIsRunningEval] = useState(false);
+  const [isRunningAgentMultihopEval, setIsRunningAgentMultihopEval] = useState(false);
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
   const [isRunningHotpotQAEval, setIsRunningHotpotQAEval] = useState(false);
   const [isRunningNaturalQuestionsEval, setIsRunningNaturalQuestionsEval] = useState(false);
@@ -1307,6 +1318,7 @@ function App() {
   );
   const isAnyEvalRunning =
     isRunningEval ||
+    isRunningAgentMultihopEval ||
     isRunningSquadEval ||
     isRunningHotpotQAEval ||
     isRunningNaturalQuestionsEval ||
@@ -1387,7 +1399,10 @@ function App() {
       const [job] = await Promise.all([loadJob(accessToken, jobId), refreshAudit(accessToken)]);
       setSelectedJob(job);
       setQueuedJobs((current) =>
-        [job, ...current.filter((candidate) => candidate.id !== job.id)].slice(0, 12),
+        [job, ...current.filter((candidate) => candidate.id !== job.id)].slice(
+          0,
+          JOB_LEDGER_LIMIT,
+        ),
       );
     } catch (error) {
       setJobDetailError(error instanceof Error ? error.message : "Job detail failed to load");
@@ -1409,7 +1424,10 @@ function App() {
       const accessToken = await getAdminToken();
       const retried = await retryJob(accessToken, jobId);
       setQueuedJobs((current) =>
-        [retried, ...current.filter((candidate) => candidate.id !== retried.id)].slice(0, 12),
+        [retried, ...current.filter((candidate) => candidate.id !== retried.id)].slice(
+          0,
+          JOB_LEDGER_LIMIT,
+        ),
       );
       setSelectedJobId(retried.id);
       setSelectedJob(retried);
@@ -2010,6 +2028,22 @@ function App() {
     }
   }
 
+  async function handleRunAgentMultihopEval() {
+    setIsRunningAgentMultihopEval(true);
+    setEvalError(null);
+    try {
+      const accessToken = await getAdminToken();
+      const response = await runAgentMultihopEval(accessToken);
+      applyEvalResponse(response);
+      await refreshAudit(accessToken);
+      await refreshEvalRuns(accessToken);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "Agent multi-hop eval failed");
+    } finally {
+      setIsRunningAgentMultihopEval(false);
+    }
+  }
+
   async function handleRunSquadEval(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsRunningSquadEval(true);
@@ -2177,7 +2211,10 @@ function App() {
       ].slice(0, 6),
     );
     setQueuedJobs((current) =>
-      [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(0, 12),
+      [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(
+        0,
+        JOB_LEDGER_LIMIT,
+      ),
     );
   }
 
@@ -3068,6 +3105,17 @@ function App() {
                 <CheckCircle2 aria-hidden="true" />
                 {isRunningEval ? "Running eval smoke" : "Run eval smoke"}
               </button>
+              <button
+                className="secondary-action"
+                disabled={isAnyEvalRunning}
+                type="button"
+                onClick={() => void handleRunAgentMultihopEval()}
+              >
+                <GitCompare aria-hidden="true" />
+                {isRunningAgentMultihopEval
+                  ? "Running agent multi-hop"
+                  : "Run agent multi-hop"}
+              </button>
               {evalJob ? (
                 <div className="selected-domain">
                   <span>Eval job</span>
@@ -3370,7 +3418,7 @@ function App() {
               ) : (
                 <div className="empty-state compact">
                   <CheckCircle2 aria-hidden="true" />
-                  <p>Run the local smoke eval to verify retrieval, citations, grounding, abstention, and budget compliance.</p>
+                  <p>Run a local eval to verify retrieval, citations, grounding, multi-hop behavior, and budget compliance.</p>
                 </div>
               )}
             </section>

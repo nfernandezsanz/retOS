@@ -172,10 +172,9 @@ curl "http://localhost:8000/evals/runs?limit=6" \
 ```
 
 The React console uses these endpoints in the `Local evals` panel to run smoke,
-SQuAD, HotpotQA, and Natural Questions evals, show metrics, per-case status, exported
-report paths, dataset provenance metadata, and a newest-first run history. The
-`agent-multihop` API suite is available for backend/API validation and persisted
-history even before it receives a dedicated UI control. Each history
+agent multi-hop, SQuAD, HotpotQA, and Natural Questions evals, show metrics, per-case
+status, exported report paths, dataset provenance metadata, and a newest-first run
+history. Each history
 row can rerun the persisted suite when its stored payload still contains the dataset and
 threshold settings needed for a faithful repeat:
 

@@ -163,6 +163,30 @@ async function mockProviderApi(page: Page) {
       },
     ],
   };
+  const agentMultihopReport = {
+    ...evalReport,
+    suite_name: "agent-multihop",
+    case_count: 1,
+    metadata: {
+      source: "built-in",
+      dataset: "agent-multihop-fixtures",
+    },
+    metrics: {
+      query_plan: 1,
+      multi_hop_support: 1,
+      evidence_route: 1,
+      citation_validity: 1,
+      grounded_answer: 1,
+      budget_compliance: 1,
+    },
+    cases: [
+      {
+        ...evalReport.cases[0],
+        case_id: "apollo-telemetry-bridge",
+        question: "Compare Apollo checklist review and telemetry guidance",
+      },
+    ],
+  };
   const hotpotqaReport = {
     ...evalReport,
     suite_name: "hotpotqa",
@@ -1011,6 +1035,19 @@ async function mockProviderApi(page: Page) {
       json: { job, report: evalReport },
     });
   });
+  await page.route("http://localhost:8000/evals/agent-multihop", async (route) => {
+    const job = jobFixture("job-eval-agent-multihop-1", "eval.run", "succeeded", {
+      result: agentMultihopReport,
+    });
+    jobs.unshift(job);
+    evalRuns.unshift({ job, report: agentMultihopReport });
+    recordAudit(job);
+    await route.fulfill({
+      contentType: "application/json",
+      status: 202,
+      json: { job, report: agentMultihopReport },
+    });
+  });
   await page.route("http://localhost:8000/evals/squad", async (route) => {
     const reportPaths = {
       json: "/var/lib/retos/evals/reports/ui-squad.json",
@@ -1166,6 +1203,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("loads the operational console", async ({ page }) => {
+  test.setTimeout(45_000);
+
   await expect(
     page.getByRole("heading", { name: "Auditable document investigation" }),
   ).toBeVisible();
@@ -1314,6 +1353,18 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval trends").getByText("retos-smoke")).toBeVisible();
   await expect(page.getByLabel("Eval trends").getByText("retrieval recall")).toBeVisible();
 
+  await page.getByRole("button", { name: "Run agent multi-hop" }).click();
+  await expect(page.getByLabel("Eval metrics").getByText("multi hop support")).toBeVisible();
+  await expect(page.getByLabel("Eval metadata").getByText("agent-multihop-fixtures")).toBeVisible();
+  await expect(page.getByLabel("Eval cases").getByText("apollo-telemetry-bridge")).toBeVisible();
+  await expect(page.getByLabel("Eval run history").getByText("agent-multihop")).toBeVisible();
+  await expect(page.getByLabel("Eval trends").getByText("agent-multihop")).toBeVisible();
+  const agentEvalRunRow = page
+    .getByLabel("Eval run history")
+    .locator("article")
+    .filter({ hasText: "agent-multihop" });
+  await expect(agentEvalRunRow.getByText("1 cases")).toBeVisible();
+
   await page.getByLabel("SQuAD dataset path").fill("ui-squad.json");
   await page.getByLabel("SQuAD max cases").fill("2");
   await page.getByLabel("SQuAD report stem").fill("ui-squad");
@@ -1332,7 +1383,11 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Run HotpotQA eval" }).click();
   await expect(page.getByLabel("Eval cases").getByText("hotpotqa-vela-air-force")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("hotpotqa")).toBeVisible();
-  await expect(page.getByLabel("Eval run history").getByText("1 cases")).toBeVisible();
+  const hotpotqaEvalRunRow = page
+    .getByLabel("Eval run history")
+    .locator("article")
+    .filter({ hasText: "hotpotqa" });
+  await expect(hotpotqaEvalRunRow.getByText("1 cases")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.md")).toBeVisible();
 
