@@ -1,7 +1,7 @@
 ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
-BRANCH_COVERAGE_MIN ?= 87.96
+BRANCH_COVERAGE_MIN ?= 90.44
 
 .PHONY: help install format format-check test lint typecheck dependency-audit db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check image-size-check docker-up docker-down
 

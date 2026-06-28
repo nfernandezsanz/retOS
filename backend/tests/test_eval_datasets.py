@@ -292,6 +292,34 @@ def test_natural_questions_adapter_accepts_document_tokens_and_respects_max_case
     assert cases[0].expected_citation_titles == ("Natural Questions: Apollo_11",)
 
 
+def test_natural_questions_adapter_accepts_plain_string_tokens(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "nq-string-tokens.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "id": "string-token-case",
+                "question_text": "Which body does Mercury orbit?",
+                "document_title": "Mercury",
+                "document_tokens": ["Mercury", "orbits", "the", "Sun"],
+                "annotations": [
+                    {
+                        "long_answer": {"start_token": 0, "end_token": 4},
+                        "short_answers": [{"start_token": 3, "end_token": 4}],
+                        "yes_no_answer": "NONE",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cases = load_natural_questions_cases(dataset_path)
+
+    assert cases[0].id == "natural-questions-string-token-case"
+    assert cases[0].documents[0].text == "Mercury orbits the Sun"
+    assert cases[0].expected_answer_terms == ("Sun",)
+
+
 def test_natural_questions_cases_run_through_local_eval_harness(tmp_path: Path) -> None:
     dataset_path = write_natural_questions_fixture(tmp_path / "nq.jsonl")
     cases = load_natural_questions_cases(dataset_path)
@@ -446,6 +474,33 @@ def test_natural_questions_adapter_rejects_invalid_long_answer(tmp_path: Path) -
         load_natural_questions_cases(dataset_path)
 
 
+def test_natural_questions_adapter_treats_boolean_long_answer_offsets_as_unanswerable(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "nq-bool-long-answer.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "example_id": "bool-long",
+                "question_text": "What is malformed?",
+                "document_text": "A small document.",
+                "annotations": [
+                    {
+                        "long_answer": {"start_token": True, "end_token": 2},
+                        "short_answers": [],
+                        "yes_no_answer": "NONE",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cases = load_natural_questions_cases(dataset_path)
+
+    assert cases[0].expect_abstention is True
+
+
 def test_natural_questions_adapter_rejects_empty_long_answer(tmp_path: Path) -> None:
     dataset_path = tmp_path / "nq-empty-long-answer.json"
     dataset_path.write_text(
@@ -494,6 +549,36 @@ def test_natural_questions_adapter_rejects_non_object_short_answers(tmp_path: Pa
         load_natural_questions_cases(dataset_path)
 
 
+def test_natural_questions_adapter_ignores_invalid_short_answer_offsets(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "nq-invalid-short-offsets.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "example_id": "invalid-short",
+                "question_text": "Which star is referenced?",
+                "document_text": "Mercury is close to the Sun.",
+                "annotations": [
+                    {
+                        "long_answer": {"start_token": 0, "end_token": 6},
+                        "short_answers": [
+                            {"start_token": -1, "end_token": 1},
+                            {"start_token": 2, "end_token": 2},
+                        ],
+                        "yes_no_answer": "NONE",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cases = load_natural_questions_cases(dataset_path)
+
+    assert cases[0].expected_answer_terms == ()
+
+
 def test_natural_questions_adapter_rejects_missing_annotations(tmp_path: Path) -> None:
     dataset_path = tmp_path / "nq-missing-annotations.json"
     dataset_path.write_text(
@@ -517,6 +602,29 @@ def test_natural_questions_adapter_rejects_malformed_wrapped_items(tmp_path: Pat
     dataset_path.write_text(json.dumps({"data": ["bad"]}), encoding="utf-8")
 
     with pytest.raises(DatasetAdapterError, match="Expected every Natural Questions item"):
+        load_natural_questions_cases(dataset_path)
+
+
+def test_natural_questions_adapter_rejects_missing_identifier(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "nq-missing-id.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "question_text": "What is missing?",
+                "document_text": "A document exists.",
+                "annotations": [
+                    {
+                        "long_answer": {"start_token": 0, "end_token": 3},
+                        "short_answers": [],
+                        "yes_no_answer": "NONE",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DatasetAdapterError, match="Expected one of example_id, id"):
         load_natural_questions_cases(dataset_path)
 
 
@@ -552,6 +660,27 @@ def test_natural_questions_adapter_rejects_invalid_jsonl(tmp_path: Path) -> None
 
     with pytest.raises(DatasetAdapterError, match="JSONL line 2"):
         load_natural_questions_cases(dataset_path)
+
+
+def test_natural_questions_adapter_skips_blank_jsonl_lines(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "blank-lines-nq.jsonl"
+    item = {
+        "example_id": "blank-lines",
+        "question_text": "Which planet is closest to the Sun?",
+        "document_text": "Mercury is closest to the Sun.",
+        "annotations": [
+            {
+                "long_answer": {"start_token": 0, "end_token": 6},
+                "short_answers": [{"start_token": 0, "end_token": 1}],
+                "yes_no_answer": "NONE",
+            }
+        ],
+    }
+    dataset_path.write_text(f"\n{json.dumps(item)}\n\n", encoding="utf-8")
+
+    cases = load_natural_questions_cases(dataset_path)
+
+    assert [case.id for case in cases] == ["natural-questions-blank-lines"]
 
 
 def test_hotpotqa_adapter_respects_max_cases(tmp_path: Path) -> None:
@@ -634,6 +763,27 @@ def test_hotpotqa_adapter_rejects_empty_context_text(tmp_path: Path) -> None:
     )
 
     with pytest.raises(DatasetAdapterError, match="has no text"):
+        load_hotpotqa_cases(dataset_path)
+
+
+def test_hotpotqa_adapter_rejects_non_array_context(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "hotpot-bad-context-root.json"
+    dataset_path.write_text(
+        json.dumps(
+            [
+                {
+                    "_id": "bad-context-root",
+                    "question": "What is malformed?",
+                    "answer": "malformed",
+                    "supporting_facts": [["Doc", 0]],
+                    "context": {"Doc": ["Text"]},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DatasetAdapterError, match="'context' to be a list"):
         load_hotpotqa_cases(dataset_path)
 
 
@@ -828,6 +978,52 @@ def test_hotpotqa_adapter_rejects_missing_supporting_context(tmp_path: Path) -> 
         load_hotpotqa_cases(dataset_path)
 
 
+def test_hotpotqa_agent_adapter_rejects_missing_supporting_context(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "bad-hotpot-agent.json"
+    dataset_path.write_text(
+        json.dumps(
+            [
+                {
+                    "_id": "broken-agent",
+                    "question": "What is broken?",
+                    "answer": "missing",
+                    "supporting_facts": [["Missing title", 0], ["Also missing", 0]],
+                    "context": [["Present title", ["Present text."]]],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DatasetAdapterError, match="missing supporting context"):
+        load_hotpotqa_agent_cases(dataset_path)
+
+
+def test_hotpotqa_agent_adapter_skips_cases_without_bridge_terms(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "no-bridge-hotpot-agent.json"
+    dataset_path.write_text(
+        json.dumps(
+            [
+                {
+                    "_id": "no-bridge",
+                    "question": "Which records should be compared?",
+                    "answer": "both",
+                    "supporting_facts": [["Alpha", 0], ["Beta", 0]],
+                    "context": [
+                        ["Alpha", ["Quartz pilots calibrated yellow radios."]],
+                        ["Beta", ["Silver nurses archived purple invoices."]],
+                    ],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert load_hotpotqa_agent_cases(dataset_path) == ()
+
+
 def test_hotpotqa_adapter_rejects_malformed_context(tmp_path: Path) -> None:
     dataset_path = tmp_path / "bad-context.json"
     dataset_path.write_text(
@@ -855,3 +1051,37 @@ def test_hotpotqa_adapter_rejects_non_object_array_items(tmp_path: Path) -> None
 
     with pytest.raises(DatasetAdapterError, match="every HotpotQA case"):
         load_hotpotqa_cases(dataset_path)
+
+
+def test_hotpotqa_adapter_rejects_primitive_root(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "bad-hotpot-root.json"
+    dataset_path.write_text(json.dumps("bad"), encoding="utf-8")
+
+    with pytest.raises(DatasetAdapterError, match="root must be a JSON array or object"):
+        load_hotpotqa_cases(dataset_path)
+
+
+def test_hotpotqa_agent_adapter_accepts_object_root(tmp_path: Path) -> None:
+    raw_cases = json.loads(write_hotpotqa_fixture(tmp_path / "hotpot-source.json").read_text())
+    dataset_path = tmp_path / "hotpot-agent-object.json"
+    dataset_path.write_text(json.dumps({"data": raw_cases}), encoding="utf-8")
+
+    cases = load_hotpotqa_agent_cases(dataset_path, HotpotQAAdapterOptions(max_cases=1))
+
+    assert [case.id for case in cases] == ["hotpotqa-agent-vela-air-force"]
+
+
+def test_hotpotqa_agent_adapter_rejects_non_object_array_items(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "bad-agent-root.json"
+    dataset_path.write_text(json.dumps(["bad"]), encoding="utf-8")
+
+    with pytest.raises(DatasetAdapterError, match="every HotpotQA case"):
+        load_hotpotqa_agent_cases(dataset_path)
+
+
+def test_hotpotqa_agent_adapter_rejects_primitive_root(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "bad-agent-primitive-root.json"
+    dataset_path.write_text(json.dumps("bad"), encoding="utf-8")
+
+    with pytest.raises(DatasetAdapterError, match="root must be a JSON array or object"):
+        load_hotpotqa_agent_cases(dataset_path)

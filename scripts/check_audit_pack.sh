@@ -66,8 +66,8 @@ for phrase in (
     "SBOM/provenance",
     "Cosign",
     "Branch coverage",
-    "94.17% total",
-    "87.96% branch-only",
+    "95.20% total",
+    "90.44% branch-only",
     "RETOS_ALLOW_PAID_LLM=false",
     "RETOS_OLLAMA_MODEL=gemma4",
     "/audit/export",
@@ -94,7 +94,7 @@ require(
     "release note must keep publish evidence blockers explicit",
 )
 require(
-    "87.96% branch" in readme,
+    "90.44% branch" in readme,
     "README must record current branch coverage evidence",
 )
 require(

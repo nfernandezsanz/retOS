@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from retos.agent.audits import QueryPlan, QueryPlanStep
 from retos.agent.harness import create_research_harness
 from retos.agent.service import (
     AgentQueryError,
@@ -15,6 +16,8 @@ from retos.agent.service import (
     hits_within_budget,
     invoke_deepagents_harness,
     run_agent_query,
+    seed_agent_evidence,
+    synthesize_agent_answer,
 )
 from retos.api.app import create_app
 from retos.api.routes.agent import enqueue_agent_query
@@ -186,6 +189,26 @@ def create_multi_document_agent_fixture(client: TestClient, headers: dict[str, s
     assert rebuild.status_code == 202
     assert rebuild.json()["status"] == "succeeded"
     return domain_id
+
+
+async def add_agent_job(
+    client: TestClient,
+    *,
+    kind: str = "agent.query",
+    status: str = "queued",
+    domain_id: str | None,
+    payload: dict[str, object] | None = None,
+) -> str:
+    async with SQLAlchemyUnitOfWork(client.app.state.session_factory) as uow:
+        job = await uow.jobs.add(
+            kind=kind,  # type: ignore[arg-type]
+            status=status,  # type: ignore[arg-type]
+            domain_id=domain_id,
+            source_id=None,
+            payload=payload if payload is not None else {"question": "What happened?"},
+        )
+        await uow.commit()
+    return job.id
 
 
 def test_agent_query_requires_admin(agent_client: TestClient) -> None:
@@ -601,11 +624,118 @@ def test_extract_harness_answer_reads_latest_message_content() -> None:
     assert answer == "Final answer"
 
 
+def test_extract_harness_answer_reads_direct_strings_and_structured_fields() -> None:
+    assert extract_harness_answer("  direct answer  ") == "direct answer"
+    assert extract_harness_answer({"answer": "  answer field  "}) == "answer field"
+    assert (
+        extract_harness_answer({"structured_response": "  structured field  "})
+        == "structured field"
+    )
+
+
+def test_extract_harness_answer_reads_object_message_content_and_ignores_unknown() -> None:
+    class Message:
+        def __init__(self) -> None:
+            self.content = ["first line", {"content": "second line"}, {"missing": "ignored"}]
+
+    assert extract_harness_answer({"messages": [Message()]}) == "first line\nsecond line"
+    assert extract_harness_answer(object()) == ""
+
+
 def test_extract_harness_answer_reads_object_content() -> None:
     class Output:
         content = "Object answer"
 
     assert extract_harness_answer(Output()) == "Object answer"
+
+
+def test_synthesize_agent_answer_uses_deterministic_runtime(settings: Settings) -> None:
+    class Toolbox:
+        def __init__(self) -> None:
+            self.selected_hits = [
+                SearchHit(
+                    segment_id="s1",
+                    document_id="d1",
+                    document_version_id="v1",
+                    title="One",
+                    text="deterministic evidence",
+                    anchor=None,
+                    ordinal=0,
+                    score=1.0,
+                )
+            ]
+
+    answer = synthesize_agent_answer(
+        settings=settings,
+        question="What evidence?",
+        seed_payload={},
+        toolbox=Toolbox(),  # type: ignore[arg-type]
+        budget=budget_from_payload({}),
+    )
+
+    assert "deterministic evidence" in answer
+
+
+def test_seed_agent_evidence_skips_duplicate_followups_and_stops_at_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, bool]] = []
+
+    class Toolbox:
+        def __init__(self) -> None:
+            self.search_count = 0
+            self.selected_hits: list[SearchHit] = []
+
+        def search_corpus(
+            self,
+            query: str,
+            *,
+            limit: int,
+            prefer_new_hits: bool = False,
+        ) -> dict[str, object]:
+            self.search_count += 1
+            calls.append((query, prefer_new_hits))
+            self.selected_hits.append(
+                SearchHit(
+                    segment_id=f"s{self.search_count}",
+                    document_id="d1",
+                    document_version_id="v1",
+                    title="One",
+                    text=query,
+                    anchor=None,
+                    ordinal=self.search_count,
+                    score=1.0,
+                )
+            )
+            return {"query": query, "limit": limit}
+
+        def usage_payload(self) -> dict[str, object]:
+            return {"search_count": self.search_count}
+
+    monkeypatch.setattr(
+        "retos.agent.service.named_entity_followup_queries",
+        lambda **_: ["complex question", "fresh entity", "budget stop"],
+    )
+    plan = QueryPlan(
+        strategy="multi_hop_evidence_route",
+        requires_multi_hop=True,
+        search_queries=["complex question", "fresh entity", "planned but over budget"],
+        expected_evidence="multi_document",
+        steps=[QueryPlanStep(name="search", description="Search", status="planned")],
+        warnings=[],
+    )
+    toolbox = Toolbox()
+
+    payload = seed_agent_evidence(
+        question="complex question",
+        limit=5,
+        budget=budget_from_payload({"budget": {"max_searches": 2, "max_citations": 3}}),
+        query_plan=plan,
+        toolbox=toolbox,  # type: ignore[arg-type]
+    )
+
+    assert calls == [("complex question", False), ("fresh entity", True)]
+    assert payload["usage"] == {"search_count": 2}
 
 
 class FakeHarnessToolbox:
@@ -854,6 +984,90 @@ async def test_run_agent_query_rejects_missing_job(
             uow=SQLAlchemyUnitOfWork(agent_client.app.state.session_factory),
             index=TantivySearchIndex(settings.index_root),
             settings=settings,
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("job_kwargs", "message"),
+    [
+        ({"kind": "index.domain"}, "Unsupported agent job kind"),
+        ({"status": "running"}, "Job must be queued"),
+        ({"domain_id": None}, "requires a domain_id"),
+    ],
+)
+async def test_run_agent_query_rejects_invalid_job_state(
+    agent_client: TestClient,
+    settings: Settings,
+    job_kwargs: dict[str, object],
+    message: str,
+) -> None:
+    domain_id = job_kwargs.pop("domain_id", "missing-domain")
+    job_id = await add_agent_job(
+        agent_client,
+        domain_id=domain_id,  # type: ignore[arg-type]
+        **job_kwargs,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(AgentQueryError, match=message):
+        await run_agent_query(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(agent_client.app.state.session_factory),
+            index=TantivySearchIndex(settings.index_root),
+            settings=settings,
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_agent_query_rejects_missing_domain(
+    agent_client: TestClient,
+    settings: Settings,
+) -> None:
+    job_id = await add_agent_job(agent_client, domain_id="missing-domain")
+
+    with pytest.raises(AgentQueryError, match="Domain not found"):
+        await run_agent_query(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(agent_client.app.state.session_factory),
+            index=TantivySearchIndex(settings.index_root),
+            settings=settings,
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_agent_query_rejects_blank_question(
+    agent_client: TestClient,
+    agent_admin_headers: dict[str, str],
+    settings: Settings,
+) -> None:
+    domain_id = create_agent_fixture(agent_client, agent_admin_headers)
+    job_id = await add_agent_job(agent_client, domain_id=domain_id, payload={"question": " "})
+
+    with pytest.raises(AgentQueryError, match="requires a question"):
+        await run_agent_query(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(agent_client.app.state.session_factory),
+            index=TantivySearchIndex(settings.index_root),
+            settings=settings,
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_agent_query_rejects_non_callable_provider(
+    agent_client: TestClient,
+    agent_admin_headers: dict[str, str],
+    settings: Settings,
+) -> None:
+    domain_id = create_agent_fixture(agent_client, agent_admin_headers)
+    job_id = await add_agent_job(agent_client, domain_id=domain_id)
+    local_settings = settings.model_copy(update={"provider": "openai"})
+
+    with pytest.raises(AgentQueryError, match="Missing required configuration"):
+        await run_agent_query(
+            job_id=job_id,
+            uow=SQLAlchemyUnitOfWork(agent_client.app.state.session_factory),
+            index=TantivySearchIndex(settings.index_root),
+            settings=local_settings,
         )
 
 

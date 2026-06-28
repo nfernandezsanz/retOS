@@ -8,6 +8,7 @@ from retos.agent.audits import (
     ensure_evidence_ledger,
     plan_query,
     query_plan_to_payload,
+    query_searches,
 )
 
 
@@ -66,6 +67,18 @@ def test_contradiction_audit_flags_opposite_polarity_citations() -> None:
     )
 
 
+def test_contradiction_audit_ignores_empty_or_weakly_shared_evidence() -> None:
+    empty = FixtureCitation("segment-empty", "no")
+    positive = FixtureCitation("segment-positive", "Apollo checklist validation confirmed.")
+    negative = FixtureCitation("segment-negative", "Apollo did not launch.")
+
+    audit = audit_contradictions([empty, positive, negative])
+
+    assert audit.checked is True
+    assert audit.conflict_count == 0
+    assert audit.findings == []
+
+
 def test_evidence_route_flags_single_document_evidence_with_context() -> None:
     citation = FixtureCitation(
         "segment-known",
@@ -91,6 +104,22 @@ def test_evidence_route_flags_single_document_evidence_with_context() -> None:
     assert route.documents[0].title == "Mission Notes"
     assert route.documents[0].segment_ids == ["segment-known"]
     assert route.documents[0].anchors == ["page=7"]
+
+
+def test_evidence_route_accepts_citations_without_anchors() -> None:
+    citation = FixtureCitation(
+        "segment-known",
+        "Known evidence",
+        document_id="document-a",
+        title="Mission Notes",
+        anchor=None,
+    )
+
+    route = audit_evidence_route([citation])
+
+    assert route.anchor_count == 0
+    assert route.documents[0].anchors == []
+    assert route.warnings == ["single_citation", "single_document", "no_neighbor_context"]
 
 
 def test_evidence_route_recognizes_multi_document_coverage() -> None:
@@ -135,6 +164,34 @@ def test_multi_hop_audit_flags_single_document_multi_hop_question() -> None:
     assert audit.warnings == ["multi_hop_question_single_document"]
 
 
+def test_multi_hop_audit_warns_when_multi_hop_question_has_no_evidence() -> None:
+    audit = audit_multi_hop("Compare Apollo and Gemini readiness", [])
+
+    assert audit.status == "no_evidence"
+    assert audit.requires_multi_hop is True
+    assert audit.document_count == 0
+    assert audit.warnings == ["multi_hop_question_without_evidence"]
+
+
+def test_multi_hop_audit_flags_multi_document_without_bridge_terms() -> None:
+    left = FixtureCitation(
+        "segment-left",
+        "Apollo checklist validation confirmed guidance readiness.",
+        document_id="document-a",
+    )
+    right = FixtureCitation(
+        "segment-right",
+        "Gemini oxygen procedures referenced cabin pressure.",
+        document_id="document-b",
+    )
+
+    audit = audit_multi_hop("Compare Apollo and Gemini readiness", [left, right])
+
+    assert audit.status == "multi_document_without_bridge_terms"
+    assert audit.bridge_terms == []
+    assert audit.warnings == ["missing_cross_document_bridge_terms"]
+
+
 def test_multi_hop_audit_recognizes_cross_document_bridge_terms() -> None:
     left = FixtureCitation(
         "segment-left",
@@ -156,6 +213,25 @@ def test_multi_hop_audit_recognizes_cross_document_bridge_terms() -> None:
     assert audit.warnings == []
 
 
+def test_multi_hop_audit_marks_opportunistic_cross_document_evidence() -> None:
+    left = FixtureCitation(
+        "segment-left",
+        "Apollo checklist review confirmed guidance readiness.",
+        document_id="document-a",
+    )
+    right = FixtureCitation(
+        "segment-right",
+        "Checklist review tracked guidance telemetry.",
+        document_id="document-b",
+    )
+
+    audit = audit_multi_hop("What confirms checklist guidance?", [left, right])
+
+    assert audit.requires_multi_hop is False
+    assert audit.status == "opportunistic_multi_document"
+    assert {"checklist", "review", "guidance"}.issuperset(set(audit.bridge_terms))
+
+
 def test_query_plan_splits_multi_hop_questions_into_searches() -> None:
     plan = plan_query("Compare Apollo checklist review and telemetry readiness")
 
@@ -167,6 +243,21 @@ def test_query_plan_splits_multi_hop_questions_into_searches() -> None:
     assert "readiness telemetry" in plan.search_queries
     assert [step.name for step in plan.steps] == ["search", "read", "route", "audit"]
     assert query_plan_to_payload(plan)["strategy"] == "multi_hop_evidence_route"
+
+
+def test_query_plan_warns_when_multi_hop_question_has_no_distinct_subqueries() -> None:
+    plan = plan_query("and")
+
+    assert plan.requires_multi_hop is True
+    assert plan.search_queries == ["and"]
+    assert plan.warnings == [
+        "low_specificity_question",
+        "multi_hop_question_without_distinct_subqueries",
+    ]
+
+
+def test_query_searches_avoids_reinserting_identical_query() -> None:
+    assert query_searches("why") == ["why"]
 
 
 def test_query_plan_warns_on_low_specificity_questions() -> None:
