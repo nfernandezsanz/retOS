@@ -150,6 +150,28 @@ def test_eval_cli_runs_hotpotqa_suite_from_local_file(tmp_path: Path, capsys) ->
     assert '"case_count": 1' in captured.out
 
 
+def test_eval_cli_runs_hotpotqa_agent_suite_from_local_file(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    dataset_path = write_hotpotqa_cli_fixture(tmp_path / "hotpot.json")
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="json",
+        suite="hotpotqa-agent",
+        dataset_path=dataset_path,
+        max_cases=1,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert '"suite_name": "hotpotqa-agent"' in captured.out
+    assert '"multi_hop_support": 1.0' in captured.out
+    assert '"adapter": "hotpotqa-agent"' in captured.out
+
+
 def test_eval_cli_runs_natural_questions_suite_from_local_file(
     tmp_path: Path,
     capsys,
@@ -353,6 +375,47 @@ def test_eval_cli_requires_dataset_path_for_dataset_suites(tmp_path: Path, capsy
     captured = capsys.readouterr()
     assert exit_code == 2
     assert "--dataset-path is required for dataset-backed suites" in captured.err
+
+
+def test_eval_cli_rejects_hotpotqa_agent_without_multi_hop_cases(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    dataset_path = tmp_path / "single-hop-hotpot.json"
+    dataset_path.write_text(
+        json.dumps(
+            [
+                {
+                    "_id": "apollo-lunar",
+                    "question": "Which program carried astronauts to the lunar surface?",
+                    "answer": "Apollo program",
+                    "supporting_facts": [["Apollo program", 0]],
+                    "context": [
+                        [
+                            "Apollo program",
+                            [
+                                "The Apollo program carried astronauts to the lunar surface.",
+                            ],
+                        ]
+                    ],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    cli = load_eval_cli()
+
+    exit_code = cli.run(
+        index_root=tmp_path / "index",
+        output_format="json",
+        suite="hotpotqa-agent",
+        dataset_path=dataset_path,
+        max_cases=1,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "hotpotqa-agent dataset produced no multi-hop agent cases" in captured.err
 
 
 def test_eval_cli_rejects_non_positive_max_cases(tmp_path: Path, capsys) -> None:

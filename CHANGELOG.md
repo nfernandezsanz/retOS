@@ -54,6 +54,9 @@ tag in GitHub.
 - React eval controls now expose an explicit `Eval scope` selector that attaches
   dataset-backed SQuAD, HotpotQA, Natural Questions, and OCR benchmark runs to a domain
   and filters history, trends, comparison, and regression-gate workflows.
+- HotpotQA supporting facts can now be converted into a local `hotpotqa-agent` eval
+  profile for deterministic agent query-plan, evidence-route, bridge-term, grounding,
+  citation, and budget calibration.
 
 ### Changed
 

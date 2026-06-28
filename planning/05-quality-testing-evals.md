@@ -138,7 +138,7 @@ does not download public data or call paid providers.
 | Dataset | Fit |
 | --- | --- |
 | SQuAD 2.0 | Implemented as an opt-in local adapter and admin API run for paragraph QA plus unanswerable/abstention cases, with optional JSON/Markdown report export. |
-| HotpotQA | Implemented as an opt-in local adapter and admin API run for multi-hop retrieval and supporting-fact evaluation, with optional JSON/Markdown report export. |
+| HotpotQA | Implemented as an opt-in local adapter and admin API run for multi-hop retrieval and supporting-fact evaluation, with optional JSON/Markdown report export. A CLI-only `hotpotqa-agent` profile converts eligible supporting-fact cases into deterministic agent audit cases for query-plan, evidence-route, bridge-term, grounding, citation, and budget calibration. |
 | Natural Questions | Implemented as an opt-in local adapter and admin API run for real user questions with Wikipedia evidence; NQ-Open samples can also be converted into adapter-compatible synthetic evidence for early query-shape calibration, and official simplified NQ `.jsonl(.gz)` files can be sampled locally for full document-shape retrieval pressure. |
 | FUNSD | Implemented as an opt-in OCR benchmark adapter for form image/text pressure; derives deterministic key-value recall and layout boxes from question/answer links and annotation boxes when present. |
 | ICDAR 2019 SROIE | Implemented as an opt-in OCR benchmark adapter for receipt OCR pressure; reads optional entity files for deterministic key-value recall and box files for reading-order/Layout IoU scoring. |

@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from retos.agent.audits import significant_terms
+from retos.evals.agent import AgentEvalCase
 from retos.evals.smoke import EvalCase, EvalDocument
 
 
@@ -84,6 +86,32 @@ def load_hotpotqa_cases(
     cases: list[EvalCase] = []
     for raw_case in raw_cases:
         cases.append(case_from_hotpotqa_item(dataset_name=dataset_path.name, item=raw_case))
+        if adapter_options.max_cases is not None and len(cases) >= adapter_options.max_cases:
+            return tuple(cases)
+    return tuple(cases)
+
+
+def load_hotpotqa_agent_cases(
+    dataset_path: Path,
+    options: HotpotQAAdapterOptions | None = None,
+) -> tuple[AgentEvalCase, ...]:
+    adapter_options = options or HotpotQAAdapterOptions()
+    payload = read_json_value(dataset_path)
+    if isinstance(payload, dict):
+        raw_cases = require_list(payload, "data")
+    elif isinstance(payload, list):
+        if not all(isinstance(item, dict) for item in payload):
+            raise DatasetAdapterError("Expected every HotpotQA case to be an object")
+        raw_cases = payload
+    else:
+        raise DatasetAdapterError("HotpotQA dataset root must be a JSON array or object")
+
+    cases: list[AgentEvalCase] = []
+    for raw_case in raw_cases:
+        case = agent_case_from_hotpotqa_item(dataset_name=dataset_path.name, item=raw_case)
+        if case is None:
+            continue
+        cases.append(case)
         if adapter_options.max_cases is not None and len(cases) >= adapter_options.max_cases:
             return tuple(cases)
     return tuple(cases)
@@ -185,6 +213,50 @@ def case_from_hotpotqa_item(*, dataset_name: str, item: dict[str, Any]) -> EvalC
         expected_citation_titles=tuple(f"HotpotQA: {title}" for title in sorted(supporting_titles)),
         expected_answer_terms=answer_terms,
         expect_abstention=False,
+    )
+
+
+def agent_case_from_hotpotqa_item(
+    *,
+    dataset_name: str,
+    item: dict[str, Any],
+) -> AgentEvalCase | None:
+    case_id = require_string(item, "_id")
+    question = require_string(item, "question")
+    answer = require_string(item, "answer")
+    supporting_titles = supporting_fact_titles(item)
+    if len(supporting_titles) < 2:
+        return None
+    documents = tuple(
+        document
+        for document in hotpotqa_documents(
+            dataset_name=dataset_name,
+            case_id=case_id,
+            context=require_raw_list(item, "context"),
+        )
+        if document.title.removeprefix("HotpotQA: ") in supporting_titles
+    )
+    available_titles = {document.title.removeprefix("HotpotQA: ") for document in documents}
+    missing_support = sorted(supporting_titles - available_titles)
+    if missing_support:
+        raise DatasetAdapterError(
+            f"HotpotQA case {case_id!r} references missing supporting context: "
+            f"{', '.join(missing_support)}"
+        )
+    bridge_terms = hotpotqa_bridge_terms(documents)
+    if not bridge_terms:
+        return None
+
+    normalized_answer = answer.strip().lower()
+    answer_terms = () if normalized_answer in {"yes", "no", "noanswer"} else (answer,)
+    supporting_label = " and ".join(sorted(supporting_titles))
+    return AgentEvalCase(
+        id=f"hotpotqa-agent-{slugify(case_id)}",
+        question=(f"Compare HotpotQA supporting facts for {supporting_label}. " f"{question}"),
+        documents=documents,
+        expected_citation_titles=tuple(f"HotpotQA: {title}" for title in sorted(supporting_titles)),
+        expected_answer_terms=answer_terms,
+        expected_bridge_terms=bridge_terms,
     )
 
 
@@ -361,6 +433,15 @@ def hotpotqa_documents(
             )
         )
     return tuple(documents)
+
+
+def hotpotqa_bridge_terms(documents: tuple[EvalDocument, ...]) -> tuple[str, ...]:
+    if len(documents) < 2:
+        return ()
+    shared_terms = significant_terms(documents[0].text)
+    for document in documents[1:]:
+        shared_terms &= significant_terms(document.text)
+    return tuple(sorted(shared_terms)[:8])
 
 
 def read_json_object(dataset_path: Path) -> dict[str, Any]:

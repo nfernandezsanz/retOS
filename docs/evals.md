@@ -67,6 +67,12 @@ Run an opt-in HotpotQA dataset eval from a local file:
 make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpot_dev_distractor_v1.json MAX_CASES=50
 ```
 
+Run HotpotQA supporting facts through the agent audit harness:
+
+```bash
+make eval-hotpotqa-agent HOTPOTQA_PATH=evals/datasets/hotpot_dev_distractor_v1.json MAX_CASES=50
+```
+
 Run an opt-in Natural Questions dataset eval from a local JSONL or JSON file:
 
 ```bash
@@ -96,8 +102,8 @@ PYTHONPATH=src python scripts/run_eval_smoke.py \
   --format markdown
 ```
 
-HotpotQA and Natural Questions use the same report flags with `--suite hotpotqa` and
-`--suite natural-questions`.
+HotpotQA, HotpotQA agent, and Natural Questions use the same report flags with
+`--suite hotpotqa`, `--suite hotpotqa-agent`, and `--suite natural-questions`.
 
 Dataset-backed JSON and Markdown reports include a `metadata` block with the adapter,
 resolved dataset path, requested `max_cases`, and execution source. Built-in smoke
@@ -337,7 +343,7 @@ profiles:
 | Profile | Output | Notes |
 | --- | --- | --- |
 | `squad-dev-v2` | `squad-dev-v2-sample.json` | Directly usable with `make eval-squad SQUAD_PATH=evals/datasets/squad-dev-v2-sample.json`. |
-| `hotpotqa-dev-distractor` | `hotpotqa-dev-distractor-sample.json` | Directly usable with `make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json`. |
+| `hotpotqa-dev-distractor` | `hotpotqa-dev-distractor-sample.json` | Directly usable with `make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json` or `make eval-hotpotqa-agent HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json` when the sample contains at least one case with two supporting documents and shared bridge terms. |
 | `nq-open-train` | `nq-open-train-sample.jsonl` | Raw NQ-Open sample for research inspection. |
 | `nq-open-train-adapter` | `nq-open-train-adapter-sample.jsonl` | Converts NQ-Open questions and answers into the local RetOS Natural Questions adapter shape with synthetic evidence documents; directly usable with `make eval-natural-questions NQ_PATH=evals/datasets/nq-open-train-adapter-sample.jsonl`. |
 | `nq-simplified-local` | `nq-simplified-sample.jsonl` | Samples an operator-provided official simplified Natural Questions `.jsonl` or `.jsonl.gz` file without network access; directly usable with `make eval-natural-questions NQ_PATH=evals/datasets/nq-simplified-sample.jsonl`. |
@@ -404,6 +410,27 @@ Adapter guarantees:
 - Missing supporting contexts and malformed `context` or `supporting_facts` entries
   fail fast with explicit errors.
 - Tests use tiny generated fixtures, not vendored benchmark data.
+
+## HotpotQA Agent Adapter
+
+`make eval-hotpotqa-agent` reads the same local HotpotQA JSON shape, but converts
+eligible cases into `AgentEvalCase` records for the deterministic agent audit harness.
+It keeps only cases with at least two supporting documents and shared bridge terms
+between those supporting documents, then wraps the original question in a comparison
+prompt so RetOS must exercise the multi-hop query planner.
+
+The resulting report uses the `hotpotqa-agent` suite name and scores:
+
+- query-plan strategy and planned search fanout
+- multi-document support and bridge terms
+- evidence-route coverage
+- citation validity
+- grounded answer terms
+- search/citation/evidence-token budget compliance
+
+This profile is CLI-only for now. It is intended for local calibration and release
+evidence before wiring a durable API endpoint. It remains cost-safe: no network access,
+no paid provider calls, bounded `MAX_CASES`, and reproducible JSON/Markdown reports.
 
 ## Natural Questions Adapter
 

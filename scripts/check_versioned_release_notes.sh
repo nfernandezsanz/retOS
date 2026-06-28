@@ -15,13 +15,19 @@ def require(condition: bool, message: str) -> None:
 
 release_dir = Path("docs/releases")
 index_path = release_dir / "README.md"
+project_readme_path = Path("README.md")
 release_files = sorted(release_dir.glob("*.md"))
 versioned_files = [path for path in release_files if path.name != "README.md"]
 
 require(index_path.is_file() and index_path.stat().st_size > 0, "docs/releases/README.md is required")
+require(project_readme_path.is_file(), "README.md is required")
 require(versioned_files, "at least one versioned release note is required")
 
 index = index_path.read_text(encoding="utf-8")
+project_readme = project_readme_path.read_text(encoding="utf-8")
+coverage_match = re.search(r"Backend coverage \| ([0-9]+\.[0-9]+%)", project_readme)
+require(coverage_match is not None, "README.md must record backend coverage evidence")
+current_backend_coverage = coverage_match.group(1)
 for phrase in (
     "versioned release notes",
     "CHANGELOG.md",
@@ -63,7 +69,10 @@ for path in versioned_files:
     for phrase in required_phrases:
         require(phrase in content, f"{path} missing {phrase}")
     require("Pending until" in content, f"{path} must state pending publish evidence while pre-release")
-    require("90.63%" in content, f"{path} must record current backend coverage evidence")
+    require(
+        current_backend_coverage in content,
+        f"{path} must record current backend coverage evidence",
+    )
 
 print(f"Versioned release notes OK: {len(versioned_files)} release note(s) validated.")
 PY

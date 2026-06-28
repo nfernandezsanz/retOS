@@ -4,11 +4,13 @@ from pathlib import Path
 
 import pytest
 
+from retos.evals.agent import run_agent_multihop_eval_suite
 from retos.evals.datasets import (
     DatasetAdapterError,
     HotpotQAAdapterOptions,
     NaturalQuestionsAdapterOptions,
     SquadAdapterOptions,
+    load_hotpotqa_agent_cases,
     load_hotpotqa_cases,
     load_natural_questions_cases,
     load_squad_v2_cases,
@@ -194,6 +196,30 @@ def test_hotpotqa_adapter_maps_multi_hop_cases(tmp_path: Path) -> None:
         "HotpotQA: Unrelated astronomy",
     ]
     assert case.documents[0].anchor == "hotpotqa://hotpot.json#vela-air-force/vela"
+
+
+def test_hotpotqa_agent_adapter_maps_supporting_facts_to_agent_cases(
+    tmp_path: Path,
+) -> None:
+    dataset_path = write_hotpotqa_fixture(tmp_path / "hotpot.json")
+
+    cases = load_hotpotqa_agent_cases(dataset_path)
+
+    assert [case.id for case in cases] == ["hotpotqa-agent-vela-air-force"]
+    case = cases[0]
+    assert case.question.startswith(
+        "Compare HotpotQA supporting facts for United States Air Force and Vela"
+    )
+    assert case.expected_answer_terms == ("United States Air Force",)
+    assert case.expected_citation_titles == (
+        "HotpotQA: United States Air Force",
+        "HotpotQA: Vela",
+    )
+    assert set(case.expected_bridge_terms).issuperset({"force", "states", "united"})
+    assert [document.title for document in case.documents] == [
+        "HotpotQA: Vela",
+        "HotpotQA: United States Air Force",
+    ]
 
 
 def test_natural_questions_adapter_maps_jsonl_answerable_and_unanswerable_cases(
@@ -623,6 +649,24 @@ def test_hotpotqa_cases_run_through_local_eval_harness(tmp_path: Path) -> None:
     assert report.passed is True
     assert report.case_count == 1
     assert report.retrieval_recall == 1.0
+    assert report.grounded_answer == 1.0
+
+
+def test_hotpotqa_agent_cases_run_through_agent_audit_harness(tmp_path: Path) -> None:
+    dataset_path = write_hotpotqa_fixture(tmp_path / "hotpot.json")
+    cases = load_hotpotqa_agent_cases(dataset_path, HotpotQAAdapterOptions(max_cases=1))
+
+    report = run_agent_multihop_eval_suite(
+        index_root=tmp_path / "agent-index",
+        suite_name="hotpotqa-agent-fixture",
+        cases=cases,
+    )
+
+    assert report.passed is True
+    assert report.case_count == 1
+    assert report.query_plan == 1.0
+    assert report.multi_hop_support == 1.0
+    assert report.evidence_route == 1.0
     assert report.grounded_answer == 1.0
 
 

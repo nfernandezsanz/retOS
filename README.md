@@ -9,11 +9,11 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.63% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.59% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
-| Next milestone | Phase 5: larger real-dataset eval profiles, deeper agent eval harnesses, and release hardening. |
+| Next milestone | Phase 5: larger real-dataset trend calibration, UI hardening, and release promotion evidence. |
 
 This repository is intentionally being built as a staff-engineer-quality reference project: decisions are documented, quality gates are automated, integration checks hit real endpoints, UI smoke tests open the actual frontend, and every implementation phase is expected to leave behind tests, auditability, and operating notes.
 
@@ -38,6 +38,9 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Auditable `agent.query` jobs that use controlled corpus search/read tools, execute bounded multi-hop subqueries, persist grounded answers, citations, deterministic query plans, evidence-route coverage, deterministic multi-hop audit status with bridge terms, bounded neighboring context, and budget usage, and emit journal/progress events.
 - Deterministic local eval smoke for retrieval recall, citation validity, grounded answers, abstention, and budget compliance, with report provenance metadata persisted for audits.
 - Deterministic agent multi-hop evals for query planning, bounded subquery execution, evidence-route coverage, bridge terms, citations, grounding, and budgets, without provider calls.
+- Opt-in HotpotQA-to-agent evals that convert local supporting-fact cases into
+  multi-hop agent audit cases for query-plan, evidence-route, bridge-term, grounding,
+  citation, and budget calibration.
 - Opt-in SQuAD 2.0, HotpotQA, and Natural Questions adapters plus admin API endpoints
   for local dataset-backed evals without network or paid providers, with optional
   JSON/Markdown report export.
@@ -164,6 +167,7 @@ make eval-fetch-dataset PROFILE=nq-simplified-local SOURCE_PATH=/path/to/simplif
 make eval-ocr
 make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50 REPORT_DIR=evals/reports
 make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpot_dev_distractor_v1.json MAX_CASES=50 REPORT_DIR=evals/reports
+make eval-hotpotqa-agent HOTPOTQA_PATH=evals/datasets/hotpot_dev_distractor_v1.json MAX_CASES=50 REPORT_DIR=evals/reports
 make eval-natural-questions NQ_PATH=evals/datasets/nq-dev-sample.jsonl MAX_CASES=50 REPORT_DIR=evals/reports
 make api-smoke
 ```
@@ -219,6 +223,7 @@ Every meaningful change should pass these gates:
 | OCR eval | `make eval-ocr` | Runs opt-in local OCR quality checks over generated image-only PDFs with CER/WER scoring. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | HotpotQA eval | `make eval-hotpotqa HOTPOTQA_PATH=...` | Runs opt-in HotpotQA multi-hop evals from a user-provided dataset file and can write JSON/Markdown reports. |
+| HotpotQA agent eval | `make eval-hotpotqa-agent HOTPOTQA_PATH=...` | Converts local HotpotQA supporting facts into agent audit cases for multi-hop plan, evidence-route, bridge-term, grounding, citation, and budget calibration. |
 | Natural Questions eval | `make eval-natural-questions NQ_PATH=...` | Runs opt-in Natural Questions real-query evals from a user-provided JSONL/JSON dataset file and can write JSON/Markdown reports. |
 | API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, agent multi-hop/SQuAD/HotpotQA/Natural Questions evals, eval rerun/comparison/trends, job lifecycle, audit export, and SSE over HTTP. OCR benchmark API smoke is opt-in for Docker where Tesseract is present. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
@@ -255,4 +260,4 @@ evals/        Local evaluation reports and optional dataset caches
 
 ## Project Status
 
-The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: larger real-dataset eval profiles and richer multi-hop review.
+The foundation is in place and CI should remain green before feature work proceeds. The project is not product-complete yet; it is a deliberately staged implementation. The current milestone is Phase 5: larger real-dataset trend calibration, UI hardening, and release promotion evidence.

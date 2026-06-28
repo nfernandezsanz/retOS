@@ -14,6 +14,7 @@ from retos.evals.datasets import (
     HotpotQAAdapterOptions,
     NaturalQuestionsAdapterOptions,
     SquadAdapterOptions,
+    load_hotpotqa_agent_cases,
     load_hotpotqa_cases,
     load_natural_questions_cases,
     load_squad_v2_cases,
@@ -37,6 +38,7 @@ def parse_args() -> argparse.Namespace:
             "smoke",
             "squad",
             "hotpotqa",
+            "hotpotqa-agent",
             "natural-questions",
             "agent-multihop",
             "ocr-smoke",
@@ -211,6 +213,24 @@ def build_report(
             HotpotQAAdapterOptions(max_cases=max_cases),
         )
         suite_name = "hotpotqa"
+    elif suite == "hotpotqa-agent":
+        agent_cases = load_hotpotqa_agent_cases(
+            dataset_path,
+            HotpotQAAdapterOptions(max_cases=max_cases),
+        )
+        if not agent_cases:
+            raise DatasetAdapterError("hotpotqa-agent dataset produced no multi-hop agent cases")
+        return run_agent_multihop_eval_suite(
+            index_root=index_root / "hotpotqa-agent",
+            suite_name="hotpotqa-agent",
+            cases=agent_cases,
+            metadata={
+                "adapter": "hotpotqa-agent",
+                "dataset_path": str(dataset_path),
+                "max_cases": max_cases if max_cases is not None else "all",
+                "source": "local-file",
+            },
+        )
     else:
         cases = load_natural_questions_cases(
             dataset_path,
