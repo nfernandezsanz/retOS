@@ -106,6 +106,9 @@ tag in GitHub.
 - Backend tests now generate `coverage.json` and CI enforces a separate branch coverage
   ratchet so branch coverage cannot regress while the project works toward the 90%
   branch-only target.
+- Eval report artifact tests now cover path-safe report stem sanitization and JSON/Markdown
+  writes, and coverage excludes type-only `Protocol` declarations from runtime branch
+  accounting.
 
 ### Changed
 

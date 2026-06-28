@@ -41,14 +41,15 @@ def _branch_percentage(report: dict[str, Any]) -> tuple[float, int, int]:
 def run(*, coverage_json: Path, fail_under: float) -> int:
     report = _load_coverage_report(coverage_json)
     branch_percent, covered_count, branch_count = _branch_percentage(report)
+    rounded_percent = round(branch_percent, 2)
     print(
         "Backend branch coverage: "
-        f"{branch_percent:.2f}% ({covered_count}/{branch_count} branches)"
+        f"{rounded_percent:.2f}% ({covered_count}/{branch_count} branches)"
     )
-    if branch_percent + 1e-9 < fail_under:
+    if rounded_percent < fail_under:
         print(
             "Backend branch coverage is below the required threshold: "
-            f"{branch_percent:.2f}% < {fail_under:.2f}%"
+            f"{rounded_percent:.2f}% < {fail_under:.2f}%"
         )
         return 1
     return 0

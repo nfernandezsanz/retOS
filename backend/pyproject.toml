@@ -24,6 +24,7 @@ fail_under = 90
 show_missing = true
 skip_covered = true
 exclude_lines = [
+  "class .*\\(Protocol\\):",
   "if TYPE_CHECKING:",
   "raise NotImplementedError",
 ]
