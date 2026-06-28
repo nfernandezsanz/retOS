@@ -48,6 +48,38 @@ def test_corpus_toolbox_searches_domain_and_tracks_usage() -> None:
     assert result["hits"][0]["segment_id"] == "segment-1"  # type: ignore[index]
 
 
+def test_corpus_toolbox_accumulates_unique_hits_across_searches() -> None:
+    class SwitchingSearchIndex(FakeSearchIndex):
+        def search_domain(self, domain_id: str, query_text: str, *, limit: int) -> list[SearchHit]:
+            self.calls.append((domain_id, query_text, limit))
+            if query_text == "alpha":
+                return [hit("segment-1", "alpha evidence")]
+            return [hit("segment-2", "beta evidence"), hit("segment-1", "alpha evidence")]
+
+    index = SwitchingSearchIndex([])
+    toolbox = create_corpus_toolbox(
+        index=index,  # type: ignore[arg-type]
+        domain_id="domain-1",
+        max_searches=2,
+        max_citations=5,
+        max_evidence_tokens=20,
+    )
+
+    first = toolbox.search_corpus("alpha")
+    second = toolbox.search_corpus("beta")
+
+    assert [item["segment_id"] for item in first["hits"]] == ["segment-1"]  # type: ignore[index]
+    assert [item["segment_id"] for item in second["hits"]] == [  # type: ignore[index]
+        "segment-1",
+        "segment-2",
+    ]
+    assert second["usage"] == {
+        "search_count": 2,
+        "citation_count": 2,
+        "evidence_tokens": 4,
+    }
+
+
 def test_corpus_toolbox_enforces_search_and_evidence_budgets() -> None:
     index = FakeSearchIndex([hit("segment-1", "alpha beta gamma")])
     toolbox = create_corpus_toolbox(

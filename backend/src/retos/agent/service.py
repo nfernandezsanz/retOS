@@ -26,6 +26,7 @@ from retos.agent.tools import (
     CorpusToolbox,
     CorpusToolError,
     create_corpus_toolbox,
+    hit_to_payload,
     select_hits_within_evidence_budget,
     token_count,
 )
@@ -505,10 +506,30 @@ async def run_agent_query(
             max_evidence_tokens=budget.max_evidence_tokens,
         )
         try:
-            seed_payload = toolbox.search_corpus(
-                question,
-                limit=min(limit, budget.max_citations),
-            )
+            planned_searches: list[dict[str, object]] = [
+                toolbox.search_corpus(
+                    question,
+                    limit=min(limit, budget.max_citations),
+                )
+            ]
+            if query_plan.requires_multi_hop:
+                for planned_query in query_plan.search_queries[1:]:
+                    if toolbox.search_count >= budget.max_searches:
+                        break
+                    if planned_query.strip().lower() == question.lower():
+                        continue
+                    planned_searches.append(
+                        toolbox.search_corpus(
+                            planned_query,
+                            limit=min(limit, budget.max_citations),
+                        )
+                    )
+            seed_payload: dict[str, object] = {
+                "query": question,
+                "hits": [hit_to_payload(hit) for hit in toolbox.selected_hits],
+                "planned_searches": planned_searches,
+                "usage": toolbox.usage_payload(),
+            }
         except CorpusToolError as exc:
             if not isinstance(exc.__cause__, SearchIndexMissingError):
                 raise AgentQueryError(str(exc)) from exc

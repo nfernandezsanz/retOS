@@ -67,7 +67,7 @@ class CorpusToolbox:
             raise CorpusToolError("Search index has not been built for this domain") from exc
 
         self.selected_hits = select_hits_within_evidence_budget(
-            raw_hits,
+            merge_unique_hits(self.selected_hits, raw_hits),
             max_citations=self.max_citations,
             max_evidence_tokens=self.max_evidence_tokens,
         )
@@ -155,6 +155,17 @@ def select_hits_within_evidence_budget(
         selected.append(hit)
         evidence_tokens += next_tokens
     return selected
+
+
+def merge_unique_hits(existing: list[SearchHit], incoming: list[SearchHit]) -> list[SearchHit]:
+    merged: list[SearchHit] = []
+    seen: set[str] = set()
+    for hit in [*existing, *incoming]:
+        if hit.segment_id in seen:
+            continue
+        seen.add(hit.segment_id)
+        merged.append(hit)
+    return merged
 
 
 def ensure_selected_hits(hits: list[SearchHit]) -> None:

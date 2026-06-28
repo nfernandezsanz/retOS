@@ -89,8 +89,10 @@ audit flags opposite-polarity citation pairs for operator review. The determinis
 `multi_hop_audit` flags multi-part questions, checks whether citations span multiple
 documents, and records cross-document bridge terms so operators can spot narrow answers
 to broad questions. The deterministic `query_plan` runs before synthesis, records the
-search/read/route/audit intent, includes bounded subqueries, and is passed into the Deep
-Agents seed payload for the same auditable plan in deterministic and agentic runtimes.
+search/read/route/audit intent, executes bounded subqueries only for multi-hop plans,
+deduplicates evidence under citation/token/search budgets, and is passed into the Deep
+Agents seed payload with the executed `planned_searches` for the same auditable plan in
+deterministic and agentic runtimes.
 The Deep Agents harness now registers named `evidence_checker` and
 `contradiction_checker` subagents with the same controlled RetOS corpus tools. The
 `source_mapper` and `table_inspector` runtime roles are served by `map_sources` and

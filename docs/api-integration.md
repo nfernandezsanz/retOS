@@ -621,9 +621,12 @@ evidence before relying on the final answer.
 
 The `query_plan` is generated before synthesis and persisted with the completed query.
 It records the deterministic strategy, whether multi-hop evidence is expected, bounded
-search queries, planned search/read/route/audit steps, and specificity warnings. The same
-plan is included in the Deep Agents seed payload so local and agentic runtimes share the
-same auditable intent.
+search queries, planned search/read/route/audit steps, and specificity warnings. Direct
+queries run the initial bounded search only. Multi-hop plans execute distinct planned
+subqueries until `max_searches` is reached, deduplicate citation candidates, and keep the
+final selected evidence within citation and token budgets. The same plan and executed
+`planned_searches` are included in the Deep Agents seed payload so local and agentic
+runtimes share the same auditable intent.
 
 The `evidence_route` is a deterministic coverage map for the answer. It records the
 coverage level (`no_evidence`, `single_segment`, `single_document`, or

@@ -322,7 +322,32 @@ def test_agent_query_records_multi_hop_audit_for_cross_document_evidence(
     assert plan["expected_evidence"] == "multi_document"
     assert plan["search_queries"][0] == "Compare Apollo checklist review and telemetry guidance"
     assert body["job"]["payload"]["result"]["query_plan"] == plan
+    assert body["result"]["usage"]["search_count"] > 1
     assert body["result"]["evidence_route"]["coverage_level"] == "multi_document"
+
+
+def test_agent_query_respects_search_budget_for_planned_subqueries(
+    agent_client: TestClient,
+    agent_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_multi_document_agent_fixture(agent_client, agent_admin_headers)
+
+    response = agent_client.post(
+        f"/domains/{domain_id}/queries",
+        json={
+            "question": "Compare Apollo checklist review and telemetry guidance",
+            "limit": 5,
+            "run_inline": True,
+            "budget": {"max_searches": 1, "max_citations": 5, "max_evidence_tokens": 80},
+        },
+        headers=agent_admin_headers,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["result"]["query_plan"]["strategy"] == "multi_hop_evidence_route"
+    assert body["result"]["usage"]["search_count"] == 1
+    assert body["result"]["usage"]["within_budget"] is True
 
 
 def test_agent_query_expands_neighbor_context_within_evidence_budget(
