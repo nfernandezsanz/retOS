@@ -240,8 +240,8 @@ or read user-provided dataset files under explicit opt-in commands.
 | [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/) | Reading comprehension and abstention. | The official page describes answerable and unanswerable questions over Wikipedia passages and links downloads under CC BY-SA 4.0. |
 | [Natural Questions](https://ai.google.com/research/NaturalQuestions/) | Implemented for real user questions with Wikipedia evidence. | The official Google page describes questions from real users requiring systems to read a Wikipedia article; the public GitHub repository is Apache-2.0. |
 | [HotpotQA](https://hotpotqa.github.io/) | Implemented for multi-hop retrieval and supporting-fact evaluation. | The official benchmark focuses on natural multi-hop questions and supporting facts for explainability. |
-| [FUNSD](https://guillaumejaume.github.io/FUNSD/) | Implemented as an OCR benchmark adapter for form image/text pressure. | Reads local `annotations/*.json` plus matching files in `images/`; layout-aware scoring remains future work. |
-| [ICDAR 2019 SROIE](https://rrc.cvc.uab.es/?ch=13) | Implemented as an OCR benchmark adapter for receipt OCR pressure. | Reads local box/text files plus matching files in `img/` or `images/`; key-value extraction scoring remains future work. |
+| [FUNSD](https://guillaumejaume.github.io/FUNSD/) | Implemented as an OCR benchmark adapter for form image/text pressure. | Reads local `annotations/*.json` plus matching files in `images/`; derives key-value recall and layout boxes when annotations provide links and boxes. |
+| [ICDAR 2019 SROIE](https://rrc.cvc.uab.es/?ch=13) | Implemented as an OCR benchmark adapter for receipt OCR pressure. | Reads local box/text files plus matching files in `img/` or `images/`; derives key-value recall and layout boxes from local annotation files. |
 | [ISRI OCR Evaluation Tools](https://code.google.com/archive/p/isri-ocr-evaluation-tools/) | OCR scoring references. | Useful as a historical reference for OCR error-rate methodology and tooling. |
 
 ## SQuAD 2.0 Adapter
@@ -334,18 +334,24 @@ Supported formats:
 
 | Format | Input path | Contract |
 | --- | --- | --- |
-| `manifest` | JSON file | Root object with `cases[]`, or a root list. Each case requires `case_id`, `input_path`, and `expected_text`. Cases may include `expected_key_values` as an object of string labels to string values. Relative `input_path` values resolve beside the manifest. |
-| `funsd` | Dataset directory | Reads `annotations/*.json`, joins non-empty `form[].text`, derives key/value pairs from `question` to `answer` links when present, and resolves matching `.pdf`, `.png`, `.jpg`, `.jpeg`, `.tif`, or `.tiff` files from `images/`. |
-| `sroie` | Dataset directory | Reads text files from `box/`, `boxes/`, `ocr/`, or `text/`, extracts text after the eighth comma on each line, reads optional entities from `entities/`, `entity/`, `key/`, or `keys/`, and resolves matching files from `img/` or `images/`. |
+| `manifest` | JSON file | Root object with `cases[]`, or a root list. Each case requires `case_id`, `input_path`, and `expected_text`. Cases may include `expected_key_values` and `expected_layout[]` with `{text, bbox, page_number}` entries. Relative `input_path` values resolve beside the manifest. |
+| `funsd` | Dataset directory | Reads `annotations/*.json`, joins non-empty `form[].text`, derives key/value pairs from `question` to `answer` links when present, derives layout boxes from `form[].box`, and resolves matching `.pdf`, `.png`, `.jpg`, `.jpeg`, `.tif`, or `.tiff` files from `images/`. |
+| `sroie` | Dataset directory | Reads text files from `box/`, `boxes/`, `ocr/`, or `text/`, extracts text and bounding polygons from each line, reads optional entities from `entities/`, `entity/`, `key/`, or `keys/`, and resolves matching files from `img/` or `images/`. |
 
 Images are converted to temporary PDFs before OCR so the adapter reuses the ingestion
 OCR path rather than introducing a parallel image OCR implementation.
 
-Key-value recall is intentionally deterministic and local. The scorer normalizes OCR
-text, labels, and values; a field counts as found when both label and value appear in
-the OCR text and the label appears before the value. This is not a geometric layout
-metric yet, but it catches the first class of receipt/form regressions without adding
-paid models or dataset-specific inference code.
+Key-value recall and layout scoring are intentionally deterministic and local. The
+scorer normalizes OCR text, labels, and values; a field counts as found when both label
+and value appear in the OCR text and the label appears before the value. When expected
+layout boxes are available, the suite also runs Tesseract word-box extraction and
+reports:
+
+- `reading_order_accuracy`: pairwise expected box order preserved by OCR output order.
+- `layout_iou`: average intersection-over-union for matched expected and actual boxes.
+
+Layout scoring is opt-in per case. Cases without `expected_layout` keep reporting only
+CER/WER and optional key-value recall.
 
 ## Adapter Rules
 
@@ -359,5 +365,5 @@ paid models or dataset-specific inference code.
 
 ## Next Implementation Step
 
-Add geometric layout metrics that score page-level `ocr_page_text` artifacts and
-bounding-box order alongside CER/WER/key-value recall.
+Use the geometric OCR metrics in larger real-dataset evaluation profiles and add
+operator-facing trend views for layout regressions.

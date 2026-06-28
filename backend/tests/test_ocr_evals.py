@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -5,6 +6,7 @@ import pytest
 from retos.evals.ocr import (
     OCRBenchmarkAdapterError,
     OCRBenchmarkOptions,
+    OCRLayoutBox,
     OCRQualityCase,
     edit_distance,
     error_rate,
@@ -12,6 +14,7 @@ from retos.evals.ocr import (
     load_ocr_benchmark_cases,
     normalize_ocr_text,
     normalize_ocr_tokens,
+    ocr_pdf_layout,
     run_ocr_quality_suite,
     score_ocr_text,
     write_image_only_pdf,
@@ -86,6 +89,95 @@ def test_ocr_score_reports_key_value_recall() -> None:
     assert missed.failures == ("key_value_recall",)
 
 
+def test_ocr_score_reports_layout_metrics() -> None:
+    expected_layout = (
+        OCRLayoutBox(text="Total", x0=0, y0=0, x1=50, y1=20),
+        OCRLayoutBox(text="42", x0=60, y0=0, x1=80, y1=20),
+    )
+    matched = score_ocr_text(
+        case_id="receipt",
+        expected_text="Total 42",
+        actual_text="Total 42",
+        max_character_error_rate=0.0,
+        max_word_error_rate=0.0,
+        expected_layout=expected_layout,
+        actual_layout=(
+            OCRLayoutBox(text="Total", x0=0, y0=0, x1=50, y1=20),
+            OCRLayoutBox(text="42", x0=60, y0=0, x1=80, y1=20),
+        ),
+    )
+    reversed_order = score_ocr_text(
+        case_id="receipt",
+        expected_text="Total 42",
+        actual_text="Total 42",
+        max_character_error_rate=0.0,
+        max_word_error_rate=0.0,
+        expected_layout=expected_layout,
+        actual_layout=(
+            OCRLayoutBox(text="42", x0=0, y0=0, x1=20, y1=20),
+            OCRLayoutBox(text="Total", x0=60, y0=0, x1=110, y1=20),
+        ),
+    )
+
+    assert matched.passed is True
+    assert matched.reading_order_accuracy == 1.0
+    assert matched.layout_iou == 1.0
+    assert reversed_order.passed is False
+    assert reversed_order.reading_order_accuracy == 0.0
+    assert reversed_order.failures == ("reading_order_accuracy", "layout_iou")
+
+
+def test_ocr_score_reports_missing_layout_failures() -> None:
+    result = score_ocr_text(
+        case_id="receipt",
+        expected_text="Total 42",
+        actual_text="Total 42",
+        max_character_error_rate=0.0,
+        max_word_error_rate=0.0,
+        expected_layout=(OCRLayoutBox(text="Total", x0=0, y0=0, x1=50, y1=20),),
+        actual_layout=(),
+    )
+
+    assert result.reading_order_accuracy == 0.0
+    assert result.layout_iou == 0.0
+    assert result.failures == ("reading_order_accuracy", "layout_iou")
+
+
+def test_ocr_pdf_layout_extracts_word_boxes(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    import pymupdf
+
+    pdf_path = tmp_path / "layout.pdf"
+    document = pymupdf.open()
+    document.new_page()
+    document.new_page()
+    document.save(pdf_path)
+    document.close()
+
+    calls = 0
+
+    def fake_image_to_data(*args: object, **kwargs: object) -> dict[str, list[object]]:
+        nonlocal calls
+        calls += 1
+        return {
+            "text": ["", "Total", "zero-width", "42"],
+            "left": [0, 10, 20, 80],
+            "top": [0, 15, 15, 15],
+            "width": [0, 50, 0, 20],
+            "height": [0, 20, 20, 20],
+        }
+
+    monkeypatch.setattr("retos.evals.ocr.pytesseract.image_to_data", fake_image_to_data)
+
+    assert ocr_pdf_layout(pdf_path, work_dir=tmp_path, max_pages=1) == (
+        OCRLayoutBox(text="Total", x0=10, y0=15, x1=60, y1=35, page_number=1),
+        OCRLayoutBox(text="42", x0=80, y0=15, x1=100, y1=35, page_number=1),
+    )
+    assert calls == 1
+
+
 def test_ocr_quality_suite_can_generate_synthetic_cases(
     tmp_path: Path,
     monkeypatch,
@@ -130,6 +222,8 @@ def test_ocr_quality_suite_uses_pipeline_ocr_and_reports_metrics(
     assert report.character_error_rate == 0
     assert report.word_error_rate == 0
     assert report.key_value_recall is None
+    assert report.reading_order_accuracy is None
+    assert report.layout_iou is None
     assert report.to_dict()["metrics"] == {
         "character_error_rate": 0.0,
         "word_error_rate": 0.0,
@@ -178,7 +272,11 @@ def test_ocr_manifest_adapter_loads_cases_and_converts_image_inputs(
               "case_id": "receipt-total",
               "input_path": "receipt.png",
               "expected_text": "Total due 42",
-              "expected_key_values": {"Total due": "42", "Ignored": "  "}
+              "expected_key_values": {"Total due": "42", "Ignored": "  "},
+              "expected_layout": [
+                {"text": "Total", "bbox": [24, 48, 74, 68], "page_number": 1},
+                {"text": "42", "bbox": [96, 48, 116, 68]}
+              ]
             }
           ]
         }
@@ -194,7 +292,19 @@ def test_ocr_manifest_adapter_loads_cases_and_converts_image_inputs(
         seen_pdf = raw.startswith(b"%PDF")
         return "Total due 42"
 
+    def fake_layout(
+        input_path: Path, *, work_dir: Path, max_pages: int
+    ) -> tuple[OCRLayoutBox, ...]:
+        assert input_path == image_path
+        assert work_dir == tmp_path / "work"
+        assert max_pages == 1
+        return (
+            OCRLayoutBox(text="Total", x0=24, y0=48, x1=74, y1=68),
+            OCRLayoutBox(text="42", x0=96, y0=48, x1=116, y1=68),
+        )
+
     monkeypatch.setattr("retos.evals.ocr.ocr_pdf_text", fake_ocr)
+    monkeypatch.setattr("retos.evals.ocr.ocr_pdf_layout", fake_layout)
     report = run_ocr_quality_suite(
         work_dir=tmp_path / "work", suite_name="ocr-manifest", cases=cases
     )
@@ -202,9 +312,17 @@ def test_ocr_manifest_adapter_loads_cases_and_converts_image_inputs(
     assert cases[0].case_id == "receipt-total"
     assert cases[0].input_path == image_path
     assert cases[0].expected_key_values == {"Total due": "42"}
+    assert cases[0].expected_layout == (
+        OCRLayoutBox(text="Total", x0=24, y0=48, x1=74, y1=68),
+        OCRLayoutBox(text="42", x0=96, y0=48, x1=116, y1=68),
+    )
     assert report.passed is True
     assert report.key_value_recall == 1.0
+    assert report.reading_order_accuracy == 1.0
+    assert report.layout_iou == 1.0
     assert "| Key-value recall | 1.0000 |" in report.to_markdown()
+    assert "| Reading order accuracy | 1.0000 |" in report.to_markdown()
+    assert "| Layout IoU | 1.0000 |" in report.to_markdown()
     assert seen_pdf is True
 
 
@@ -249,6 +367,102 @@ def test_ocr_manifest_adapter_rejects_invalid_key_value_shapes(tmp_path: Path) -
         load_ocr_benchmark_cases(manifest_path)
 
 
+def test_ocr_manifest_adapter_rejects_invalid_layout_shapes(tmp_path: Path) -> None:
+    image_path = tmp_path / "case.pdf"
+    write_image_only_pdf(image_path, "Total 42")
+    manifest_path = tmp_path / "ocr-manifest.json"
+    manifest_path.write_text(
+        """
+        {
+          "cases": [
+            {
+              "case_id": "receipt-total",
+              "input_path": "case.pdf",
+              "expected_text": "Total 42",
+              "expected_layout": [{"text": "Total", "bbox": [0, 0, 0, 20]}]
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    with pytest.raises(OCRBenchmarkAdapterError, match="positive area"):
+        load_ocr_benchmark_cases(manifest_path)
+
+    manifest_path.write_text(
+        """
+        {
+          "cases": [
+            {
+              "case_id": "receipt-total",
+              "input_path": "case.pdf",
+              "expected_text": "Total 42",
+              "expected_layout": {"text": "Total", "bbox": [0, 0, 10, 20]}
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(OCRBenchmarkAdapterError, match="expected_layout"):
+        load_ocr_benchmark_cases(manifest_path)
+
+    manifest_path.write_text(
+        """
+        {
+          "cases": [
+            {
+              "case_id": "receipt-total",
+              "input_path": "case.pdf",
+              "expected_text": "Total 42",
+              "expected_layout": [42]
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(OCRBenchmarkAdapterError, match="expected_layout"):
+        load_ocr_benchmark_cases(manifest_path)
+
+    manifest_path.write_text(
+        """
+        {
+          "cases": [
+            {
+              "case_id": "receipt-total",
+              "input_path": "case.pdf",
+              "expected_text": "Total 42",
+              "expected_layout": [{"text": "Total", "bbox": [0, 0, "bad", 20]}]
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(OCRBenchmarkAdapterError, match="bbox values"):
+        load_ocr_benchmark_cases(manifest_path)
+
+    manifest_path.write_text(
+        """
+        {
+          "cases": [
+            {
+              "case_id": "receipt-total",
+              "input_path": "case.pdf",
+              "expected_text": "Total 42",
+              "expected_layout": [{"text": "Total", "bbox": [0, 0, 10, 20], "page_number": 0}]
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(OCRBenchmarkAdapterError, match="page_number"):
+        load_ocr_benchmark_cases(manifest_path)
+
+
 def test_ocr_funsd_adapter_reads_annotation_text(tmp_path: Path) -> None:
     dataset_root = tmp_path / "funsd"
     annotations = dataset_root / "annotations"
@@ -257,15 +471,32 @@ def test_ocr_funsd_adapter_reads_annotation_text(tmp_path: Path) -> None:
     images.mkdir(parents=True)
     write_image_only_pdf(images / "form-1.pdf", "Name Alice total 42")
     (annotations / "form-1.json").write_text(
-        """
-        {
-          "form": [
-            {"id": 1, "label": "question", "text": "Name", "linking": [[1, 2]]},
-            {"id": 2, "label": "answer", "text": "Alice", "linking": [[1, 2]]},
-            {"id": 3, "label": "other", "text": "total 42"}
-          ]
-        }
-        """,
+        json.dumps(
+            {
+                "form": [
+                    {
+                        "id": 1,
+                        "label": "question",
+                        "text": "Name",
+                        "box": [0, 0, 40, 20],
+                        "linking": [[1, 2]],
+                    },
+                    {
+                        "id": 2,
+                        "label": "answer",
+                        "text": "Alice",
+                        "box": [60, 0, 120, 20],
+                        "linking": [[1, 2]],
+                    },
+                    {
+                        "id": 3,
+                        "label": "other",
+                        "text": "total 42",
+                        "box": [0, 40, 90, 60],
+                    },
+                ]
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -280,6 +511,11 @@ def test_ocr_funsd_adapter_reads_annotation_text(tmp_path: Path) -> None:
             expected_text="Name Alice total 42",
             input_path=images / "form-1.pdf",
             expected_key_values={"Name": "Alice"},
+            expected_layout=(
+                OCRLayoutBox(text="Name", x0=0, y0=0, x1=40, y1=20),
+                OCRLayoutBox(text="Alice", x0=60, y0=0, x1=120, y1=20),
+                OCRLayoutBox(text="total 42", x0=0, y0=40, x1=90, y1=60),
+            ),
         ),
     )
 
@@ -340,8 +576,31 @@ def test_ocr_sroie_adapter_reads_box_text(tmp_path: Path) -> None:
             expected_text="STORE TOTAL 42",
             input_path=image_root / "receipt-1.pdf",
             expected_key_values={"company": "STORE", "total": "42"},
+            expected_layout=(
+                OCRLayoutBox(text="STORE", x0=0, y0=0, x1=10, y1=10),
+                OCRLayoutBox(text="TOTAL 42", x0=0, y0=20, x1=10, y1=30),
+            ),
         ),
     )
+
+
+def test_ocr_sroie_adapter_rejects_invalid_layout_coordinates(tmp_path: Path) -> None:
+    dataset_root = tmp_path / "sroie"
+    box_root = dataset_root / "box"
+    image_root = dataset_root / "img"
+    box_root.mkdir(parents=True)
+    image_root.mkdir(parents=True)
+    write_image_only_pdf(image_root / "receipt-1.pdf", "STORE")
+    (box_root / "receipt-1.txt").write_text(
+        "0,0,10,0,10,10,nope,10,STORE\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(OCRBenchmarkAdapterError, match="invalid coordinates"):
+        load_ocr_benchmark_cases(
+            dataset_root,
+            OCRBenchmarkOptions(dataset_format="sroie"),
+        )
 
 
 def test_ocr_sroie_adapter_reads_json_entities_and_allows_missing_entities(
