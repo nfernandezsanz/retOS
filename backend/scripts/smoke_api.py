@@ -1239,6 +1239,13 @@ def main() -> None:
                 ),
                 "created job missing from journal events",
             )
+            require(
+                any(
+                    item["event_type"] == "job.created" and item["trace_id"] == job["id"]
+                    for item in journal_body
+                ),
+                "created job journal event missing trace id",
+            )
 
             persisted_progress_events = client.get(
                 "/audit/progress-events",
@@ -1257,6 +1264,13 @@ def main() -> None:
                     for item in progress_body
                 ),
                 "created job missing from persisted progress events",
+            )
+            require(
+                any(
+                    item["event_type"] == "job.queued" and item["trace_id"] == job["id"]
+                    for item in progress_body
+                ),
+                "created job progress event missing trace id",
             )
 
             audit_export = client.get(
@@ -1286,10 +1300,24 @@ def main() -> None:
             )
             require(
                 any(
+                    item["event_type"] == "job.created" and item["trace_id"] == job["id"]
+                    for item in audit_export_body["journal_events"]
+                ),
+                "created job missing trace id from audit export journal events",
+            )
+            require(
+                any(
                     item["event_type"] == "job.queued" and item["job_id"] == job["id"]
                     for item in audit_export_body["progress_events"]
                 ),
                 "created job missing from audit export progress events",
+            )
+            require(
+                any(
+                    item["event_type"] == "job.queued" and item["trace_id"] == job["id"]
+                    for item in audit_export_body["progress_events"]
+                ),
+                "created job missing trace id from audit export progress events",
             )
             audit_integrity = audit_export_body["integrity"]
             require(audit_integrity["algorithm"] == "sha256", "audit export hash algorithm changed")
@@ -1317,6 +1345,10 @@ def main() -> None:
                     item["payload_hash"] and item["event_hash"] for item in audit_integrity["chain"]
                 ),
                 "audit export integrity chain has empty hashes",
+            )
+            require(
+                any(item["trace_id"] == job["id"] for item in audit_integrity["chain"]),
+                "audit export integrity chain missing job trace id",
             )
 
             stream_timeout = httpx.Timeout(10, read=3)

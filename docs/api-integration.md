@@ -1116,6 +1116,7 @@ Journal event shape:
 ```json
 {
   "id": "<event_id>",
+  "trace_id": "<job_id_or_trace_id>",
   "occurred_at": "2026-06-27T00:00:00Z",
   "actor": "admin@retos.dev",
   "event_type": "job.created",
@@ -1133,6 +1134,7 @@ Progress event shape:
 ```json
 {
   "id": "<event_id>",
+  "trace_id": "<job_id_or_trace_id>",
   "job_id": "<job_id>",
   "occurred_at": "2026-06-27T00:00:00Z",
   "event_type": "job.queued",
@@ -1158,7 +1160,18 @@ Audit export shape:
     "valid": true,
     "event_count": 0,
     "head_hash": null,
-    "chain": []
+    "chain": [
+      {
+        "event_id": "<event_id>",
+        "trace_id": "<job_id_or_trace_id>",
+        "event_stream": "journal",
+        "event_type": "job.created",
+        "occurred_at": "2026-06-27T00:00:00Z",
+        "payload_hash": "<sha256>",
+        "prev_hash": null,
+        "event_hash": "<sha256>"
+      }
+    ]
   }
 }
 ```

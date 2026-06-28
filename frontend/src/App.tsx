@@ -487,6 +487,7 @@ type DocumentHistoryRead = {
 
 type JournalEventRead = {
   id: string;
+  trace_id: string | null;
   occurred_at: string;
   actor: string;
   event_type: string;
@@ -497,6 +498,7 @@ type JournalEventRead = {
 
 type ProgressEventRead = {
   id: string;
+  trace_id: string | null;
   job_id: string | null;
   occurred_at: string;
   event_type: string;
@@ -520,6 +522,23 @@ type AuditExportRead = {
   limit: number;
   journal_events: JournalEventRead[];
   progress_events: ProgressEventRead[];
+  integrity?: {
+    algorithm: string;
+    canonicalization: string;
+    valid: boolean;
+    event_count: number;
+    head_hash: string | null;
+    chain: Array<{
+      event_id: string;
+      trace_id: string | null;
+      event_stream: string;
+      event_type: string;
+      occurred_at: string;
+      payload_hash: string;
+      prev_hash: string | null;
+      event_hash: string;
+    }>;
+  };
 };
 
 type LiveStatus = "disconnected" | "connecting" | "connected";
@@ -1628,8 +1647,12 @@ function App() {
     try {
       const accessToken = await getAdminToken();
       const { filename, snapshot } = await exportAuditSnapshot(accessToken);
+      const integrity = snapshot.integrity;
+      const integrityLabel = integrity
+        ? `, integrity ${integrity.valid ? "valid" : "invalid"} (${integrity.event_count} hashed)`
+        : "";
       setAuditExportMessage(
-        `${filename}: ${snapshot.journal_events.length} journal, ${snapshot.progress_events.length} progress`,
+        `${filename}: ${snapshot.journal_events.length} journal, ${snapshot.progress_events.length} progress${integrityLabel}`,
       );
     } catch (error) {
       setAuditError(error instanceof Error ? error.message : "Audit export failed");

@@ -15,6 +15,7 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 
 class JournalEventRead(BaseModel):
     id: str
+    trace_id: str | None
     occurred_at: datetime
     actor: str
     event_type: str
@@ -26,6 +27,7 @@ class JournalEventRead(BaseModel):
     def from_event(cls, event: JournalEvent) -> JournalEventRead:
         return cls(
             id=event.id,
+            trace_id=event.trace_id,
             occurred_at=event.occurred_at,
             actor=event.actor,
             event_type=event.event_type,
@@ -37,6 +39,7 @@ class JournalEventRead(BaseModel):
 
 class ProgressEventRead(BaseModel):
     id: str
+    trace_id: str | None
     job_id: str | None
     occurred_at: datetime
     event_type: str
@@ -47,6 +50,7 @@ class ProgressEventRead(BaseModel):
     def from_event(cls, event: ProgressEvent) -> ProgressEventRead:
         return cls(
             id=event.id,
+            trace_id=event.trace_id,
             job_id=event.job_id,
             occurred_at=event.occurred_at,
             event_type=event.event_type,
@@ -57,6 +61,7 @@ class ProgressEventRead(BaseModel):
 
 class AuditHashChainEntryRead(BaseModel):
     event_id: str
+    trace_id: str | None
     event_stream: str
     event_type: str
     occurred_at: datetime
@@ -102,20 +107,35 @@ def build_audit_integrity(
     prev_hash: str | None = None
     chronological = sorted(
         [
-            ("journal", event.id, event.occurred_at, event.event_type, event.payload)
+            (
+                "journal",
+                event.id,
+                event.trace_id,
+                event.occurred_at,
+                event.event_type,
+                event.payload,
+            )
             for event in journal_events
         ]
         + [
-            ("progress", event.id, event.occurred_at, event.event_type, event.payload)
+            (
+                "progress",
+                event.id,
+                event.trace_id,
+                event.occurred_at,
+                event.event_type,
+                event.payload,
+            )
             for event in progress_events
         ],
-        key=lambda item: (item[2], item[0], item[1]),
+        key=lambda item: (item[3], item[0], item[1]),
     )
-    for event_stream, event_id, occurred_at, event_type, payload in chronological:
+    for event_stream, event_id, trace_id, occurred_at, event_type, payload in chronological:
         payload_hash = canonical_json_hash(payload)
         event_hash = canonical_json_hash(
             {
                 "event_id": event_id,
+                "trace_id": trace_id,
                 "event_stream": event_stream,
                 "event_type": event_type,
                 "occurred_at": occurred_at.isoformat(),
@@ -126,6 +146,7 @@ def build_audit_integrity(
         entries.append(
             AuditHashChainEntryRead(
                 event_id=event_id,
+                trace_id=trace_id,
                 event_stream=event_stream,
                 event_type=event_type,
                 occurred_at=occurred_at,
@@ -151,6 +172,7 @@ def validate_audit_chain(entries: list[AuditHashChainEntryRead]) -> bool:
         expected_hash = canonical_json_hash(
             {
                 "event_id": entry.event_id,
+                "trace_id": entry.trace_id,
                 "event_stream": entry.event_stream,
                 "event_type": entry.event_type,
                 "occurred_at": entry.occurred_at.isoformat(),

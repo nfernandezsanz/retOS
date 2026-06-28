@@ -44,6 +44,10 @@ The first revision creates these tables:
 | `progress_events` | Persisted progress updates that can back SSE streams and UI timelines. |
 | `journal_events` | Append-only audit facts for user and system actions. |
 
+`journal_events.trace_id` and `progress_events.trace_id` are nullable correlation keys.
+Job-backed records default to the job id, while callers can pass an explicit
+`payload.trace_id` when a broader trace should span multiple entities.
+
 The first API-backed workflows are document registration and job creation:
 
 - Application startup bootstraps `RETOS_BOOTSTRAP_ADMIN_EMAIL` into `admin_users`

@@ -24,6 +24,7 @@ class Job:
 @dataclass(frozen=True)
 class JournalEvent:
     id: str
+    trace_id: str | None
     occurred_at: datetime
     actor: str
     event_type: str
@@ -35,6 +36,7 @@ class JournalEvent:
 @dataclass(frozen=True)
 class ProgressEvent:
     id: str
+    trace_id: str | None
     job_id: str | None
     occurred_at: datetime
     event_type: str

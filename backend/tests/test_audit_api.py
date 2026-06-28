@@ -123,6 +123,7 @@ def test_lists_persisted_journal_and_progress_events(
     assert journals[0]["event_type"] == "job.created"
     assert journals[0]["entity_type"] == "job"
     assert journals[0]["entity_id"] == second_job_id
+    assert journals[0]["trace_id"] == second_job_id
     assert journals[0]["actor"] == "admin@retos.dev"
     assert journals[0]["payload"]["kind"] == "index.domain"
     assert journals[0]["occurred_at"]
@@ -132,6 +133,7 @@ def test_lists_persisted_journal_and_progress_events(
         "job.queued",
     ]
     assert [event["job_id"] for event in progress_events] == [second_job_id, first_job_id]
+    assert [event["trace_id"] for event in progress_events] == [second_job_id, first_job_id]
     assert progress_events[0]["message"] == "Queued index.domain"
     assert progress_events[0]["payload"] == {"status": "queued"}
     assert progress_events[0]["occurred_at"]
@@ -178,6 +180,14 @@ def test_exports_audit_snapshot_with_download_headers(
         event["event_type"] == "job.queued" and event["job_id"] == job_id
         for event in body["progress_events"]
     )
+    assert any(
+        event["event_type"] == "job.created" and event["trace_id"] == job_id
+        for event in body["journal_events"]
+    )
+    assert any(
+        event["event_type"] == "job.queued" and event["trace_id"] == job_id
+        for event in body["progress_events"]
+    )
     integrity = body["integrity"]
     assert integrity["algorithm"] == "sha256"
     assert integrity["canonicalization"] == "json-sort-keys-v1"
@@ -188,6 +198,7 @@ def test_exports_audit_snapshot_with_download_headers(
     assert all(entry["payload_hash"] for entry in integrity["chain"])
     assert all(entry["event_hash"] for entry in integrity["chain"])
     assert {entry["event_stream"] for entry in integrity["chain"]} == {"journal", "progress"}
+    assert any(entry["trace_id"] == job_id for entry in integrity["chain"])
     assert any(entry["event_type"] == "job.created" for entry in integrity["chain"])
     assert any(entry["event_type"] == "job.queued" for entry in integrity["chain"])
     assert [

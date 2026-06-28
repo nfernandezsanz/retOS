@@ -11,6 +11,8 @@ tag in GitHub.
 
 ### Added
 
+- Nullable audit `trace_id` columns for journal/progress correlation, including default
+  job-id traces for job-backed events and trace-aware audit export hashes.
 - Audit export integrity metadata with canonical payload hashes and a chronological
   SHA-256 hash chain for offline review.
 - React document evidence inspection for latest versions, artifacts, and searchable

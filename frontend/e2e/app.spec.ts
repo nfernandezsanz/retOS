@@ -115,6 +115,7 @@ async function mockProviderApi(page: Page) {
   const journalEvents = [
     {
       id: "journal-seed-1",
+      trace_id: "job-seed-1",
       occurred_at: "2026-06-27T00:00:00Z",
       actor: "admin@retos.dev",
       event_type: "job.created",
@@ -126,6 +127,7 @@ async function mockProviderApi(page: Page) {
   const progressEvents = [
     {
       id: "progress-seed-1",
+      trace_id: "job-seed-1",
       job_id: "job-seed-1",
       occurred_at: "2026-06-27T00:00:00Z",
       event_type: "job.queued",
@@ -448,6 +450,7 @@ async function mockProviderApi(page: Page) {
     const baseTime = "2026-06-27T00:01:";
     journalEvents.unshift({
       id: `journal-${job.id}`,
+      trace_id: job.id,
       occurred_at: `${baseTime}00Z`,
       actor: "admin@retos.dev",
       event_type: "job.created",
@@ -458,6 +461,7 @@ async function mockProviderApi(page: Page) {
     progressEvents.unshift(
       {
         id: `progress-${job.id}-completed`,
+        trace_id: job.id,
         job_id: job.id,
         occurred_at: `${baseTime}20Z`,
         event_type: `job.${job.status}`,
@@ -466,6 +470,7 @@ async function mockProviderApi(page: Page) {
       },
       {
         id: `progress-${job.id}-started`,
+        trace_id: job.id,
         job_id: job.id,
         occurred_at: `${baseTime}10Z`,
         event_type: `${job.kind}.started`,
@@ -474,6 +479,7 @@ async function mockProviderApi(page: Page) {
       },
       {
         id: `progress-${job.id}-queued`,
+        trace_id: job.id,
         job_id: job.id,
         occurred_at: `${baseTime}00Z`,
         event_type: "job.queued",
@@ -486,6 +492,7 @@ async function mockProviderApi(page: Page) {
   function recordAdminAudit(adminUserId: string, eventType: string, email: string) {
     journalEvents.unshift({
       id: `journal-${eventType}-${adminUserId}`,
+      trace_id: null,
       occurred_at: "2026-06-27T00:01:00Z",
       actor: "admin@retos.dev",
       event_type: eventType,
@@ -498,6 +505,7 @@ async function mockProviderApi(page: Page) {
   function recordDomainGrantAudit(adminUserId: string, eventType: string, domainId: string) {
     journalEvents.unshift({
       id: `journal-${eventType}-${adminUserId}-${domainId}`,
+      trace_id: null,
       occurred_at: "2026-06-27T00:01:00Z",
       actor: "admin@retos.dev",
       event_type: eventType,
@@ -694,6 +702,7 @@ async function mockProviderApi(page: Page) {
     };
     journalEvents.unshift({
       id: `journal-document-restored-${documentId}`,
+      trace_id: null,
       occurred_at: "2026-06-27T00:05:00Z",
       actor: "admin@retos.dev",
       event_type: "document.restored",
@@ -706,6 +715,7 @@ async function mockProviderApi(page: Page) {
     });
     progressEvents.unshift({
       id: `progress-document-restored-${documentId}`,
+      trace_id: null,
       job_id: null,
       occurred_at: "2026-06-27T00:05:00Z",
       event_type: "document.restored",
@@ -804,6 +814,7 @@ async function mockProviderApi(page: Page) {
       };
       journalEvents.unshift({
         id: `journal-document-updated-${documentId}`,
+        trace_id: null,
         occurred_at: "2026-06-27T00:03:00Z",
         actor: "admin@retos.dev",
         event_type: "document.updated",
@@ -817,6 +828,7 @@ async function mockProviderApi(page: Page) {
       });
       progressEvents.unshift({
         id: `progress-document-updated-${documentId}`,
+        trace_id: null,
         job_id: null,
         occurred_at: "2026-06-27T00:03:00Z",
         event_type: "document.updated",
@@ -838,6 +850,7 @@ async function mockProviderApi(page: Page) {
       };
       journalEvents.unshift({
         id: `journal-document-archived-${documentId}`,
+        trace_id: null,
         occurred_at: "2026-06-27T00:04:00Z",
         actor: "admin@retos.dev",
         event_type: "document.archived",
@@ -850,6 +863,7 @@ async function mockProviderApi(page: Page) {
       });
       progressEvents.unshift({
         id: `progress-document-archived-${documentId}`,
+        trace_id: null,
         job_id: null,
         occurred_at: "2026-06-27T00:04:00Z",
         event_type: "document.archived",
@@ -948,6 +962,7 @@ async function mockProviderApi(page: Page) {
           chain: [
             {
               event_id: "journal-event-1",
+              trace_id: "job-seed-1",
               event_stream: "journal",
               event_type: "job.created",
               occurred_at: "2026-06-27T00:00:00Z",

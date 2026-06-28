@@ -15,6 +15,7 @@ The implemented durable event table and API expose:
 | Field | Purpose |
 | --- | --- |
 | `id` | Event identifier. |
+| `trace_id` | Nullable correlation key. Job-backed journal/progress events use the job id by default unless an explicit payload `trace_id` is provided. |
 | `occurred_at` | UTC timestamp. |
 | `actor` | Admin email, worker, or system actor string. |
 | `event_type` | Stable event name. |
@@ -36,17 +37,15 @@ producing mutations remain admin-only. Results return newest events first.
 `/audit/export` returns `retos.audit-export.v2` snapshots with newest-first journal and
 progress event lists plus an offline integrity section. The integrity block uses
 SHA-256, sorted-key JSON canonicalization, per-event payload hashes, chronological
-`prev_hash`/`event_hash` links, a `head_hash`, and a `valid` flag computed before the
-download is returned. The chain covers the exported slice only; durable append-only
-hashes in the database remain a future hardening step.
+`trace_id`/`prev_hash`/`event_hash` links, a `head_hash`, and a `valid` flag computed
+before the download is returned. The chain covers the exported slice only; durable
+append-only hashes in the database remain a future hardening step.
 
 ## Future Hardening
 
-The next audit hardening pass should add:
-
-- `trace_id` correlation with OpenTelemetry.
-- Durable database-level `prev_hash` plus `event_hash` columns for append-only ledger
-  verification across exports.
+The next audit hardening pass should add durable database-level `prev_hash` plus
+`event_hash` columns for append-only ledger verification across exports and optional
+OpenTelemetry propagation for external traces.
 
 ## Base Events
 

@@ -63,6 +63,16 @@ def test_initial_migration_creates_and_drops_catalog_schema(tmp_path: Path) -> N
         assert {
             item["name"] for item in inspector.get_unique_constraints("admin_user_domain_grants")
         } == {"uq_admin_user_domain_grants_user_domain"}
+        journal_columns = {item["name"] for item in inspector.get_columns("journal_events")}
+        progress_columns = {item["name"] for item in inspector.get_columns("progress_events")}
+        assert "trace_id" in journal_columns
+        assert "trace_id" in progress_columns
+        assert {item["name"] for item in inspector.get_indexes("journal_events")} >= {
+            "ix_journal_events_trace_id"
+        }
+        assert {item["name"] for item in inspector.get_indexes("progress_events")} >= {
+            "ix_progress_events_trace_id"
+        }
     finally:
         engine.dispose()
 

@@ -151,6 +151,7 @@ def job_from_record(record: JobRecord) -> Job:
 def journal_event_from_record(record: JournalEventRecord) -> JournalEvent:
     return JournalEvent(
         id=record.id,
+        trace_id=record.trace_id,
         occurred_at=record.occurred_at,
         actor=record.actor,
         event_type=record.event_type,
@@ -163,6 +164,7 @@ def journal_event_from_record(record: JournalEventRecord) -> JournalEvent:
 def progress_event_from_record(record: ProgressEventRecord) -> ProgressEvent:
     return ProgressEvent(
         id=record.id,
+        trace_id=record.trace_id,
         job_id=record.job_id,
         occurred_at=record.occurred_at,
         event_type=record.event_type,
@@ -174,6 +176,24 @@ def progress_event_from_record(record: ProgressEventRecord) -> ProgressEvent:
 def payload_domain_id(payload: dict[str, Any]) -> str | None:
     value = payload.get("domain_id")
     return value if isinstance(value, str) and value else None
+
+
+def payload_trace_id(payload: dict[str, object]) -> str | None:
+    value = payload.get("trace_id")
+    return value if isinstance(value, str) and value else None
+
+
+def journal_trace_id(
+    *,
+    entity_type: str,
+    entity_id: str,
+    payload: dict[str, object],
+) -> str | None:
+    return payload_trace_id(payload) or (entity_id if entity_type == "job" else None)
+
+
+def progress_trace_id(*, job_id: str | None, payload: dict[str, object]) -> str | None:
+    return payload_trace_id(payload) or job_id
 
 
 def journal_record_visible_to_domains(
@@ -812,6 +832,11 @@ class JournalRepository:
     ) -> JournalEvent:
         record = JournalEventRecord(
             id=str(uuid4()),
+            trace_id=journal_trace_id(
+                entity_type=entity_type,
+                entity_id=entity_id,
+                payload=payload,
+            ),
             actor=actor,
             event_type=event_type,
             entity_type=entity_type,
@@ -896,6 +921,7 @@ class ProgressEventRepository:
     ) -> ProgressEvent:
         record = ProgressEventRecord(
             id=str(uuid4()),
+            trace_id=progress_trace_id(job_id=job_id, payload=payload),
             job_id=job_id,
             event_type=event_type,
             message=message,
