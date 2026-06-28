@@ -170,6 +170,65 @@ def agent_multihop_eval_cases() -> tuple[AgentEvalCase, ...]:
             expected_answer_terms=("checklist review", "guidance"),
             expected_bridge_terms=("checklist", "guidance", "review"),
         ),
+        AgentEvalCase(
+            id="invoice-retention-policy",
+            question="Compare invoice approval and retention policy evidence",
+            documents=(
+                EvalDocument(
+                    id="invoice-approval",
+                    title="Invoice Approval Policy",
+                    text=(
+                        "Invoice approval policy requires retention review before "
+                        "payment release."
+                    ),
+                    anchor="fixture://agent/invoice-approval#p1",
+                ),
+                EvalDocument(
+                    id="retention-audit",
+                    title="Retention Audit Policy",
+                    text=(
+                        "Retention review policy links invoice approval evidence to "
+                        "audit storage."
+                    ),
+                    anchor="fixture://agent/retention-audit#p1",
+                ),
+            ),
+            expected_citation_titles=("Invoice Approval Policy", "Retention Audit Policy"),
+            expected_answer_terms=("invoice approval", "retention review"),
+            expected_bridge_terms=("approval", "invoice", "policy", "retention", "review"),
+        ),
+        AgentEvalCase(
+            id="incident-escalation-triage",
+            question=(
+                "Which same incident response evidence connects triage notes and "
+                "escalation policy?"
+            ),
+            documents=(
+                EvalDocument(
+                    id="incident-triage",
+                    title="Incident Triage Notes",
+                    text=(
+                        "Incident response triage notes record escalation policy "
+                        "evidence and containment review."
+                    ),
+                    anchor="fixture://agent/incident-triage#p1",
+                ),
+                EvalDocument(
+                    id="escalation-policy",
+                    title="Escalation Policy",
+                    text=(
+                        "Incident response escalation policy requires triage evidence "
+                        "before containment review."
+                    ),
+                    anchor="fixture://agent/escalation-policy#p1",
+                ),
+            ),
+            expected_citation_titles=("Escalation Policy", "Incident Triage Notes"),
+            expected_answer_terms=("incident response", "triage evidence"),
+            expected_bridge_terms=("evidence", "incident", "policy", "response", "triage"),
+            max_citations=2,
+            max_evidence_tokens=80,
+        ),
     )
 
 

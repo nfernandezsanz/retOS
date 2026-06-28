@@ -134,6 +134,14 @@ provider:
 PYTHONPATH=src python scripts/run_eval_smoke.py --suite agent-multihop --format markdown
 ```
 
+Current built-in cases cover:
+
+| Case | Calibration Target |
+| --- | --- |
+| `apollo-telemetry-bridge` | Cross-document bridge terms for checklist and telemetry guidance. |
+| `invoice-retention-policy` | Policy evidence that must connect invoice approval with retention review. |
+| `incident-escalation-triage` | Incident response evidence with a strict two-citation budget. |
+
 The same suite is available through the admin API at `/evals/agent-multihop`. API runs
 persist an `eval.run` job, report metrics, journal/progress events, and support reruns
 through `/evals/runs/<job_id>/rerun`.
@@ -474,5 +482,5 @@ CER/WER and optional key-value recall.
 
 ## Next Implementation Step
 
-Expand real-dataset eval profiles and add deeper agent calibration cases that combine
-HotpotQA supporting facts with persisted agent query audits.
+Expand real-dataset eval profiles and connect HotpotQA supporting facts to persisted
+agent query audits.

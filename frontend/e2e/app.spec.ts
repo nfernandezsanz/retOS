@@ -166,7 +166,7 @@ async function mockProviderApi(page: Page) {
   const agentMultihopReport = {
     ...evalReport,
     suite_name: "agent-multihop",
-    case_count: 1,
+    case_count: 3,
     metadata: {
       source: "built-in",
       dataset: "agent-multihop-fixtures",
@@ -184,6 +184,17 @@ async function mockProviderApi(page: Page) {
         ...evalReport.cases[0],
         case_id: "apollo-telemetry-bridge",
         question: "Compare Apollo checklist review and telemetry guidance",
+      },
+      {
+        ...evalReport.cases[0],
+        case_id: "invoice-retention-policy",
+        question: "Compare invoice approval and retention policy evidence",
+      },
+      {
+        ...evalReport.cases[0],
+        case_id: "incident-escalation-triage",
+        question:
+          "Which same incident response evidence connects triage notes and escalation policy?",
       },
     ],
   };
@@ -1378,13 +1389,15 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval metrics").getByText("multi hop support")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("agent-multihop-fixtures")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("apollo-telemetry-bridge")).toBeVisible();
+  await expect(page.getByLabel("Eval cases").getByText("invoice-retention-policy")).toBeVisible();
+  await expect(page.getByLabel("Eval cases").getByText("incident-escalation-triage")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("agent-multihop")).toBeVisible();
   await expect(page.getByLabel("Eval trends").getByText("agent-multihop")).toBeVisible();
   const agentEvalRunRow = page
     .getByLabel("Eval run history")
     .locator("article")
     .filter({ hasText: "agent-multihop" });
-  await expect(agentEvalRunRow.getByText("1 cases")).toBeVisible();
+  await expect(agentEvalRunRow.getByText("3 cases")).toBeVisible();
 
   await page.getByLabel("SQuAD dataset path").fill("ui-squad.json");
   await page.getByLabel("SQuAD max cases").fill("2");

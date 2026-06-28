@@ -41,6 +41,8 @@ tag in GitHub.
   evidence under citation, token, and search budgets.
 - Deterministic agent multi-hop eval suite for query plans, bounded subqueries,
   evidence-route coverage, bridge terms, citations, grounding, and budgets.
+- Expanded agent multi-hop calibration fixtures for invoice-retention and
+  incident-escalation evidence routes, including strict citation-budget coverage.
 - React local eval controls now run the built-in agent multi-hop eval and surface its
   metrics in the same result, history, trend, and audit workflow as other suites.
 - React eval history now exposes the persisted regression gate with promote/block

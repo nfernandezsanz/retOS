@@ -65,7 +65,7 @@ def test_agent_multihop_eval_suite_validates_plan_audits_and_budget(tmp_path: Pa
     )
 
     assert report.passed is True
-    assert report.case_count == 1
+    assert report.case_count == 3
     assert report.query_plan == 1.0
     assert report.multi_hop_support == 1.0
     assert report.evidence_route == 1.0
@@ -74,8 +74,19 @@ def test_agent_multihop_eval_suite_validates_plan_audits_and_budget(tmp_path: Pa
     assert report.budget_compliance == 1.0
     payload = report.to_dict()
     assert payload["metrics"]["multi_hop_support"] == 1.0
-    assert payload["cases"][0]["usage"]["search_count"] >= 2
-    assert payload["cases"][0]["audits"]["query_plan"]["strategy"] == "multi_hop_evidence_route"
+    assert {case["case_id"] for case in payload["cases"]} == {
+        "apollo-telemetry-bridge",
+        "incident-escalation-triage",
+        "invoice-retention-policy",
+    }
+    for case in payload["cases"]:
+        assert case["usage"]["search_count"] >= 2
+        assert case["audits"]["query_plan"]["strategy"] == "multi_hop_evidence_route"
+    strict_budget_case = next(
+        case for case in payload["cases"] if case["case_id"] == "incident-escalation-triage"
+    )
+    assert strict_budget_case["usage"]["citation_count"] == 2
+    assert strict_budget_case["usage"]["within_budget"] is True
     markdown = report.to_markdown()
     assert "Agent Eval Report: agent-multihop" in markdown
     assert markdown.index("| Budget compliance | 1.00 |") < markdown.index("| Metadata | Value |")
@@ -85,8 +96,13 @@ def test_agent_multihop_eval_suite_validates_plan_audits_and_budget(tmp_path: Pa
 def test_agent_multihop_eval_cases_are_immutable_fixtures() -> None:
     cases = agent_multihop_eval_cases()
 
-    assert [case.id for case in cases] == ["apollo-telemetry-bridge"]
+    assert [case.id for case in cases] == [
+        "apollo-telemetry-bridge",
+        "invoice-retention-policy",
+        "incident-escalation-triage",
+    ]
     assert cases[0].min_search_count == 2
+    assert cases[2].max_citations == 2
 
 
 def test_eval_case_reports_missing_grounding() -> None:
