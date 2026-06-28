@@ -137,6 +137,19 @@ type AgentCitation = {
   text: string;
 };
 
+type AgentNeighborContext = {
+  segment_id: string;
+  source_segment_id: string;
+  document_id: string;
+  document_version_id: string;
+  title: string;
+  anchor: string | null;
+  ordinal: number;
+  distance: number;
+  text: string;
+  token_count: number;
+};
+
 type AgentBudgetUsage = {
   budget: {
     max_searches: number;
@@ -172,6 +185,7 @@ type AgentQueryResult = {
   } | null;
   usage: AgentBudgetUsage;
   citations: AgentCitation[];
+  neighbor_context?: AgentNeighborContext[];
 };
 
 type AgentQueryResponse = {
@@ -2730,6 +2744,25 @@ function App() {
                       </article>
                     ))}
                   </div>
+                  {(queryResult.neighbor_context ?? []).length > 0 ? (
+                    <div className="citation-list neighbor-list" aria-label="Neighbor context">
+                      {(queryResult.neighbor_context ?? []).map((context) => (
+                        <article className="citation-row" key={context.segment_id}>
+                          <div>
+                            <strong>{context.title}</strong>
+                            <span>
+                              {context.anchor ?? "No anchor"} near{" "}
+                              {context.source_segment_id.slice(0, 8)}
+                            </span>
+                          </div>
+                          <p>{context.text}</p>
+                          <span className="badge muted">
+                            {context.token_count} tokens
+                          </span>
+                        </article>
+                      ))}
+                    </div>
+                  ) : null}
                 </>
                   );
                 })()

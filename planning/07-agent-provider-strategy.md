@@ -69,11 +69,11 @@ connected.
 implementation uses controlled corpus tools (`search_corpus`, `read_citation`,
 `map_sources`, and `inspect_evidence_table`) over already-indexed domain evidence,
 builds a grounded answer from retrieved segments, persists citations, `evidence_audit`,
-and `contradiction_audit` under `job.payload.result`, enforces query budgets for
-searches, citations, evidence tokens, and runtime, and writes `agent.queued`,
-`agent.started`, `agent.completed`, or `agent.failed` progress/journal events. Usage is
-persisted with `search_count`, `citation_count`, `evidence_tokens`, `runtime_ms`, and
-`within_budget`.
+`contradiction_audit`, and bounded adjacent `neighbor_context` under
+`job.payload.result`, enforces query budgets for searches, citations, neighboring
+context, evidence tokens, and runtime, and writes `agent.queued`, `agent.started`,
+`agent.completed`, or `agent.failed` progress/journal events. Usage is persisted with
+`search_count`, `citation_count`, `evidence_tokens`, `runtime_ms`, and `within_budget`.
 
 The Deep Agents harness factory is present through `deepagents.create_deep_agent` with a
 RetOS-specific system prompt and a registered RetOS harness profile that excludes
@@ -87,4 +87,4 @@ audit flags opposite-polarity citation pairs for operator review. The Deep Agent
 harness now registers named `evidence_checker` and `contradiction_checker` subagents
 with the same controlled RetOS corpus tools. The `source_mapper` and `table_inspector`
 runtime roles are served by `map_sources` and `inspect_evidence_table`; richer
-multi-hop planning and neighboring-context expansion remain future slices.
+multi-hop planning and broader evidence-routing heuristics remain future slices.

@@ -683,6 +683,10 @@ def main() -> None:
                 "search readiness" in agent_result["answer"],
                 "agent answer did not include grounded evidence",
             )
+            require(
+                "neighbor_context" in agent_result,
+                "agent result did not include neighbor context",
+            )
 
             updated_document = client.patch(
                 f"/documents/{document['id']}",

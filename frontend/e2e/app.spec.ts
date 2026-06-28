@@ -925,6 +925,20 @@ async function mockProviderApi(page: Page) {
               text: "Smoke segment text for search readiness.",
             },
           ],
+          neighbor_context: [
+            {
+              segment_id: "segment-neighbor-1",
+              source_segment_id: "segment-1234567890",
+              document_id: "document-1",
+              document_version_id: "version-1",
+              title: "Smoke Document",
+              anchor: "page=2",
+              ordinal: 2,
+              distance: 1,
+              text: "Adjacent context explains who reviewed the search readiness evidence.",
+              token_count: 9,
+            },
+          ],
         },
       },
     });
@@ -1148,6 +1162,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Query budget usage").getByText("Contradictions 0")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Citations 1/5")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
+  await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();
   await expect(page.getByText("page=1")).toBeVisible();
 
   await page.getByLabel("Slug").fill("policy-research");

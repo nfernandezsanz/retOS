@@ -96,6 +96,17 @@ def create_agent_fixture(client: TestClient, headers: dict[str, str]) -> str:
         },
         headers=headers,
     )
+    client.post(
+        f"/document-versions/{version_id}/segments",
+        json={
+            "ordinal": 2,
+            "text": "Engineering signoff followed the review checklist.",
+            "anchor": "paragraph=2",
+            "token_count": 6,
+            "content_hash": "sha256:dddddddddddddddd",
+        },
+        headers=headers,
+    )
     rebuild = client.post(
         f"/domains/{domain_id}/index/rebuild",
         json={"run_inline": True},
@@ -168,6 +179,7 @@ def test_agent_query_runs_inline_with_citations(
     assert body["job"]["payload"]["result"]["runtime"] == "deterministic"
     assert body["job"]["payload"]["result"]["evidence_audit"]["grounded"] is True
     assert body["job"]["payload"]["result"]["contradiction_audit"]["conflict_count"] == 0
+    assert isinstance(body["job"]["payload"]["result"]["neighbor_context"], list)
     assert body["job"]["payload"]["budget"]["max_citations"] == 5
     assert body["job"]["payload"]["result"]["usage"]["within_budget"] is True
     assert body["result"]["provider"] == "local"
@@ -181,10 +193,46 @@ def test_agent_query_runs_inline_with_citations(
     assert body["result"]["contradiction_audit"]["conflict_count"] == 0
     assert body["result"]["usage"]["budget"]["max_searches"] == 8
     assert body["result"]["usage"]["search_count"] == 1
+    assert isinstance(body["result"]["neighbor_context"], list)
+    assert body["result"]["usage"]["evidence_tokens"] >= sum(
+        citation["text"].count(" ") + 1 for citation in body["result"]["citations"]
+    )
     assert "Apollo guidance computers" in body["result"]["answer"]
     assert "Evidence ledger:" in body["result"]["answer"]
     assert body["result"]["citations"][0]["title"] == "Apollo Guidance Memo"
     assert body["result"]["citations"][0]["anchor"] == "paragraph=0"
+
+
+def test_agent_query_expands_neighbor_context_within_evidence_budget(
+    agent_client: TestClient,
+    agent_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_agent_fixture(agent_client, agent_admin_headers)
+
+    response = agent_client.post(
+        f"/domains/{domain_id}/queries",
+        json={
+            "question": "What did Apollo computers use?",
+            "limit": 1,
+            "run_inline": True,
+            "budget": {"max_citations": 1, "max_evidence_tokens": 20},
+        },
+        headers=agent_admin_headers,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert len(body["result"]["citations"]) == 1
+    assert body["result"]["neighbor_context"][0]["anchor"] == "paragraph=1"
+    assert (
+        body["result"]["neighbor_context"][0]["source_segment_id"]
+        == body["result"]["citations"][0]["segment_id"]
+    )
+    assert body["result"]["neighbor_context"][0]["distance"] == 1
+    assert "audit trails" in body["result"]["neighbor_context"][0]["text"]
+    assert body["result"]["usage"]["evidence_tokens"] > body["result"]["citations"][0][
+        "text"
+    ].count(" ")
 
 
 def test_agent_query_applies_citation_budget(
@@ -230,6 +278,7 @@ def test_agent_query_applies_evidence_token_budget(
     assert response.status_code == 202
     body = response.json()
     assert body["result"]["citations"] == []
+    assert body["result"]["neighbor_context"] == []
     assert body["result"]["evidence_audit"]["grounded"] is True
     assert body["result"]["usage"]["evidence_tokens"] == 0
     assert "could not find enough indexed evidence" in body["result"]["answer"]

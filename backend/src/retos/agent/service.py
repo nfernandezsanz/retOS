@@ -22,6 +22,7 @@ from retos.agent.tools import (
 )
 from retos.api.routes.events import progress_store
 from retos.core.config import Settings
+from retos.domain.documents import Segment
 from retos.llm.providers import active_provider
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 from retos.search.index import SearchHit, SearchIndexMissingError, TantivySearchIndex
@@ -64,6 +65,19 @@ class Citation:
 
 
 @dataclass(frozen=True)
+class NeighborContext:
+    segment_id: str
+    source_segment_id: str
+    document_id: str
+    document_version_id: str
+    title: str
+    anchor: str | None
+    ordinal: int
+    distance: int
+    text: str
+
+
+@dataclass(frozen=True)
 class AgentQueryResult:
     job_id: str
     domain_id: str
@@ -76,6 +90,7 @@ class AgentQueryResult:
     evidence_audit: EvidenceAudit
     contradiction_audit: ContradictionAudit
     usage: AgentBudgetUsage
+    neighbor_context: list[NeighborContext]
 
 
 class AgentQueryError(RuntimeError):
@@ -91,6 +106,24 @@ def citation_from_hit(hit: SearchHit) -> Citation:
         anchor=hit.anchor,
         score=hit.score,
         text=hit.text,
+    )
+
+
+def neighbor_context_from_segment(
+    *,
+    segment: Segment,
+    source_hit: SearchHit,
+) -> NeighborContext:
+    return NeighborContext(
+        segment_id=segment.id,
+        source_segment_id=source_hit.segment_id,
+        document_id=source_hit.document_id,
+        document_version_id=segment.document_version_id,
+        title=source_hit.title,
+        anchor=segment.anchor,
+        ordinal=segment.ordinal,
+        distance=abs(segment.ordinal - source_hit.ordinal),
+        text=segment.text,
     )
 
 
@@ -296,6 +329,21 @@ def usage_to_payload(usage: AgentBudgetUsage) -> dict[str, object]:
     }
 
 
+def neighbor_context_to_payload(context: NeighborContext) -> dict[str, object]:
+    return {
+        "segment_id": context.segment_id,
+        "source_segment_id": context.source_segment_id,
+        "document_id": context.document_id,
+        "document_version_id": context.document_version_id,
+        "title": context.title,
+        "anchor": context.anchor,
+        "ordinal": context.ordinal,
+        "distance": context.distance,
+        "text": context.text,
+        "token_count": token_count(context.text),
+    }
+
+
 def result_payload(
     *,
     original_payload: dict[str, object],
@@ -323,8 +371,52 @@ def result_payload(
                 }
                 for citation in result.citations
             ],
+            "neighbor_context": [
+                neighbor_context_to_payload(context) for context in result.neighbor_context
+            ],
         },
     }
+
+
+async def expand_neighbor_context(
+    *,
+    uow: SQLAlchemyUnitOfWork,
+    hits: list[SearchHit],
+    max_evidence_tokens: int,
+) -> list[NeighborContext]:
+    if not hits:
+        return []
+    selected_ids = {hit.segment_id for hit in hits}
+    remaining_tokens = max_evidence_tokens - sum(token_count(hit.text) for hit in hits)
+    if remaining_tokens < 1:
+        return []
+
+    context: list[NeighborContext] = []
+    seen_ids: set[str] = set()
+    segments_by_version: dict[str, list[Segment]] = {}
+    for hit in hits:
+        if hit.document_version_id not in segments_by_version:
+            segments_by_version[hit.document_version_id] = await uow.documents.list_segments(
+                hit.document_version_id
+            )
+        candidates = sorted(
+            (
+                segment
+                for segment in segments_by_version[hit.document_version_id]
+                if segment.id not in selected_ids
+                and segment.id not in seen_ids
+                and abs(segment.ordinal - hit.ordinal) == 1
+            ),
+            key=lambda segment: (abs(segment.ordinal - hit.ordinal), segment.ordinal),
+        )
+        for segment in candidates:
+            next_tokens = token_count(segment.text)
+            if next_tokens > remaining_tokens:
+                continue
+            context.append(neighbor_context_from_segment(segment=segment, source_hit=hit))
+            seen_ids.add(segment.id)
+            remaining_tokens -= next_tokens
+    return context
 
 
 async def run_agent_query(
@@ -405,6 +497,17 @@ async def run_agent_query(
                 raise AgentQueryError(str(exc)) from exc
             raise AgentQueryError("Search index has not been built for this domain") from exc
         hits = toolbox.selected_hits
+        neighbor_context = await expand_neighbor_context(
+            uow=uow,
+            hits=hits,
+            max_evidence_tokens=budget.max_evidence_tokens,
+        )
+        seed_payload = {
+            **seed_payload,
+            "neighbor_context": [
+                neighbor_context_to_payload(context) for context in neighbor_context
+            ],
+        }
         answer = synthesize_agent_answer(
             settings=settings,
             question=question,
@@ -422,13 +525,20 @@ async def run_agent_query(
         usage = AgentBudgetUsage(
             search_count=toolbox.search_count,
             citation_count=len(hits),
-            evidence_tokens=sum(token_count(hit.text) for hit in hits),
+            evidence_tokens=(
+                sum(token_count(hit.text) for hit in hits)
+                + sum(token_count(context.text) for context in neighbor_context)
+            ),
             runtime_ms=runtime_ms,
             budget=budget,
             within_budget=(
                 toolbox.search_count <= budget.max_searches
                 and len(hits) <= budget.max_citations
-                and sum(token_count(hit.text) for hit in hits) <= budget.max_evidence_tokens
+                and (
+                    sum(token_count(hit.text) for hit in hits)
+                    + sum(token_count(context.text) for context in neighbor_context)
+                )
+                <= budget.max_evidence_tokens
                 and runtime_ms <= budget.max_runtime_seconds * 1000
             ),
         )
@@ -445,6 +555,7 @@ async def run_agent_query(
             evidence_audit=evidence_audit,
             contradiction_audit=contradiction_audit,
             usage=usage,
+            neighbor_context=neighbor_context,
         )
         completed_at = datetime.now(UTC)
         await uow.jobs.update_payload(
@@ -470,6 +581,7 @@ async def run_agent_query(
                 "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
                 "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
                 "usage": usage_to_payload(result.usage),
+                "neighbor_context_count": len(result.neighbor_context),
             },
         )
         await uow.journal_events.add(
@@ -492,6 +604,7 @@ async def run_agent_query(
                 "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
                 "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
                 "usage": usage_to_payload(result.usage),
+                "neighbor_context_count": len(result.neighbor_context),
             },
         )
         await uow.commit()
@@ -508,6 +621,7 @@ async def run_agent_query(
             "within_budget": result.usage.within_budget,
             "search_count": result.usage.search_count,
             "evidence_tokens": result.usage.evidence_tokens,
+            "neighbor_context_count": len(result.neighbor_context),
         },
     )
     return result

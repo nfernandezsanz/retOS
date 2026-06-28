@@ -567,6 +567,12 @@ citations. It flags citation pairs with opposite polarity markers and overlappin
 domain terms so operators can review conflicting evidence. It is intentionally
 conservative and does not replace deeper named subagent review.
 
+Completed query payloads also include `neighbor_context`. These are non-cited segments
+adjacent to returned citations, selected from the same document version with ordinal
+distance `1` while staying inside `max_evidence_tokens`. They help the UI and operators
+inspect surrounding context without turning nearby text into a citation. Each item stores
+`source_segment_id`, title, anchor, ordinal, distance, text, and token count.
+
 When `RETOS_AGENT_RUNTIME=deepagents`, the harness registers named
 `evidence_checker` and `contradiction_checker` subagents. They receive the same
 controlled corpus tools as the main agent, and the post-answer deterministic audits
@@ -915,7 +921,8 @@ scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA/Natural Questions/
 benchmark evals, read recent jobs, inspect a selected job's full payload/error/progress
 detail, read persisted audit/progress events, group progress by job, filter the job
 ledger by status/kind, and send queries against the selected domain. Query execution
-uses `run_inline=true` so the UI can render the answer and citations immediately.
+uses `run_inline=true` so the UI can render the answer, citations, neighbor context,
+provider metadata, budget usage, evidence audit, and contradiction audit immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.

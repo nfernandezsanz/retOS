@@ -53,6 +53,19 @@ class AgentCitationRead(BaseModel):
     text: str
 
 
+class AgentNeighborContextRead(BaseModel):
+    segment_id: str
+    source_segment_id: str
+    document_id: str
+    document_version_id: str
+    title: str
+    anchor: str | None
+    ordinal: int
+    distance: int
+    text: str
+    token_count: int
+
+
 class AgentBudgetRead(BaseModel):
     max_searches: int
     max_citations: int
@@ -96,6 +109,7 @@ class AgentQueryResultRead(BaseModel):
     contradiction_audit: AgentContradictionAuditRead
     usage: AgentBudgetUsageRead
     citations: list[AgentCitationRead]
+    neighbor_context: list[AgentNeighborContextRead]
 
     @classmethod
     def from_result(cls, result: AgentQueryResult) -> AgentQueryResultRead:
@@ -145,6 +159,21 @@ class AgentQueryResultRead(BaseModel):
                     text=citation.text,
                 )
                 for citation in result.citations
+            ],
+            neighbor_context=[
+                AgentNeighborContextRead(
+                    segment_id=context.segment_id,
+                    source_segment_id=context.source_segment_id,
+                    document_id=context.document_id,
+                    document_version_id=context.document_version_id,
+                    title=context.title,
+                    anchor=context.anchor,
+                    ordinal=context.ordinal,
+                    distance=context.distance,
+                    text=context.text,
+                    token_count=len(context.text.split()),
+                )
+                for context in result.neighbor_context
             ],
         )
 
