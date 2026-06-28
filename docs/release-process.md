@@ -47,6 +47,7 @@ make release-check
 make audit-pack-check
 make production-preflight
 make auditor-static-check
+make auditor-handoff-check
 make audit-manifest-check
 make audit-manifest OUTPUT=evals/reports/audit-manifest.json
 docker compose --env-file .env.example config
@@ -187,6 +188,9 @@ Images:
   screenshots, required gates, and remaining external promotion evidence. When generated
   inside GitHub Actions, the manifest is an in-run snapshot and must be paired with a
   later `make ci-status-check` success for the same commit.
+- `make auditor-handoff-check` is the local auditor entry point for static guards,
+  current CI artifact evidence, and manifest export. It does not replace tag publishing,
+  GHCR digests, SBOM/provenance, Cosign verification, or target-environment review.
 - `scripts/check_published_release_evidence.sh` is the independent post-publish verifier
   for immutable image digests. Run it through `make release-evidence-check` before final
   promotion evidence is accepted.

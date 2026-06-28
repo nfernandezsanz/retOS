@@ -231,6 +231,7 @@ Every meaningful change should pass these gates:
 | Ignore hygiene | `make ignore-hygiene-check` | Validates `.gitignore` and `.dockerignore` keep secrets, generated files, local volumes, public datasets, reports, and backups out of Git and Docker contexts. |
 | Operations runbook | `make operations-runbook-check` | Validates backup, restore, rollback, health-check, audit-export, and promotion-evidence fields. |
 | Auditor static pack | `make auditor-static-check` | Runs the non-destructive auditor gates for dependency advisories, security policy, ignore hygiene, operations runbooks, branding, release workflow, release notes, production preflight, and audit-pack alignment. |
+| Auditor handoff | `make auditor-handoff-check` | Runs the static auditor pack, verifies current GitHub Actions jobs and evidence artifacts, and exports the audit manifest to `evals/reports/audit-manifest.json`. |
 | Audit handoff manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | Exports commit/CI status, generation context, required gates, critical file hashes, visual audit screenshot records, and remaining external promotion evidence as JSON. |
 | Audit manifest schema | `make audit-manifest-check` | Validates the audit manifest schema, required gates, critical file hashes, visual artifact names, and external blockers offline. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |

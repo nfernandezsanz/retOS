@@ -56,6 +56,7 @@ make security-policy-check
 make ignore-hygiene-check
 make operations-runbook-check
 make auditor-static-check
+make auditor-handoff-check
 make audit-manifest-check
 make audit-manifest OUTPUT=evals/reports/audit-manifest.json
 make ci-status-check
@@ -92,6 +93,7 @@ auditor a stable local entry point:
 | Ignore hygiene | `make ignore-hygiene-check` | Git and Docker contexts exclude secrets, generated files, local volumes, public datasets, reports, and backups. |
 | Operations runbook | `make operations-runbook-check` | Backup, restore, rollback, health-check, audit-export, and promotion-evidence fields are aligned. |
 | Auditor static pack | `make auditor-static-check` | Non-destructive dependency, security, ignore, operations, branding, release, preflight, and audit-pack guards pass together. |
+| Auditor handoff | `make auditor-handoff-check` | Runs static auditor gates, verifies current CI jobs and evidence artifacts, and exports the audit manifest for the promotion record. |
 | Audit manifest schema | `make audit-manifest-check` | Offline schema check for required manifest fields, gates, critical file hashes, visual artifact names, and external blockers. |
 | Audit manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | JSON handoff with current commit, dirty state, CI run, generation context, required gates, critical file hashes, local visual screenshots, CI/release artifact names, and remaining external promotion evidence. CI also uploads `retos-audit-manifest-<commit>` as an in-run snapshot; treat that artifact as final evidence only with a later `make ci-status-check` success for the same commit. |
 | Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, docker, final audit-evidence jobs, and required visual-audit/audit-manifest artifacts for the current commit. |
@@ -133,6 +135,7 @@ These items must be closed before a final production release:
 - [ ] `make ignore-hygiene-check` passes.
 - [ ] `make operations-runbook-check` passes.
 - [ ] `make auditor-static-check` passes.
+- [ ] `make auditor-handoff-check` passes and writes the audit manifest for the promotion record.
 - [ ] `make audit-manifest-check` passes.
 - [ ] `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` was exported for the promotion record.
 - [ ] `make integration` passes against real local endpoints.

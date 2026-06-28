@@ -68,6 +68,7 @@ for phrase in (
     "make ignore-hygiene-check",
     "make operations-runbook-check",
     "make auditor-static-check",
+    "make auditor-handoff-check",
     "make audit-manifest-check",
     "make audit-manifest",
     "make ci-status-check",
@@ -145,6 +146,14 @@ require(
 require(
     "make auditor-static-check" in release_process and "make frontend-visual-audit" in release_process,
     "release process must require auditor static and visual audit evidence",
+)
+require(
+    "make auditor-handoff-check" in release_process and "make auditor-handoff-check" in readme,
+    "release process and README must document the auditor handoff command",
+)
+require(
+    "It does not replace tag publishing" in release_process,
+    "release process must keep auditor handoff scoped below final release promotion",
 )
 require(
     "make dependency-audit" in release_process,

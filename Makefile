@@ -2,8 +2,9 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 BRANCH_COVERAGE_MIN ?= 90.44
+AUDIT_MANIFEST_OUTPUT ?= evals/reports/audit-manifest.json
 
-.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-static-check audit-manifest audit-manifest-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -18,6 +19,7 @@ help:
 	@printf "  make ignore-hygiene-check Validate Git and Docker ignore rules\n"
 	@printf "  make operations-runbook-check Validate backup, restore, rollback, and audit-export runbooks\n"
 	@printf "  make auditor-static-check Run non-destructive auditor documentation/release/security gates\n"
+	@printf "  make auditor-handoff-check Run static gates, CI artifact check, and export audit manifest\n"
 	@printf "  make audit-manifest   Export a JSON manifest for human production audit handoff\n"
 	@printf "  make audit-manifest-check Validate audit manifest schema offline\n"
 	@printf "  make db-upgrade       Apply Alembic migrations\n"
@@ -90,6 +92,10 @@ operations-runbook-check:
 	scripts/check_operations_runbook.sh
 
 auditor-static-check: dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check brand-check release-workflow-check release-notes-check versioned-release-notes-check release-check production-preflight audit-pack-check audit-manifest-check
+
+auditor-handoff-check: auditor-static-check ci-status-check
+	$(MAKE) audit-manifest OUTPUT="$(AUDIT_MANIFEST_OUTPUT)"
+	@printf "Auditor handoff OK: static gates, CI artifacts, and audit manifest are ready at %s\n" "$(AUDIT_MANIFEST_OUTPUT)"
 
 audit-manifest:
 	$(PYTHON) scripts/export_audit_manifest.py $(if $(OUTPUT),--output "$(abspath $(OUTPUT))",)
