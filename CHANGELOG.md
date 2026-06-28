@@ -124,6 +124,8 @@ tag in GitHub.
 
 ### Changed
 
+- Audit manifests now hash the auditor evidence matrix and record its local gate so the
+  machine-readable handoff preserves objective-to-evidence traceability.
 - README onboarding now uses live GitHub Actions status badges, action-oriented local
   workflow pills, and collapsible operator paths for try/audit/develop entry points.
 - The React console now uses a more explicit audit-console brand treatment with a
