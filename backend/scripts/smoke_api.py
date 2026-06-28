@@ -602,6 +602,31 @@ def main() -> None:
                 latest_eval_run["report"]["passed"] is True,
                 "latest eval run report did not pass",
             )
+            eval_comparison = client.get(
+                "/evals/runs/compare",
+                headers=auth_headers,
+                params={
+                    "baseline_job_id": eval_body["job"]["id"],
+                    "candidate_job_id": squad_body["job"]["id"],
+                },
+            )
+            require(
+                eval_comparison.status_code == 200,
+                f"eval comparison failed: {eval_comparison.status_code} {eval_comparison.text}",
+            )
+            comparison_body = eval_comparison.json()
+            require(
+                comparison_body["baseline"]["job_id"] == eval_body["job"]["id"],
+                "eval comparison baseline did not match smoke eval",
+            )
+            require(
+                comparison_body["candidate"]["job_id"] == squad_body["job"]["id"],
+                "eval comparison candidate did not match SQuAD eval",
+            )
+            require(
+                any(metric["name"] == "retrieval_recall" for metric in comparison_body["metrics"]),
+                "eval comparison did not include retrieval recall",
+            )
 
             created_job = client.post(
                 "/jobs",

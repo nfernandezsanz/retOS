@@ -89,7 +89,16 @@ curl "http://localhost:8000/evals/runs?limit=6" \
 
 The React console uses these endpoints in the `Local evals` panel to run smoke and
 SQuAD evals, show metrics, per-case status, exported report paths, and a newest-first
-run history.
+run history. It can also compare the latest two reported runs through:
+
+```bash
+curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&candidate_job_id=<new_job_id>" \
+  --header "Authorization: Bearer <token>"
+```
+
+Comparison is local and deterministic. It reads already persisted `eval.run` report
+payloads, returns baseline/candidate summaries, per-metric deltas, an average delta,
+and a coarse status of `improved`, `regressed`, or `unchanged`.
 
 Dataset-backed SQuAD evals are also available through the admin API:
 

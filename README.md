@@ -13,7 +13,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
-| Next milestone | Phase 5: broader dataset adapters and richer eval comparisons. |
+| Next milestone | Phase 5: broader dataset adapters and OCR quality evals. |
 
 This repository is intentionally being built as a staff-engineer-quality reference project: decisions are documented, quality gates are automated, integration checks hit real endpoints, UI smoke tests open the actual frontend, and every implementation phase is expected to leave behind tests, auditability, and operating notes.
 
@@ -35,6 +35,7 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - Auditable `agent.query` jobs that search indexed evidence, persist grounded answers and citations, and emit journal/progress events.
 - Deterministic local eval smoke for retrieval recall, citation validity, grounded answers, abstention, and budget compliance.
 - Opt-in SQuAD 2.0 adapter and admin API endpoint for local dataset-backed evals without network or paid providers, with optional JSON/Markdown report export.
+- Cross-run eval comparison API and React view for latest reported runs, with per-metric deltas.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for
   document inventory, edit/archive/restore/history actions, jobs, OCR, indexing, agent
   runs, and local eval execution.
@@ -192,12 +193,12 @@ Every meaningful change should pass these gates:
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
-| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, job lifecycle, audit export, and SSE over HTTP. |
+| API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, eval run comparison, job lifecycle, audit export, and SSE over HTTP. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
-| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state, including document edit/archive/restore/history flows. |
+| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state, including document edit/archive/restore/history and eval comparison flows. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
-| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, domain/source/document update/archive/restore/history/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, job lifecycle, SSE, and web over HTTP. |
+| Docker stack smoke | `make docker-smoke` | Builds images, runs migrations, starts Postgres/RabbitMQ/API/worker/web, creates a mounted `.txt`/`.md`/`.pdf` fixture corpus, and hits health, auth, domain/source/document update/archive/restore/history/artifact/segment CRUD, worker-backed source scan, worker-backed text and file upload ingestion, worker-backed BM25 rebuild/search, eval run comparison, job lifecycle, SSE, and web over HTTP. |
 
 ## Security Defaults
 

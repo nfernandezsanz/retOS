@@ -8,6 +8,7 @@ import {
   Database,
   CircleStop,
   Download,
+  GitCompare,
   RotateCcw,
   FolderPlus,
   FileSearch,
@@ -172,6 +173,29 @@ type EvalRunResponse = {
 type EvalRunRead = {
   job: JobRead;
   report: EvalReport | null;
+};
+
+type EvalRunSummary = {
+  job_id: string;
+  suite_name: string;
+  passed: boolean;
+  case_count: number;
+  completed_at: string | null;
+};
+
+type EvalMetricComparison = {
+  name: string;
+  baseline: number;
+  candidate: number;
+  delta: number;
+};
+
+type EvalRunComparison = {
+  baseline: EvalRunSummary;
+  candidate: EvalRunSummary;
+  metrics: EvalMetricComparison[];
+  average_delta: number;
+  status: string;
 };
 
 type ProgressEvent = {
@@ -561,6 +585,22 @@ async function loadEvalRuns(token: string): Promise<EvalRunRead[]> {
   });
 }
 
+async function compareEvalRuns(
+  token: string,
+  baselineJobId: string,
+  candidateJobId: string,
+): Promise<EvalRunComparison> {
+  const query = new URLSearchParams({
+    baseline_job_id: baselineJobId,
+    candidate_job_id: candidateJobId,
+  });
+  return requestJson<EvalRunComparison>(`/evals/runs/compare?${query.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 function providerLabel(name: ProviderName): string {
   if (name === "local") {
     return "Ollama";
@@ -652,6 +692,11 @@ function formatScore(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatDelta(value: number): string {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${formatScore(value)}`;
+}
+
 function App() {
   const [email, setEmail] = useState("admin@retos.dev");
   const [password, setPassword] = useState("");
@@ -702,8 +747,10 @@ function App() {
   const [evalJob, setEvalJob] = useState<JobRead | null>(null);
   const [evalReportPaths, setEvalReportPaths] = useState<EvalReportPaths | null>(null);
   const [evalRuns, setEvalRuns] = useState<EvalRunRead[]>([]);
+  const [evalComparison, setEvalComparison] = useState<EvalRunComparison | null>(null);
   const [isRunningEval, setIsRunningEval] = useState(false);
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
+  const [isComparingEvals, setIsComparingEvals] = useState(false);
   const [squadDatasetPath, setSquadDatasetPath] = useState("dev-v2.0.json");
   const [squadMaxCases, setSquadMaxCases] = useState("50");
   const [squadWriteReport, setSquadWriteReport] = useState(true);
@@ -765,6 +812,7 @@ function App() {
     [jobFilter, queuedJobs],
   );
   const isAnyEvalRunning = isRunningEval || isRunningSquadEval;
+  const comparableEvalRuns = evalRuns.filter((run) => run.report !== null);
 
   useEffect(() => {
     return () => {
@@ -859,6 +907,7 @@ function App() {
       setEvalReportPaths(
         latestWithReport ? reportPathsFromPayload(latestWithReport.job.payload) : null,
       );
+      setEvalComparison(null);
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Eval history refresh failed");
     }
@@ -1300,10 +1349,29 @@ function App() {
     }
   }
 
+  async function handleCompareLatestEvals() {
+    setIsComparingEvals(true);
+    setEvalError(null);
+    try {
+      const [candidate, baseline] = comparableEvalRuns;
+      if (!candidate || !baseline) {
+        throw new Error("At least two reported eval runs are required for comparison");
+      }
+      const accessToken = await getAdminToken();
+      const comparison = await compareEvalRuns(accessToken, baseline.job.id, candidate.job.id);
+      setEvalComparison(comparison);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "Eval comparison failed");
+    } finally {
+      setIsComparingEvals(false);
+    }
+  }
+
   function applyEvalResponse(response: EvalRunResponse) {
     setEvalJob(response.job);
     setEvalReport(response.report);
     setEvalReportPaths(response.report_paths ?? reportPathsFromPayload(response.job.payload));
+    setEvalComparison(null);
     setEvalRuns((current) =>
       [
         { job: response.job, report: response.report },
@@ -1403,6 +1471,7 @@ function App() {
     setEvalJob(null);
     setEvalReportPaths(null);
     setEvalRuns([]);
+    setEvalComparison(null);
     setEvalError(null);
     setDomains([]);
     setSelectedDomainId("");
@@ -2155,15 +2224,65 @@ function App() {
             <section className="eval-history" aria-label="Eval run history">
               <div className="section-heading">
                 <h3>Run history</h3>
-                <button
-                  className="icon-button"
-                  type="button"
-                  aria-label="Refresh eval history"
-                  onClick={() => void refreshEvalRuns()}
-                >
-                  <RefreshCw aria-hidden="true" />
-                </button>
+                <div className="section-actions">
+                  <button
+                    className="secondary-action compact-action"
+                    type="button"
+                    disabled={isAnyEvalRunning || isComparingEvals || comparableEvalRuns.length < 2}
+                    onClick={() => void handleCompareLatestEvals()}
+                  >
+                    <GitCompare aria-hidden="true" />
+                    {isComparingEvals ? "Comparing" : "Compare latest"}
+                  </button>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    aria-label="Refresh eval history"
+                    onClick={() => void refreshEvalRuns()}
+                  >
+                    <RefreshCw aria-hidden="true" />
+                  </button>
+                </div>
               </div>
+              {evalComparison ? (
+                <div className="eval-comparison" aria-label="Eval comparison" aria-live="polite">
+                  <div className="comparison-summary">
+                    <div>
+                      <span>Baseline</span>
+                      <strong>{evalComparison.baseline.suite_name}</strong>
+                      <small>{evalComparison.baseline.case_count} cases</small>
+                    </div>
+                    <div>
+                      <span>Candidate</span>
+                      <strong>{evalComparison.candidate.suite_name}</strong>
+                      <small>{evalComparison.candidate.case_count} cases</small>
+                    </div>
+                    <div>
+                      <span>Average delta</span>
+                      <strong>{formatDelta(evalComparison.average_delta)}</strong>
+                      <small>{evalComparison.status}</small>
+                    </div>
+                  </div>
+                  <div className="comparison-metrics">
+                    <div className="comparison-metric comparison-header">
+                      <strong>Metric</strong>
+                      <span>Baseline</span>
+                      <span>Candidate</span>
+                      <span>Delta</span>
+                    </div>
+                    {evalComparison.metrics.map((metric) => (
+                      <article className="comparison-metric" key={metric.name}>
+                        <strong>{metric.name.replaceAll("_", " ")}</strong>
+                        <span>{formatScore(metric.baseline)}</span>
+                        <span>{formatScore(metric.candidate)}</span>
+                        <span className={metric.delta < 0 ? "delta negative" : "delta"}>
+                          {formatDelta(metric.delta)}
+                        </span>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {evalRuns.length > 0 ? (
                 <div className="eval-run-list">
                   {evalRuns.map((run) => {

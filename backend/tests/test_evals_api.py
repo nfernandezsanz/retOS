@@ -105,6 +105,15 @@ def test_eval_runs_requires_admin_token(evals_client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def test_eval_run_compare_requires_admin_token(evals_client: TestClient) -> None:
+    response = evals_client.get(
+        "/evals/runs/compare",
+        params={"baseline_job_id": "job-a", "candidate_job_id": "job-b"},
+    )
+
+    assert response.status_code == 401
+
+
 def test_smoke_eval_runs_and_persists_auditable_job(
     evals_client: TestClient,
     evals_admin_headers: dict[str, str],
@@ -295,6 +304,111 @@ def test_eval_runs_lists_recent_reports_first(
     ]
     assert runs[0]["report"]["passed"] is False
     assert runs[1]["report"]["passed"] is True
+
+
+def test_eval_run_compare_returns_metric_deltas(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert first.status_code == 202
+
+    def fake_suite(*, index_root: object) -> EvalSuiteReport:
+        return EvalSuiteReport(
+            suite_name="retos-smoke",
+            passed=False,
+            case_count=1,
+            retrieval_recall=0.0,
+            citation_validity=1.0,
+            grounded_answer=0.0,
+            abstention=1.0,
+            budget_compliance=1.0,
+            cases=(
+                EvalCaseResult(
+                    case_id="later-failing-case",
+                    question="What failed later?",
+                    passed=False,
+                    retrieval_recall=False,
+                    citation_validity=True,
+                    grounded_answer=False,
+                    abstention=True,
+                    budget_compliance=True,
+                    answer="No grounded answer.",
+                    citations=(),
+                    failures=("retrieval_recall", "grounded_answer"),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr("retos.api.routes.evals.run_smoke_eval_suite", fake_suite)
+
+    second = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert second.status_code == 202
+
+    response = evals_client.get(
+        "/evals/runs/compare",
+        headers=evals_admin_headers,
+        params={
+            "baseline_job_id": first.json()["job"]["id"],
+            "candidate_job_id": second.json()["job"]["id"],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["baseline"]["job_id"] == first.json()["job"]["id"]
+    assert body["baseline"]["suite_name"] == "retos-smoke"
+    assert body["candidate"]["job_id"] == second.json()["job"]["id"]
+    assert body["candidate"]["passed"] is False
+    assert body["status"] == "regressed"
+    assert body["average_delta"] == -0.4
+    assert body["metrics"] == [
+        {"name": "retrieval_recall", "baseline": 1.0, "candidate": 0.0, "delta": -1.0},
+        {"name": "citation_validity", "baseline": 1.0, "candidate": 1.0, "delta": 0.0},
+        {"name": "grounded_answer", "baseline": 1.0, "candidate": 0.0, "delta": -1.0},
+        {"name": "abstention", "baseline": 1.0, "candidate": 1.0, "delta": 0.0},
+        {"name": "budget_compliance", "baseline": 1.0, "candidate": 1.0, "delta": 0.0},
+    ]
+
+
+def test_eval_run_compare_rejects_missing_or_unreported_runs(
+    evals_client: TestClient,
+    evals_admin_headers: dict[str, str],
+) -> None:
+    first = evals_client.post("/evals/smoke", headers=evals_admin_headers)
+    assert first.status_code == 202
+    created = evals_client.post(
+        "/jobs",
+        headers=evals_admin_headers,
+        json={
+            "kind": "eval.run",
+            "payload": {"suite_name": "retos-smoke"},
+        },
+    )
+    assert created.status_code == 201
+
+    missing = evals_client.get(
+        "/evals/runs/compare",
+        headers=evals_admin_headers,
+        params={
+            "baseline_job_id": "missing",
+            "candidate_job_id": first.json()["job"]["id"],
+        },
+    )
+    malformed = evals_client.get(
+        "/evals/runs/compare",
+        headers=evals_admin_headers,
+        params={
+            "baseline_job_id": first.json()["job"]["id"],
+            "candidate_job_id": created.json()["id"],
+        },
+    )
+
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "Eval run not found"
+    assert malformed.status_code == 409
+    assert malformed.json()["detail"] == "Eval run does not have a comparable report"
 
 
 def test_eval_runs_tolerates_malformed_report_payload(

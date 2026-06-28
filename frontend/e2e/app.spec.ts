@@ -147,6 +147,31 @@ async function mockProviderApi(page: Page) {
     ],
   };
   const evalRuns: { job: ReturnType<typeof jobFixture>; report: typeof evalReport | null }[] = [];
+  const evalComparison = {
+    baseline: {
+      job_id: "job-eval-1",
+      suite_name: "retos-smoke",
+      passed: true,
+      case_count: 3,
+      completed_at: "2026-06-27T00:02:00Z",
+    },
+    candidate: {
+      job_id: "job-eval-squad-1",
+      suite_name: "squad-v2",
+      passed: true,
+      case_count: 2,
+      completed_at: "2026-06-27T00:03:00Z",
+    },
+    metrics: [
+      { name: "retrieval_recall", baseline: 1, candidate: 1, delta: 0 },
+      { name: "citation_validity", baseline: 1, candidate: 1, delta: 0 },
+      { name: "grounded_answer", baseline: 1, candidate: 1, delta: 0 },
+      { name: "abstention", baseline: 1, candidate: 1, delta: 0 },
+      { name: "budget_compliance", baseline: 1, candidate: 1, delta: 0 },
+    ],
+    average_delta: 0,
+    status: "unchanged",
+  };
 
   function recordAudit(job: ReturnType<typeof jobFixture>) {
     journalEvents.unshift({
@@ -604,6 +629,12 @@ async function mockProviderApi(page: Page) {
       json: evalRuns,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/evals\/runs\/compare.*/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: evalComparison,
+    });
+  });
   await page.route("http://localhost:8000/events/progress", async (route) => {
     await route.fulfill({
       contentType: "text/event-stream",
@@ -741,6 +772,11 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval run history").getByText("2 cases")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-squad.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-squad.md")).toBeVisible();
+  await page.getByRole("button", { name: "Compare latest" }).click();
+  await expect(page.getByLabel("Eval comparison").getByText("retos-smoke")).toBeVisible();
+  await expect(page.getByLabel("Eval comparison").getByText("squad-v2")).toBeVisible();
+  await expect(page.getByLabel("Eval comparison").getByText("retrieval recall")).toBeVisible();
+  await expect(page.getByLabel("Eval comparison").getByText("unchanged")).toBeVisible();
 
   await page.getByLabel("Filter jobs").selectOption("index.domain");
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();

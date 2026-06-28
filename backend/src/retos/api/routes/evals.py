@@ -89,6 +89,29 @@ class EvalRunRead(BaseModel):
     report: EvalReportRead | None
 
 
+class EvalRunSummaryRead(BaseModel):
+    job_id: str
+    suite_name: str
+    passed: bool
+    case_count: int
+    completed_at: datetime | None
+
+
+class EvalMetricComparisonRead(BaseModel):
+    name: str
+    baseline: float
+    candidate: float
+    delta: float
+
+
+class EvalRunComparisonRead(BaseModel):
+    baseline: EvalRunSummaryRead
+    candidate: EvalRunSummaryRead
+    metrics: list[EvalMetricComparisonRead]
+    average_delta: float
+    status: str
+
+
 def report_from_payload(payload: dict[str, Any]) -> EvalReportRead | None:
     result = payload.get("result")
     if not isinstance(result, dict):
@@ -121,6 +144,47 @@ async def list_eval_runs(
         )
         for job in jobs
     ]
+
+
+@router.get("/runs/compare", response_model=EvalRunComparisonRead)
+async def compare_eval_runs(
+    _: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    baseline_job_id: Annotated[str, Query(min_length=1)],
+    candidate_job_id: Annotated[str, Query(min_length=1)],
+) -> EvalRunComparisonRead:
+    async with uow:
+        baseline_job = await uow.jobs.get(baseline_job_id)
+        candidate_job = await uow.jobs.get(candidate_job_id)
+
+    baseline_report = report_from_eval_job(baseline_job)
+    candidate_report = report_from_eval_job(candidate_job)
+    assert baseline_job is not None
+    assert candidate_job is not None
+    baseline_metrics = baseline_report.metrics.model_dump()
+    candidate_metrics = candidate_report.metrics.model_dump()
+    common_names = [name for name in baseline_metrics if name in candidate_metrics]
+    metric_comparisons = [
+        EvalMetricComparisonRead(
+            name=name,
+            baseline=baseline_metrics[name],
+            candidate=candidate_metrics[name],
+            delta=candidate_metrics[name] - baseline_metrics[name],
+        )
+        for name in common_names
+    ]
+    average_delta = (
+        sum(metric.delta for metric in metric_comparisons) / len(metric_comparisons)
+        if metric_comparisons
+        else 0.0
+    )
+    return EvalRunComparisonRead(
+        baseline=summary_from_eval_run(baseline_job, baseline_report),
+        candidate=summary_from_eval_run(candidate_job, candidate_report),
+        metrics=metric_comparisons,
+        average_delta=average_delta,
+        status=comparison_status(average_delta),
+    )
 
 
 @router.post(
@@ -273,6 +337,36 @@ def resolve_dataset_path(dataset_root: str, dataset_path: str) -> Path:
             detail="Eval dataset path must stay inside RETOS_EVAL_DATASET_ROOT",
         )
     return resolved
+
+
+def report_from_eval_job(job: Job | None) -> EvalReportRead:
+    if job is None or job.kind != "eval.run":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eval run not found")
+    report = report_from_payload(job.payload)
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Eval run does not have a comparable report",
+        )
+    return report
+
+
+def summary_from_eval_run(job: Job, report: EvalReportRead) -> EvalRunSummaryRead:
+    return EvalRunSummaryRead(
+        job_id=job.id,
+        suite_name=report.suite_name,
+        passed=report.passed,
+        case_count=report.case_count,
+        completed_at=job.completed_at,
+    )
+
+
+def comparison_status(average_delta: float) -> str:
+    if average_delta > 0:
+        return "improved"
+    if average_delta < 0:
+        return "regressed"
+    return "unchanged"
 
 
 async def queue_eval_job(

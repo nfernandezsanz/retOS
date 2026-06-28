@@ -30,6 +30,7 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/evals/smoke" in route_paths
     assert "/evals/squad" in route_paths
     assert "/evals/runs" in route_paths
+    assert "/evals/runs/compare" in route_paths
     assert "/audit/journal-events" in route_paths
     assert "/audit/progress-events" in route_paths
     assert "/audit/export" in route_paths

@@ -581,6 +581,43 @@ was produced:
 ]
 ```
 
+Compare two persisted eval runs:
+
+```bash
+curl "http://localhost:8000/evals/runs/compare?baseline_job_id=<old_job_id>&candidate_job_id=<new_job_id>" \
+  --header "Authorization: Bearer <token>"
+```
+
+The endpoint reads reports already stored in `job.payload.result`, does not call
+providers, and returns per-metric deltas:
+
+```json
+{
+  "baseline": {
+    "job_id": "<old_job_id>",
+    "suite_name": "retos-smoke",
+    "passed": true,
+    "case_count": 3
+  },
+  "candidate": {
+    "job_id": "<new_job_id>",
+    "suite_name": "squad-v2",
+    "passed": true,
+    "case_count": 2
+  },
+  "metrics": [
+    {
+      "name": "retrieval_recall",
+      "baseline": 1.0,
+      "candidate": 1.0,
+      "delta": 0.0
+    }
+  ],
+  "average_delta": 0.0,
+  "status": "unchanged"
+}
+```
+
 ### Frontend Runtime Notes
 
 The React console reads `VITE_RETOS_API_URL` and falls back to `http://localhost:8000`.
@@ -607,6 +644,7 @@ Current console calls:
 - `POST /domains/{domain_id}/index/rebuild`
 - `POST /domains/{domain_id}/queries`
 - `GET /evals/runs?limit=6`
+- `GET /evals/runs/compare?baseline_job_id=...&candidate_job_id=...`
 - `POST /evals/smoke`
 - `POST /evals/squad`
 - `GET /jobs?limit=12`

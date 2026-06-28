@@ -62,9 +62,10 @@ The UI is a working console, not a landing page. It must make background process
 - The audit panel downloads `/audit/export?limit=200` through an authenticated `fetch`
   call so the bearer token stays in headers and the exported JSON can be retained for
   review.
-- The eval panel posts to `/evals/smoke`, reads `/evals/runs?limit=6`, and renders the
-  returned `eval.run` job, metric scorecards, per-case pass/failure rows, and a compact
-  newest-first run history.
+- The eval panel posts to `/evals/smoke` and `/evals/squad`, reads `/evals/runs?limit=6`,
+  compares reported runs through `/evals/runs/compare`, and renders the returned
+  `eval.run` jobs, metric scorecards, per-case pass/failure rows, report paths,
+  newest-first run history, and per-metric deltas.
 - Browser smoke tests mock the API contract and verify provider, domain creation,
   document/source inventory, document edit/archive/restore/history, file upload, text ingestion,
   scan/index queueing, job/audit filtering, persisted audit events, audit export, eval
