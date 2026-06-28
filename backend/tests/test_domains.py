@@ -66,6 +66,16 @@ def test_create_and_list_domain(
     assert [domain["slug"] for domain in listed.json()] == ["legal-research"]
 
 
+def test_get_domain_rejects_missing_domain(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    response = domain_client.get("/domains/missing-domain", headers=admin_headers)
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Domain not found"
+
+
 def test_rejects_duplicate_domain_slug(
     domain_client: TestClient,
     admin_headers: dict[str, str],
@@ -112,6 +122,16 @@ def test_create_and_list_domain_source(
     assert [item["uri"] for item in listed.json()] == ["file:///corpus/research"]
 
 
+def test_list_sources_rejects_missing_domain(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    response = domain_client.get("/domains/missing-domain/sources", headers=admin_headers)
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Domain not found"
+
+
 def test_rejects_duplicate_source_uri_within_domain(
     domain_client: TestClient,
     admin_headers: dict[str, str],
@@ -150,3 +170,92 @@ def test_source_requires_existing_domain(
     )
 
     assert response.status_code == 404
+
+
+def test_viewer_domain_list_is_empty_without_grants(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created_domain = domain_client.post(
+        "/domains",
+        json={"slug": "viewer-empty", "name": "Viewer Empty"},
+        headers=admin_headers,
+    )
+    created_viewer = domain_client.post(
+        "/admin/users",
+        headers=admin_headers,
+        json={
+            "email": "domain-viewer@retos.dev",
+            "password": "domain-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    login = domain_client.post(
+        "/auth/login",
+        json={"email": "domain-viewer@retos.dev", "password": "domain-viewer-password"},
+    )
+    viewer_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    listed = domain_client.get("/domains", headers=viewer_headers)
+    fetched = domain_client.get(f"/domains/{created_domain.json()['id']}", headers=viewer_headers)
+
+    assert created_domain.status_code == 201
+    assert created_viewer.status_code == 201
+    assert login.status_code == 200
+    assert listed.status_code == 200
+    assert listed.json() == []
+    assert fetched.status_code == 403
+
+
+def test_viewer_domain_grant_allows_domain_and_sources(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created_domain = domain_client.post(
+        "/domains",
+        json={"slug": "viewer-granted", "name": "Viewer Granted"},
+        headers=admin_headers,
+    )
+    domain_id = created_domain.json()["id"]
+    created_source = domain_client.post(
+        f"/domains/{domain_id}/sources",
+        json={"kind": "upload", "name": "Granted Upload", "uri": "upload://granted"},
+        headers=admin_headers,
+    )
+    created_viewer = domain_client.post(
+        "/admin/users",
+        headers=admin_headers,
+        json={
+            "email": "granted-domain-viewer@retos.dev",
+            "password": "granted-domain-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    grant = domain_client.post(
+        f"/admin/users/{created_viewer.json()['id']}/domain-grants",
+        headers=admin_headers,
+        json={"domain_id": domain_id},
+    )
+    login = domain_client.post(
+        "/auth/login",
+        json={
+            "email": "granted-domain-viewer@retos.dev",
+            "password": "granted-domain-viewer-password",
+        },
+    )
+    viewer_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    listed = domain_client.get("/domains", headers=viewer_headers)
+    fetched = domain_client.get(f"/domains/{domain_id}", headers=viewer_headers)
+    sources = domain_client.get(f"/domains/{domain_id}/sources", headers=viewer_headers)
+
+    assert created_domain.status_code == 201
+    assert created_source.status_code == 201
+    assert created_viewer.status_code == 201
+    assert grant.status_code == 201
+    assert login.status_code == 200
+    assert [domain["id"] for domain in listed.json()] == [domain_id]
+    assert fetched.status_code == 200
+    assert fetched.json()["slug"] == "viewer-granted"
+    assert sources.status_code == 200
+    assert [source["uri"] for source in sources.json()] == ["upload://granted"]
