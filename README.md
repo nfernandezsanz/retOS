@@ -151,6 +151,7 @@ make lint
 make typecheck
 make test
 make eval-smoke
+make eval-fetch-dataset PROFILE=squad-dev-v2 MAX_RECORDS=100
 make eval-ocr
 make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50 REPORT_DIR=evals/reports
 make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpot_dev_distractor_v1.json MAX_CASES=50 REPORT_DIR=evals/reports
@@ -202,6 +203,7 @@ Every meaningful change should pass these gates:
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with 90% coverage gate. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
+| Dataset fetch | `make eval-fetch-dataset PROFILE=squad-dev-v2` | Opt-in download of bounded public dataset samples under `evals/datasets`; never runs in CI by default. |
 | OCR eval | `make eval-ocr` | Runs opt-in local OCR quality checks over generated image-only PDFs with CER/WER scoring. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | HotpotQA eval | `make eval-hotpotqa HOTPOTQA_PATH=...` | Runs opt-in HotpotQA multi-hop evals from a user-provided dataset file and can write JSON/Markdown reports. |

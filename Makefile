@@ -2,7 +2,7 @@ ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 
-.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
+.PHONY: help install format format-check test lint typecheck db-upgrade db-downgrade api-smoke eval-smoke eval-fetch-dataset eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-natural-questions check frontend-install frontend-test frontend-e2e integration docker-config docker-build docker-smoke docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -16,6 +16,7 @@ help:
 	@printf "  make db-downgrade     Roll back the latest Alembic migration\n"
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
 	@printf "  make eval-smoke       Run deterministic local retrieval/citation evals\n"
+	@printf "  make eval-fetch-dataset Fetch an opt-in public eval dataset sample with PROFILE=...\n"
 	@printf "  make eval-ocr         Run opt-in local OCR quality evals\n"
 	@printf "  make eval-ocr-benchmark Run OCR benchmark evals with OCR_PATH=...\n"
 	@printf "  make eval-squad       Run opt-in SQuAD v2 evals with SQUAD_PATH=...\n"
@@ -61,6 +62,12 @@ api-smoke:
 
 eval-smoke:
 	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --format markdown
+
+eval-fetch-dataset:
+ifndef PROFILE
+	$(error PROFILE is required, for example make eval-fetch-dataset PROFILE=squad-dev-v2)
+endif
+	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/fetch_eval_dataset.py "$(PROFILE)" --output-dir "../evals/datasets" --max-records "$(or $(MAX_RECORDS),100)" $(if $(FORCE),--force,)
 
 eval-ocr:
 	cd backend && PYTHONPATH=src "$(BACKEND_PYTHON)" scripts/run_eval_smoke.py --suite ocr-smoke --format markdown $(if $(REPORT_DIR),--report-dir "$(REPORT_DIR)",) $(if $(REPORT_STEM),--report-stem "$(REPORT_STEM)",)

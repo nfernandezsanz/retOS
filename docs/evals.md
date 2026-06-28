@@ -235,6 +235,25 @@ benchmark inputs and generated reports mounted, auditable, and outside the sourc
 Do not vendor large benchmark datasets into this repository. Add adapters that download
 or read user-provided dataset files under explicit opt-in commands.
 
+Small public dataset samples can be prepared with:
+
+```bash
+make eval-fetch-dataset PROFILE=squad-dev-v2 MAX_RECORDS=100
+make eval-fetch-dataset PROFILE=hotpotqa-dev-distractor MAX_RECORDS=100
+make eval-fetch-dataset PROFILE=nq-open-train MAX_RECORDS=100
+```
+
+The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
+unless `FORCE=1` is provided, and is never part of the default CI path. Available
+profiles:
+
+| Profile | Output | Notes |
+| --- | --- | --- |
+| `squad-dev-v2` | `squad-dev-v2-sample.json` | Directly usable with `make eval-squad SQUAD_PATH=evals/datasets/squad-dev-v2-sample.json`. |
+| `hotpotqa-dev-distractor` | `hotpotqa-dev-distractor-sample.json` | Directly usable with `make eval-hotpotqa HOTPOTQA_PATH=evals/datasets/hotpotqa-dev-distractor-sample.json`. |
+| `nq-open-train` | `nq-open-train-sample.jsonl` | Fetched for research inspection; full RetOS Natural Questions evals still use the annotated document-shape adapter input. |
+| `funsd` | Manual download | Listed with source/license notes; the dataset must be downloaded manually after reviewing the official license. |
+
 | Dataset | Use | Notes |
 | --- | --- | --- |
 | [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/) | Reading comprehension and abstention. | The official page describes answerable and unanswerable questions over Wikipedia passages and links downloads under CC BY-SA 4.0. |

@@ -103,6 +103,11 @@ shared eval report volume. Browser smoke exercises the React SQuAD, HotpotQA, Na
 Questions, and OCR benchmark controls with mocked API responses and verifies visible
 suite history, report paths, and cross-run comparison.
 
+`make eval-fetch-dataset PROFILE=...` is the only supported networked dataset helper.
+It downloads bounded public samples into `evals/datasets/` for local research, refuses
+overwrites by default, and remains outside CI. Tests cover its samplers and overwrite
+guards with mocked/local payloads so quality gates do not depend on public endpoints.
+
 ## Implemented OCR Quality Smoke
 
 `make eval-ocr` runs `backend/scripts/run_eval_smoke.py --suite ocr-smoke`. It
