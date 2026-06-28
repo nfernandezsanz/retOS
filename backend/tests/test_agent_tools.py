@@ -79,3 +79,118 @@ def test_corpus_toolbox_reads_only_returned_citations() -> None:
     assert toolbox.read_citation("segment-1")["text"] == "alpha beta"
     with pytest.raises(CorpusToolError, match="not returned"):
         toolbox.read_citation("segment-2")
+
+
+def test_corpus_toolbox_maps_selected_sources() -> None:
+    toolbox = create_corpus_toolbox(
+        index=FakeSearchIndex(
+            [
+                hit("segment-1", "alpha beta"),
+                SearchHit(
+                    segment_id="segment-2",
+                    document_id="document-2",
+                    document_version_id="version-2",
+                    title="Second",
+                    text="gamma delta epsilon",
+                    anchor="page=2",
+                    ordinal=4,
+                    score=3.0,
+                ),
+            ]
+        ),  # type: ignore[arg-type]
+        domain_id="domain-1",
+        max_searches=1,
+        max_citations=5,
+        max_evidence_tokens=20,
+    )
+
+    toolbox.search_corpus("alpha")
+    result = toolbox.map_sources()
+
+    assert result["document_count"] == 2
+    documents = result["documents"]
+    assert documents[0]["document_id"] == "document-2"  # type: ignore[index]
+    assert documents[0]["anchors"] == [  # type: ignore[index]
+        {
+            "segment_id": "segment-2",
+            "anchor": "page=2",
+            "ordinal": 4,
+            "score": 3.0,
+            "token_count": 3,
+        }
+    ]
+    assert result["usage"] == {
+        "search_count": 1,
+        "citation_count": 2,
+        "evidence_tokens": 5,
+    }
+
+
+def test_corpus_toolbox_inspects_table_and_key_value_rows() -> None:
+    table_hit = hit(
+        "segment-table",
+        "Metric | Value\nTotal: 42\nIgnored plain sentence\nOwner = Research",
+    )
+    toolbox = create_corpus_toolbox(
+        index=FakeSearchIndex([table_hit]),  # type: ignore[arg-type]
+        domain_id="domain-1",
+        max_searches=1,
+        max_citations=5,
+        max_evidence_tokens=20,
+    )
+
+    toolbox.search_corpus("total")
+    result = toolbox.inspect_evidence_table("segment-table")
+
+    assert result["row_count"] == 3
+    assert result["rows"] == [
+        {
+            "segment_id": "segment-table",
+            "title": "Fixture",
+            "anchor": "page=1",
+            "line_number": 1,
+            "kind": "table_row",
+            "cells": ["Metric", "Value"],
+            "text": "Metric | Value",
+        },
+        {
+            "segment_id": "segment-table",
+            "title": "Fixture",
+            "anchor": "page=1",
+            "line_number": 2,
+            "kind": "key_value",
+            "key": "Total",
+            "value": "42",
+            "text": "Total: 42",
+        },
+        {
+            "segment_id": "segment-table",
+            "title": "Fixture",
+            "anchor": "page=1",
+            "line_number": 4,
+            "kind": "key_value",
+            "key": "Owner",
+            "value": "Research",
+            "text": "Owner = Research",
+        },
+    ]
+
+
+def test_corpus_toolbox_source_tools_require_selected_evidence() -> None:
+    toolbox = create_corpus_toolbox(
+        index=FakeSearchIndex([hit("segment-1", "alpha beta")]),  # type: ignore[arg-type]
+        domain_id="domain-1",
+        max_searches=1,
+        max_citations=5,
+        max_evidence_tokens=20,
+    )
+
+    with pytest.raises(CorpusToolError, match="search_corpus"):
+        toolbox.map_sources()
+    with pytest.raises(CorpusToolError, match="search_corpus"):
+        toolbox.inspect_evidence_table()
+    toolbox.search_corpus("alpha")
+    with pytest.raises(CorpusToolError, match="segment_id"):
+        toolbox.inspect_evidence_table(" ")
+    with pytest.raises(CorpusToolError, match="not returned"):
+        toolbox.inspect_evidence_table("missing")

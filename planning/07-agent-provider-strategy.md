@@ -66,23 +66,25 @@ connected.
 ## Implemented Query Contract
 
 `POST /domains/{domain_id}/queries` creates a durable `agent.query` job. The current
-implementation uses controlled corpus tools (`search_corpus` and `read_citation`) over
-the domain BM25 index, builds a grounded answer from retrieved segments, persists
-citations, `evidence_audit`, and `contradiction_audit` under `job.payload.result`,
-enforces query budgets for searches, citations, evidence tokens, and runtime, and
-writes `agent.queued`, `agent.started`, `agent.completed`, or `agent.failed`
-progress/journal events. Usage is persisted with `search_count`, `citation_count`,
-`evidence_tokens`, `runtime_ms`, and `within_budget`.
+implementation uses controlled corpus tools (`search_corpus`, `read_citation`,
+`map_sources`, and `inspect_evidence_table`) over already-indexed domain evidence,
+builds a grounded answer from retrieved segments, persists citations, `evidence_audit`,
+and `contradiction_audit` under `job.payload.result`, enforces query budgets for
+searches, citations, evidence tokens, and runtime, and writes `agent.queued`,
+`agent.started`, `agent.completed`, or `agent.failed` progress/journal events. Usage is
+persisted with `search_count`, `citation_count`, `evidence_tokens`, `runtime_ms`, and
+`within_budget`.
 
 The Deep Agents harness factory is present through `deepagents.create_deep_agent` with a
 RetOS-specific system prompt and a registered RetOS harness profile that excludes
 Deep Agents filesystem and shell built-ins for the local `ollama:gemma4` profile.
-`RETOS_AGENT_RUNTIME=deepagents` invokes that harness with `search_corpus` and
-`read_citation` tools after a bounded seed search. `RETOS_AGENT_RUNTIME=deterministic`
+`RETOS_AGENT_RUNTIME=deepagents` invokes that harness with the controlled corpus tools
+after a bounded seed search. `RETOS_AGENT_RUNTIME=deterministic`
 remains the default so CI, Docker smoke, and local development do not require downloaded
 model weights or paid provider calls. The post-answer evidence audit appends a final
 ledger when the model does not explicitly cite returned segment ids. The contradiction
 audit flags opposite-polarity citation pairs for operator review. The Deep Agents
 harness now registers named `evidence_checker` and `contradiction_checker` subagents
-with the same controlled RetOS corpus tools. `source_mapper` and `table_inspector`
-remain future runtime slices.
+with the same controlled RetOS corpus tools. The `source_mapper` and `table_inspector`
+runtime roles are served by `map_sources` and `inspect_evidence_table`; richer
+multi-hop planning and neighboring-context expansion remain future slices.

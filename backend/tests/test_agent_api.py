@@ -259,6 +259,8 @@ def test_agent_query_can_use_mocked_deepagents_runtime(
             prompt = messages[0]["content"]  # type: ignore[index]
             assert "Seed evidence returned by search_corpus" in prompt
             assert "Apollo guidance computers" in prompt
+            assert "Use map_sources" in prompt
+            assert "Use inspect_evidence_table" in prompt
             return {"messages": [{"role": "assistant", "content": "Deep answer without ids."}]}
 
     def fake_create_research_harness(
@@ -295,7 +297,12 @@ def test_agent_query_can_use_mocked_deepagents_runtime(
     ]
     assert body["result"]["contradiction_audit"]["conflict_count"] == 0
     assert body["result"]["usage"]["search_count"] == 1
-    assert tool_names == ["search_corpus", "read_citation"]
+    assert tool_names == [
+        "search_corpus",
+        "read_citation",
+        "map_sources",
+        "inspect_evidence_table",
+    ]
     assert invocations[0]["config"] == {"recursion_limit": 25}
 
 

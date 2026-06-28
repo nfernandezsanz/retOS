@@ -125,6 +125,8 @@ def build_deepagents_prompt(
         "- Use segment_id values from the evidence when making factual claims.\n"
         "- You may call search_corpus for additional evidence within budget.\n"
         "- You may call read_citation only for segment ids returned by search_corpus.\n"
+        "- Use map_sources to understand which documents and anchors support the answer.\n"
+        "- Use inspect_evidence_table when evidence contains tables or key-value rows.\n"
         "- Abstain if the returned evidence is insufficient.\n\n"
         "Budget:\n"
         f"- max_searches={budget.max_searches}\n"
@@ -173,7 +175,12 @@ def extract_harness_answer(output: object) -> str:
 def invoke_deepagents_harness(*, settings: Settings, toolbox: CorpusToolbox, prompt: str) -> str:
     harness = create_research_harness(
         settings=settings,
-        tools=[toolbox.search_corpus, toolbox.read_citation],
+        tools=[
+            toolbox.search_corpus,
+            toolbox.read_citation,
+            toolbox.map_sources,
+            toolbox.inspect_evidence_table,
+        ],
     )
     invoke = getattr(harness, "invoke", None)
     if not callable(invoke):

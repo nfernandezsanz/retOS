@@ -549,9 +549,11 @@ events, and emits SSE progress. If the domain index has not been built, the API 
 
 Agent budgets are persisted in the queued job payload and echoed in the final result
 usage. The runtime always uses controlled RetOS corpus tools instead of host filesystem
-access: `search_corpus` performs bounded BM25 searches and `read_citation` can read only
-citations returned by those searches. The runtime caps citations with `max_citations`,
-caps retained evidence with `max_evidence_tokens`, and records `search_count`,
+access: `search_corpus` performs bounded BM25 searches, `read_citation` can read only
+citations returned by those searches, `map_sources` groups already-selected evidence by
+document/anchor, and `inspect_evidence_table` extracts simple table/key-value rows from
+already-selected evidence. The runtime caps citations with `max_citations`, caps
+retained evidence with `max_evidence_tokens`, and records `search_count`,
 `citation_count`, `evidence_tokens`, `runtime_ms`, and `within_budget` for audit and UI
 display.
 
@@ -567,14 +569,14 @@ conservative and does not replace deeper named subagent review.
 
 When `RETOS_AGENT_RUNTIME=deepagents`, the harness registers named
 `evidence_checker` and `contradiction_checker` subagents. They receive the same
-controlled `search_corpus` and `read_citation` tools as the main agent, and the
-post-answer deterministic audits still run before results are persisted.
+controlled corpus tools as the main agent, and the post-answer deterministic audits
+still run before results are persisted.
 
 `RETOS_AGENT_RUNTIME=deterministic` is the default for CI, Docker smoke, and local
 development without downloaded model weights. It performs the controlled corpus search
 and produces a deterministic grounded answer. `RETOS_AGENT_RUNTIME=deepagents` enables
-`deepagents.create_deep_agent` synthesis with the same `search_corpus` and
-`read_citation` tools. For the default local profile, pull the model first:
+`deepagents.create_deep_agent` synthesis with the same controlled corpus tools. For the
+default local profile, pull the model first:
 
 ```bash
 docker compose --profile models run --rm ollama-pull
