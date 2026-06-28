@@ -91,7 +91,7 @@ auditor a stable local entry point:
 | Ignore hygiene | `make ignore-hygiene-check` | Git and Docker contexts exclude secrets, generated files, local volumes, public datasets, reports, and backups. |
 | Operations runbook | `make operations-runbook-check` | Backup, restore, rollback, health-check, audit-export, and promotion-evidence fields are aligned. |
 | Auditor static pack | `make auditor-static-check` | Non-destructive dependency, security, ignore, operations, branding, release, preflight, and audit-pack guards pass together. |
-| Audit manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | JSON handoff with current commit, dirty state, CI run, required gates, critical file hashes, local visual screenshots, CI/release artifact names, and remaining external promotion evidence; CI also uploads `retos-audit-manifest-<commit>`. |
+| Audit manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | JSON handoff with current commit, dirty state, CI run, generation context, required gates, critical file hashes, local visual screenshots, CI/release artifact names, and remaining external promotion evidence. CI also uploads `retos-audit-manifest-<commit>` as an in-run snapshot; treat that artifact as final evidence only with a later `make ci-status-check` success for the same commit. |
 | Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, docker, and final audit-evidence jobs for the current commit. |
 
 ## External Promotion Evidence

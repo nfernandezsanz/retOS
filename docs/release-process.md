@@ -181,8 +181,10 @@ Images:
 - The release workflow must run dependency audits plus browser/visual smoke before
   publishing images, and it must upload visual audit screenshots as release evidence.
 - `make audit-manifest` exports a machine-readable local handoff manifest with the
-  current commit, CI lookup, critical file hashes, visual audit screenshots, required
-  gates, and remaining external promotion evidence.
+  current commit, CI lookup, generation context, critical file hashes, visual audit
+  screenshots, required gates, and remaining external promotion evidence. When generated
+  inside GitHub Actions, the manifest is an in-run snapshot and must be paired with a
+  later `make ci-status-check` success for the same commit.
 - `scripts/check_published_release_evidence.sh` is the independent post-publish verifier
   for immutable image digests. Run it through `make release-evidence-check` before final
   promotion evidence is accepted.

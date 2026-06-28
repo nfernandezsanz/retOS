@@ -40,6 +40,7 @@ tracker = paths["tracker"].read_text(encoding="utf-8")
 release_note = paths["release_note"].read_text(encoding="utf-8")
 promotion_template = paths["promotion_template"].read_text(encoding="utf-8")
 ci = paths["ci"].read_text(encoding="utf-8")
+audit_manifest_script = paths["audit_manifest_script"].read_text(encoding="utf-8")
 
 for heading in (
     "## Current Verdict",
@@ -97,6 +98,8 @@ for phrase in (
     ".dockerignore",
     "docs/releases/evidence/production-promotion-template.md",
     "JSON handoff",
+    "generation context",
+    "in-run snapshot",
 ):
     require(phrase in audit_pack, f"docs/production-readiness.md missing evidence phrase: {phrase}")
 
@@ -123,6 +126,10 @@ require(
     "release note must record final CI audit-evidence and manifest artifact evidence",
 )
 require(
+    "in-run snapshot" in release_note,
+    "release note must explain CI-generated audit manifests are in-run snapshots",
+)
+require(
     "Publishing evidence still required" in release_note,
     "release note must keep publish evidence blockers explicit",
 )
@@ -146,6 +153,13 @@ require(
     "make audit-manifest" in release_process and "scripts/export_audit_manifest.py" in audit_pack,
     "release process and audit pack must document the audit manifest exporter",
 )
+for phrase in (
+    "generation_context",
+    "generated_for_current_github_run",
+    "post_run_ci_validation_required",
+    "post_run_ci_validation_command",
+):
+    require(phrase in audit_manifest_script, f"audit manifest must record CI generation semantics: {phrase}")
 require(
     "production-promotion-template.md" in operations and "production-promotion-template.md" in release_process,
     "operations and release process must link the promotion evidence template",

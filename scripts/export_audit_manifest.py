@@ -167,8 +167,21 @@ def github_ci(repo: str, sha: str) -> dict[str, Any]:
 def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
     sha = run(["git", "rev-parse", "HEAD"])
     dirty_files = run_optional(["git", "status", "--short"]) or ""
+    ci = github_ci(args.repository, sha)
+    github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
+    github_run_id = os.environ.get("GITHUB_RUN_ID")
+    generated_for_current_github_run = (
+        github_actions
+        and github_run_id is not None
+        and str(ci.get("run_id")) == github_run_id
+    )
     return {
-        "ci": github_ci(args.repository, sha),
+        "ci": {
+            **ci,
+            "generated_for_current_github_run": generated_for_current_github_run,
+            "post_run_ci_validation_required": generated_for_current_github_run,
+            "post_run_ci_validation_command": "make ci-status-check",
+        },
         "coverage_targets": {
             "branch_minimum_percent": 90.44,
             "last_recorded_branch_percent": 90.44,
@@ -178,6 +191,20 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
         "critical_file_hashes": [file_record(path) for path in CRITICAL_FILES],
         "external_promotion_evidence_required": list(EXTERNAL_PROMOTION_EVIDENCE),
         "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "generation_context": {
+            "github_actions": github_actions,
+            "github_job": os.environ.get("GITHUB_JOB"),
+            "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+            "github_run_id": github_run_id,
+            "mode": "github-actions-in-run" if github_actions else "local-or-operator",
+            "note": (
+                "When generated inside GitHub Actions, the manifest is an in-run snapshot. "
+                "Treat the uploaded artifact as final evidence only together with a later "
+                "`make ci-status-check` success for the same commit."
+                if github_actions
+                else "Operator-generated manifest after local or remote validation."
+            ),
+        },
         "local_gates_required": list(LOCAL_GATES),
         "production_promotion_ready": False,
         "production_promotion_ready_reason": (
