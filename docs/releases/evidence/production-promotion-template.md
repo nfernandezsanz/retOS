@@ -29,6 +29,7 @@ Paste or link the output for each gate:
 - `make integration`
 - `make frontend-test`
 - `make frontend-e2e`
+- `make frontend-visual-audit`
 - `make docker-smoke`
 - `make release-check`
 - `make production-preflight`

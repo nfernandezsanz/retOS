@@ -39,6 +39,7 @@ for command in (
     "make integration",
     "make frontend-test",
     "make frontend-e2e",
+    "make frontend-visual-audit",
     "make docker-smoke",
     "make release-check",
     "make dependency-audit",

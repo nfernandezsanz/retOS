@@ -46,6 +46,7 @@ make check
 make integration
 make frontend-test
 make frontend-e2e
+make frontend-visual-audit
 docker compose --env-file .env.example config
 docker compose --dry-run build
 make release-check
@@ -80,7 +81,7 @@ auditor a stable local entry point:
 | Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 527 pytest cases, eval smoke, agent multi-hop eval, 95.20% total coverage, and 90.44% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
-| Browser and branding | `make frontend-e2e` and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, and end-to-end console workflows. |
+| Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, and reproducible desktop/mobile screenshots. |
 | Docker runtime | `make docker-smoke` | Built API/web images, Postgres, RabbitMQ, API, worker, migrate, web, HTTP smoke, worker-backed jobs, and one shared backend image ID. |
 | Static release guardrails | `make release-check` | Required docs, Docker topology, image metadata source, image size budgets, workflow contract, release notes, audit pack, branding assets, safe defaults, and a dry-run of the published evidence verifier. |
 | Production preflight | `make production-preflight` | Local evidence, branding, release docs, and external promotion blockers are aligned. |
@@ -129,7 +130,7 @@ These items must be closed before a final production release:
 - [ ] `make operations-runbook-check` passes.
 - [ ] `make auditor-static-check` passes.
 - [ ] `make integration` passes against real local endpoints.
-- [ ] `make frontend-test` and `make frontend-e2e` pass.
+- [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
 - [ ] `make docker-smoke` passes with API, worker, migrate, web, Postgres, RabbitMQ, and Ollama services.
 - [ ] `scripts/check_release_readiness.sh` passes.
 - [ ] `scripts/check_audit_pack.sh` passes.
@@ -147,6 +148,7 @@ These items must be closed before a final production release:
 | Evidence | Location |
 | --- | --- |
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
+| Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit` |
 | Dependency advisory evidence | `scripts/check_dependency_audit.sh`, `make dependency-audit` |
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
