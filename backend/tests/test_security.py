@@ -83,3 +83,27 @@ def test_token_with_invalid_roles_is_rejected() -> None:
 
     with pytest.raises(TokenError, match="roles"):
         decode_access_token(token, settings)
+
+
+def test_token_with_invalid_subject_is_rejected() -> None:
+    settings = Settings(
+        env="test",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+    )
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "sub": "",
+            "roles": ["admin"],
+            "iss": settings.jwt_issuer,
+            "aud": settings.jwt_audience,
+            "iat": int(now.timestamp()),
+            "nbf": int(now.timestamp()),
+            "exp": int((now + timedelta(minutes=5)).timestamp()),
+        },
+        settings.jwt_secret.get_secret_value(),
+        algorithm="HS256",
+    )
+
+    with pytest.raises(TokenError, match="subject"):
+        decode_access_token(token, settings)
