@@ -13,6 +13,8 @@ tag in GitHub.
 
 - React document evidence inspection for latest versions, artifacts, and searchable
   segments directly from the document inventory.
+- Metric-gated real-dataset calibration manifests so release candidates can fail on
+  explicit retrieval, citation, grounding, or budget thresholds.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.

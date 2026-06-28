@@ -61,6 +61,12 @@ DEFAULT_TARGETS: tuple[CalibrationTarget, ...] = (
 TARGETS_BY_KEY = {target.key: target for target in DEFAULT_TARGETS}
 
 
+@dataclass(frozen=True)
+class MetricGate:
+    name: str
+    minimum: float
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -115,6 +121,15 @@ def parse_args() -> argparse.Namespace:
         default=2,
         help="Attempts per source URL before trying the next mirror.",
     )
+    parser.add_argument(
+        "--metric-gate",
+        action="append",
+        metavar="NAME=MINIMUM",
+        help=(
+            "Require every target to report metric NAME at or above MINIMUM. "
+            "May be repeated for release promotion gates."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -131,6 +146,7 @@ def main() -> int:
             force_datasets=args.force_datasets,
             download_timeout=args.download_timeout,
             download_retries=args.download_retries,
+            metric_gates=parse_metric_gates(args.metric_gate or ()),
         )
     except (DatasetFetchError, EvalCalibrationError) as exc:
         print(f"Eval calibration error: {exc}", file=sys.stderr)
@@ -149,6 +165,7 @@ def run_calibration(
     force_datasets: bool = False,
     download_timeout: float = 60.0,
     download_retries: int = 2,
+    metric_gates: tuple[MetricGate, ...] = (),
 ) -> dict[str, Any]:
     if not targets:
         raise EvalCalibrationError("At least one calibration target is required")
@@ -174,6 +191,7 @@ def run_calibration(
                 force_dataset=force_datasets,
                 download_timeout=download_timeout,
                 download_retries=download_retries,
+                metric_gates=metric_gates,
             )
             results.append(result)
 
@@ -184,6 +202,7 @@ def run_calibration(
         "target_count": len(results),
         "max_records": max_records,
         "max_cases": case_limit,
+        "metric_gates": [{"name": gate.name, "minimum": gate.minimum} for gate in metric_gates],
         "targets": results,
     }
     manifest_path = report_dir / "manifest.json"
@@ -205,6 +224,7 @@ def run_target(
     force_dataset: bool,
     download_timeout: float,
     download_retries: int,
+    metric_gates: tuple[MetricGate, ...],
 ) -> dict[str, Any]:
     profile = DATASET_PROFILES[target.profile_name]
     dataset_result = materialize_dataset(
@@ -229,11 +249,19 @@ def run_target(
         report_stem=target.report_stem,
     )
     report_payload = report.to_dict()
+    gate_results = evaluate_metric_gates(
+        metrics=report_payload["metrics"],
+        metric_gates=metric_gates,
+    )
+    gates_passed = all(gate["passed"] for gate in gate_results)
     return {
         "key": target.key,
         "suite": report.suite_name,
         "description": target.description,
-        "passed": report.passed,
+        "passed": report.passed and gates_passed,
+        "report_passed": report.passed,
+        "gates_passed": gates_passed,
+        "gates": gate_results,
         "case_count": report_payload["case_count"],
         "metrics": report_payload["metrics"],
         "dataset": dataset_result,
@@ -275,6 +303,46 @@ def materialize_dataset(
         download_retries=download_retries,
     )
     return {**result, "reused": False}
+
+
+def parse_metric_gates(raw_gates: tuple[str, ...] | list[str]) -> tuple[MetricGate, ...]:
+    gates: list[MetricGate] = []
+    for raw_gate in raw_gates:
+        name, separator, raw_minimum = raw_gate.partition("=")
+        name = name.strip()
+        raw_minimum = raw_minimum.strip()
+        if separator != "=" or not name or not raw_minimum:
+            raise EvalCalibrationError(
+                "--metric-gate must use NAME=MINIMUM, for example retrieval_recall=0.80"
+            )
+        try:
+            minimum = float(raw_minimum)
+        except ValueError as exc:
+            raise EvalCalibrationError(
+                f"--metric-gate minimum for {name!r} must be numeric"
+            ) from exc
+        gates.append(MetricGate(name=name, minimum=minimum))
+    return tuple(gates)
+
+
+def evaluate_metric_gates(
+    *,
+    metrics: dict[str, Any],
+    metric_gates: tuple[MetricGate, ...],
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for gate in metric_gates:
+        value = metrics.get(gate.name)
+        numeric_value = value if isinstance(value, int | float) else None
+        results.append(
+            {
+                "name": gate.name,
+                "minimum": gate.minimum,
+                "actual": numeric_value,
+                "passed": numeric_value is not None and numeric_value >= gate.minimum,
+            }
+        )
+    return results
 
 
 if __name__ == "__main__":

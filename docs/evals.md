@@ -357,15 +357,20 @@ Run the bounded public calibration set end-to-end:
 ```bash
 make eval-calibration MAX_RECORDS=100 MAX_CASES=50
 make eval-calibration TARGET=hotpotqa-agent MAX_RECORDS=100 MAX_CASES=25
+make eval-calibration MAX_RECORDS=100 MAX_CASES=50 \
+  METRIC_GATES="retrieval_recall=0.80 citation_validity=1.0"
 ```
 
 The calibration command fetches or reuses bounded samples for SQuAD, HotpotQA,
 HotpotQA-agent, and the NQ-Open adapter, then writes per-suite JSON/Markdown reports
 plus `evals/reports/calibration/manifest.json`. The manifest records pass/fail status,
-case counts, metrics, dataset provenance, report paths, and whether an existing sample
-was reused. It is intentionally opt-in because it performs network downloads when
-samples are missing, but tests mock the fetch and eval layers so no CI run depends on
-public endpoints or paid providers.
+case counts, metrics, dataset provenance, report paths, optional metric-gate decisions,
+and whether an existing sample was reused. `METRIC_GATES` expands to repeated
+`--metric-gate NAME=MINIMUM` CLI flags; every selected target must report each metric at
+or above the configured threshold or the manifest fails. Use these gates when turning a
+larger real-dataset run into release-promotion evidence. The command is intentionally
+opt-in because it performs network downloads when samples are missing, but tests mock
+the fetch and eval layers so no CI run depends on public endpoints or paid providers.
 
 The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
 unless `FORCE=1` is provided, and is never part of the default CI path. Networked
