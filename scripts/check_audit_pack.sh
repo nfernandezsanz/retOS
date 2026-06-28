@@ -98,6 +98,10 @@ require(
     "release note must keep maturity limitation explicit",
 )
 require(
+    "Baseline draft commit:" in release_note and "make ci-status-check" in release_note,
+    "release note must distinguish baseline draft evidence from current HEAD CI evidence",
+)
+require(
     "Publishing evidence still required" in release_note,
     "release note must keep publish evidence blockers explicit",
 )

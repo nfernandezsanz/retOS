@@ -47,7 +47,9 @@ required_sections = (
 )
 
 required_phrases = (
-    "Commit:",
+    "Baseline draft commit:",
+    "make ci-status-check",
+    "exact release commit must be reconciled",
     "Images:",
     "retos-backend",
     "retos-web",
