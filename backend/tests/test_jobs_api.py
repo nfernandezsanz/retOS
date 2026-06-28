@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import sqlite3
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from retos.api.app import create_app
@@ -11,8 +15,11 @@ from retos.api.routes.jobs import (
     RetryDispatchPlan,
     dispatch_retry_job,
     retry_dispatch_plan,
+    retry_job,
+    transition_job,
 )
 from retos.core.config import Settings
+from retos.domain.documents import Domain, Source
 from retos.domain.jobs import Job
 
 
@@ -98,6 +105,7 @@ def create_job(
 def job_fixture(
     *,
     kind: str,
+    status: str = "failed",
     domain_id: str | None = "domain-1",
     source_id: str | None = None,
     payload: dict[str, object] | None = None,
@@ -106,7 +114,7 @@ def job_fixture(
     return Job(
         id="job-fixture",
         kind=kind,  # type: ignore[arg-type]
-        status="failed",
+        status=status,  # type: ignore[arg-type]
         domain_id=domain_id,
         source_id=source_id,
         payload=payload or {},
@@ -116,6 +124,119 @@ def job_fixture(
         created_at=now,
         updated_at=now,
     )
+
+
+def domain_fixture(domain_id: str = "domain-1") -> Domain:
+    now = datetime.now(UTC)
+    return Domain(
+        id=domain_id,
+        slug="domain-one",
+        name="Domain One",
+        description=None,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def source_fixture(*, source_id: str = "source-1", domain_id: str = "domain-1") -> Source:
+    now = datetime.now(UTC)
+    return Source(
+        id=source_id,
+        domain_id=domain_id,
+        kind="mount",
+        name="Source One",
+        uri="file:///tmp/source-one",
+        created_at=now,
+        updated_at=now,
+    )
+
+
+class FakeJobRepository:
+    def __init__(self, job: Job | None, *, updated: Job | None = None) -> None:
+        self.job = job
+        self.updated = updated
+        self.added: Job | None = None
+
+    async def get(self, job_id: str) -> Job | None:
+        return self.job if self.job is not None and self.job.id == job_id else None
+
+    async def update_status(self, **kwargs: Any) -> Job | None:
+        return self.updated
+
+    async def add(
+        self,
+        *,
+        kind: str,
+        status: str,
+        domain_id: str | None,
+        source_id: str | None,
+        payload: dict[str, Any],
+    ) -> Job:
+        now = datetime.now(UTC)
+        self.added = Job(
+            id="retry-job",
+            kind=kind,  # type: ignore[arg-type]
+            status=status,  # type: ignore[arg-type]
+            domain_id=domain_id,
+            source_id=source_id,
+            payload=payload,
+            error=None,
+            started_at=None,
+            completed_at=None,
+            created_at=now,
+            updated_at=now,
+        )
+        return self.added
+
+
+class FakeDomainRepository:
+    def __init__(self, domain: Domain | None) -> None:
+        self.domain = domain
+
+    async def get(self, domain_id: str) -> Domain | None:
+        return self.domain if self.domain is not None and self.domain.id == domain_id else None
+
+
+class FakeSourceRepository:
+    def __init__(self, source: Source | None) -> None:
+        self.source = source
+
+    async def get(self, source_id: str) -> Source | None:
+        return self.source if self.source is not None and self.source.id == source_id else None
+
+
+class FakeEvents:
+    def __init__(self) -> None:
+        self.events: list[dict[str, Any]] = []
+
+    async def add(self, **event: Any) -> None:
+        self.events.append(event)
+
+
+class FakeJobsUnitOfWork:
+    def __init__(
+        self,
+        *,
+        job: Job | None,
+        updated: Job | None = None,
+        domain: Domain | None = None,
+        source: Source | None = None,
+    ) -> None:
+        self.jobs = FakeJobRepository(job, updated=updated)
+        self.domains = FakeDomainRepository(domain)
+        self.sources = FakeSourceRepository(source)
+        self.journal_events = FakeEvents()
+        self.progress_events = FakeEvents()
+        self.commits = 0
+
+    async def __aenter__(self) -> FakeJobsUnitOfWork:
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        return None
+
+    async def commit(self) -> None:
+        self.commits += 1
 
 
 def test_jobs_require_admin_token(jobs_client: TestClient) -> None:
@@ -454,6 +575,130 @@ def test_dispatch_retry_job_calls_matching_celery_task(monkeypatch: pytest.Monke
     ]
     with pytest.raises(RuntimeError, match="Unsupported retry dispatch task"):
         dispatch_retry_job(job, RetryDispatchPlan(task_name="unknown"))
+
+
+@pytest.mark.asyncio
+async def test_transition_job_rejects_missing_after_update() -> None:
+    current = job_fixture(kind="index.domain", status="queued")
+    uow = FakeJobsUnitOfWork(job=current, updated=None)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await transition_job(
+            job_id=current.id,
+            target="running",
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Job not found"
+
+
+@pytest.mark.asyncio
+async def test_retry_job_rejects_missing_job() -> None:
+    uow = FakeJobsUnitOfWork(job=None)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await retry_job(
+            actor="admin@retos.dev",
+            settings=Settings(),
+            uow=uow,  # type: ignore[arg-type]
+            job_id="missing",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Job not found"
+
+
+@pytest.mark.asyncio
+async def test_retry_job_rejects_missing_domain() -> None:
+    original = job_fixture(kind="index.domain", domain_id="domain-1")
+    uow = FakeJobsUnitOfWork(job=original, domain=None)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await retry_job(
+            actor="admin@retos.dev",
+            settings=Settings(),
+            uow=uow,  # type: ignore[arg-type]
+            job_id=original.id,
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Domain not found"
+
+
+@pytest.mark.asyncio
+async def test_retry_job_rejects_missing_source() -> None:
+    original = job_fixture(
+        kind="ingest.source",
+        domain_id="domain-1",
+        source_id="source-1",
+        payload={"ingestion_kind": "source_scan"},
+    )
+    uow = FakeJobsUnitOfWork(job=original, domain=domain_fixture(), source=None)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await retry_job(
+            actor="admin@retos.dev",
+            settings=Settings(),
+            uow=uow,  # type: ignore[arg-type]
+            job_id=original.id,
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Source not found"
+
+
+@pytest.mark.asyncio
+async def test_retry_job_rejects_source_domain_mismatch() -> None:
+    original = job_fixture(
+        kind="ingest.source",
+        domain_id="domain-1",
+        source_id="source-1",
+        payload={"ingestion_kind": "source_scan"},
+    )
+    uow = FakeJobsUnitOfWork(
+        job=original,
+        domain=domain_fixture("domain-1"),
+        source=source_fixture(source_id="source-1", domain_id="domain-2"),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await retry_job(
+            actor="admin@retos.dev",
+            settings=Settings(),
+            uow=uow,  # type: ignore[arg-type]
+            job_id=original.id,
+        )
+
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.detail == "Source does not belong to domain"
+
+
+@pytest.mark.asyncio
+async def test_retry_job_dispatches_worker_outside_test_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dispatched: list[tuple[str, str]] = []
+    original = job_fixture(kind="index.domain", domain_id="domain-1")
+    uow = FakeJobsUnitOfWork(job=original, domain=domain_fixture("domain-1"))
+    settings = Settings(env="development")
+    monkeypatch.setattr(
+        "retos.api.routes.jobs.dispatch_retry_job",
+        lambda job, plan: dispatched.append((job.id, plan.task_name)),
+    )
+
+    retried = await retry_job(
+        actor="admin@retos.dev",
+        settings=settings,
+        uow=uow,  # type: ignore[arg-type]
+        job_id=original.id,
+    )
+
+    assert retried.id == "retry-job"
+    assert uow.jobs.added is not None
+    assert uow.commits == 1
+    assert dispatched == [("retry-job", "rebuild_domain_index")]
 
 
 def test_create_job_rejects_missing_domain(
