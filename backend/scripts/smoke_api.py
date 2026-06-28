@@ -1337,14 +1337,24 @@ def main() -> None:
                 "audit export head hash did not match the final chain event",
             )
             require(
-                audit_integrity["chain"][0]["prev_hash"] is None,
-                "audit export first chain event should not have a previous hash",
-            )
-            require(
                 all(
                     item["payload_hash"] and item["event_hash"] for item in audit_integrity["chain"]
                 ),
                 "audit export integrity chain has empty hashes",
+            )
+            persisted_audit_events = {
+                item["id"]: item
+                for item in audit_export_body["journal_events"]
+                + audit_export_body["progress_events"]
+            }
+            require(
+                all(
+                    item["event_hash"] == persisted_audit_events[item["event_id"]]["event_hash"]
+                    and item["payload_hash"]
+                    == persisted_audit_events[item["event_id"]]["payload_hash"]
+                    for item in audit_integrity["chain"]
+                ),
+                "audit export integrity chain did not match persisted hashes",
             )
             require(
                 any(item["trace_id"] == job["id"] for item in audit_integrity["chain"]),

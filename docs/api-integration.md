@@ -1115,9 +1115,11 @@ The export endpoint follows the same admin/viewer visibility rules, accepts `lim
 `1` to `1000`, returns `Content-Disposition: attachment;
 filename="retos-audit-export.json"`, and sets `Cache-Control: no-store`. Export payloads
 also include an offline integrity section. RetOS canonicalizes each event payload with
-sorted JSON keys, hashes it with SHA-256, then builds a chronological hash chain across
-the exported journal and progress events. This does not replace database backups, but it
-lets operators detect accidental or malicious edits to an exported audit package.
+sorted JSON keys, hashes it with SHA-256, and persists `payload_hash`, `prev_hash`, and
+`event_hash` on each journal/progress event at write time. The export reuses those
+persisted hashes when available and validates each included event before returning the
+download. This does not replace database backups, but it lets operators detect accidental
+or malicious edits to persisted audit rows or exported audit packages.
 
 Journal event shape:
 
@@ -1125,6 +1127,9 @@ Journal event shape:
 {
   "id": "<event_id>",
   "trace_id": "<job_id_or_trace_id>",
+  "payload_hash": "<sha256>",
+  "prev_hash": "<previous_event_hash_or_null>",
+  "event_hash": "<sha256>",
   "occurred_at": "2026-06-27T00:00:00Z",
   "actor": "admin@retos.dev",
   "event_type": "job.created",
@@ -1143,6 +1148,9 @@ Progress event shape:
 {
   "id": "<event_id>",
   "trace_id": "<job_id_or_trace_id>",
+  "payload_hash": "<sha256>",
+  "prev_hash": "<previous_event_hash_or_null>",
+  "event_hash": "<sha256>",
   "job_id": "<job_id>",
   "occurred_at": "2026-06-27T00:00:00Z",
   "event_type": "job.queued",

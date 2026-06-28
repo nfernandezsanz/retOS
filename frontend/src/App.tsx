@@ -489,6 +489,9 @@ type DocumentHistoryRead = {
 type JournalEventRead = {
   id: string;
   trace_id: string | null;
+  payload_hash: string | null;
+  prev_hash: string | null;
+  event_hash: string | null;
   occurred_at: string;
   actor: string;
   event_type: string;
@@ -500,6 +503,9 @@ type JournalEventRead = {
 type ProgressEventRead = {
   id: string;
   trace_id: string | null;
+  payload_hash: string | null;
+  prev_hash: string | null;
+  event_hash: string | null;
   job_id: string | null;
   occurred_at: string;
   event_type: string;
@@ -4609,6 +4615,9 @@ function App() {
                         <span>{formatDateTime(event.occurred_at)}</span>
                       </div>
                       <p className="payload-summary">{summarizePayload(event.payload)}</p>
+                      {event.event_hash ? (
+                        <p className="payload-summary">Hash {event.event_hash.slice(0, 16)}</p>
+                      ) : null}
                     </article>
                   ))}
                   {journalEvents.length === 0 ? (
@@ -4636,6 +4645,9 @@ function App() {
                         <span>{formatDateTime(event.occurred_at)}</span>
                       </div>
                       <p className="payload-summary">{summarizePayload(event.payload)}</p>
+                      {event.event_hash ? (
+                        <p className="payload-summary">Hash {event.event_hash.slice(0, 16)}</p>
+                      ) : null}
                     </article>
                   ))}
                   {auditProgressEvents.length === 0 ? (

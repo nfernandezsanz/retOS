@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from retos.api.app import create_app
 from retos.api.routes.audit import AuditHashChainEntryRead, validate_audit_chain
+from retos.core.audit_hash import audit_event_hash, audit_payload_hash
 from retos.core.config import Settings
 
 
@@ -127,6 +128,8 @@ def test_lists_persisted_journal_and_progress_events(
     assert journals[0]["actor"] == "admin@retos.dev"
     assert journals[0]["payload"]["kind"] == "index.domain"
     assert journals[0]["occurred_at"]
+    assert journals[0]["payload_hash"]
+    assert journals[0]["event_hash"]
 
     assert [event["event_type"] for event in progress_events] == [
         "job.queued",
@@ -137,6 +140,8 @@ def test_lists_persisted_journal_and_progress_events(
     assert progress_events[0]["message"] == "Queued index.domain"
     assert progress_events[0]["payload"] == {"status": "queued"}
     assert progress_events[0]["occurred_at"]
+    assert progress_events[0]["payload_hash"]
+    assert progress_events[0]["event_hash"]
 
 
 def test_audit_event_limit_is_validated(
@@ -201,6 +206,18 @@ def test_exports_audit_snapshot_with_download_headers(
     assert any(entry["trace_id"] == job_id for entry in integrity["chain"])
     assert any(entry["event_type"] == "job.created" for entry in integrity["chain"])
     assert any(entry["event_type"] == "job.queued" for entry in integrity["chain"])
+    persisted_events = {
+        **{event["id"]: event for event in body["journal_events"]},
+        **{event["id"]: event for event in body["progress_events"]},
+    }
+    assert all(
+        entry["event_hash"] == persisted_events[entry["event_id"]]["event_hash"]
+        for entry in integrity["chain"]
+    )
+    assert all(
+        entry["payload_hash"] == persisted_events[entry["event_id"]]["payload_hash"]
+        for entry in integrity["chain"]
+    )
     assert [
         (entry["occurred_at"], entry["event_stream"], entry["event_id"])
         for entry in integrity["chain"]
@@ -233,6 +250,41 @@ def test_audit_hash_chain_validation_detects_tampering(
     ]
 
     assert validate_audit_chain(tampered) is False
+
+
+def test_audit_hash_helpers_are_stable() -> None:
+    occurred_at = AuditHashChainEntryRead.model_validate(
+        {
+            "event_id": "event-1",
+            "trace_id": "trace-1",
+            "event_stream": "journal",
+            "event_type": "domain.created",
+            "occurred_at": "2026-06-28T09:00:00+00:00",
+            "payload_hash": "0" * 64,
+            "prev_hash": None,
+            "event_hash": "0" * 64,
+        }
+    ).occurred_at
+    payload_hash = audit_payload_hash({"b": 2, "a": 1})
+
+    assert payload_hash == audit_payload_hash({"a": 1, "b": 2})
+    assert audit_event_hash(
+        event_id="event-1",
+        trace_id="trace-1",
+        event_stream="journal",
+        event_type="domain.created",
+        occurred_at=occurred_at,
+        payload_hash=payload_hash,
+        prev_hash=None,
+    ) == audit_event_hash(
+        event_id="event-1",
+        trace_id="trace-1",
+        event_stream="journal",
+        event_type="domain.created",
+        occurred_at=occurred_at,
+        payload_hash=payload_hash,
+        prev_hash=None,
+    )
 
 
 def test_viewer_audit_is_scoped_to_granted_domains(

@@ -6,6 +6,7 @@ from uuid import uuid4
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from retos.core.audit_hash import audit_event_hash, audit_payload_hash
 from retos.domain.admin import AdminUser, AdminUserDomainGrant, normalize_admin_roles
 from retos.domain.documents import (
     Artifact,
@@ -152,6 +153,9 @@ def journal_event_from_record(record: JournalEventRecord) -> JournalEvent:
     return JournalEvent(
         id=record.id,
         trace_id=record.trace_id,
+        payload_hash=record.payload_hash,
+        prev_hash=record.prev_hash,
+        event_hash=record.event_hash,
         occurred_at=record.occurred_at,
         actor=record.actor,
         event_type=record.event_type,
@@ -165,6 +169,9 @@ def progress_event_from_record(record: ProgressEventRecord) -> ProgressEvent:
     return ProgressEvent(
         id=record.id,
         trace_id=record.trace_id,
+        payload_hash=record.payload_hash,
+        prev_hash=record.prev_hash,
+        event_hash=record.event_hash,
         job_id=record.job_id,
         occurred_at=record.occurred_at,
         event_type=record.event_type,
@@ -194,6 +201,38 @@ def journal_trace_id(
 
 def progress_trace_id(*, job_id: str | None, payload: dict[str, object]) -> str | None:
     return payload_trace_id(payload) or job_id
+
+
+async def latest_audit_event_hash(session: AsyncSession) -> str | None:
+    journal_result = await session.execute(
+        select(
+            JournalEventRecord.occurred_at,
+            JournalEventRecord.id,
+            JournalEventRecord.event_hash,
+        )
+        .where(JournalEventRecord.event_hash.is_not(None))
+        .order_by(JournalEventRecord.occurred_at.desc(), JournalEventRecord.id.desc())
+        .limit(1)
+    )
+    progress_result = await session.execute(
+        select(
+            ProgressEventRecord.occurred_at,
+            ProgressEventRecord.id,
+            ProgressEventRecord.event_hash,
+        )
+        .where(ProgressEventRecord.event_hash.is_not(None))
+        .order_by(ProgressEventRecord.occurred_at.desc(), ProgressEventRecord.id.desc())
+        .limit(1)
+    )
+    candidates = [
+        row
+        for row in (journal_result.first(), progress_result.first())
+        if row is not None and row.event_hash is not None
+    ]
+    if not candidates:
+        return None
+    latest = max(candidates, key=lambda row: (row.occurred_at, row.id))
+    return cast(str, latest.event_hash)
 
 
 def journal_record_visible_to_domains(
@@ -830,13 +869,30 @@ class JournalRepository:
         entity_id: str,
         payload: dict[str, object],
     ) -> JournalEvent:
+        event_id = str(uuid4())
+        occurred_at = utc_now()
+        trace_id = journal_trace_id(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            payload=payload,
+        )
+        payload_hash = audit_payload_hash(payload)
+        prev_hash = await latest_audit_event_hash(self._session)
         record = JournalEventRecord(
-            id=str(uuid4()),
-            trace_id=journal_trace_id(
-                entity_type=entity_type,
-                entity_id=entity_id,
-                payload=payload,
+            id=event_id,
+            trace_id=trace_id,
+            payload_hash=payload_hash,
+            prev_hash=prev_hash,
+            event_hash=audit_event_hash(
+                event_id=event_id,
+                trace_id=trace_id,
+                event_stream="journal",
+                event_type=event_type,
+                occurred_at=occurred_at,
+                payload_hash=payload_hash,
+                prev_hash=prev_hash,
             ),
+            occurred_at=occurred_at,
             actor=actor,
             event_type=event_type,
             entity_type=entity_type,
@@ -919,9 +975,26 @@ class ProgressEventRepository:
         message: str,
         payload: dict[str, object],
     ) -> ProgressEvent:
+        event_id = str(uuid4())
+        occurred_at = utc_now()
+        trace_id = progress_trace_id(job_id=job_id, payload=payload)
+        payload_hash = audit_payload_hash(payload)
+        prev_hash = await latest_audit_event_hash(self._session)
         record = ProgressEventRecord(
-            id=str(uuid4()),
-            trace_id=progress_trace_id(job_id=job_id, payload=payload),
+            id=event_id,
+            trace_id=trace_id,
+            payload_hash=payload_hash,
+            prev_hash=prev_hash,
+            event_hash=audit_event_hash(
+                event_id=event_id,
+                trace_id=trace_id,
+                event_stream="progress",
+                event_type=event_type,
+                occurred_at=occurred_at,
+                payload_hash=payload_hash,
+                prev_hash=prev_hash,
+            ),
+            occurred_at=occurred_at,
             job_id=job_id,
             event_type=event_type,
             message=message,

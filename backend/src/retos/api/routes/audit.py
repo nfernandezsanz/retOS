@@ -1,5 +1,3 @@
-import hashlib
-import json
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
@@ -8,6 +6,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from retos.api.dependencies import UnitOfWorkDep, ViewerSubjectDep, visible_domain_ids_for_actor
+from retos.core.audit_hash import (
+    AUDIT_HASH_ALGORITHM,
+    AUDIT_HASH_CANONICALIZATION,
+    audit_event_hash,
+    audit_payload_hash,
+)
 from retos.domain.jobs import JournalEvent, ProgressEvent
 
 router = APIRouter(prefix="/audit", tags=["audit"])
@@ -16,6 +20,9 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 class JournalEventRead(BaseModel):
     id: str
     trace_id: str | None
+    payload_hash: str | None
+    prev_hash: str | None
+    event_hash: str | None
     occurred_at: datetime
     actor: str
     event_type: str
@@ -28,6 +35,9 @@ class JournalEventRead(BaseModel):
         return cls(
             id=event.id,
             trace_id=event.trace_id,
+            payload_hash=event.payload_hash,
+            prev_hash=event.prev_hash,
+            event_hash=event.event_hash,
             occurred_at=event.occurred_at,
             actor=event.actor,
             event_type=event.event_type,
@@ -40,6 +50,9 @@ class JournalEventRead(BaseModel):
 class ProgressEventRead(BaseModel):
     id: str
     trace_id: str | None
+    payload_hash: str | None
+    prev_hash: str | None
+    event_hash: str | None
     job_id: str | None
     occurred_at: datetime
     event_type: str
@@ -51,6 +64,9 @@ class ProgressEventRead(BaseModel):
         return cls(
             id=event.id,
             trace_id=event.trace_id,
+            payload_hash=event.payload_hash,
+            prev_hash=event.prev_hash,
+            event_hash=event.event_hash,
             job_id=event.job_id,
             occurred_at=event.occurred_at,
             event_type=event.event_type,
@@ -88,16 +104,6 @@ class AuditExportRead(BaseModel):
     integrity: AuditExportIntegrityRead
 
 
-def canonical_json_hash(payload: dict[str, Any]) -> str:
-    encoded = json.dumps(
-        payload,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=True,
-    ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
-
-
 def build_audit_integrity(
     *,
     journal_events: list[JournalEvent],
@@ -114,6 +120,9 @@ def build_audit_integrity(
                 event.occurred_at,
                 event.event_type,
                 event.payload,
+                event.payload_hash,
+                event.prev_hash,
+                event.event_hash,
             )
             for event in journal_events
         ]
@@ -125,23 +134,35 @@ def build_audit_integrity(
                 event.occurred_at,
                 event.event_type,
                 event.payload,
+                event.payload_hash,
+                event.prev_hash,
+                event.event_hash,
             )
             for event in progress_events
         ],
         key=lambda item: (item[3], item[0], item[1]),
     )
-    for event_stream, event_id, trace_id, occurred_at, event_type, payload in chronological:
-        payload_hash = canonical_json_hash(payload)
-        event_hash = canonical_json_hash(
-            {
-                "event_id": event_id,
-                "trace_id": trace_id,
-                "event_stream": event_stream,
-                "event_type": event_type,
-                "occurred_at": occurred_at.isoformat(),
-                "payload_hash": payload_hash,
-                "prev_hash": prev_hash,
-            }
+    for (
+        event_stream,
+        event_id,
+        trace_id,
+        occurred_at,
+        event_type,
+        payload,
+        stored_payload_hash,
+        stored_prev_hash,
+        stored_event_hash,
+    ) in chronological:
+        payload_hash = stored_payload_hash or audit_payload_hash(payload)
+        entry_prev_hash = stored_prev_hash if stored_event_hash else prev_hash
+        event_hash = stored_event_hash or audit_event_hash(
+            event_id=event_id,
+            trace_id=trace_id,
+            event_stream=event_stream,
+            event_type=event_type,
+            occurred_at=occurred_at,
+            payload_hash=payload_hash,
+            prev_hash=entry_prev_hash,
         )
         entries.append(
             AuditHashChainEntryRead(
@@ -151,14 +172,14 @@ def build_audit_integrity(
                 event_type=event_type,
                 occurred_at=occurred_at,
                 payload_hash=payload_hash,
-                prev_hash=prev_hash,
+                prev_hash=entry_prev_hash,
                 event_hash=event_hash,
             )
         )
         prev_hash = event_hash
     return AuditExportIntegrityRead(
-        algorithm="sha256",
-        canonicalization="json-sort-keys-v1",
+        algorithm=AUDIT_HASH_ALGORITHM,
+        canonicalization=AUDIT_HASH_CANONICALIZATION,
         valid=validate_audit_chain(entries),
         event_count=len(entries),
         head_hash=prev_hash,
@@ -167,22 +188,18 @@ def build_audit_integrity(
 
 
 def validate_audit_chain(entries: list[AuditHashChainEntryRead]) -> bool:
-    prev_hash: str | None = None
     for entry in entries:
-        expected_hash = canonical_json_hash(
-            {
-                "event_id": entry.event_id,
-                "trace_id": entry.trace_id,
-                "event_stream": entry.event_stream,
-                "event_type": entry.event_type,
-                "occurred_at": entry.occurred_at.isoformat(),
-                "payload_hash": entry.payload_hash,
-                "prev_hash": prev_hash,
-            }
+        expected_hash = audit_event_hash(
+            event_id=entry.event_id,
+            trace_id=entry.trace_id,
+            event_stream=entry.event_stream,
+            event_type=entry.event_type,
+            occurred_at=entry.occurred_at,
+            payload_hash=entry.payload_hash,
+            prev_hash=entry.prev_hash,
         )
-        if entry.prev_hash != prev_hash or entry.event_hash != expected_hash:
+        if entry.event_hash != expected_hash:
             return False
-        prev_hash = entry.event_hash
     return True
 
 

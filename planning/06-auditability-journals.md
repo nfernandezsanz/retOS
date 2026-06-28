@@ -16,6 +16,9 @@ The implemented durable event table and API expose:
 | --- | --- |
 | `id` | Event identifier. |
 | `trace_id` | Nullable correlation key. Job-backed journal/progress events use the job id by default unless an explicit payload `trace_id` is provided. |
+| `payload_hash` | SHA-256 hash of the canonical event payload. |
+| `prev_hash` | Previous journal/progress event hash in the persisted append-only chain. |
+| `event_hash` | SHA-256 hash of event identity, stream, type, timestamp, payload hash, trace id, and previous hash. |
 | `occurred_at` | UTC timestamp. |
 | `actor` | Admin email, worker, or system actor string. |
 | `event_type` | Stable event name. |
@@ -38,14 +41,16 @@ producing mutations remain admin-only. Results return newest events first.
 progress event lists plus an offline integrity section. The integrity block uses
 SHA-256, sorted-key JSON canonicalization, per-event payload hashes, chronological
 `trace_id`/`prev_hash`/`event_hash` links, a `head_hash`, and a `valid` flag computed
-before the download is returned. The chain covers the exported slice only; durable
-append-only hashes in the database remain a future hardening step.
+before the download is returned. New writes persist the same hash-chain fields in the
+database, and migration `0008_audit_hash_chain_columns` backfills existing rows. Because
+exports can be limited slices, `valid=true` means each included event matches its
+persisted hash material; a first `prev_hash` may legitimately point to an event outside
+the exported slice.
 
 ## Future Hardening
 
-The next audit hardening pass should add durable database-level `prev_hash` plus
-`event_hash` columns for append-only ledger verification across exports and optional
-OpenTelemetry propagation for external traces.
+The next audit hardening pass should add optional OpenTelemetry propagation for external
+traces and operator tooling for full-ledger verification reports.
 
 ## Base Events
 

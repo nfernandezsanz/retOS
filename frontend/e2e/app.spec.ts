@@ -112,10 +112,16 @@ async function mockProviderApi(page: Page) {
     completed_at: "2026-06-27T00:01:00Z",
   };
   const jobs = [jobFixture("job-seed-1", "ingest.source", "succeeded"), failedIndexJob];
+  const auditHashFields = {
+    payload_hash: "1111111111111111111111111111111111111111111111111111111111111111",
+    prev_hash: null,
+    event_hash: "2222222222222222222222222222222222222222222222222222222222222222",
+  };
   const journalEvents = [
     {
       id: "journal-seed-1",
       trace_id: "job-seed-1",
+      ...auditHashFields,
       occurred_at: "2026-06-27T00:00:00Z",
       actor: "admin@retos.dev",
       event_type: "job.created",
@@ -128,6 +134,9 @@ async function mockProviderApi(page: Page) {
     {
       id: "progress-seed-1",
       trace_id: "job-seed-1",
+      payload_hash: "3333333333333333333333333333333333333333333333333333333333333333",
+      prev_hash: auditHashFields.event_hash,
+      event_hash: "4444444444444444444444444444444444444444444444444444444444444444",
       job_id: "job-seed-1",
       occurred_at: "2026-06-27T00:00:00Z",
       event_type: "job.queued",
@@ -968,9 +977,9 @@ async function mockProviderApi(page: Page) {
               event_stream: "journal",
               event_type: "job.created",
               occurred_at: "2026-06-27T00:00:00Z",
-              payload_hash: "hash-payload-1",
+              payload_hash: auditHashFields.payload_hash,
               prev_hash: null,
-              event_hash: "hash-final",
+              event_hash: auditHashFields.event_hash,
             },
           ],
         },
@@ -1591,6 +1600,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("title: Policy Note")).toBeVisible();
   await page.getByRole("button", { name: "Refresh audit" }).click();
   await expect(page.getByLabel("Journal events").getByText("job.created").first()).toBeVisible();
+  await expect(page.getByLabel("Journal events").getByText("Hash 2222222222222222")).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("document.archived")).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("document.restored")).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("job-text-1")).toBeVisible();

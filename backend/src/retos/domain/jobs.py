@@ -25,6 +25,9 @@ class Job:
 class JournalEvent:
     id: str
     trace_id: str | None
+    payload_hash: str | None
+    prev_hash: str | None
+    event_hash: str | None
     occurred_at: datetime
     actor: str
     event_type: str
@@ -37,6 +40,9 @@ class JournalEvent:
 class ProgressEvent:
     id: str
     trace_id: str | None
+    payload_hash: str | None
+    prev_hash: str | None
+    event_hash: str | None
     job_id: str | None
     occurred_at: datetime
     event_type: str

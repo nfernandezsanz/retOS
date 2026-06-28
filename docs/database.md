@@ -48,6 +48,12 @@ The first revision creates these tables:
 Job-backed records default to the job id, while callers can pass an explicit
 `payload.trace_id` when a broader trace should span multiple entities.
 
+Both event tables also persist `payload_hash`, `prev_hash`, and `event_hash` values.
+Hashes use SHA-256 over sorted-key JSON canonicalization. New writes append to a single
+journal/progress hash chain, and migration `0008_audit_hash_chain_columns` backfills
+existing events so `/audit/export` can validate persisted ledger rows instead of relying
+only on export-time hashes.
+
 The first API-backed workflows are document registration and job creation:
 
 - Application startup bootstraps `RETOS_BOOTSTRAP_ADMIN_EMAIL` into `admin_users`

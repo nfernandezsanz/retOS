@@ -280,6 +280,9 @@ class JournalEventRecord(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     trace_id: Mapped[str | None] = mapped_column(String(80), index=True, nullable=True)
+    payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prev_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    event_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
@@ -298,6 +301,9 @@ class ProgressEventRecord(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     trace_id: Mapped[str | None] = mapped_column(String(80), index=True, nullable=True)
+    payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prev_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    event_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     job_id: Mapped[str | None] = mapped_column(
         ForeignKey("jobs.id", ondelete="CASCADE"),
         index=True,
