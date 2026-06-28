@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from retos.domain.admin import AdminUser
+from retos.domain.admin import AdminUser, normalize_admin_roles
 from retos.domain.documents import (
     Artifact,
     Document,
@@ -38,6 +38,7 @@ def admin_user_from_record(record: AdminUserRecord) -> AdminUser:
         id=record.id,
         email=record.email,
         password_hash=record.password_hash,
+        roles=normalize_admin_roles(record.roles or ["admin"]),
         is_active=record.is_active,
         created_at=record.created_at,
         updated_at=record.updated_at,
@@ -200,12 +201,14 @@ class AdminUserRepository:
         *,
         email: str,
         password_hash: str,
+        roles: tuple[str, ...] = ("admin",),
         is_active: bool = True,
     ) -> AdminUser:
         record = AdminUserRecord(
             id=str(uuid4()),
             email=email,
             password_hash=password_hash,
+            roles=list(normalize_admin_roles(roles)),
             is_active=is_active,
         )
         self._session.add(record)
@@ -241,11 +244,25 @@ class AdminUserRepository:
         )
         return int(result or 0)
 
+    async def count_active_admins(self) -> int:
+        result = await self._session.scalars(
+            select(AdminUserRecord).where(AdminUserRecord.is_active)
+        )
+        return sum(1 for record in result if "admin" in normalize_admin_roles(record.roles))
+
     async def update_active(self, *, admin_user_id: str, is_active: bool) -> AdminUser | None:
         record = await self._session.get(AdminUserRecord, admin_user_id)
         if record is None:
             return None
         record.is_active = is_active
+        await self._session.flush()
+        return admin_user_from_record(record)
+
+    async def update_roles(self, *, admin_user_id: str, roles: tuple[str, ...]) -> AdminUser | None:
+        record = await self._session.get(AdminUserRecord, admin_user_id)
+        if record is None:
+            return None
+        record.roles = list(normalize_admin_roles(roles))
         await self._session.flush()
         return admin_user_from_record(record)
 

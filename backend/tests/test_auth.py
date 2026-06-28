@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.engine import make_url
 
 from retos.core.config import Settings
+from retos.core.security import decode_access_token
 
 
 def sqlite_path(settings: Settings) -> Path:
@@ -13,7 +14,7 @@ def sqlite_path(settings: Settings) -> Path:
     return Path(database.database)
 
 
-def test_login_issues_admin_token(client: TestClient) -> None:
+def test_login_issues_admin_token(client: TestClient, settings: Settings) -> None:
     response = client.post(
         "/auth/login",
         json={"email": "admin@retos.dev", "password": "test-admin-password"},
@@ -23,6 +24,8 @@ def test_login_issues_admin_token(client: TestClient) -> None:
     body = response.json()
     assert body["token_type"] == "bearer"
     assert body["access_token"]
+    claims = decode_access_token(body["access_token"], settings)
+    assert claims.roles == ("admin",)
 
 
 def test_bootstrap_admin_is_persisted(client: TestClient, settings: Settings) -> None:

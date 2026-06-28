@@ -57,6 +57,8 @@ def test_initial_migration_creates_and_drops_catalog_schema(tmp_path: Path) -> N
             "ix_jobs_kind",
             "ix_jobs_status",
         }
+        admin_columns = {item["name"] for item in inspector.get_columns("admin_users")}
+        assert "roles" in admin_columns
     finally:
         engine.dispose()
 

@@ -40,6 +40,7 @@ class AdminUserRecord(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    roles: Mapped[list[str]] = mapped_column(JSON, default=lambda: ["admin"], nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 

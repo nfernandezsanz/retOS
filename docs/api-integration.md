@@ -21,8 +21,8 @@ Authorization: Bearer <token>
 ```
 
 Admin bearer tokens are checked against the persisted `admin_users` row on each
-management request. If an admin account is deactivated, existing tokens for that
-account stop working.
+management request. If an admin account is deactivated or loses the persisted `admin`
+role, existing tokens for that account stop working.
 
 ## Admin Users
 
@@ -33,13 +33,14 @@ curl --header "Authorization: Bearer <token>" \
   http://localhost:8000/admin/users
 ```
 
-Create an admin account:
+Create an admin account. `roles` defaults to `["admin"]`; supported values are `admin`
+and `viewer`.
 
 ```bash
 curl --request POST http://localhost:8000/admin/users \
   --header "Authorization: Bearer <token>" \
   --header "Content-Type: application/json" \
-  --data '{"email":"ops@retos.dev","password":"change-me-with-12-plus-chars"}'
+  --data '{"email":"ops@retos.dev","password":"change-me-with-12-plus-chars","roles":["admin"]}'
 ```
 
 Activate or deactivate an account:
@@ -60,9 +61,19 @@ curl --request POST http://localhost:8000/admin/users/<admin_user_id>/password \
   --data '{"password":"new-password-with-12-plus-chars"}'
 ```
 
-The API never returns password hashes. It prevents self-deactivation, requires at
-least one active admin, and writes `admin_user.created`,
-`admin_user.status_updated`, and `admin_user.password_reset` journal events.
+Update account roles:
+
+```bash
+curl --request PATCH http://localhost:8000/admin/users/<admin_user_id>/roles \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"roles":["viewer"]}'
+```
+
+The API never returns password hashes. It prevents self-deactivation, prevents removing
+your own `admin` role, requires at least one active admin role, and writes
+`admin_user.created`, `admin_user.status_updated`, `admin_user.roles_updated`, and
+`admin_user.password_reset` journal events.
 
 ## Domains
 
@@ -762,6 +773,7 @@ Current console calls:
 - `GET /admin/users`
 - `POST /admin/users`
 - `PATCH /admin/users/{admin_user_id}/status`
+- `PATCH /admin/users/{admin_user_id}/roles`
 - `POST /admin/users/{admin_user_id}/password`
 - `GET /llm/providers`
 - `GET /domains`
@@ -794,8 +806,9 @@ audited local accounts:
 - `paid=true` means the UI must show a cost warning before future query execution.
 - `enabled=false` plus `reason` explains whether configuration or cost opt-in is missing.
 - API keys are never returned to the browser.
-- Admin passwords are write-only; the browser can create accounts and submit resets,
-  but only receives account metadata and active/inactive state.
+- Admin passwords are write-only; the browser can create accounts with explicit roles
+  and submit resets, but only receives account metadata, roles, and active/inactive
+  state.
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, create mounted sources, queue text and file upload ingestions, queue source

@@ -37,7 +37,7 @@ async def login(
 
     token = create_access_token(
         subject=admin.email,
-        roles=("admin",),
+        roles=admin.roles,
         settings=settings,
     )
     return TokenResponse(access_token=token)

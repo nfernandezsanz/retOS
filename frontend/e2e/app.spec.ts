@@ -163,6 +163,7 @@ async function mockProviderApi(page: Page) {
     {
       id: "admin-user-1",
       email: "admin@retos.dev",
+      roles: ["admin"],
       is_active: true,
       created_at: "2026-06-27T00:00:00Z",
       updated_at: "2026-06-27T00:00:00Z",
@@ -253,10 +254,15 @@ async function mockProviderApi(page: Page) {
   });
   await page.route("http://localhost:8000/admin/users", async (route) => {
     if (route.request().method() === "POST") {
-      const payload = route.request().postDataJSON() as { email: string; password: string };
+      const payload = route.request().postDataJSON() as {
+        email: string;
+        password: string;
+        roles: string[];
+      };
       const created = {
         id: "admin-user-2",
         email: payload.email.toLowerCase(),
+        roles: payload.roles,
         is_active: true,
         created_at: "2026-06-27T00:02:00Z",
         updated_at: "2026-06-27T00:02:00Z",
@@ -830,12 +836,14 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Admin users").getByText("admin@retos.dev")).toBeVisible();
   await page.getByLabel("New admin email").fill("ui-admin@retos.dev");
   await page.getByLabel("New admin password").fill("ui-admin-password");
+  await page.getByLabel("New admin role").selectOption("viewer");
   await page.getByRole("button", { name: "Create admin" }).click();
   const uiAdminRow = page
     .getByLabel("Admin users")
     .locator(".admin-user-row")
     .filter({ hasText: "ui-admin@retos.dev" });
   await expect(uiAdminRow.getByText("ui-admin@retos.dev", { exact: true })).toBeVisible();
+  await expect(uiAdminRow.getByText("viewer", { exact: true })).toBeVisible();
   await uiAdminRow.getByPlaceholder("New password").fill("ui-admin-password-2");
   await uiAdminRow.getByRole("button", { name: "Reset" }).click();
   await expect(page.getByText("Updated password for ui-admin@retos.dev")).toBeVisible();

@@ -62,8 +62,9 @@ The UI is a working console, not a landing page. It must make background process
 - The audit panel downloads `/audit/export?limit=200` through an authenticated `fetch`
   call so the bearer token stays in headers and the exported JSON can be retained for
   review.
-- The admin panel reads `/admin/users`, creates admin accounts, updates active state,
-  and submits password resets without rendering hashes or secrets.
+- The admin panel reads `/admin/users`, creates `admin` or `viewer` accounts, renders
+  account roles, updates active state, and submits password resets without rendering
+  hashes or secrets.
 - The eval panel posts to `/evals/smoke`, `/evals/squad`, and `/evals/hotpotqa`, reads `/evals/runs?limit=6`,
   compares reported runs through `/evals/runs/compare`, and renders the returned
   `eval.run` jobs, metric scorecards, per-case pass/failure rows, report paths,
@@ -71,7 +72,7 @@ The UI is a working console, not a landing page. It must make background process
 - The audit panel groups persisted progress by `job_id` before showing the raw
   journal/progress ledgers, so operators can scan each job's event count, latest
   state, and final progress message without losing the underlying audit trail.
-- Browser smoke tests mock the API contract and verify provider, admin users, domain
+- Browser smoke tests mock the API contract and verify provider, admin user roles, domain
   creation, document/source inventory, document edit/archive/restore/history, file
   upload, text ingestion, scan/index queueing, job/audit filtering, persisted audit
   events, audit export, eval smoke execution, eval run history, query, and live

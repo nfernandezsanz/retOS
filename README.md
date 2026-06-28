@@ -9,7 +9,7 @@ The source of truth is the versioned corpus store. Search indexes are rebuildabl
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation. Core product slices are being built phase by phase. |
-| Backend coverage | 90.18% line/branch coverage on the current scaffold. |
+| Backend coverage | 90.06% line/branch coverage on the current scaffold. |
 | Stability | Green foundation: format, PEP 8, typecheck, tests, eval smoke, API smoke, frontend build, browser smoke, Docker build, migrations, and Docker stack smoke are enforced. |
 | Default cost profile | Zero paid LLM calls. Paid providers are disabled unless explicitly enabled. |
 | Runtime model | Docker-first local stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
@@ -22,8 +22,9 @@ This repository is intentionally being built as a staff-engineer-quality referen
 - A Python 3.14 FastAPI backend scaffold with secure settings, JWT helpers, Argon2 password hashing, persisted-resume SSE progress streaming, and Celery/RabbitMQ wiring.
 - Initial SQLAlchemy async persistence for domain and source management through a Unit of Work.
 - Alembic migrations for domains, sources, documents, versions, artifacts, segments, jobs, progress events, and audit journals.
-- Persisted admin users with idempotent bootstrap at startup, active-account token checks,
-  audited account creation/status updates, and password resets.
+- Persisted admin users with idempotent bootstrap at startup, active-account and
+  persisted-role token checks, audited account creation/status/role updates, and
+  password resets.
 - Durable documents API with immutable initial versions, auditable title/metadata updates,
   soft archive/restore, field-level history, progress events, and live SSE notifications.
 - Durable artifact and segment APIs for OCR outputs, page-level OCR text artifacts, rebuildable projections, retrieval chunks, and citation anchors.

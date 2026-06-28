@@ -58,6 +58,7 @@ type ProviderCatalog = {
 type AdminUserRead = {
   id: string;
   email: string;
+  roles: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -378,7 +379,7 @@ async function loadAdminUsers(token: string): Promise<AdminUserRead[]> {
 
 async function createAdminUser(
   token: string,
-  payload: { email: string; password: string },
+  payload: { email: string; password: string; roles: string[] },
 ): Promise<AdminUserRead> {
   return requestJson<AdminUserRead>("/admin/users", {
     method: "POST",
@@ -880,6 +881,7 @@ function App() {
   const [adminUsers, setAdminUsers] = useState<AdminUserRead[]>([]);
   const [adminUserEmail, setAdminUserEmail] = useState("");
   const [adminUserPassword, setAdminUserPassword] = useState("");
+  const [adminUserRole, setAdminUserRole] = useState("admin");
   const [adminPasswordResets, setAdminPasswordResets] = useState<Record<string, string>>({});
   const [isCreatingAdminUser, setIsCreatingAdminUser] = useState(false);
   const [savingAdminUserId, setSavingAdminUserId] = useState<string | null>(null);
@@ -1159,10 +1161,12 @@ function App() {
       const created = await createAdminUser(accessToken, {
         email: nextEmail,
         password: adminUserPassword,
+        roles: [adminUserRole],
       });
       setAdminUsers((current) => [...current.filter((user) => user.id !== created.id), created]);
       setAdminUserEmail("");
       setAdminUserPassword("");
+      setAdminUserRole("admin");
       setAdminUserMessage(`Created ${created.email}`);
       await refreshAudit(accessToken);
     } catch (error) {
@@ -1779,6 +1783,7 @@ function App() {
     setAdminUsers([]);
     setAdminUserEmail("");
     setAdminUserPassword("");
+    setAdminUserRole("admin");
     setAdminPasswordResets({});
     setAdminUserError(null);
     setAdminUserMessage(null);
@@ -2850,6 +2855,17 @@ function App() {
                     onChange={(event) => setAdminUserPassword(event.target.value)}
                   />
                 </label>
+                <label>
+                  <span>Role</span>
+                  <select
+                    aria-label="New admin role"
+                    value={adminUserRole}
+                    onChange={(event) => setAdminUserRole(event.target.value)}
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                </label>
                 <button
                   className="secondary-action"
                   disabled={isCreatingAdminUser || !token}
@@ -2877,6 +2893,7 @@ function App() {
                         {user.is_active ? "active" : "inactive"}
                       </span>
                       <strong>{user.email}</strong>
+                      <span>{user.roles.join(", ")}</span>
                       <span>{formatDateTime(user.updated_at)}</span>
                     </div>
                     <div className="admin-user-actions">

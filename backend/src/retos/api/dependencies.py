@@ -60,6 +60,8 @@ async def require_admin(
             detail="Admin account is inactive",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if "admin" not in admin.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
     return claims.subject
 
 

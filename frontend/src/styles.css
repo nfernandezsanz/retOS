@@ -1407,7 +1407,7 @@ button:focus-visible {
 
 .admin-user-form {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(160px, 0.5fr);
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(120px, 0.4fr) max-content;
   gap: 10px;
   align-items: end;
 }
@@ -1420,6 +1420,7 @@ button:focus-visible {
 }
 
 .admin-user-form input,
+.admin-user-form select,
 .admin-user-actions input {
   min-height: 44px;
   width: 100%;
