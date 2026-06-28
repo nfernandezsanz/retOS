@@ -122,6 +122,8 @@ tag in GitHub.
 
 ### Changed
 
+- README onboarding now uses live GitHub Actions status badges, action-oriented local
+  workflow pills, and collapsible operator paths for try/audit/develop entry points.
 - The React console now uses a more explicit audit-console brand treatment with a
   compact operating-posture band, stronger first-viewport identity, reduced-motion
   handling, and stable responsive heading sizing.

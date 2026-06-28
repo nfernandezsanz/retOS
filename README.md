@@ -9,11 +9,54 @@ Tantivy BM25 search, Ollama `gemma4`, and a Deep Agents research runtime.
 The short version: bring your documents, keep the canonical corpus versioned, rebuild
 indexes when needed, and make every ingestion/query/eval step traceable.
 
-[![Run locally](https://img.shields.io/badge/run-local%20docker-2563eb?style=for-the-badge)](#local-quick-start)
-[![Open UI](https://img.shields.io/badge/open-react%20console-0f766e?style=for-the-badge)](#where-to-look)
-[![Local audit](https://img.shields.io/badge/audit-local%20handoff-f97316?style=for-the-badge)](#local-audit-handoff)
-[![Docs](https://img.shields.io/badge/read-docs-334155?style=for-the-badge)](#where-to-look)
-[![MIT](https://img.shields.io/badge/license-MIT-111827?style=for-the-badge)](LICENSE)
+[![CI](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml?query=branch%3Amain)
+[![Release Images](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml/badge.svg)](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml)
+[![MIT](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
+[![Coverage](https://img.shields.io/badge/coverage-95.20%25%20total%20%7C%2090.44%25%20branch-166534?style=flat-square)](#current-status)
+[![Stability](https://img.shields.io/badge/stability-pre--alpha-f97316?style=flat-square)](#current-status)
+
+**Action pills**
+
+[![Run local Docker](https://img.shields.io/badge/run-docker%20compose%20up%20--build-2563eb?style=for-the-badge)](#local-quick-start)
+[![Open console](https://img.shields.io/badge/open-react%20console-0f766e?style=for-the-badge)](#local-quick-start)
+[![Audit handoff](https://img.shields.io/badge/audit-make%20auditor--handoff--check-f97316?style=for-the-badge)](#local-audit-handoff)
+[![Quality gates](https://img.shields.io/badge/verify-local%20quality%20gates-334155?style=for-the-badge)](#quality-gates)
+[![Release playbook](https://img.shields.io/badge/release-human%20promotion%20pack-7c3aed?style=for-the-badge)](docs/release-process.md)
+
+<details open>
+<summary><strong>I want to try it locally</strong></summary>
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Open http://localhost:8080 for the console or http://localhost:8000/docs for the API.
+
+</details>
+
+<details>
+<summary><strong>I want to audit it before trusting it</strong></summary>
+
+```bash
+make auditor-handoff-check
+make audit-manifest-check
+```
+
+The offline manifest lands at `evals/reports/audit-manifest.json` and records the
+current commit, dirty state, local gates, critical file hashes, visual artifacts, and
+remaining production-promotion evidence.
+
+</details>
+
+<details>
+<summary><strong>I want to develop with agents</strong></summary>
+
+Start with `planning/`, `docs/adr/`, and the quality gates below. RetOS is intentionally
+structured for mostly autonomous Codex/Claude implementation: every meaningful change
+should update code, tests, docs, and the process tracker together.
+
+</details>
 
 ## Why It Exists
 

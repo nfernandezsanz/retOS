@@ -45,6 +45,12 @@ ci = paths["ci"].read_text(encoding="utf-8")
 
 for phrase in (
     "![RetOS project card](docs/assets/retos-project-card.svg)",
+    "actions/workflows/ci.yml/badge.svg?branch=main",
+    "actions/workflows/release.yml/badge.svg",
+    "**Action pills**",
+    "I want to try it locally",
+    "I want to audit it before trusting it",
+    "I want to develop with agents",
     "Branding assets and visual guidance",
     "docs/production-readiness.md",
 ):
