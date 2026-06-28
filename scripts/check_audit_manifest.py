@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -51,6 +52,14 @@ def require(condition: bool, message: str) -> None:
 def load_manifest() -> dict[str, Any]:
     with tempfile.TemporaryDirectory() as tmpdir:
         output = Path(tmpdir) / "audit-manifest.json"
+        env = os.environ.copy()
+        for key in (
+            "GITHUB_ACTIONS",
+            "GITHUB_JOB",
+            "GITHUB_RUN_ATTEMPT",
+            "GITHUB_RUN_ID",
+        ):
+            env.pop(key, None)
         subprocess.run(
             [
                 "python3",
@@ -60,6 +69,7 @@ def load_manifest() -> dict[str, Any]:
                 str(output),
             ],
             cwd=ROOT,
+            env=env,
             check=True,
         )
         return json.loads(output.read_text(encoding="utf-8"))
