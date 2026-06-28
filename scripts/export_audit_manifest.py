@@ -36,6 +36,7 @@ CRITICAL_FILES = (
     "scripts/check_production_preflight.sh",
     "scripts/check_release_workflow.sh",
     "scripts/check_published_release_evidence.sh",
+    "scripts/export_audit_manifest.py",
 )
 
 LOCAL_GATES = (
@@ -50,6 +51,7 @@ LOCAL_GATES = (
     "make release-check",
     "make production-preflight",
     "make auditor-static-check",
+    "make audit-manifest-check",
     "make dependency-audit",
     "make security-policy-check",
     "make ignore-hygiene-check",
@@ -167,7 +169,11 @@ def github_ci(repo: str, sha: str) -> dict[str, Any]:
 def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
     sha = run(["git", "rev-parse", "HEAD"])
     dirty_files = run_optional(["git", "status", "--short"]) or ""
-    ci = github_ci(args.repository, sha)
+    ci = (
+        {"available": False, "reason": "CI lookup skipped by request", "skipped": True}
+        if args.skip_ci_lookup
+        else github_ci(args.repository, sha)
+    )
     github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
     github_run_id = os.environ.get("GITHUB_RUN_ID")
     generated_for_current_github_run = (
@@ -242,6 +248,11 @@ def main() -> int:
         help="GitHub repository used for CI lookup, for example owner/name.",
     )
     parser.add_argument("--output", type=Path, help="Write the manifest to this path.")
+    parser.add_argument(
+        "--skip-ci-lookup",
+        action="store_true",
+        help="Skip the GitHub Actions API lookup while still validating manifest shape.",
+    )
     args = parser.parse_args()
 
     payload = json.dumps(build_manifest(args), indent=2, sort_keys=True) + "\n"

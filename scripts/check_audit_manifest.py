@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+REQUIRED_TOP_LEVEL_KEYS = {
+    "ci",
+    "coverage_targets",
+    "critical_file_hashes",
+    "external_promotion_evidence_required",
+    "generated_at",
+    "generation_context",
+    "local_gates_required",
+    "production_promotion_ready",
+    "production_promotion_ready_reason",
+    "repository",
+    "schema_version",
+    "visual_audit",
+}
+REQUIRED_CRITICAL_FILES = {
+    "README.md",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    "docs/production-readiness.md",
+    "docs/releases/2026.06.28-alpha.1.md",
+    "scripts/check_ci_status.sh",
+    "scripts/check_audit_pack.sh",
+    "scripts/export_audit_manifest.py",
+}
+REQUIRED_LOCAL_GATES = {
+    "make check",
+    "make integration",
+    "make frontend-visual-audit",
+    "make docker-smoke",
+    "make auditor-static-check",
+    "make audit-manifest-check",
+    "make ci-status-check",
+}
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise SystemExit(f"Audit manifest failed: {message}")
+
+
+def load_manifest() -> dict[str, Any]:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output = Path(tmpdir) / "audit-manifest.json"
+        subprocess.run(
+            [
+                "python3",
+                "scripts/export_audit_manifest.py",
+                "--skip-ci-lookup",
+                "--output",
+                str(output),
+            ],
+            cwd=ROOT,
+            check=True,
+        )
+        return json.loads(output.read_text(encoding="utf-8"))
+
+
+def main() -> int:
+    manifest = load_manifest()
+    missing_keys = REQUIRED_TOP_LEVEL_KEYS - set(manifest)
+    require(
+        not missing_keys, f"missing top-level key(s): {', '.join(sorted(missing_keys))}"
+    )
+    require(manifest["schema_version"] == 1, "schema_version must be 1")
+    require(
+        manifest["production_promotion_ready"] is False,
+        "manifest must not claim production promotion",
+    )
+    require(
+        "immutable release publishing evidence"
+        in manifest["production_promotion_ready_reason"],
+        "promotion readiness reason must keep external release evidence explicit",
+    )
+
+    ci = manifest["ci"]
+    require(
+        ci["available"] is False and ci["skipped"] is True,
+        "offline check must skip CI lookup",
+    )
+    require(
+        ci["post_run_ci_validation_required"] is False,
+        "offline check must not require post-run validation",
+    )
+    require(
+        ci["post_run_ci_validation_command"] == "make ci-status-check",
+        "CI validation command must be stable",
+    )
+
+    generation = manifest["generation_context"]
+    require(
+        generation["mode"] == "local-or-operator",
+        "offline check must use local generation mode",
+    )
+    require(
+        generation["github_actions"] is False,
+        "offline check must not look like GitHub Actions",
+    )
+
+    coverage = manifest["coverage_targets"]
+    require(
+        coverage["total_minimum_percent"] >= 90,
+        "total coverage target must stay at least 90%",
+    )
+    require(
+        coverage["branch_minimum_percent"] >= 90,
+        "branch coverage target must stay at least 90%",
+    )
+
+    critical_files = manifest["critical_file_hashes"]
+    by_path = {record["path"]: record for record in critical_files}
+    missing_files = REQUIRED_CRITICAL_FILES - set(by_path)
+    require(
+        not missing_files,
+        f"missing critical file hash(es): {', '.join(sorted(missing_files))}",
+    )
+    for path in REQUIRED_CRITICAL_FILES:
+        record = by_path[path]
+        require(record["exists"] is True, f"critical file must exist: {path}")
+        require(
+            len(record["sha256"]) == 64, f"critical file hash must be sha256: {path}"
+        )
+        require(record["size_bytes"] > 0, f"critical file must not be empty: {path}")
+
+    gates = set(manifest["local_gates_required"])
+    missing_gates = REQUIRED_LOCAL_GATES - gates
+    require(
+        not missing_gates, f"missing local gate(s): {', '.join(sorted(missing_gates))}"
+    )
+
+    visual = manifest["visual_audit"]
+    require(
+        "retos-visual-audit-" in visual["ci_artifact"],
+        "visual CI artifact name must be present",
+    )
+    require(
+        "retos-release-visual-audit-" in visual["release_artifact"],
+        "visual release artifact name must be present",
+    )
+
+    external = "\n".join(manifest["external_promotion_evidence_required"])
+    for phrase in (
+        "GHCR",
+        "SBOM/provenance",
+        "Cosign",
+        "Human target-environment security review",
+    ):
+        require(phrase in external, f"external promotion evidence missing {phrase}")
+
+    print(
+        "Audit manifest OK: schema, gates, hashes, visual artifacts, and blockers are aligned."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

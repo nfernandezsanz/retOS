@@ -24,6 +24,7 @@ required_files=(
   "scripts/check_production_preflight.sh"
   "scripts/check_published_release_evidence.sh"
   "scripts/export_audit_manifest.py"
+  "scripts/check_audit_manifest.py"
 )
 
 for file in "${required_files[@]}"; do

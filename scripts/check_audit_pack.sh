@@ -68,6 +68,7 @@ for phrase in (
     "make ignore-hygiene-check",
     "make operations-runbook-check",
     "make auditor-static-check",
+    "make audit-manifest-check",
     "make audit-manifest",
     "make ci-status-check",
     "make production-preflight",
@@ -153,11 +154,16 @@ require(
     "make audit-manifest" in release_process and "scripts/export_audit_manifest.py" in audit_pack,
     "release process and audit pack must document the audit manifest exporter",
 )
+require(
+    "make audit-manifest-check" in release_process and "scripts/check_audit_manifest.py" in audit_pack,
+    "release process and audit pack must document the audit manifest schema checker",
+)
 for phrase in (
     "generation_context",
     "generated_for_current_github_run",
     "post_run_ci_validation_required",
     "post_run_ci_validation_command",
+    "make audit-manifest-check",
 ):
     require(phrase in audit_manifest_script, f"audit manifest must record CI generation semantics: {phrase}")
 require(

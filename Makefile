@@ -3,7 +3,7 @@ PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
 BRANCH_COVERAGE_MIN ?= 90.44
 
-.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-static-check audit-manifest db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-static-check audit-manifest audit-manifest-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -19,6 +19,7 @@ help:
 	@printf "  make operations-runbook-check Validate backup, restore, rollback, and audit-export runbooks\n"
 	@printf "  make auditor-static-check Run non-destructive auditor documentation/release/security gates\n"
 	@printf "  make audit-manifest   Export a JSON manifest for human production audit handoff\n"
+	@printf "  make audit-manifest-check Validate audit manifest schema offline\n"
 	@printf "  make db-upgrade       Apply Alembic migrations\n"
 	@printf "  make db-downgrade     Roll back the latest Alembic migration\n"
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
@@ -88,10 +89,13 @@ ignore-hygiene-check:
 operations-runbook-check:
 	scripts/check_operations_runbook.sh
 
-auditor-static-check: dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check brand-check release-workflow-check release-notes-check versioned-release-notes-check release-check production-preflight audit-pack-check
+auditor-static-check: dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check brand-check release-workflow-check release-notes-check versioned-release-notes-check release-check production-preflight audit-pack-check audit-manifest-check
 
 audit-manifest:
 	$(PYTHON) scripts/export_audit_manifest.py $(if $(OUTPUT),--output "$(abspath $(OUTPUT))",)
+
+audit-manifest-check:
+	$(PYTHON) scripts/check_audit_manifest.py
 
 db-upgrade:
 	cd backend && "$(BACKEND_PYTHON)" -m alembic upgrade head

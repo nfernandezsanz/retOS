@@ -47,6 +47,7 @@ make release-check
 make audit-pack-check
 make production-preflight
 make auditor-static-check
+make audit-manifest-check
 make audit-manifest OUTPUT=evals/reports/audit-manifest.json
 docker compose --env-file .env.example config
 docker compose --dry-run build
@@ -97,6 +98,7 @@ make release-evidence-check
 | SBOM/provenance | Yes |
 | Cosign signatures and verification | Yes |
 | `make release-evidence-check` output | Yes |
+| `make audit-manifest-check` output | Yes |
 | `make audit-manifest` JSON | Yes |
 | Eval smoke | Yes |
 | Migration notes | Yes |
