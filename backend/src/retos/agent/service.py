@@ -9,6 +9,7 @@ from retos.agent.audits import (
     EvidenceAudit,
     EvidenceRoute,
     MultiHopAudit,
+    QueryPlan,
     audit_contradictions,
     audit_evidence_route,
     audit_multi_hop,
@@ -17,6 +18,8 @@ from retos.agent.audits import (
     evidence_audit_to_payload,
     evidence_route_to_payload,
     multi_hop_audit_to_payload,
+    plan_query,
+    query_plan_to_payload,
 )
 from retos.agent.harness import create_research_harness
 from retos.agent.tools import (
@@ -96,6 +99,7 @@ class AgentQueryResult:
     evidence_audit: EvidenceAudit
     contradiction_audit: ContradictionAudit
     multi_hop_audit: MultiHopAudit
+    query_plan: QueryPlan
     evidence_route: EvidenceRoute
     usage: AgentBudgetUsage
     neighbor_context: list[NeighborContext]
@@ -367,6 +371,7 @@ def result_payload(
             "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
             "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
             "multi_hop_audit": multi_hop_audit_to_payload(result.multi_hop_audit),
+            "query_plan": query_plan_to_payload(result.query_plan),
             "evidence_route": evidence_route_to_payload(result.evidence_route),
             "usage": usage_to_payload(result.usage),
             "citations": [
@@ -462,6 +467,7 @@ async def run_agent_query(
             default=DEFAULT_AGENT_BUDGET["max_citations"],
         )
         budget = budget_from_payload(job.payload)
+        query_plan = plan_query(question)
         provider = active_provider(settings)
         if not provider.can_call:
             raise AgentQueryError(provider.reason or "Active provider is not callable")
@@ -487,6 +493,7 @@ async def run_agent_query(
                 "model": provider.model,
                 "runtime": settings.agent_runtime,
                 "budget": budget_to_payload(budget),
+                "query_plan": query_plan_to_payload(query_plan),
             },
         )
 
@@ -514,6 +521,7 @@ async def run_agent_query(
         )
         seed_payload = {
             **seed_payload,
+            "query_plan": query_plan_to_payload(query_plan),
             "neighbor_context": [
                 neighbor_context_to_payload(context) for context in neighbor_context
             ],
@@ -567,6 +575,7 @@ async def run_agent_query(
             evidence_audit=evidence_audit,
             contradiction_audit=contradiction_audit,
             multi_hop_audit=multi_hop_audit,
+            query_plan=query_plan,
             evidence_route=evidence_route,
             usage=usage,
             neighbor_context=neighbor_context,
@@ -595,6 +604,7 @@ async def run_agent_query(
                 "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
                 "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
                 "multi_hop_audit": multi_hop_audit_to_payload(result.multi_hop_audit),
+                "query_plan": query_plan_to_payload(result.query_plan),
                 "evidence_route": evidence_route_to_payload(result.evidence_route),
                 "usage": usage_to_payload(result.usage),
                 "neighbor_context_count": len(result.neighbor_context),
@@ -620,6 +630,7 @@ async def run_agent_query(
                 "evidence_audit": evidence_audit_to_payload(result.evidence_audit),
                 "contradiction_audit": contradiction_audit_to_payload(result.contradiction_audit),
                 "multi_hop_audit": multi_hop_audit_to_payload(result.multi_hop_audit),
+                "query_plan": query_plan_to_payload(result.query_plan),
                 "evidence_route": evidence_route_to_payload(result.evidence_route),
                 "usage": usage_to_payload(result.usage),
                 "neighbor_context_count": len(result.neighbor_context),
@@ -638,6 +649,7 @@ async def run_agent_query(
             "contradiction_count": result.contradiction_audit.conflict_count,
             "multi_hop_status": result.multi_hop_audit.status,
             "multi_hop_required": result.multi_hop_audit.requires_multi_hop,
+            "query_strategy": result.query_plan.strategy,
             "evidence_coverage_level": result.evidence_route.coverage_level,
             "evidence_document_count": result.evidence_route.document_count,
             "within_budget": result.usage.within_budget,

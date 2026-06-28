@@ -919,6 +919,28 @@ async function mockProviderApi(page: Page) {
             bridge_terms: ["search", "readiness"],
             warnings: [],
           },
+          query_plan: {
+            strategy: "multi_hop_evidence_route",
+            requires_multi_hop: true,
+            search_queries: [
+              "What evidence mentions search readiness?",
+              "evidence mentions readiness search",
+            ],
+            expected_evidence: "multi_document",
+            warnings: [],
+            steps: [
+              {
+                name: "search",
+                description: "Run bounded BM25 search over the selected domain.",
+                status: "planned",
+              },
+              {
+                name: "read",
+                description: "Read only citations returned by controlled corpus search.",
+                status: "planned",
+              },
+            ],
+          },
           evidence_route: {
             coverage_level: "single_segment",
             segment_count: 1,
@@ -1197,6 +1219,9 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Query budget usage").getByText("Contradictions 0")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Citations 1/5")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Route single segment")).toBeVisible();
+  await expect(page.getByLabel("Query plan").getByText("multi hop evidence route")).toBeVisible();
+  await expect(page.getByLabel("Query plan").getByText("expects multi document")).toBeVisible();
+  await expect(page.getByLabel("Query plan").getByText("evidence mentions readiness search")).toBeVisible();
   await expect(page.getByLabel("Evidence route").getByText("single citation")).toBeVisible();
   await expect(page.getByLabel("Evidence route").getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Multi-hop audit").getByText("supported multi document")).toBeVisible();

@@ -522,6 +522,25 @@ The response always includes the durable job. When `run_inline=true`, or in
       "bridge_terms": [],
       "warnings": []
     },
+    "query_plan": {
+      "strategy": "direct_evidence_lookup",
+      "requires_multi_hop": false,
+      "search_queries": ["What evidence mentions search readiness?"],
+      "expected_evidence": "single_document_or_abstain",
+      "warnings": [],
+      "steps": [
+        {
+          "name": "search",
+          "description": "Run bounded BM25 search over the selected domain.",
+          "status": "planned"
+        },
+        {
+          "name": "read",
+          "description": "Read only citations returned by controlled corpus search.",
+          "status": "planned"
+        }
+      ]
+    },
     "evidence_route": {
       "coverage_level": "single_segment",
       "segment_count": 1,
@@ -599,6 +618,12 @@ bridge terms across cited documents, and emits warnings such as
 `multi_hop_question_single_document` or `missing_cross_document_bridge_terms`. It gives
 operators a cheap way to see whether a multi-part question was answered from broad enough
 evidence before relying on the final answer.
+
+The `query_plan` is generated before synthesis and persisted with the completed query.
+It records the deterministic strategy, whether multi-hop evidence is expected, bounded
+search queries, planned search/read/route/audit steps, and specificity warnings. The same
+plan is included in the Deep Agents seed payload so local and agentic runtimes share the
+same auditable intent.
 
 The `evidence_route` is a deterministic coverage map for the answer. It records the
 coverage level (`no_evidence`, `single_segment`, `single_document`, or
@@ -962,9 +987,9 @@ scans, rebuild the BM25 index, run local smoke/SQuAD/HotpotQA/Natural Questions/
 benchmark evals, read recent jobs, inspect a selected job's full payload/error/progress
 detail, read persisted audit/progress events, group progress by job, filter the job
 ledger by status/kind, and send queries against the selected domain. Query execution
-uses `run_inline=true` so the UI can render the answer, citations, evidence route,
-multi-hop audit, neighbor context, provider metadata, budget usage, evidence audit,
-and contradiction audit immediately.
+uses `run_inline=true` so the UI can render the answer, citations, query plan, evidence
+route, multi-hop audit, neighbor context, provider metadata, budget usage, evidence
+audit, and contradiction audit immediately.
 Worker-backed query jobs are already available through the API by omitting `run_inline`;
 the live progress panel reads the same SSE stream that ingestion, indexing, and agent
 jobs write to.

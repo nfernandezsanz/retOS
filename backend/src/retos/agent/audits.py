@@ -63,6 +63,23 @@ class MultiHopAudit:
 
 
 @dataclass(frozen=True)
+class QueryPlanStep:
+    name: str
+    description: str
+    status: str
+
+
+@dataclass(frozen=True)
+class QueryPlan:
+    strategy: str
+    requires_multi_hop: bool
+    search_queries: list[str]
+    expected_evidence: str
+    steps: list[QueryPlanStep]
+    warnings: list[str]
+
+
+@dataclass(frozen=True)
 class EvidenceRouteDocument:
     document_id: str
     title: str
@@ -232,6 +249,74 @@ def audit_multi_hop(question: str, citations: Sequence[AuditedCitation]) -> Mult
     )
 
 
+def plan_query(question: str) -> QueryPlan:
+    normalized_question = " ".join(question.split())
+    question_terms = significant_terms(normalized_question)
+    question_tokens = set(re.findall(r"[a-z0-9]+", normalized_question.lower()))
+    requires_multi_hop = bool(question_tokens & MULTI_HOP_MARKERS)
+    search_queries = query_searches(normalized_question)
+    expected_evidence = "multi_document" if requires_multi_hop else "single_document_or_abstain"
+    strategy = "multi_hop_evidence_route" if requires_multi_hop else "direct_evidence_lookup"
+    warnings: list[str] = []
+    if len(question_terms) < 2:
+        warnings.append("low_specificity_question")
+    if requires_multi_hop and len(search_queries) < 2:
+        warnings.append("multi_hop_question_without_distinct_subqueries")
+
+    steps = [
+        QueryPlanStep(
+            name="search",
+            description="Run bounded BM25 search over the selected domain.",
+            status="planned",
+        ),
+        QueryPlanStep(
+            name="read",
+            description="Read only citations returned by controlled corpus search.",
+            status="planned",
+        ),
+        QueryPlanStep(
+            name="route",
+            description=f"Expect {expected_evidence.replace('_', ' ')} evidence coverage.",
+            status="planned",
+        ),
+        QueryPlanStep(
+            name="audit",
+            description="Persist evidence, contradiction, multi-hop, and budget audits.",
+            status="planned",
+        ),
+    ]
+
+    return QueryPlan(
+        strategy=strategy,
+        requires_multi_hop=requires_multi_hop,
+        search_queries=search_queries,
+        expected_evidence=expected_evidence,
+        steps=steps,
+        warnings=warnings,
+    )
+
+
+def query_searches(question: str) -> list[str]:
+    candidates = [
+        candidate.strip(" ,.;:?!")
+        for candidate in re.split(
+            r"\b(?:and|versus|vs|compare|between|while|during|after|before)\b",
+            question,
+            flags=re.IGNORECASE,
+        )
+        if candidate.strip(" ,.;:?!")
+    ]
+    searches: list[str] = []
+    for candidate in candidates or [question]:
+        terms = sorted(significant_terms(candidate))
+        rendered = " ".join(terms) if terms else candidate
+        if rendered and rendered not in searches:
+            searches.append(rendered[:160])
+    if question not in searches:
+        searches.insert(0, question[:160])
+    return searches[:4]
+
+
 def cross_document_bridge_terms(citations: Sequence[AuditedCitation]) -> list[str]:
     terms_by_document: dict[str, set[str]] = {}
     for citation in citations:
@@ -338,6 +423,24 @@ def multi_hop_audit_to_payload(audit: MultiHopAudit) -> dict[str, object]:
         "document_count": audit.document_count,
         "bridge_terms": audit.bridge_terms,
         "warnings": audit.warnings,
+    }
+
+
+def query_plan_to_payload(plan: QueryPlan) -> dict[str, object]:
+    return {
+        "strategy": plan.strategy,
+        "requires_multi_hop": plan.requires_multi_hop,
+        "search_queries": plan.search_queries,
+        "expected_evidence": plan.expected_evidence,
+        "warnings": plan.warnings,
+        "steps": [
+            {
+                "name": step.name,
+                "description": step.description,
+                "status": step.status,
+            }
+            for step in plan.steps
+        ],
     }
 
 

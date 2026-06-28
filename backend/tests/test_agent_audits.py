@@ -6,6 +6,8 @@ from retos.agent.audits import (
     audit_evidence_route,
     audit_multi_hop,
     ensure_evidence_ledger,
+    plan_query,
+    query_plan_to_payload,
 )
 
 
@@ -152,3 +154,24 @@ def test_multi_hop_audit_recognizes_cross_document_bridge_terms() -> None:
     assert audit.document_count == 2
     assert {"checklist", "review", "guidance"}.issuperset(set(audit.bridge_terms))
     assert audit.warnings == []
+
+
+def test_query_plan_splits_multi_hop_questions_into_searches() -> None:
+    plan = plan_query("Compare Apollo checklist review and telemetry readiness")
+
+    assert plan.strategy == "multi_hop_evidence_route"
+    assert plan.requires_multi_hop is True
+    assert plan.expected_evidence == "multi_document"
+    assert plan.search_queries[0] == "Compare Apollo checklist review and telemetry readiness"
+    assert "apollo checklist review" in plan.search_queries
+    assert "readiness telemetry" in plan.search_queries
+    assert [step.name for step in plan.steps] == ["search", "read", "route", "audit"]
+    assert query_plan_to_payload(plan)["strategy"] == "multi_hop_evidence_route"
+
+
+def test_query_plan_warns_on_low_specificity_questions() -> None:
+    plan = plan_query("Why?")
+
+    assert plan.strategy == "direct_evidence_lookup"
+    assert plan.requires_multi_hop is False
+    assert plan.warnings == ["low_specificity_question"]

@@ -249,6 +249,7 @@ def test_agent_query_runs_inline_with_citations(
     assert body["job"]["payload"]["result"]["evidence_audit"]["grounded"] is True
     assert body["job"]["payload"]["result"]["contradiction_audit"]["conflict_count"] == 0
     assert body["job"]["payload"]["result"]["multi_hop_audit"]["checked"] is True
+    assert body["job"]["payload"]["result"]["query_plan"]["strategy"] == "direct_evidence_lookup"
     assert body["job"]["payload"]["result"]["evidence_route"]["coverage_level"] in {
         "single_segment",
         "single_document",
@@ -270,6 +271,8 @@ def test_agent_query_runs_inline_with_citations(
         "not_required",
         "opportunistic_multi_document",
     }
+    assert body["result"]["query_plan"]["expected_evidence"] == "single_document_or_abstain"
+    assert body["result"]["query_plan"]["steps"][0]["name"] == "search"
     assert body["result"]["evidence_route"]["segment_count"] == len(body["result"]["citations"])
     assert body["result"]["evidence_route"]["document_count"] == 1
     assert body["result"]["evidence_route"]["has_neighbor_context"] is bool(
@@ -313,6 +316,12 @@ def test_agent_query_records_multi_hop_audit_for_cross_document_evidence(
     assert audit["document_count"] == 2
     assert {"checklist", "review", "guidance"}.issuperset(set(audit["bridge_terms"]))
     assert audit["warnings"] == []
+    plan = body["result"]["query_plan"]
+    assert plan["strategy"] == "multi_hop_evidence_route"
+    assert plan["requires_multi_hop"] is True
+    assert plan["expected_evidence"] == "multi_document"
+    assert plan["search_queries"][0] == "Compare Apollo checklist review and telemetry guidance"
+    assert body["job"]["payload"]["result"]["query_plan"] == plan
     assert body["result"]["evidence_route"]["coverage_level"] == "multi_document"
 
 

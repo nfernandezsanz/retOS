@@ -34,6 +34,8 @@ tag in GitHub.
   bridge terms.
 - Eval reports now include dataset/source provenance metadata in JSON, Markdown, API
   responses, persisted job payloads, journal/progress events, and the React eval panel.
+- Agent queries now persist and display deterministic query plans with strategy,
+  subqueries, expected evidence breadth, planned steps, and operator warnings.
 
 ### Changed
 

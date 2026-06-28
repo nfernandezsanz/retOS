@@ -189,6 +189,19 @@ type AgentMultiHopAudit = {
   warnings: string[];
 };
 
+type AgentQueryPlan = {
+  strategy: string;
+  requires_multi_hop: boolean;
+  search_queries: string[];
+  expected_evidence: string;
+  steps: {
+    name: string;
+    description: string;
+    status: string;
+  }[];
+  warnings: string[];
+};
+
 type AgentQueryResult = {
   answer: string;
   provider: string;
@@ -209,6 +222,7 @@ type AgentQueryResult = {
     }[];
   } | null;
   multi_hop_audit?: AgentMultiHopAudit | null;
+  query_plan?: AgentQueryPlan | null;
   evidence_route?: AgentEvidenceRoute | null;
   usage: AgentBudgetUsage;
   citations: AgentCitation[];
@@ -275,6 +289,19 @@ function evidenceRouteFor(result: AgentQueryResult): AgentEvidenceRoute {
       has_neighbor_context: (result.neighbor_context ?? []).length > 0,
       warnings: result.citations.length === 0 ? ["no_citations"] : [],
       documents: [],
+    }
+  );
+}
+
+function queryPlanFor(result: AgentQueryResult): AgentQueryPlan {
+  return (
+    result.query_plan ?? {
+      strategy: "direct_evidence_lookup",
+      requires_multi_hop: false,
+      search_queries: [],
+      expected_evidence: "single_document_or_abstain",
+      steps: [],
+      warnings: [],
     }
   );
 }
@@ -2769,6 +2796,7 @@ function App() {
                   const evidenceAudit = evidenceAuditFor(queryResult);
                   const contradictionAudit = contradictionAuditFor(queryResult);
                   const multiHopAudit = multiHopAuditFor(queryResult);
+                  const queryPlan = queryPlanFor(queryResult);
                   const evidenceRoute = evidenceRouteFor(queryResult);
                   return (
                 <>
@@ -2809,6 +2837,38 @@ function App() {
                       Evidence {queryResult.usage.evidence_tokens}/
                       {queryResult.usage.budget.max_evidence_tokens} tokens
                     </span>
+                  </div>
+                  <div className="query-plan" aria-label="Query plan">
+                    <div className="route-summary">
+                      <span className={queryPlan.requires_multi_hop ? "badge warning" : "badge muted"}>
+                        {queryPlan.strategy.replaceAll("_", " ")}
+                      </span>
+                      <span className={queryPlan.expected_evidence === "multi_document" ? "badge success" : "badge muted"}>
+                        expects {queryPlan.expected_evidence.replaceAll("_", " ")}
+                      </span>
+                      {queryPlan.warnings.map((warning) => (
+                        <span className="badge warning" key={warning}>
+                          {warning.replaceAll("_", " ")}
+                        </span>
+                      ))}
+                    </div>
+                    {queryPlan.search_queries.length > 0 ? (
+                      <div className="query-plan-searches">
+                        {queryPlan.search_queries.slice(0, 4).map((searchQuery) => (
+                          <span key={searchQuery}>{searchQuery}</span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {queryPlan.steps.length > 0 ? (
+                      <ol>
+                        {queryPlan.steps.map((step) => (
+                          <li key={step.name}>
+                            <strong>{step.name}</strong>
+                            <span>{step.description}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : null}
                   </div>
                   <p>{queryResult.answer}</p>
                   <div className="citation-list" aria-label="Query citations">

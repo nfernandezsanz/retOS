@@ -109,6 +109,21 @@ class AgentMultiHopAuditRead(BaseModel):
     warnings: list[str]
 
 
+class AgentQueryPlanStepRead(BaseModel):
+    name: str
+    description: str
+    status: str
+
+
+class AgentQueryPlanRead(BaseModel):
+    strategy: str
+    requires_multi_hop: bool
+    search_queries: list[str]
+    expected_evidence: str
+    steps: list[AgentQueryPlanStepRead]
+    warnings: list[str]
+
+
 class AgentEvidenceRouteDocumentRead(BaseModel):
     document_id: str
     title: str
@@ -135,6 +150,7 @@ class AgentQueryResultRead(BaseModel):
     evidence_audit: AgentEvidenceAuditRead
     contradiction_audit: AgentContradictionAuditRead
     multi_hop_audit: AgentMultiHopAuditRead
+    query_plan: AgentQueryPlanRead
     evidence_route: AgentEvidenceRouteRead
     usage: AgentBudgetUsageRead
     citations: list[AgentCitationRead]
@@ -171,6 +187,21 @@ class AgentQueryResultRead(BaseModel):
                 document_count=result.multi_hop_audit.document_count,
                 bridge_terms=result.multi_hop_audit.bridge_terms,
                 warnings=result.multi_hop_audit.warnings,
+            ),
+            query_plan=AgentQueryPlanRead(
+                strategy=result.query_plan.strategy,
+                requires_multi_hop=result.query_plan.requires_multi_hop,
+                search_queries=result.query_plan.search_queries,
+                expected_evidence=result.query_plan.expected_evidence,
+                warnings=result.query_plan.warnings,
+                steps=[
+                    AgentQueryPlanStepRead(
+                        name=step.name,
+                        description=step.description,
+                        status=step.status,
+                    )
+                    for step in result.query_plan.steps
+                ],
             ),
             evidence_route=AgentEvidenceRouteRead(
                 coverage_level=result.evidence_route.coverage_level,
