@@ -41,6 +41,14 @@ class MetricTrend:
     status: str
 
 
+@dataclass(frozen=True)
+class TargetProvenance:
+    dataset_profile: str
+    dataset_suite: str
+    source_url: str
+    license_note: str
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -174,10 +182,13 @@ def validate_trend(
     require_int_field(fields, "Max cases", 1, min_candidate_cases)
 
     targets = parse_targets(content)
+    provenance = parse_provenance(content)
     missing_targets = sorted(set(required_targets) - set(targets))
     require(not missing_targets, "missing target(s): " + ", ".join(missing_targets))
     for target_key in required_targets:
         target = targets[target_key]
+        target_provenance = provenance.get(target_key)
+        require(target_provenance is not None, f"{target_key} must include provenance")
         require(target.status == "PASS", f"{target_key} status must be PASS")
         require(
             target.records_delta >= min_record_delta,
@@ -193,6 +204,26 @@ def validate_trend(
         require(
             target.source_url.startswith("https://"),
             f"{target_key} source URL must be https",
+        )
+        require(
+            target.dataset not in {"", "-"},
+            f"{target_key} dataset profile must be present",
+        )
+        require(
+            target_provenance.dataset_profile == target.dataset,
+            f"{target_key} provenance dataset profile must match target table",
+        )
+        require(
+            target_provenance.dataset_suite not in {"", "-"},
+            f"{target_key} provenance dataset suite must be present",
+        )
+        require(
+            target_provenance.source_url == target.source_url,
+            f"{target_key} provenance source URL must match target table",
+        )
+        require(
+            target_provenance.license_note not in {"", "-"},
+            f"{target_key} provenance license note must be present",
         )
 
     metrics = parse_metrics(content)
@@ -283,6 +314,51 @@ def parse_metrics(content: str) -> dict[str, list[MetricTrend]]:
             )
         )
     return metrics
+
+
+def parse_provenance(content: str) -> dict[str, TargetProvenance]:
+    provenance: dict[str, TargetProvenance] = {}
+    current_target: str | None = None
+    current_values: dict[str, str] = {}
+    for line in [*content.splitlines(), "## EOF"]:
+        metric_heading = re.fullmatch(r"## ([a-z0-9-]+) Metrics", line.strip())
+        next_heading = line.startswith("## ") and metric_heading is None
+        if metric_heading is not None or next_heading:
+            if current_target is not None:
+                provenance[current_target] = provenance_from_values(
+                    current_target, current_values
+                )
+            current_target = (
+                metric_heading.group(1) if metric_heading is not None else None
+            )
+            current_values = {}
+            continue
+        if current_target is None:
+            continue
+        cells = table_cells(line)
+        if len(cells) != 2:
+            continue
+        if cells[0] in {"Provenance", "---"}:
+            continue
+        current_values[cells[0]] = cells[1]
+    return provenance
+
+
+def provenance_from_values(target: str, values: dict[str, str]) -> TargetProvenance:
+    required_fields = {
+        "Dataset profile": "dataset profile",
+        "Dataset suite": "dataset suite",
+        "Source URL": "source URL",
+        "License note": "license note",
+    }
+    for field, label in required_fields.items():
+        require(field in values, f"{target} provenance missing {label}")
+    return TargetProvenance(
+        dataset_profile=values["Dataset profile"],
+        dataset_suite=values["Dataset suite"],
+        source_url=values["Source URL"],
+        license_note=values["License note"],
+    )
 
 
 def require_metric_delta(metric: MetricTrend, max_regression: float) -> None:

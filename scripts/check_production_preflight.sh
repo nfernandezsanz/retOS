@@ -79,7 +79,7 @@ require(
     "coverage evidence must match the current README/release note ratchet",
 )
 require(
-    "787 pytest cases" in audit_pack,
+    "788 pytest cases" in audit_pack,
     "production readiness pack must record the current backend pytest case count",
 )
 for unique_gate in (

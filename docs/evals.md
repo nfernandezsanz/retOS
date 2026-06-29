@@ -400,15 +400,16 @@ effective source URL, record count, source path, and license provenance.
 
 `make eval-calibration-compare` compares two manifests for trend evidence. Candidate
 runs must pass their own gates, retain every baseline target and numeric metric, keep at
-least the baseline record/case counts, and avoid metric regression beyond
-`MAX_REGRESSION`. Its Markdown output is also path-safe, so release notes can preserve
-source URLs, license notes, metric deltas, and record/case growth without committing raw
-dataset or report paths.
+least the baseline record/case counts, keep the same dataset profile and suite per
+target, and avoid metric regression beyond `MAX_REGRESSION`. Its Markdown output is also
+path-safe, so release notes can preserve dataset profile/suite provenance, source URLs,
+license notes, metric deltas, and record/case growth without committing raw dataset or
+report paths.
 
 `make eval-calibration-trend-gate` validates that versioned trend Markdown offline. It
 requires PASS status, the expected baseline/candidate sample growth, required target
-rows, HTTPS source URLs, metric-level regression tolerance, and no local dataset/report
-path leakage.
+rows, per-target dataset profile/suite provenance, HTTPS source URLs, non-empty license
+notes, metric-level regression tolerance, and no local dataset/report path leakage.
 
 The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
 unless `FORCE=1` is provided, and is never part of the default CI path. Networked

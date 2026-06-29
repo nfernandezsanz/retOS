@@ -27,6 +27,7 @@ def trend_markdown(
     metric_delta: float = 0.0,
     metric_status: str = "PASS",
     include_local_path: bool = False,
+    include_dataset_suite: bool = True,
 ) -> str:
     local_path_note = (
         "\n- Raw path: evals/reports/calibration/manifest.json\n" if include_local_path else ""
@@ -39,6 +40,7 @@ def trend_markdown(
         f"| retrieval_recall | 1 | {1 + metric_delta:g} | {metric_delta:g} | "
         f"higher_is_better | {metric_status} |"
     )
+    dataset_suite_row = "| Dataset suite | squad |\n" if include_dataset_suite else ""
     return f"""# Calibration Trend Evidence
 
 Status: {status}
@@ -63,6 +65,12 @@ Allowed regression tolerance: 0
 | Metric | Baseline | Candidate | Delta | Direction | Status |
 | --- | ---: | ---: | ---: | --- | --- |
 {metric_row}
+
+| Provenance | Value |
+| --- | --- |
+| Dataset profile | squad-dev-v2 |
+{dataset_suite_row}| Source URL | https://example.test/squad.json |
+| License note | SQuAD fixture license note. |
 
 ## Notes
 {local_path_note}
@@ -133,3 +141,15 @@ def test_calibration_trend_gate_rejects_local_paths(tmp_path: Path) -> None:
         assert "trend evidence must omit local path pattern" in str(exc)
     else:
         raise AssertionError("Expected local path leakage to fail")
+
+
+def test_calibration_trend_gate_rejects_missing_dataset_suite(tmp_path: Path) -> None:
+    cli = load_gate_cli()
+    evidence_path = write_evidence(tmp_path, trend_markdown(include_dataset_suite=False))
+
+    try:
+        validate_default(cli, evidence_path)
+    except cli.EvalCalibrationTrendError as exc:
+        assert "squad provenance missing dataset suite" in str(exc)
+    else:
+        raise AssertionError("Expected missing dataset suite provenance to fail")
