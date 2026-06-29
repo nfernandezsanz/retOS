@@ -1901,6 +1901,88 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
   }
 });
 
+test("keeps operational modules compact and segmented", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const modules: Array<[string, string | null]> = [
+    ["overview", null],
+    ["documents", "documents-library"],
+    ["documents", "documents-sources"],
+    ["documents", "documents-upload"],
+    ["documents", "documents-text"],
+    ["queries", "queries-runner"],
+    ["queries", "queries-live"],
+    ["evals", "evals-runner"],
+    ["evals", "evals-results"],
+    ["evals", "evals-history"],
+    ["audit", "audit-jobs"],
+    ["audit", "audit-progress"],
+    ["audit", "audit-events"],
+    ["admin", "admin-providers"],
+    ["admin", "admin-users"],
+  ];
+  const sectionLabels = new Map([
+    ["overview", "Overview"],
+    ["documents", "Documents"],
+    ["queries", "Queries"],
+    ["evals", "Evals"],
+    ["audit", "Audit"],
+    ["admin", "Admin"],
+  ]);
+
+  for (const [section, module] of modules) {
+    await page
+      .getByLabel("Primary navigation")
+      .getByRole("link", { name: sectionLabels.get(section) ?? section })
+      .click();
+    if (module) {
+      await page.locator(`.module-nav a[href="#${module}"]`).click();
+    }
+
+    const layout = await page.evaluate(
+      ({ section, module }) => {
+        const panel =
+          section === "overview"
+            ? document.querySelector(".overview-layout")
+            : document.querySelector(`#${section}`);
+        const active = module
+          ? document.querySelector(`#${module}`)
+          : document.querySelector(".overview-layout");
+        const workspace = document.querySelector(".workspace");
+        return {
+          activeHeight: Math.round(active?.getBoundingClientRect().height ?? 0),
+          activeScroll: active ? active.scrollHeight - active.clientHeight : 0,
+          bodyHorizontalOverflow:
+            document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          panelScroll: panel ? panel.scrollHeight - panel.clientHeight : 0,
+          tooltipTargets: [
+            ...document.querySelectorAll(".workspace [data-tooltip], .sidebar [data-tooltip]"),
+          ].filter((element) => element.getClientRects().length > 0).length,
+          workspaceScroll: workspace ? workspace.scrollHeight - workspace.clientHeight : 0,
+        };
+      },
+      { section, module },
+    );
+
+    expect(layout.bodyHorizontalOverflow, `${section}/${module ?? "overview"} horizontal overflow`).toBe(
+      false,
+    );
+    expect(layout.workspaceScroll, `${section}/${module ?? "overview"} workspace scroll`).toBeLessThanOrEqual(
+      0,
+    );
+    expect(layout.activeHeight, `${section}/${module ?? "overview"} active height`).toBeLessThanOrEqual(
+      720,
+    );
+    expect(layout.panelScroll, `${section}/${module ?? "overview"} panel scroll`).toBeLessThanOrEqual(
+      section === "documents" && module === "documents-library" ? 140 : 20,
+    );
+    expect(layout.activeScroll, `${section}/${module ?? "overview"} active scroll`).toBeLessThanOrEqual(
+      section === "documents" && module === "documents-library" ? 140 : 20,
+    );
+    expect(layout.tooltipTargets, `${section}/${module ?? "overview"} tooltip targets`).toBeGreaterThan(0);
+  }
+});
+
 test("seeds the local demo corpus from the overview", async ({ page }) => {
   await page.locator(".workflow-button").click();
 

@@ -174,6 +174,9 @@ tag in GitHub.
 - The React console now uses shorter headers, tighter bounded module scroll regions,
   native tooltip fallbacks on navigation pills, and hover tooltips preserved in audit
   summary panels so operational screens feel less like long pages.
+- Frontend browser smoke now includes a compact-module regression guard that walks every
+  console section/module, blocks global workspace scroll, checks bounded internal
+  scroll, and verifies visible tooltip targets.
 - Audit manifests now hash the auditor evidence matrix and record its local gate so the
   machine-readable handoff preserves objective-to-evidence traceability.
 - Audit manifests now hash the RetOS project card, favicon mark, frontend brand tokens,
