@@ -48,6 +48,8 @@ required_sections = (
 
 required_phrases = (
     "Current draft evidence commit:",
+    "code revision covered by the recorded local gates, CI",
+    "Documentation-only commits may follow it",
     "make ci-status-check",
     "exact immutable release tag commit must",
     "Images:",

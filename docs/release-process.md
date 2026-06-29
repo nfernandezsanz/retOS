@@ -177,6 +177,10 @@ Images:
 - `docs/releases/` stores versioned release notes or release-candidate notes with
   validation evidence, migration notes, known limitations, and rollback guidance.
 - Every release note references the commit SHA and immutable image tags.
+- Draft release notes may record a `Current draft evidence commit` that trails later
+  documentation-only commits. That SHA is the code revision covered by the recorded
+  gates, CI run, and audit artifacts; the immutable release tag commit must be
+  reconciled with the note before promotion.
 - Every release candidate records `scripts/check_image_size.sh` output or the equivalent
   `make image-size-check` evidence. Default budgets can be overridden with
   `RETOS_BACKEND_IMAGE_MAX_BYTES` and `RETOS_WEB_IMAGE_MAX_BYTES` only when the release
