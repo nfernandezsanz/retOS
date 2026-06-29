@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 from collections.abc import Callable, Mapping
@@ -203,6 +204,19 @@ def audit_export_detail(export: dict[str, Any]) -> str:
     gap_count = len(continuity_gaps) if isinstance(continuity_gaps, list) else 0
     suffix = f", {gap_count} limited-window gap(s)" if gap_count else ""
     return f"{event_count} event(s), valid{suffix}"
+
+
+def validate_audit_export_offline(export: dict[str, Any]) -> str | None:
+    verifier_path = ROOT / "scripts" / "check_audit_export.py"
+    spec = importlib.util.spec_from_file_location("check_audit_export", verifier_path)
+    if spec is None or spec.loader is None:
+        return f"could not load offline verifier from {verifier_path}"
+    verifier = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(verifier)
+    errors = verifier.validate_export(export)
+    if errors:
+        return "; ".join(str(error) for error in errors[:3])
+    return None
 
 
 def validate_sse_event(event: dict[str, str]) -> str | None:
@@ -421,8 +435,17 @@ def run_local_smoke(
                     export_error = validate_audit_export(export)
                     if export_error:
                         checks.append(fail("audit export", export_error))
+                    elif offline_error := validate_audit_export_offline(export):
+                        checks.append(
+                            fail("audit export", f"offline verifier: {offline_error}")
+                        )
                     else:
-                        checks.append(ok("audit export", audit_export_detail(export)))
+                        checks.append(
+                            ok(
+                                "audit export",
+                                f"{audit_export_detail(export)}, offline verifier OK",
+                            )
+                        )
 
         try:
             stream_status, content_type, event = sse_requester(

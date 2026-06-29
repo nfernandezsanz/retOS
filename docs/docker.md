@@ -158,9 +158,9 @@ the API, worker, web, Postgres, RabbitMQ, and one-shot migration service states 
 checks API readiness and version metadata, authenticates with the local bootstrap admin,
 re-seeds the demo corpus idempotently, and verifies that demo search returns indexed
 evidence plus journal/progress hash-chain events, authenticated SSE progress
-replay/resume, and a valid limited audit export. A limited export can report continuity
-gaps at the window boundary while still requiring valid hash integrity and zero hash
-failures. Use it after UI/API changes when
+replay/resume, and a valid limited audit export rechecked by the offline audit-export
+verifier. A limited export can report continuity gaps at the window boundary while still
+requiring valid hash integrity and zero hash failures. Use it after UI/API changes when
 `make docker-smoke` would be heavier than the feedback you need.
 
 Use `make local-logs` for a bounded, non-following log snapshot across Postgres,
