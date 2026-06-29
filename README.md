@@ -23,6 +23,16 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 [![Quality gates](https://img.shields.io/badge/verify-local%20quality%20gates-334155?style=for-the-badge)](#quality-gates)
 [![Release playbook](https://img.shields.io/badge/release-human%20promotion%20pack-7c3aed?style=for-the-badge)](docs/release-process.md)
 
+## First Minute
+
+| I want to... | Start here | What you get |
+| --- | --- | --- |
+| Run the product | [Local Quick Start](#local-quick-start) | Dockerized API, worker, web UI, Postgres, RabbitMQ, and local-safe defaults. |
+| See useful data | [Demo corpus](#local-quick-start) | An auditable `retos-demo` domain, searchable documents, jobs, and journal events. |
+| Trust the evidence | [Local Audit Handoff](#local-audit-handoff) | Manifest, Markdown handoff, checksum bundle, critical file hashes, and visual artifacts. |
+| Judge readiness | [Current Status](#current-status) | Coverage, stability, cost posture, runtime posture, and production blockers. |
+| Work with agents | [Development Model](#development-model) | The Codex/Claude-first loop for code, tests, docs, plans, and audit evidence. |
+
 <details open>
 <summary><strong>I want to try it locally</strong></summary>
 
@@ -404,6 +414,7 @@ Every meaningful change should pass these gates:
 | Backup/restore drill template | `make backup-restore-drill-check` | Validates the detailed backup/restore rehearsal evidence template for backup artifacts, restore commands, health checks, audit-export verification, and promotion impact. |
 | Promotion template | `make promotion-template-check` | Validates the human promotion evidence template contract: required sections, local gates, release provenance, visual/security review, backup/restore rehearsal, rollback, and decision fields. |
 | Auditor evidence matrix | `make auditor-evidence-matrix-check` | Validates the objective-to-evidence matrix so requirements, local gates, and external promotion blockers stay traceable. |
+| README usability | `make readme-check` | Validates that onboarding pills, first-minute paths, current status, local actions, and the Codex/Claude development model stay visible for new reviewers. |
 | Auditor static pack | `make auditor-static-check` | Runs the non-destructive auditor gates for dependency advisories, security policy, ignore hygiene, operations runbooks, branding, CI/release workflow contracts, release notes, production preflight, and audit-pack alignment. |
 | Auditor handoff | `make auditor-handoff-check` | Runs the local static auditor pack and exports the offline manifest, Markdown handoff with promotion decision checklist, and checksummed bundle under `evals/reports/`. |
 | Audit handoff manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | Exports commit state, generation context, coverage evidence from `backend/coverage.json`, required gates, critical file hashes including the auditor evidence matrix and branding assets, visual audit screenshot records, and remaining external promotion evidence as JSON. |

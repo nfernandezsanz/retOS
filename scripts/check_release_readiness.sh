@@ -25,6 +25,7 @@ required_files=(
   ".dockerignore"
   "docs/release-process.md"
   "docs/production-readiness.md"
+  "scripts/check_readme_usability.py"
   "scripts/check_ci_workflow.sh"
   "scripts/check_production_preflight.sh"
   "scripts/check_published_release_evidence.sh"
@@ -50,6 +51,7 @@ for file in "${required_files[@]}"; do
 done
 
 scripts/check_ci_workflow.sh >/dev/null
+python3 scripts/check_readme_usability.py >/dev/null
 scripts/check_docker_topology.sh >/dev/null
 scripts/check_image_metadata.sh >/dev/null
 scripts/check_image_size.sh >/dev/null

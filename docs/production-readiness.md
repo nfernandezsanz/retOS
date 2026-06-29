@@ -123,6 +123,7 @@ auditor a stable local entry point:
 | Backup/restore drill template | `make backup-restore-drill-check` | Detailed rehearsal evidence fields are present for backup artifacts, restore commands, health checks, audit-export validation, and promotion impact. |
 | Promotion template | `make promotion-template-check` | The human promotion evidence template keeps required sections, local machine gates, release provenance, visual/security review, backup/restore rehearsal, rollback, and decision fields aligned. |
 | Auditor evidence matrix | `make auditor-evidence-matrix-check` | Objective requirements map to current evidence, local gates, and external promotion blockers in `docs/auditor-evidence-matrix.md`. |
+| README usability | `make readme-check` | New-reviewer onboarding, action pills, current status, local paths, and the Codex/Claude development model stay visible and auditable. |
 | Auditor static pack | `make auditor-static-check` | Non-destructive dependency, security, ignore, operations, branding, release, preflight, and audit-pack guards pass together. |
 | Auditor handoff | `make auditor-handoff-check` | Runs local static auditor gates and exports an offline audit manifest for the promotion record. |
 | Audit manifest schema | `make audit-manifest-check` | Offline schema check for required manifest fields, gates, critical file hashes, visual artifact names, and external blockers. |
@@ -210,6 +211,7 @@ These items must be closed before a final production release:
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
 | CI workflow contract | `.github/workflows/ci.yml`, `scripts/check_ci_workflow.sh`, `make ci-workflow-check` |
 | Objective-to-evidence traceability | `docs/auditor-evidence-matrix.md`, `scripts/check_auditor_evidence_matrix.sh`, `make auditor-evidence-matrix-check` |
+| README usability contract | `README.md`, `scripts/check_readme_usability.py`, `make readme-check` |
 | Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit`, `frontend/visual-audit/manifest.json`, and the release workflow `retos-release-visual-audit-<commit>` artifact |
 | Visual audit verifier | `scripts/check_visual_audit.py`, `make visual-audit-check` |
 | Human visual review | `docs/releases/evidence/production-promotion-template.md` |

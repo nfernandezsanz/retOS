@@ -38,6 +38,7 @@ REQUIRED_CRITICAL_FILES = {
     "docs/releases/evidence/calibration-scope-decision-template.md",
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/target-security-review-template.md",
+    "scripts/check_readme_usability.py",
     "scripts/check_ci_workflow.sh",
     "scripts/check_ci_status.sh",
     "scripts/check_auditor_evidence_matrix.sh",
