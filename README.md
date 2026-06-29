@@ -28,6 +28,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 
 ```bash
 cp .env.example .env
+make doctor
 docker compose up --build
 ```
 
@@ -76,6 +77,7 @@ auditor-friendly evidence.
 
 ```bash
 cp .env.example .env
+make doctor
 docker compose up --build
 ```
 
@@ -328,6 +330,7 @@ make local-acceptance
 The expanded command sequence behind that gate is:
 
 ```bash
+make doctor
 make check
 make integration
 make frontend-test
@@ -354,6 +357,7 @@ Every meaningful change should pass these gates:
 
 | Gate | Command | Purpose |
 | --- | --- | --- |
+| Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Backend format | `make format-check` | Enforces Black formatting. |
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |

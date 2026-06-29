@@ -28,6 +28,7 @@ npm install
 Use the fast loop while developing:
 
 ```bash
+make doctor
 make format
 make format-check
 make lint
@@ -44,11 +45,14 @@ Before asking for review on a release-facing or auditor-facing change, run the l
 acceptance gate:
 
 ```bash
+make doctor
 make local-acceptance
 ```
 
-That gate covers backend quality, API/browser integration, frontend build, visual audit,
-Docker config, auditor handoff, and Docker stack smoke without paid LLM providers.
+The doctor checks local prerequisites, safe defaults, Compose config, topology, and audit
+tooling before heavier gates. The acceptance gate covers backend quality, API/browser
+integration, frontend build, visual audit, Docker config, auditor handoff, and Docker
+stack smoke without paid LLM providers.
 
 ## Security Rules
 

@@ -65,6 +65,7 @@ Cosign signatures and immutable version tag-to-digest resolution for both images
 Before tagging a release candidate, run:
 
 ```bash
+make doctor
 make local-acceptance
 ```
 

@@ -3474,10 +3474,13 @@ function App() {
                   disabled={!selectedDomainId || isLoadingWorkspace}
                   onChange={(event) => void handleArchivedToggle(event)}
                 />
-                <span>Show archived</span>
+                <span data-tooltip="Include archived documents without deleting audit history">
+                  Show archived
+                </span>
               </label>
               <button
                 className="ghost-action"
+                data-tooltip="Reload the active domain documents and jobs"
                 disabled={isLoadingWorkspace}
                 type="button"
                 onClick={() => void refreshWorkspace()}
@@ -3519,6 +3522,7 @@ function App() {
                           <div className="document-actions">
                             <button
                               className="icon-button"
+                              data-tooltip="Save the edited document title"
                               disabled={isUpdatingDocument}
                               title="Save document title"
                               type="submit"
@@ -3528,6 +3532,7 @@ function App() {
                             </button>
                             <button
                               className="icon-button"
+                              data-tooltip="Discard the document title edit"
                               disabled={isUpdatingDocument}
                               title="Cancel document edit"
                               type="button"

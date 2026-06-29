@@ -121,6 +121,7 @@ for phrase in (
     "provenance",
     "docs/release-process.md",
     "docker compose --env-file .env.example config",
+    "make doctor",
     "make docker-runtime-image-check",
     "make local-acceptance",
     "make docker-smoke",
@@ -163,6 +164,10 @@ require(
     "README must link the production readiness audit pack",
 )
 require(
+    "make doctor" in readme and "make doctor" in docker_docs and "make doctor" in audit_pack,
+    "README, Docker docs, and production readiness pack must expose the local doctor",
+)
+require(
     "make local-acceptance" in contributing,
     "CONTRIBUTING.md must document the local acceptance gate",
 )
@@ -172,6 +177,7 @@ local_acceptance_line = next(
 )
 require(local_acceptance_line, "Makefile must define local-acceptance")
 for dependency in (
+    "doctor",
     "check",
     "integration",
     "frontend-test",

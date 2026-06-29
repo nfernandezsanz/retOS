@@ -109,6 +109,7 @@ the core quality gates pass.
 Run the full local pre-audit acceptance gate when validating a checkout:
 
 ```bash
+make doctor
 make local-acceptance
 ```
 
@@ -139,6 +140,7 @@ make docker-runtime-image-check
 
 ```bash
 cp .env.example .env
+make doctor
 docker compose up --build
 ```
 
