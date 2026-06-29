@@ -57,6 +57,8 @@ tag in GitHub.
 - Offline `make eval-calibration-trend-gate` validation for versioned calibration trend
   evidence, including sample growth, required targets, metric regression tolerance,
   HTTPS provenance, and path safety.
+- Local doctor now checks the active `.env` when present, failing unsafe production
+  placeholders, wildcard CORS outside development, invalid providers, and short secrets.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.

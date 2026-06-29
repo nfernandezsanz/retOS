@@ -145,6 +145,10 @@ docker compose up --build
 make docker-seed-demo
 ```
 
+`make doctor` validates prerequisites, `.env.example`, and the active `.env` when it
+exists. It fails on production placeholders, wildcard CORS outside development, unknown
+provider profiles, and unsafe secret lengths before the stack starts.
+
 Open:
 
 - Web UI: http://localhost:8080

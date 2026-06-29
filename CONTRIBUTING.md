@@ -49,8 +49,9 @@ make doctor
 make local-acceptance
 ```
 
-The doctor checks local prerequisites, safe defaults, Compose config, topology, and audit
-tooling before heavier gates. The acceptance gate covers backend quality, API/browser
+The doctor checks local prerequisites, safe `.env.example` defaults, the active `.env`
+when present, Compose config, topology, and audit tooling before heavier gates. The
+acceptance gate covers backend quality, API/browser
 integration, frontend build, visual audit, Docker config, auditor handoff, and Docker
 stack smoke without paid LLM providers.
 

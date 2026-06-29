@@ -53,6 +53,10 @@ def write_minimal_repo(root: Path, *, allow_paid_llm: str = "false") -> None:
     topology.chmod(0o755)
 
 
+def write_local_env(root: Path, lines: list[str]) -> None:
+    (root / ".env").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def successful_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(command, 0, stdout=f"{command[0]} ok\n", stderr="")
 
@@ -86,6 +90,84 @@ def test_local_doctor_fails_when_paid_llms_are_enabled_by_default(
     failure = next(check for check in checks if check.name == "env:RETOS_ALLOW_PAID_LLM")
     assert failure.status == "FAIL"
     assert "expected 'false'" in failure.detail
+
+
+def test_local_doctor_fails_when_production_env_uses_development_secrets(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    doctor = load_local_doctor()
+    write_minimal_repo(tmp_path)
+    write_local_env(
+        tmp_path,
+        [
+            "RETOS_ENV=production",
+            "RETOS_JWT_SECRET=change-this-development-secret-at-least-32-chars",
+            "RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me",
+            "RETOS_ALLOWED_ORIGINS=https://retos.example",
+            "RETOS_PROVIDER=local",
+            "RETOS_ALLOW_PAID_LLM=false",
+            "RETOS_OLLAMA_MODEL=gemma4",
+        ],
+    )
+    monkeypatch.setattr(doctor.shutil, "which", lambda command: f"/usr/bin/{command}")
+
+    checks = doctor.collect_checks(tmp_path, runner=successful_runner)
+
+    failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
+    assert "local env:RETOS_JWT_SECRET.production" in failures
+    assert "local env:RETOS_BOOTSTRAP_ADMIN_PASSWORD.production" in failures
+
+
+def test_local_doctor_warns_when_paid_llms_are_enabled_in_local_env(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    doctor = load_local_doctor()
+    write_minimal_repo(tmp_path)
+    write_local_env(
+        tmp_path,
+        [
+            "RETOS_ENV=development",
+            "RETOS_JWT_SECRET=development-secret-value-that-is-long-enough",
+            "RETOS_PROVIDER=openai",
+            "RETOS_ALLOW_PAID_LLM=true",
+            "RETOS_OPENAI_API_KEY=test-key",
+        ],
+    )
+    monkeypatch.setattr(doctor.shutil, "which", lambda command: f"/usr/bin/{command}")
+
+    checks = doctor.collect_checks(tmp_path, runner=successful_runner)
+
+    warning = next(check for check in checks if check.name == "local env:RETOS_ALLOW_PAID_LLM")
+    assert warning.status == "WARN"
+    assert not [check for check in checks if check.name == "local env:paid provider"]
+
+
+def test_local_doctor_fails_when_non_development_env_allows_wildcard_cors(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    doctor = load_local_doctor()
+    write_minimal_repo(tmp_path)
+    write_local_env(
+        tmp_path,
+        [
+            "RETOS_ENV=test",
+            "RETOS_JWT_SECRET=test-secret-value-that-is-long-enough",
+            "RETOS_ALLOWED_ORIGINS=*",
+            "RETOS_PROVIDER=local",
+            "RETOS_ALLOW_PAID_LLM=false",
+            "RETOS_OLLAMA_MODEL=gemma4",
+        ],
+    )
+    monkeypatch.setattr(doctor.shutil, "which", lambda command: f"/usr/bin/{command}")
+
+    checks = doctor.collect_checks(tmp_path, runner=successful_runner)
+
+    failure = next(check for check in checks if check.name == "local env:RETOS_ALLOWED_ORIGINS")
+    assert failure.status == "FAIL"
+    assert "wildcard CORS" in failure.detail
 
 
 def test_local_doctor_render_includes_summary() -> None:

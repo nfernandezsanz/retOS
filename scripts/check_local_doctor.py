@@ -13,6 +13,18 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_DEVELOPMENT_JWT_PLACEHOLDER = (
     "change-this-development-secret-at-least-32-chars"
 )
+EXPECTED_DEVELOPMENT_ADMIN_PASSWORD = "retos-dev-admin-change-me"
+MIN_ADMIN_PASSWORD_LENGTH = 12
+KNOWN_PROVIDER_PROFILES = {
+    "fake",
+    "local",
+    "openai",
+    "anthropic",
+    "google",
+    "openrouter",
+    "azure",
+}
+PAID_PROVIDER_PROFILES = {"openai", "anthropic", "google", "openrouter", "azure"}
 CommandRunner = Callable[[Sequence[str]], subprocess.CompletedProcess[str]]
 
 
@@ -98,8 +110,109 @@ def file_checks(root: Path) -> list[DoctorCheck]:
     checks.append(
         ok("local .env", ".env exists")
         if env_path.is_file()
-        else warn("local .env", "missing; run cp .env.example .env before docker compose up")
+        else warn(
+            "local .env", "missing; run cp .env.example .env before docker compose up"
+        )
     )
+    return checks
+
+
+def local_env_checks(root: Path) -> list[DoctorCheck]:
+    env_path = root / ".env"
+    if not env_path.is_file():
+        return []
+
+    env = parse_env(env_path)
+    checks: list[DoctorCheck] = []
+    runtime_env = env.get("RETOS_ENV", "development")
+    jwt_secret = env.get("RETOS_JWT_SECRET", "")
+    bootstrap_password = env.get("RETOS_BOOTSTRAP_ADMIN_PASSWORD")
+    allow_paid = env.get("RETOS_ALLOW_PAID_LLM", "false").lower()
+    provider = env.get("RETOS_PROVIDER", "local")
+    allowed_origins = [
+        origin.strip()
+        for origin in env.get("RETOS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
+
+    checks.append(
+        ok("local env:RETOS_ENV", runtime_env)
+        if runtime_env in {"development", "test", "production"}
+        else fail("local env:RETOS_ENV", f"unknown environment: {runtime_env!r}")
+    )
+    checks.append(
+        ok("local env:RETOS_JWT_SECRET", "present and long enough")
+        if len(jwt_secret) >= 32
+        else fail("local env:RETOS_JWT_SECRET", "must contain at least 32 characters")
+    )
+    if (
+        runtime_env == "production"
+        and jwt_secret == EXPECTED_DEVELOPMENT_JWT_PLACEHOLDER
+    ):
+        checks.append(
+            fail(
+                "local env:RETOS_JWT_SECRET.production",
+                "development placeholder is not allowed in production",
+            )
+        )
+    if bootstrap_password:
+        checks.append(
+            ok("local env:RETOS_BOOTSTRAP_ADMIN_PASSWORD", "present and long enough")
+            if len(bootstrap_password) >= MIN_ADMIN_PASSWORD_LENGTH
+            else fail(
+                "local env:RETOS_BOOTSTRAP_ADMIN_PASSWORD",
+                f"must contain at least {MIN_ADMIN_PASSWORD_LENGTH} characters",
+            )
+        )
+        if (
+            runtime_env == "production"
+            and bootstrap_password == EXPECTED_DEVELOPMENT_ADMIN_PASSWORD
+        ):
+            checks.append(
+                fail(
+                    "local env:RETOS_BOOTSTRAP_ADMIN_PASSWORD.production",
+                    "development placeholder is not allowed in production",
+                )
+            )
+    checks.append(
+        ok("local env:RETOS_PROVIDER", provider)
+        if provider in KNOWN_PROVIDER_PROFILES
+        else fail("local env:RETOS_PROVIDER", f"unknown provider profile: {provider!r}")
+    )
+    if allow_paid == "true":
+        checks.append(
+            warn(
+                "local env:RETOS_ALLOW_PAID_LLM",
+                "paid providers are enabled in local .env; tests still mock providers",
+            )
+        )
+    elif allow_paid == "false":
+        checks.append(ok("local env:RETOS_ALLOW_PAID_LLM", "false"))
+    else:
+        checks.append(
+            fail("local env:RETOS_ALLOW_PAID_LLM", "must be 'true' or 'false'")
+        )
+    if provider in PAID_PROVIDER_PROFILES and allow_paid != "true":
+        checks.append(
+            fail(
+                "local env:paid provider",
+                "paid provider profile requires RETOS_ALLOW_PAID_LLM=true",
+            )
+        )
+    if runtime_env != "development" and "*" in allowed_origins:
+        checks.append(
+            fail(
+                "local env:RETOS_ALLOWED_ORIGINS",
+                "wildcard CORS origins are only allowed in development",
+            )
+        )
+    if provider == "local":
+        ollama_model = env.get("RETOS_OLLAMA_MODEL", "")
+        checks.append(
+            ok("local env:RETOS_OLLAMA_MODEL", ollama_model)
+            if ollama_model == "gemma4"
+            else warn("local env:RETOS_OLLAMA_MODEL", "expected local default gemma4")
+        )
     return checks
 
 
@@ -122,7 +235,10 @@ def env_safety_checks(root: Path) -> list[DoctorCheck]:
         )
     jwt_secret = env.get("RETOS_JWT_SECRET", "")
     checks.append(
-        ok("env:RETOS_JWT_SECRET", "development placeholder is explicit and long enough")
+        ok(
+            "env:RETOS_JWT_SECRET",
+            "development placeholder is explicit and long enough",
+        )
         if jwt_secret == EXPECTED_DEVELOPMENT_JWT_PLACEHOLDER
         else fail("env:RETOS_JWT_SECRET", "development placeholder changed or missing")
     )
@@ -134,9 +250,12 @@ def collect_checks(
     *,
     runner: CommandRunner = default_runner,
 ) -> list[DoctorCheck]:
-    checks = [*file_checks(root), *env_safety_checks(root)]
+    checks = [*file_checks(root), *env_safety_checks(root), *local_env_checks(root)]
     checks.append(
-        ok("python", f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+        ok(
+            "python",
+            f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        )
         if sys.version_info >= (3, 14)
         else fail("python", "Python 3.14 or newer is required")
     )
@@ -185,8 +304,12 @@ def render_checks(checks: Sequence[DoctorCheck]) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check local RetOS development prerequisites.")
-    parser.add_argument("--strict", action="store_true", help="Treat warnings as failures.")
+    parser = argparse.ArgumentParser(
+        description="Check local RetOS development prerequisites."
+    )
+    parser.add_argument(
+        "--strict", action="store_true", help="Treat warnings as failures."
+    )
     args = parser.parse_args()
     checks = collect_checks()
     print(render_checks(checks))

@@ -368,7 +368,7 @@ Every meaningful change should pass these gates:
 
 | Gate | Command | Purpose |
 | --- | --- | --- |
-| Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
+| Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Demo corpus seed | `make docker-seed-demo` or `make seed-demo SEED_DEMO_ARGS=--create-schema` | Seeds an idempotent, auditable demo domain with text-ingestion jobs, hash-chained journal/progress events, and a rebuilt local BM25 index for hands-on UI checks. |
 | Backend format | `make format-check` | Enforces Black formatting. |
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
