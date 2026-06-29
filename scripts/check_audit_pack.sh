@@ -232,6 +232,7 @@ for phrase in (
     "artifacts?per_page=50",
     "retos-visual-audit-{sha}",
     "retos-audit-manifest-{sha}",
+    "retos-audit-handoff-{sha}",
     "expired_artifacts",
     "size_in_bytes",
     "empty_artifacts",
@@ -244,8 +245,11 @@ for phrase in (
     "- frontend",
     "- docker",
     "make audit-manifest OUTPUT=retos-audit-manifest.json",
+    "make audit-handoff-report MANIFEST=retos-audit-manifest.json OUTPUT=retos-audit-handoff.md",
     "retos-audit-manifest-${{ github.sha }}",
+    "retos-audit-handoff-${{ github.sha }}",
     "path: retos-audit-manifest.json",
+    "path: retos-audit-handoff.md",
 ):
     require(phrase in ci, f"CI must publish audit manifest evidence: {phrase}")
 

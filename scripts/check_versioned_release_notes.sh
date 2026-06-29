@@ -62,7 +62,9 @@ required_phrases = (
     "make frontend-visual-audit",
     "make audit-manifest",
     "Audit handoff manifest",
+    "Audit handoff report",
     "retos-audit-manifest-",
+    "retos-audit-handoff-",
     "audit-evidence",
     "Rollback",
 )
@@ -93,6 +95,10 @@ for path in versioned_files:
     require(
         f"retos-audit-manifest-{evidence_match.group(1)}" in content,
         f"{path} must align the audit manifest artifact with the draft evidence commit",
+    )
+    require(
+        f"retos-audit-handoff-{evidence_match.group(1)}" in content,
+        f"{path} must align the audit handoff artifact with the draft evidence commit",
     )
 
 print(f"Versioned release notes OK: {len(versioned_files)} release note(s) validated.")

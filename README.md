@@ -115,7 +115,7 @@ make ci-status-check
 ```
 
 Use that only when you want to verify the latest GitHub Actions run and its downloadable
-visual-audit/audit-manifest artifacts.
+visual-audit, audit-manifest, and audit-handoff artifacts.
 
 ## Where To Look
 
@@ -370,7 +370,7 @@ Every meaningful change should pass these gates:
 | Production audit pack | `make audit-pack-check` | Validates that production readiness evidence, blockers, and auditor links stay current. |
 | Production preflight | `make production-preflight` | Validates local evidence, branding, release docs, and external release blockers are aligned for human review. |
 | Brand contract | `make brand-check` | Validates the project card, favicon mark, palette, branding guide, README visibility, and Playwright brand smoke coverage. |
-| Current HEAD CI | `make ci-status-check` | Queries GitHub Actions and verifies the current commit has successful backend, frontend, docker, final audit-evidence jobs, and required visual-audit/audit-manifest artifacts. |
+| Current HEAD CI | `make ci-status-check` | Queries GitHub Actions and verifies the current commit has successful backend, frontend, docker, final audit-evidence jobs, and required visual-audit/audit-manifest/audit-handoff artifacts. |
 | Release notes | `make release-notes-check` | Validates changelog, release-process guidance, and docs links for auditable releases. |
 | Versioned release notes | `make versioned-release-notes-check` | Validates concrete release note artifacts with evidence, limits, and rollback details. |
 | Release workflow | `make release-workflow-check` | Validates GHCR publishing, SBOM/provenance, Cosign signing, and signature verification workflow documentation. |

@@ -189,6 +189,8 @@ Images:
   screenshots, required gates, and remaining external promotion evidence. When generated
   inside GitHub Actions, the manifest is an in-run snapshot and must be paired with a
   later `make ci-status-check` success for the same commit.
+- CI also exports `retos-audit-handoff-<commit>`, a Markdown companion generated from
+  the same manifest snapshot for reviewers who prefer a readable handoff artifact.
 - `make auditor-handoff-check` is the local auditor entry point for static guards,
   offline manifest export, and promotion preparation. It does not replace tag publishing,
   GHCR digests, SBOM/provenance, Cosign verification, or target-environment review.

@@ -99,6 +99,7 @@ artifact_by_name = {artifact.get("name"): artifact for artifact in artifacts}
 required_artifacts = {
     f"retos-visual-audit-{sha}",
     f"retos-audit-manifest-{sha}",
+    f"retos-audit-handoff-{sha}",
 }
 missing_artifacts = sorted(required_artifacts - set(artifact_by_name))
 if missing_artifacts:

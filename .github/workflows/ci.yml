@@ -135,9 +135,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: make audit-manifest OUTPUT=retos-audit-manifest.json
+      - name: Export audit handoff report
+        run: make audit-handoff-report MANIFEST=retos-audit-manifest.json OUTPUT=retos-audit-handoff.md
       - name: Upload audit manifest
         uses: actions/upload-artifact@v4
         with:
           name: retos-audit-manifest-${{ github.sha }}
           path: retos-audit-manifest.json
+          if-no-files-found: error
+      - name: Upload audit handoff report
+        uses: actions/upload-artifact@v4
+        with:
+          name: retos-audit-handoff-${{ github.sha }}
+          path: retos-audit-handoff.md
           if-no-files-found: error
