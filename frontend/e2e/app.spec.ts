@@ -2003,10 +2003,17 @@ test("loads the operational console", async ({ page }) => {
 
   await expect(page.getByText("Active provider")).toBeVisible();
   await expect(page.getByText("Active model")).toBeVisible();
+  await expect(page.getByLabel("Provider runtime context").getByText("Ollama", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Provider runtime context").getByText("deepagents")).toBeVisible();
+  await expect(
+    page.getByLabel("Provider runtime context").locator("[data-tooltip]").filter({
+      hasText: "Paid providers blocked",
+    }),
+  ).toHaveAttribute("data-tooltip", /explicit configuration/);
   await expect(page.locator(".provider-summary").getByText("Agent runtime")).toBeVisible();
   await expect(page.getByText("ollama:gemma4")).toBeVisible();
-  await expect(page.getByText("deepagents")).toBeVisible();
-  await expect(page.getByText("Paid providers blocked")).toBeVisible();
+  await expect(page.locator(".provider-summary").getByText("deepagents")).toBeVisible();
+  await expect(page.locator(".provider-summary").getByText("Paid providers blocked")).toBeVisible();
   await expect(page.getByLabel("Runtime switch planner")).toBeVisible();
   await page.getByLabel("Runtime plan provider").selectOption("local");
   await page.getByLabel("Runtime plan agent runtime").selectOption("deepagents");

@@ -5737,6 +5737,25 @@ function App() {
                 ) : null}
               </form>
 
+              <section className="provider-context" aria-label="Provider runtime context">
+                <div data-tooltip="Local Ollama is the default runtime profile for development and tests">
+                  <span>Default provider</span>
+                  <strong>{catalog ? providerLabel(catalog.active.provider) : "Ollama local"}</strong>
+                </div>
+                <div data-tooltip="RetOS routes agent work through the Deep Agents harness by default">
+                  <span>Agent harness</span>
+                  <strong>{catalog ? catalog.agent_runtime : "deepagents"}</strong>
+                </div>
+                <div data-tooltip="Paid calls require explicit configuration and opt-in">
+                  <span>Cost policy</span>
+                  <strong>
+                    {catalog?.paid_providers_enabled
+                      ? "Paid providers enabled"
+                      : "Paid providers blocked"}
+                  </strong>
+                </div>
+              </section>
+
               <section className="provider-summary" aria-live="polite">
                 <div>
                   <span>Active provider</span>
