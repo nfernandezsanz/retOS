@@ -81,8 +81,8 @@ for phrase in (
     "Cosign evidence",
     "target-environment review",
     "Ollama `gemma4`",
-    "95.23%",
-    "90.48%",
+    "95.25%",
+    "90.53%",
 ):
     require(phrase in matrix, f"matrix missing audit phrase: {phrase}")
 

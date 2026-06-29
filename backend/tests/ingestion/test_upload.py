@@ -18,6 +18,7 @@ from retos.ingestion.upload import (
     fail_file_upload_ingestion_job,
     run_file_upload_ingestion,
     sanitize_upload_filename,
+    validate_upload_content_type,
 )
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
@@ -99,6 +100,42 @@ def test_sanitize_upload_filename_rejects_empty_name() -> None:
         sanitize_upload_filename(".")
 
 
+@pytest.mark.parametrize(
+    ("filename", "content_type"),
+    [
+        ("notes.txt", "text/plain; charset=utf-8"),
+        ("notes.md", "text/markdown"),
+        ("notes.md", "text/plain"),
+        ("scan.pdf", "application/pdf"),
+        ("scan.pdf", "application/octet-stream"),
+        ("fixture.txt", None),
+        ("fixture.txt", "  "),
+    ],
+)
+def test_validate_upload_content_type_accepts_supported_pairs(
+    filename: str,
+    content_type: str | None,
+) -> None:
+    validate_upload_content_type(filename, content_type)
+
+
+@pytest.mark.parametrize(
+    ("filename", "content_type"),
+    [
+        ("notes.txt", "application/pdf"),
+        ("notes.md", "application/pdf"),
+        ("scan.pdf", "text/plain"),
+        ("payload.exe", "application/octet-stream"),
+    ],
+)
+def test_validate_upload_content_type_rejects_declared_mime_spoofing(
+    filename: str,
+    content_type: str,
+) -> None:
+    with pytest.raises(FileUploadIngestionError, match=r"content type|not supported"):
+        validate_upload_content_type(filename, content_type)
+
+
 def test_enqueue_file_upload_ingestion_dispatches_celery_task(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -159,6 +196,7 @@ def test_file_upload_endpoint_ingests_text_file_inline_in_test_env(
     assert document["external_id"] == "uploaded-note.txt"
     assert document["content_hash"] == content_hash(raw)
     assert document["metadata"]["ingestion"]["kind"] == "file_upload"
+    assert document["metadata"]["ingestion"]["content_type"] == "text/plain"
 
     versions = upload_client.get(
         f"/documents/{document['id']}/versions",
@@ -312,6 +350,34 @@ def test_file_upload_endpoint_rejects_unsupported_file_type(
     assert response.json()["detail"] == "Upload file type is not supported"
 
 
+@pytest.mark.parametrize(
+    ("filename", "raw", "content_type"),
+    [
+        ("spoofed.txt", b"%PDF-1.7\n%%EOF\n", "application/pdf"),
+        ("spoofed.pdf", b"plain text pretending to be pdf", "text/plain"),
+    ],
+)
+def test_file_upload_endpoint_rejects_declared_mime_spoofing(
+    upload_client: TestClient,
+    upload_admin_headers: dict[str, str],
+    tmp_path: Path,
+    filename: str,
+    raw: bytes,
+    content_type: str,
+) -> None:
+    domain_id = create_upload_domain(upload_client, upload_admin_headers)
+
+    response = upload_client.post(
+        f"/domains/{domain_id}/ingestions/upload",
+        headers=upload_admin_headers,
+        files={"file": (filename, raw, content_type)},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Upload content type does not match file extension"
+    assert not list((tmp_path / "storage" / "uploads").glob(f"**/{filename}"))
+
+
 def test_file_upload_endpoint_marks_failed_when_inline_runner_crashes(
     upload_client: TestClient,
     upload_admin_headers: dict[str, str],
@@ -453,6 +519,18 @@ async def test_run_file_upload_ingestion_rejects_missing_job(
                 }
             },
             "source_uri",
+        ),
+        (
+            {
+                "payload": {
+                    "ingestion_kind": "file_upload",
+                    "filename": "fixture.txt",
+                    "content_type": 123,
+                    "file_path": "missing.txt",
+                    "source_uri": "storage://missing",
+                }
+            },
+            "content_type",
         ),
         (
             {

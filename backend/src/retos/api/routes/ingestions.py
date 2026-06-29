@@ -14,6 +14,7 @@ from retos.ingestion.upload import (
     FileUploadIngestionError,
     fail_file_upload_ingestion_job,
     sanitize_upload_filename,
+    validate_upload_content_type,
 )
 from retos.jobs.tasks import ingest_file_upload_job, ingest_text_job, scan_source_job
 
@@ -162,6 +163,7 @@ async def create_file_upload_ingestion(
 ) -> JobRead:
     try:
         filename = sanitize_upload_filename(file.filename or "")
+        validate_upload_content_type(filename, file.content_type)
     except FileUploadIngestionError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -206,6 +208,7 @@ async def create_file_upload_ingestion(
                 "ingestion_kind": "file_upload",
                 "filename": filename,
                 "title": document_title,
+                "content_type": file.content_type,
                 "file_path": str(file_path),
                 "source_uri": source_uri,
                 "size_bytes": size_bytes,

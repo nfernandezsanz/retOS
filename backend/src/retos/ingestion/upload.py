@@ -30,6 +30,26 @@ class FileUploadIngestionError(RuntimeError):
     pass
 
 
+SUPPORTED_UPLOAD_CONTENT_TYPES: dict[str, frozenset[str]] = {
+    ".txt": frozenset({"text/plain", "application/octet-stream"}),
+    ".md": frozenset(
+        {
+            "text/markdown",
+            "text/x-markdown",
+            "text/plain",
+            "application/octet-stream",
+        }
+    ),
+    ".pdf": frozenset(
+        {
+            "application/pdf",
+            "application/x-pdf",
+            "application/octet-stream",
+        }
+    ),
+}
+
+
 def sanitize_upload_filename(filename: str) -> str:
     cleaned = "".join(
         character if character.isalnum() or character in (".", "-", "_") else "-"
@@ -41,6 +61,18 @@ def sanitize_upload_filename(filename: str) -> str:
     if Path(cleaned).suffix.lower() not in SUPPORTED_SOURCE_SUFFIXES:
         raise FileUploadIngestionError("Upload file type is not supported")
     return cleaned[:255]
+
+
+def validate_upload_content_type(filename: str, content_type: str | None) -> None:
+    if content_type is None or not content_type.strip():
+        return
+    suffix = Path(filename).suffix.lower()
+    allowed = SUPPORTED_UPLOAD_CONTENT_TYPES.get(suffix)
+    if allowed is None:
+        raise FileUploadIngestionError("Upload file type is not supported")
+    normalized = content_type.split(";", maxsplit=1)[0].strip().lower()
+    if normalized not in allowed:
+        raise FileUploadIngestionError("Upload content type does not match file extension")
 
 
 async def run_file_upload_ingestion(
@@ -74,10 +106,13 @@ async def run_file_upload_ingestion(
         file_path_value = job.payload.get("file_path")
         filename_value = job.payload.get("filename")
         source_uri_value = job.payload.get("source_uri")
+        content_type_value = job.payload.get("content_type")
         if not isinstance(file_path_value, str) or not isinstance(filename_value, str):
             raise FileUploadIngestionError("Upload job requires file_path and filename")
         if not isinstance(source_uri_value, str):
             raise FileUploadIngestionError("Upload job requires source_uri")
+        if content_type_value is not None and not isinstance(content_type_value, str):
+            raise FileUploadIngestionError("Upload content_type must be a string")
 
         file_path = Path(file_path_value)
         anyio_file_path = anyio.Path(file_path)
@@ -138,6 +173,7 @@ async def run_file_upload_ingestion(
                     "job_id": job.id,
                     "source_id": source.id if source else None,
                     "filename": filename_value,
+                    "content_type": content_type_value,
                     "suffix": Path(filename_value).suffix.lower(),
                     "extraction": extracted.extraction_kind,
                     "segmenter": "word-window-v1",

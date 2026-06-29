@@ -25,25 +25,25 @@ def test_coverage_targets_read_makefile_and_coverage_json(tmp_path: Path, monkey
             {
                 "meta": {"branch_coverage": True},
                 "totals": {
-                    "covered_branches": 1254,
-                    "num_branches": 1386,
-                    "percent_branches_covered": 90.47619047619048,
-                    "percent_covered": 95.22990303409446,
+                    "covered_branches": 1262,
+                    "num_branches": 1394,
+                    "percent_branches_covered": 90.53084648493544,
+                    "percent_covered": 95.24985068684054,
                 },
             }
         ),
         encoding="utf-8",
     )
-    (tmp_path / "Makefile").write_text("BRANCH_COVERAGE_MIN ?= 90.48\n", encoding="utf-8")
+    (tmp_path / "Makefile").write_text("BRANCH_COVERAGE_MIN ?= 90.53\n", encoding="utf-8")
     monkeypatch.setattr(exporter, "ROOT", tmp_path)
 
     targets = exporter.coverage_targets()
 
-    assert targets["branch_minimum_percent"] == 90.48
-    assert targets["last_recorded_branch_percent"] == 90.48
-    assert targets["last_recorded_total_percent"] == 95.23
-    assert targets["covered_branches"] == 1254
-    assert targets["num_branches"] == 1386
+    assert targets["branch_minimum_percent"] == 90.53
+    assert targets["last_recorded_branch_percent"] == 90.53
+    assert targets["last_recorded_total_percent"] == 95.25
+    assert targets["covered_branches"] == 1262
+    assert targets["num_branches"] == 1394
     assert targets["branch_coverage_enabled"] is True
     assert targets["source"] == "coverage.py json"
     assert targets["source_available"] is True
@@ -72,11 +72,11 @@ def test_coverage_targets_report_unparseable_coverage_json(
     coverage_path = tmp_path / "backend" / "coverage.json"
     coverage_path.parent.mkdir()
     coverage_path.write_text('{"totals": {}}', encoding="utf-8")
-    (tmp_path / "Makefile").write_text("BRANCH_COVERAGE_MIN ?= 90.48\n", encoding="utf-8")
+    (tmp_path / "Makefile").write_text("BRANCH_COVERAGE_MIN ?= 90.53\n", encoding="utf-8")
     monkeypatch.setattr(exporter, "ROOT", tmp_path)
 
     targets = exporter.coverage_targets()
 
-    assert targets["branch_minimum_percent"] == 90.48
+    assert targets["branch_minimum_percent"] == 90.53
     assert targets["source_available"] is False
     assert targets["source_reason"].startswith("coverage report could not be parsed:")

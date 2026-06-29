@@ -11,6 +11,9 @@ tag in GitHub.
 
 ### Added
 
+- File upload ingestion now rejects declared MIME/extension mismatches for `.txt`,
+  `.md`, and `.pdf` uploads before writing bytes, and preserves declared
+  `content_type` in job/document audit metadata.
 - Human-readable audit handoff report generated from the JSON manifest, plus a local
   checker so the report preserves candidate, gate, blocker, hash, and visual evidence.
 - Audit handoff reports now include a promotion decision checklist that separates

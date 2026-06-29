@@ -416,11 +416,23 @@ Optional fields:
 - `enable_ocr` and `max_ocr_pages`: allow local OCR fallback for image-only PDFs.
 
 The API sanitizes the filename, rejects unsupported extensions before writing the file,
-stores bytes under `RETOS_STORAGE_ROOT/uploads/<domain_id>/<upload_id>/`, creates a
-durable `ingest.source` job, writes `upload.queued` journal/progress records, and emits
-SSE progress. In Docker/runtime mode, RabbitMQ dispatches the job to the worker. The API
-and worker use the same `retos-backend` image and the same storage volume, so the worker
-processes the exact uploaded bytes instead of relying on a parallel implementation path.
+and rejects declared MIME types that conflict with the extension. Generic or missing
+types are accepted for local tooling compatibility, but explicit pairs must match:
+
+| Extension | Accepted declared content types |
+| --- | --- |
+| `.txt` | `text/plain`, `application/octet-stream` |
+| `.md` | `text/markdown`, `text/x-markdown`, `text/plain`, `application/octet-stream` |
+| `.pdf` | `application/pdf`, `application/x-pdf`, `application/octet-stream` |
+
+Accepted uploads are stored under
+`RETOS_STORAGE_ROOT/uploads/<domain_id>/<upload_id>/`, create a durable
+`ingest.source` job, record the declared `content_type` in the job payload and
+document ingestion metadata, write `upload.queued` journal/progress records, and emit
+SSE progress. In Docker/runtime mode, RabbitMQ dispatches the job to the worker. The
+API and worker use the same `retos-backend` image and the same storage volume, so the
+worker processes the exact uploaded bytes instead of relying on a parallel
+implementation path.
 
 When the worker succeeds, it creates the canonical document, immutable version,
 text artifact (`raw_text`, `extracted_text`, or `ocr_text` depending on extraction),

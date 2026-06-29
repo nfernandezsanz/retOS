@@ -33,7 +33,9 @@ RetOS should be easy to clone, test, build, and run as a local Docker stack.
 - Paid LLMs are disabled by default.
 - Development admin credentials are rejected in production.
 - Upload size limits are configurable.
-- Path traversal and MIME spoofing must be tested.
+- Upload path traversal is constrained by sanitized basenames and per-upload storage
+  directories; declared MIME spoofing for `.txt`, `.md`, and `.pdf` uploads is rejected
+  before bytes are written or jobs are created. Both paths are covered by local tests.
 - Tests do not require network access by default.
 
 ## Release Checks

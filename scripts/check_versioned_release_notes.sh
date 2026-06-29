@@ -58,7 +58,7 @@ required_sections = (
 
 required_phrases = (
     "Current draft evidence commit:",
-    "Current local development head:",
+    "Latest local development evidence commit:",
     "code revision covered by the recorded local gates, CI",
     "Local-only implementation commits after the draft evidence commit",
     "Documentation-only commits may follow it",
@@ -123,12 +123,12 @@ for path in versioned_files:
         f"{path} must align the audit handoff artifact with the draft evidence commit",
     )
     local_head_match = re.search(
-        r"Current local development head: `([0-9a-f]{40})`",
+        r"Latest local development evidence commit: `([0-9a-f]{40})`",
         content,
     )
     require(
         local_head_match is not None,
-        f"{path} must record the current local development head SHA",
+        f"{path} must record the latest local development evidence commit SHA",
     )
     recorded_local_head = local_head_match.group(1)
     recorded_commit_type = subprocess.run(
@@ -139,7 +139,7 @@ for path in versioned_files:
     )
     require(
         recorded_commit_type.returncode == 0 and recorded_commit_type.stdout.strip() == "commit",
-        f"{path} local development head must be a commit in the local Git history",
+        f"{path} local development evidence commit must be in the local Git history",
     )
 
 print(f"Versioned release notes OK: {len(versioned_files)} release note(s) validated.")
