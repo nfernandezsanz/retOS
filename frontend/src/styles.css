@@ -166,6 +166,7 @@ button:disabled {
 }
 
 .workspace {
+  min-width: 0;
   padding: 22px 26px;
 }
 
@@ -605,10 +606,17 @@ h2 {
 
 .section-content {
   grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
 }
 
 .panel {
+  min-height: 0;
   padding: 16px;
+}
+
+.section-content > .panel:not([hidden]) {
+  max-height: calc(100vh - 236px);
+  overflow: auto;
 }
 
 .panel.wide {
@@ -891,7 +899,7 @@ h2 {
 }
 
 .text-ingestion-form textarea {
-  min-height: 180px;
+  min-height: 124px;
 }
 
 .query-box textarea:focus-visible,
@@ -973,7 +981,7 @@ button:focus-visible {
 .document-list {
   display: grid;
   gap: 10px;
-  max-height: min(560px, 48vh);
+  max-height: min(440px, 42vh);
   margin-top: 14px;
   overflow: auto;
   padding-right: 4px;
@@ -1317,7 +1325,7 @@ button:focus-visible {
 .query-result {
   display: grid;
   gap: 12px;
-  max-height: min(560px, 48vh);
+  max-height: min(430px, 42vh);
   margin-top: 14px;
   overflow: auto;
   padding-right: 4px;
@@ -1625,7 +1633,7 @@ button:focus-visible {
 
 .eval-toolbar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
   align-items: stretch;
   margin-bottom: 14px;
@@ -1667,20 +1675,49 @@ button:focus-visible {
 
 .eval-runner-forms {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 12px;
-  max-height: min(480px, 42vh);
+  max-height: min(430px, 42vh);
   overflow: auto;
   padding-right: 4px;
 }
 
 .eval-dataset-form {
   align-content: start;
+  grid-template-columns: minmax(0, 1fr) minmax(92px, 0.42fr);
   margin-bottom: 0;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #ffffff;
   padding: 12px;
+}
+
+.dataset-form-heading {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 10px;
+}
+
+.dataset-form-heading div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dataset-form-heading span:not(.badge) {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dataset-form-heading strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
 }
 
 .eval-dataset-form input:disabled,
@@ -1774,7 +1811,7 @@ button:focus-visible {
 .eval-case-list {
   display: grid;
   gap: 10px;
-  max-height: min(380px, 38vh);
+  max-height: min(320px, 34vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -1833,7 +1870,7 @@ button:focus-visible {
 .eval-history {
   display: grid;
   gap: 12px;
-  max-height: min(560px, 50vh);
+  max-height: min(460px, 44vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -2072,7 +2109,7 @@ button:focus-visible {
 .job-ledger {
   display: grid;
   gap: 12px;
-  max-height: min(520px, 46vh);
+  max-height: min(430px, 42vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -2492,7 +2529,7 @@ button:focus-visible {
 .provider-list {
   display: grid;
   gap: 10px;
-  max-height: min(420px, 38vh);
+  max-height: min(340px, 34vh);
   margin-top: 18px;
   overflow: auto;
   padding-right: 4px;
@@ -2568,7 +2605,7 @@ button:focus-visible {
 .admin-user-list {
   display: grid;
   gap: 10px;
-  max-height: min(480px, 42vh);
+  max-height: min(400px, 38vh);
   overflow: auto;
   padding-right: 4px;
 }

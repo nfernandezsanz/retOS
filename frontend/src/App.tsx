@@ -4344,6 +4344,15 @@ function App() {
                 className="eval-dataset-form"
                 onSubmit={(event) => void handleRunSquadEval(event)}
               >
+                <div className="dataset-form-heading">
+                  <div>
+                    <span>Dataset</span>
+                    <strong>SQuAD</strong>
+                  </div>
+                  <span className="badge muted" data-tooltip="Single-hop answer grounding fixture">
+                    QA
+                  </span>
+                </div>
                 <label className="span-two">
                   SQuAD dataset path
                   <input
@@ -4398,6 +4407,15 @@ function App() {
                 className="eval-dataset-form"
                 onSubmit={(event) => void handleRunHotpotQAEval(event)}
               >
+                <div className="dataset-form-heading">
+                  <div>
+                    <span>Dataset</span>
+                    <strong>HotpotQA</strong>
+                  </div>
+                  <span className="badge warning" data-tooltip="Multi-hop retrieval and Deep Agents checks">
+                    Multi-hop
+                  </span>
+                </div>
                 <label className="span-two">
                   HotpotQA dataset path
                   <input
@@ -4464,6 +4482,15 @@ function App() {
                 className="eval-dataset-form"
                 onSubmit={(event) => void handleRunNaturalQuestionsEval(event)}
               >
+                <div className="dataset-form-heading">
+                  <div>
+                    <span>Dataset</span>
+                    <strong>Natural Questions</strong>
+                  </div>
+                  <span className="badge muted" data-tooltip="Open-domain local retrieval fixture">
+                    Open QA
+                  </span>
+                </div>
                 <label className="span-two">
                   Natural Questions dataset path
                   <input
@@ -4520,6 +4547,15 @@ function App() {
                 className="eval-dataset-form"
                 onSubmit={(event) => void handleRunOcrBenchmarkEval(event)}
               >
+                <div className="dataset-form-heading">
+                  <div>
+                    <span>Dataset</span>
+                    <strong>OCR benchmark</strong>
+                  </div>
+                  <span className="badge muted" data-tooltip="Document extraction accuracy fixture">
+                    OCR
+                  </span>
+                </div>
                 <label className="span-two">
                   OCR benchmark path
                   <input
@@ -4677,6 +4713,7 @@ function App() {
                   <button
                     className="secondary-action compact-action"
                     type="button"
+                    data-tooltip="Compare the two latest compatible eval runs"
                     disabled={
                       isAnyEvalRunning ||
                       isComparingEvals ||
@@ -4691,6 +4728,7 @@ function App() {
                   <button
                     className="secondary-action compact-action"
                     type="button"
+                    data-tooltip="Block promotion when local eval metrics regress"
                     disabled={
                       isAnyEvalRunning ||
                       isComparingEvals ||
@@ -4831,6 +4869,7 @@ function App() {
                           <button
                             className="secondary-action compact-action"
                             type="button"
+                            data-tooltip="Run this eval suite again with the same job payload"
                             disabled={isAnyEvalRunning}
                             aria-label={`Rerun ${run.report?.suite_name ?? run.job.id}`}
                             onClick={() => void handleRerunEval(run.job.id)}
@@ -5174,6 +5213,7 @@ function App() {
                 </label>
                 <button
                   className="secondary-action"
+                  data-tooltip="Create a local admin account with the selected role"
                   disabled={isCreatingAdminUser || !token}
                   type="submit"
                 >
@@ -5441,6 +5481,7 @@ function App() {
                   <p className="payload-summary">{summarizePayload(job.payload)}</p>
                   <button
                     className="ghost-action job-inspect-action"
+                    data-tooltip="Open payload and persisted progress for this job"
                     disabled={isLoadingJobDetail && selectedJobId === job.id}
                     type="button"
                     onClick={() => void handleInspectJob(job.id)}
@@ -5451,6 +5492,7 @@ function App() {
                   {job.status === "failed" || job.status === "cancelled" ? (
                     <button
                       className="ghost-action job-retry-action"
+                      data-tooltip="Queue a retry for this failed or cancelled job"
                       disabled={retryingJobId === job.id}
                       type="button"
                       onClick={() => void handleRetryJob(job.id)}
