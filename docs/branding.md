@@ -87,6 +87,9 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
 - Reproducible screenshots: run `make frontend-visual-audit` to write ignored local
   desktop and mobile PNGs plus `frontend/visual-audit/manifest.json` with viewport,
   size, and SHA-256 metadata for human design review.
+- Evidence gate: run `make visual-audit-check` after `make frontend-visual-audit` to
+  verify the manifest, expected desktop/mobile screenshot records, PNG existence,
+  byte sizes, SHA-256 hashes, and viewport dimensions offline.
 - CI evidence: the frontend workflow uploads those PNGs as a
   `retos-visual-audit-<commit>` artifact with the same manifest so remote reviewers can
   download the exact desktop and mobile screenshots produced by the run.

@@ -405,6 +405,7 @@ Every meaningful change should pass these gates:
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
 | Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies section navigation, tooltip contract, runtime build/readiness metadata, contextual module pills, current-context bands, visible UI state, admin user management, document edit/archive/restore/history, agent multi-hop and dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
 | Visual audit screenshots | `make frontend-visual-audit` | Generates ignored desktop/mobile PNG snapshots and `frontend/visual-audit/manifest.json` with viewport, size, SHA-256 metadata, section-navigation evidence, and responsive no-overflow coverage; CI uploads them as a `retos-visual-audit-<commit>` artifact. |
+| Visual audit evidence gate | `make visual-audit-check` | Validates the local visual-audit manifest offline, including expected desktop/mobile screenshot records, PNG existence, byte sizes, SHA-256 hashes, and viewport dimensions. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
 | Release readiness | `make release-check` | Validates release docs, Docker image topology, safe defaults, operations runbook coverage, and a dry-run of the published evidence verifier. |

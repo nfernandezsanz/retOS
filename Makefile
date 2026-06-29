@@ -7,7 +7,7 @@ AUDIT_HANDOFF_REPORT_OUTPUT ?= evals/reports/audit-handoff.md
 AUDIT_BUNDLE_OUTPUT ?= evals/reports/retos-audit-handoff.tar.gz
 AUDIT_MANIFEST_SKIP_CI ?= false
 
-.PHONY: help doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-evidence-matrix-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-evidence-matrix-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -35,6 +35,7 @@ help:
 	@printf "  make audit-bundle    Export a tar.gz auditor handoff bundle with checksum\n"
 	@printf "  make audit-bundle-check Validate the generated auditor bundle shape\n"
 	@printf "  make audit-export-check Validate /audit/export JSON with EXPORT=path, or self-test verifier\n"
+	@printf "  make visual-audit-check Validate local visual-audit manifest and screenshot hashes\n"
 	@printf "  make db-upgrade       Apply Alembic migrations\n"
 	@printf "  make db-downgrade     Roll back the latest Alembic migration\n"
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
@@ -122,7 +123,7 @@ operations-runbook-check:
 auditor-evidence-matrix-check:
 	scripts/check_auditor_evidence_matrix.sh
 
-auditor-static-check: dependency-audit security-policy-check env-security-check ignore-hygiene-check operations-runbook-check auditor-evidence-matrix-check brand-check release-workflow-check release-notes-check versioned-release-notes-check eval-calibration-gate eval-calibration-trend-gate release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
+auditor-static-check: dependency-audit security-policy-check env-security-check ignore-hygiene-check operations-runbook-check auditor-evidence-matrix-check brand-check visual-audit-check release-workflow-check release-notes-check versioned-release-notes-check eval-calibration-gate eval-calibration-trend-gate release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
 
 auditor-handoff-check: auditor-static-check
 	$(MAKE) audit-manifest OUTPUT="$(AUDIT_MANIFEST_OUTPUT)" AUDIT_MANIFEST_SKIP_CI=true
@@ -150,6 +151,9 @@ audit-bundle-check:
 
 audit-export-check:
 	$(PYTHON) scripts/check_audit_export.py $(if $(EXPORT),--export "$(abspath $(EXPORT))",--self-test)
+
+visual-audit-check:
+	$(PYTHON) scripts/check_visual_audit.py $(if $(MANIFEST),--manifest "$(abspath $(MANIFEST))",)
 
 db-upgrade:
 	cd backend && "$(BACKEND_PYTHON)" -m alembic upgrade head

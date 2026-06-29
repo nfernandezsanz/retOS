@@ -61,6 +61,8 @@ tag in GitHub.
   placeholders, wildcard CORS outside development, invalid providers, and short secrets.
 - Standalone `make env-security-check` gate for active `.env` security validation without
   starting Docker, Node, or service probes.
+- Standalone `make visual-audit-check` gate for local desktop/mobile visual-audit
+  manifest, screenshot existence, byte-size, SHA-256, and viewport verification.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.

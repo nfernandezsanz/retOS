@@ -122,9 +122,11 @@ for phrase in (
 require(
     "make frontend-visual-audit" in readme
     and "frontend/visual-audit/manifest.json" in readme
+    and "make visual-audit-check" in readme
     and "make frontend-visual-audit" in branding
+    and "make visual-audit-check" in branding
     and "frontend/visual-audit/manifest.json" in branding,
-    "README and branding guide must document the visual audit command and manifest",
+    "README and branding guide must document the visual audit commands and manifest",
 )
 require(
     "workspaceSections" in app

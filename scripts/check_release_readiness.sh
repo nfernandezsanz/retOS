@@ -27,6 +27,7 @@ required_files=(
   "scripts/check_env_security.py"
   "scripts/check_eval_calibration_evidence.py"
   "scripts/check_eval_calibration_trend.py"
+  "scripts/check_visual_audit.py"
   "scripts/export_audit_manifest.py"
   "scripts/check_audit_manifest.py"
   "scripts/export_audit_bundle.py"
@@ -49,6 +50,7 @@ scripts/check_versioned_release_notes.sh >/dev/null
 python3 scripts/check_env_security.py >/dev/null
 python3 scripts/check_eval_calibration_evidence.py >/dev/null
 python3 scripts/check_eval_calibration_trend.py >/dev/null
+python3 scripts/check_visual_audit.py >/dev/null
 scripts/check_audit_pack.sh >/dev/null
 scripts/check_branding_assets.sh >/dev/null
 scripts/check_security_policy.sh >/dev/null
@@ -217,6 +219,11 @@ require(
 require(
     "make env-security-check Validate active .env security posture" in makefile,
     "Makefile help must expose env-security-check",
+)
+require(
+    "make visual-audit-check Validate local visual-audit manifest and screenshot hashes"
+    in makefile,
+    "Makefile help must expose visual-audit-check",
 )
 require(
     "RetOS is not production-promoted yet" in audit_pack,

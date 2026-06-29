@@ -69,6 +69,7 @@ for gate in (
     "make audit-export-check",
     "make frontend-e2e",
     "make frontend-visual-audit",
+    "make visual-audit-check",
     "make docker-smoke",
     "make integration",
     "make auditor-static-check",
