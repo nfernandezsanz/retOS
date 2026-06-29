@@ -214,8 +214,9 @@ Images:
   later `make ci-status-check` success for the same commit.
 - CI also exports `retos-audit-handoff-<commit>`, a Markdown companion generated from
   the same manifest snapshot for reviewers who prefer a readable handoff artifact. The
-  report includes a promotion decision checklist that separates locally proven evidence
-  from external release and target-environment decisions.
+  report includes an evidence-status table and a promotion decision checklist that
+  separate locally proven evidence from external release and target-environment
+  decisions.
 - `make audit-bundle` packages the local JSON manifest, Markdown handoff report,
   production readiness pack, release process, operations guide, branding guide, release
   note, calibration scope decision template, backup/restore drill template, target

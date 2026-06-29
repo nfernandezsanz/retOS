@@ -125,12 +125,17 @@ def main() -> int:
         "bundled calibration evidence must include passing 200-record evidence",
     )
     require(
-        "Status: PASS" in calibration_trend and "Allowed regression tolerance: 0" in calibration_trend,
+        "Status: PASS" in calibration_trend
+        and "Allowed regression tolerance: 0" in calibration_trend,
         "bundled calibration trend must include passing zero-regression evidence",
     )
     require(
         "Promotion Decision Checklist" in handoff,
         "bundled handoff report must include the promotion decision checklist",
+    )
+    require(
+        "Evidence Status" in handoff and "External release evidence" in handoff,
+        "bundled handoff report must include the evidence status summary",
     )
     if (ROOT / "frontend/visual-audit/manifest.json").is_file():
         require(

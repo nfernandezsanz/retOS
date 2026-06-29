@@ -73,6 +73,78 @@ def build_decision_checklist(
     ]
 
 
+def build_evidence_status_rows(
+    manifest: dict[str, Any],
+    *,
+    missing_critical: list[str],
+) -> list[tuple[str, str, str]]:
+    repository = manifest["repository"]
+    ci = manifest["ci"]
+    visual = manifest["visual_audit"]
+    local_manifest = visual["local_manifest"]
+    local_screenshots = visual["local_screenshots"]
+    visual_files_present = bool(local_manifest.get("exists")) and all(
+        screenshot.get("exists") for screenshot in local_screenshots
+    )
+    ci_available = ci.get("available") is True
+    ci_ready = (
+        ci_available
+        and ci.get("status") == "completed"
+        and ci.get("conclusion") == "success"
+    )
+
+    return [
+        (
+            "Local worktree",
+            "ready" if repository["dirty"] is False else "review",
+            (
+                "Clean candidate checkout"
+                if repository["dirty"] is False
+                else "Dirty files must be reviewed before promotion"
+            ),
+        ),
+        (
+            "GitHub Actions",
+            "ready" if ci_ready else "pending",
+            (
+                "Current commit CI is green"
+                if ci_ready
+                else ci.get(
+                    "reason", "Run `make ci-status-check` for the candidate commit"
+                )
+            ),
+        ),
+        (
+            "Critical files",
+            "ready" if not missing_critical else "review",
+            (
+                "All required evidence files are hashed"
+                if not missing_critical
+                else f"{len(missing_critical)} required file(s) missing"
+            ),
+        ),
+        (
+            "Visual evidence",
+            "ready" if visual_files_present else "review",
+            (
+                "Local manifest and desktop/mobile screenshots are present"
+                if visual_files_present
+                else "Run `make frontend-visual-audit` and `make visual-audit-check`"
+            ),
+        ),
+        (
+            "Local gates",
+            "operator-run",
+            f"{len(manifest['local_gates_required'])} reproducible local gate command(s) listed below",
+        ),
+        (
+            "External release evidence",
+            "pending",
+            f"{len(manifest['external_promotion_evidence_required'])} item(s) still require registry, CI release, or human evidence",
+        ),
+    ]
+
+
 def build_report(manifest: dict[str, Any], *, manifest_path: Path) -> str:
     repository = manifest["repository"]
     coverage = manifest["coverage_targets"]
@@ -116,23 +188,40 @@ def build_report(manifest: dict[str, Any], *, manifest_path: Path) -> str:
         "",
         manifest["production_promotion_ready_reason"],
         "",
-        "## Local Gates To Reproduce",
+        "## Evidence Status",
         "",
-        *markdown_list(manifest["local_gates_required"]),
-        "",
-        "## Remaining External Promotion Evidence",
-        "",
-        *[f"- {item}" for item in manifest["external_promotion_evidence_required"]],
-        "",
-        "## Promotion Decision Checklist",
-        "",
-        *build_decision_checklist(manifest, missing_critical=missing_critical),
-        "",
-        "## Critical Evidence Hashes",
-        "",
-        "| Path | Present | SHA-256 |",
+        "| Area | Status | Notes |",
         "| --- | --- | --- |",
     ]
+
+    lines.extend(
+        f"| {area} | `{status}` | {notes} |"
+        for area, status, notes in build_evidence_status_rows(
+            manifest, missing_critical=missing_critical
+        )
+    )
+
+    lines.extend(
+        [
+            "",
+            "## Local Gates To Reproduce",
+            "",
+            *markdown_list(manifest["local_gates_required"]),
+            "",
+            "## Remaining External Promotion Evidence",
+            "",
+            *[f"- {item}" for item in manifest["external_promotion_evidence_required"]],
+            "",
+            "## Promotion Decision Checklist",
+            "",
+            *build_decision_checklist(manifest, missing_critical=missing_critical),
+            "",
+            "## Critical Evidence Hashes",
+            "",
+            "| Path | Present | SHA-256 |",
+            "| --- | --- | --- |",
+        ]
+    )
 
     for record in critical_files:
         digest = record.get("sha256", "missing")
