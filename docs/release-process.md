@@ -53,6 +53,7 @@ make release-check
 make audit-pack-check
 make production-preflight
 make backup-restore-drill-check
+make target-security-review-check
 make promotion-template-check
 make auditor-static-check
 make auditor-handoff-check
@@ -116,6 +117,7 @@ make release-evidence-check
 | Migration notes | Yes |
 | Rollback notes | Yes |
 | Backup/restore drill template | Yes |
+| Target security review template | Yes |
 | Production promotion template | Yes |
 
 Before production promotion, reconcile this release evidence with
@@ -123,6 +125,8 @@ Before production promotion, reconcile this release evidence with
 every blocker there.
 Use [docs/releases/evidence/production-promotion-template.md](releases/evidence/production-promotion-template.md)
 for the final human promotion record.
+Use [docs/releases/evidence/target-security-review-template.md](releases/evidence/target-security-review-template.md)
+for the target-environment security review record.
 
 ## Release Notes Template
 
@@ -210,8 +214,9 @@ Images:
   from external release and target-environment decisions.
 - `make audit-bundle` packages the local JSON manifest, Markdown handoff report,
   production readiness pack, release process, operations guide, branding guide, release
-  note, promotion template, and workflow contracts into a tarball with a `.sha256`
-  sidecar for offline auditor transfer.
+  note, backup/restore drill template, target security review template, promotion
+  template, and workflow contracts into a tarball with a `.sha256` sidecar for offline
+  auditor transfer.
 - `make auditor-handoff-check` is the local auditor entry point for static guards,
   offline manifest export, and promotion preparation. It does not replace tag publishing,
   GHCR digests, SBOM/provenance, Cosign verification, or target-environment review.

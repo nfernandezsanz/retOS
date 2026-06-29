@@ -26,6 +26,7 @@ REQUIRED_MEMBERS = {
     f"{BUNDLE_ROOT}/docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md",
     f"{BUNDLE_ROOT}/docs/releases/evidence/backup-restore-drill-template.md",
     f"{BUNDLE_ROOT}/docs/releases/evidence/production-promotion-template.md",
+    f"{BUNDLE_ROOT}/docs/releases/evidence/target-security-review-template.md",
     f"{BUNDLE_ROOT}/.github/workflows/ci.yml",
     f"{BUNDLE_ROOT}/.github/workflows/release.yml",
 }

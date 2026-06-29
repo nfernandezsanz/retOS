@@ -34,8 +34,10 @@ production pilot.
 7. Review a fresh `/audit/export` snapshot and validate the hash-chain fields.
 8. Confirm no paid-provider calls are required for tests, eval smoke, browser smoke, API
    smoke, or Docker smoke.
-9. Complete `docs/releases/evidence/production-promotion-template.md` or a copy of it
+9. Complete `docs/releases/evidence/target-security-review-template.md` or a copy of it
    for the target environment.
+10. Complete `docs/releases/evidence/production-promotion-template.md` or a copy of it
+    for the final promotion decision.
 
 ## Required Local Evidence
 
@@ -55,6 +57,7 @@ make release-check
 make production-preflight
 make dependency-audit
 make security-policy-check
+make target-security-review-check
 make ignore-hygiene-check
 make operations-runbook-check
 make backup-restore-drill-check
@@ -99,7 +102,7 @@ auditor a stable local entry point:
 | Environment security | `make env-security-check` | Active `.env` security posture is validated without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Local demo corpus | `make docker-seed-demo`, `make api-smoke`, and `make frontend-e2e` | The running Docker stack, real HTTP smoke, and React console can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 599 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 603 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
@@ -109,6 +112,7 @@ auditor a stable local entry point:
 | Production preflight | `make production-preflight` | Local evidence, branding, release docs, and external promotion blockers are aligned. |
 | Dependency advisories | `make dependency-audit` | Python runtime and frontend lockfile dependency advisory checks pass without paid providers. |
 | Security policy | `make security-policy-check` | Security reporting, secure defaults, human review scope, and operational links are aligned. |
+| Target security review template | `make target-security-review-check` | Required auth, secrets, provider keys, CORS, exposed ports, data handling, release provenance, rollback, accepted-risk, and promotion-impact fields are present for the target environment. |
 | Ignore hygiene | `make ignore-hygiene-check` | Git and Docker contexts exclude secrets, generated files, local volumes, public datasets, reports, and backups. |
 | Operations runbook | `make operations-runbook-check` | Backup, restore, rollback, health-check, audit-export, and promotion-evidence fields are aligned. |
 | Backup/restore drill template | `make backup-restore-drill-check` | Detailed rehearsal evidence fields are present for backup artifacts, restore commands, health checks, audit-export validation, and promotion impact. |
@@ -138,7 +142,7 @@ production promotion:
 | SBOM/provenance | GitHub Actions build attestations requested by the release workflow. |
 | Cosign signature and tag verification | `make release-evidence-check` / `scripts/check_published_release_evidence.sh` run with the workflow summary's backend and web digests, verifying signatures and immutable version tag-to-digest resolution. |
 | Broader calibration or accepted pilot scope | Additional public-slice trend evidence, or an explicit human acceptance of the bounded 200-record/40-case pilot scope. |
-| Human security review | `SECURITY.md` target-environment review of auth, secrets, CORS, exposed ports, backups, provider keys, and rollback ownership. |
+| Human security review | `SECURITY.md` plus `docs/releases/evidence/target-security-review-template.md` target-environment review of auth, secrets, CORS, exposed ports, backups, provider keys, release provenance, accepted risks, and rollback ownership. |
 
 ## Promotion Blockers
 
@@ -150,7 +154,7 @@ These items must be closed before a final production release:
 | SBOM/provenance evidence missing | Link or copy the attestation evidence from the release workflow into the versioned release note. |
 | Cosign signature/tag evidence missing | Run `make release-evidence-check` with the published digests and record successful keyless signature verification plus version tag-to-digest resolution for both images. |
 | Broader public calibration pending | Run `make eval-calibration-gate` and `make eval-calibration-trend-gate` against the versioned calibration evidence, then add trend evidence beyond the current 200-record/40-case public slices or document the pilot scope limit. |
-| Human security review pending | Review auth, secrets, exposed ports, CORS, backup handling, and provider key handling for the target environment. |
+| Human security review pending | Complete `docs/releases/evidence/target-security-review-template.md` for auth, secrets, exposed ports, CORS, backup handling, provider key handling, release provenance, accepted risks, and rollback ownership in the target environment. |
 
 ## Production Pilot Acceptance Checklist
 
@@ -161,6 +165,7 @@ These items must be closed before a final production release:
 - [ ] `make check` passes with no paid providers.
 - [ ] `make dependency-audit` reports no known Python runtime advisories and no high-severity Node advisories.
 - [ ] `make security-policy-check` passes.
+- [ ] `make target-security-review-check` passes.
 - [ ] `make env-security-check` passes or records only the expected missing local `.env` warning.
 - [ ] `make ignore-hygiene-check` passes.
 - [ ] `make operations-runbook-check` passes.
@@ -188,6 +193,7 @@ These items must be closed before a final production release:
 - [ ] Backup and restore commands were rehearsed against a disposable environment.
 - [ ] `/audit/export` validates hash-chain fields for journal and progress events.
 - [ ] Operator has recorded rollback steps and previous image tag.
+- [ ] Target security review is completed and linked in the promotion record.
 - [ ] GHCR digests, SBOM/provenance, and Cosign signature evidence are recorded.
 
 ## Evidence Locations
@@ -202,6 +208,7 @@ These items must be closed before a final production release:
 | Dependency advisory evidence | `scripts/check_dependency_audit.sh`, `make dependency-audit` |
 | Environment security evidence | `scripts/check_env_security.py`, `make env-security-check` |
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |
+| Target security review template | `docs/releases/evidence/target-security-review-template.md`, `scripts/check_target_security_review.py`, `make target-security-review-check` |
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
 | Operations runbook | `docs/operations.md`, `scripts/check_operations_runbook.sh`, `make operations-runbook-check` |
 | Backup/restore drill template | `docs/releases/evidence/backup-restore-drill-template.md`, `scripts/check_backup_restore_drill.py`, `make backup-restore-drill-check` |

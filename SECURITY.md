@@ -47,6 +47,10 @@ Before production promotion, a human operator must record evidence for:
 - Operations: upgrade, backup, restore, health checks, Docker smoke, rollback owner, and
   incident log location.
 
+Use `docs/releases/evidence/target-security-review-template.md` to capture the completed
+target-environment review, then keep that completed copy with the production promotion
+evidence for the release candidate.
+
 ## Machine Guards
 
 Run these before asking a human to approve a production pilot:
@@ -54,6 +58,7 @@ Run these before asking a human to approve a production pilot:
 ```bash
 make local-acceptance
 make security-policy-check
+make target-security-review-check
 make dependency-audit
 make release-check
 make production-preflight

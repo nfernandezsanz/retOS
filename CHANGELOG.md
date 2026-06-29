@@ -71,6 +71,9 @@ tag in GitHub.
 - Standalone `make backup-restore-drill-check` gate and evidence template for
   recording backup artifacts, disposable restore commands, health checks,
   audit-export validation, and promotion impact.
+- Standalone `make target-security-review-check` gate and evidence template for
+  target-environment auth, secrets, provider keys, CORS, exposed ports, release
+  provenance, rollback, accepted risks, and promotion impact.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.

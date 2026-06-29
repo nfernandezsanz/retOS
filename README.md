@@ -45,6 +45,7 @@ make local-acceptance
 make auditor-handoff-check
 make audit-manifest-check
 make audit-bundle-check
+make target-security-review-check
 ```
 
 The offline manifest lands at `evals/reports/audit-manifest.json`, and the human-readable
@@ -130,6 +131,11 @@ checklist that separates locally proven evidence from external release and
 target-environment decisions. These artifacts deliberately do not claim production
 promotion.
 
+For the human target-environment security review, validate the template with
+`make target-security-review-check`, then complete
+`docs/releases/evidence/target-security-review-template.md` and store the completed copy
+with the promotion record.
+
 Remote CI evidence is separate:
 
 ```bash
@@ -178,6 +184,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 | Run deterministic evals | `make eval-smoke` and `make eval-agent-multihop` |
 | Smoke the full stack | `make docker-smoke` |
 | Prepare human review | `make auditor-handoff-check` |
+| Prepare target security review | `make target-security-review-check` |
 
 ## What This Repository Contains
 

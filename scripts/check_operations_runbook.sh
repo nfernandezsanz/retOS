@@ -20,6 +20,9 @@ promotion_template = Path("docs/releases/evidence/production-promotion-template.
 drill_template = Path("docs/releases/evidence/backup-restore-drill-template.md").read_text(
     encoding="utf-8"
 )
+target_security_template = Path(
+    "docs/releases/evidence/target-security-review-template.md"
+).read_text(encoding="utf-8")
 gitignore = Path(".gitignore").read_text(encoding="utf-8")
 dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
 api_smoke = Path("backend/scripts/smoke_api.py").read_text(encoding="utf-8")
@@ -54,6 +57,8 @@ for phrase in (
     "export RETOS_IMAGE_TAG=<previous-tag>",
     "restore the backup captured",
     "backup-restore-drill-template.md",
+    "target-security-review-template.md",
+    "make target-security-review-check",
 ):
     require(phrase in operations, f"docs/operations.md missing operational phrase: {phrase}")
 
@@ -85,6 +90,7 @@ for phrase in (
     "/audit/export` validates hash-chain fields",
     "make audit-export-check EXPORT=retos-audit-export.json",
     "Operator has recorded rollback steps and previous image tag",
+    "Target security review is completed and linked in the promotion record",
 ):
     require(
         phrase in production_readiness,
@@ -115,6 +121,21 @@ for phrase in (
     require(
         phrase in drill_template,
         f"backup/restore drill template missing evidence field: {phrase}",
+    )
+
+for phrase in (
+    "Target Security Review Evidence Template",
+    "CORS origins reviewed",
+    "API exposure reviewed",
+    "Provider API keys stored in secret manager",
+    "Audit hash-chain validation output",
+    "Rollback owner",
+    "Accepted risks",
+    "Promotion impact",
+):
+    require(
+        phrase in target_security_template,
+        f"target security review template missing evidence field: {phrase}",
     )
 
 print("Operations runbook OK: backup, restore, rollback, audit export, and evidence fields are aligned.")

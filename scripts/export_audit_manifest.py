@@ -46,12 +46,14 @@ CRITICAL_FILES = (
     "docs/releases/2026.06.28-alpha.1.md",
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/production-promotion-template.md",
+    "docs/releases/evidence/target-security-review-template.md",
     "scripts/check_ci_status.sh",
     "scripts/check_auditor_evidence_matrix.sh",
     "scripts/check_audit_pack.sh",
     "scripts/check_backup_restore_drill.py",
     "scripts/check_env_security.py",
     "scripts/check_promotion_template.py",
+    "scripts/check_target_security_review.py",
     "scripts/check_eval_calibration_evidence.py",
     "scripts/check_eval_calibration_trend.py",
     "scripts/check_production_preflight.sh",
@@ -82,6 +84,7 @@ LOCAL_GATES = (
     "make audit-manifest-check",
     "make dependency-audit",
     "make security-policy-check",
+    "make target-security-review-check",
     "make env-security-check",
     "make backup-restore-drill-check",
     "make promotion-template-check",
@@ -102,6 +105,7 @@ EXTERNAL_PROMOTION_EVIDENCE = (
     "Cosign verification against published backend and web digests",
     "Accepted calibration scope or broader public-slice trend evidence",
     "Human target-environment security review",
+    "Completed target security review evidence template",
 )
 
 

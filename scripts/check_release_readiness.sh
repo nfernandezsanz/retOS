@@ -17,6 +17,7 @@ required_files=(
   "docs/releases/2026.06.28-alpha.1.md"
   "docs/releases/evidence/backup-restore-drill-template.md"
   "docs/releases/evidence/production-promotion-template.md"
+  "docs/releases/evidence/target-security-review-template.md"
   ".env.example"
   "docker-compose.yml"
   ".gitignore"
@@ -28,6 +29,7 @@ required_files=(
   "scripts/check_env_security.py"
   "scripts/check_backup_restore_drill.py"
   "scripts/check_promotion_template.py"
+  "scripts/check_target_security_review.py"
   "scripts/check_eval_calibration_evidence.py"
   "scripts/check_eval_calibration_trend.py"
   "scripts/check_visual_audit.py"
@@ -53,6 +55,7 @@ scripts/check_versioned_release_notes.sh >/dev/null
 python3 scripts/check_env_security.py >/dev/null
 python3 scripts/check_backup_restore_drill.py >/dev/null
 python3 scripts/check_promotion_template.py >/dev/null
+python3 scripts/check_target_security_review.py >/dev/null
 python3 scripts/check_eval_calibration_evidence.py >/dev/null
 python3 scripts/check_eval_calibration_trend.py >/dev/null
 python3 scripts/check_visual_audit.py >/dev/null
@@ -190,6 +193,11 @@ require(
     "make promotion-template-check" in readme
     and "make promotion-template-check" in audit_pack,
     "README and production readiness pack must expose promotion-template-check",
+)
+require(
+    "make target-security-review-check" in readme
+    and "make target-security-review-check" in audit_pack,
+    "README and production readiness pack must expose target-security-review-check",
 )
 require(
     "make backup-restore-drill-check" in readme

@@ -7,7 +7,7 @@ AUDIT_HANDOFF_REPORT_OUTPUT ?= evals/reports/audit-handoff.md
 AUDIT_BUNDLE_OUTPUT ?= evals/reports/retos-audit-handoff.tar.gz
 AUDIT_MANIFEST_SKIP_CI ?= false
 
-.PHONY: help doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check target-security-review-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -23,6 +23,7 @@ help:
 	@printf "  make typecheck        Run backend type checks\n"
 	@printf "  make dependency-audit Audit Python and Node dependency advisories\n"
 	@printf "  make security-policy-check Validate security policy and human review links\n"
+	@printf "  make target-security-review-check Validate target security review evidence template\n"
 	@printf "  make ignore-hygiene-check Validate Git and Docker ignore rules\n"
 	@printf "  make operations-runbook-check Validate backup, restore, rollback, and audit-export runbooks\n"
 	@printf "  make backup-restore-drill-check Validate backup/restore drill evidence template\n"
@@ -116,6 +117,9 @@ dependency-audit:
 security-policy-check:
 	scripts/check_security_policy.sh
 
+target-security-review-check:
+	$(PYTHON) scripts/check_target_security_review.py $(if $(TEMPLATE),--template "$(abspath $(TEMPLATE))",)
+
 ignore-hygiene-check:
 	scripts/check_ignore_hygiene.sh
 
@@ -131,7 +135,7 @@ promotion-template-check:
 auditor-evidence-matrix-check:
 	scripts/check_auditor_evidence_matrix.sh
 
-auditor-static-check: dependency-audit security-policy-check env-security-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check brand-check visual-audit-check release-workflow-check release-notes-check versioned-release-notes-check eval-calibration-gate eval-calibration-trend-gate release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
+auditor-static-check: dependency-audit security-policy-check target-security-review-check env-security-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check brand-check visual-audit-check release-workflow-check release-notes-check versioned-release-notes-check eval-calibration-gate eval-calibration-trend-gate release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
 
 auditor-handoff-check: auditor-static-check
 	$(MAKE) audit-manifest OUTPUT="$(AUDIT_MANIFEST_OUTPUT)" AUDIT_MANIFEST_SKIP_CI=true

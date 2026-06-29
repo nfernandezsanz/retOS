@@ -20,6 +20,7 @@ paths = {
     "tracker": Path("planning/04-process-tracker.md"),
     "release_note": Path("docs/releases/2026.06.28-alpha.1.md"),
     "backup_restore_drill_template": Path("docs/releases/evidence/backup-restore-drill-template.md"),
+    "target_security_review_template": Path("docs/releases/evidence/target-security-review-template.md"),
     "promotion_template": Path("docs/releases/evidence/production-promotion-template.md"),
     "ci": Path(".github/workflows/ci.yml"),
     "ci_status_script": Path("scripts/check_ci_status.sh"),
@@ -27,6 +28,7 @@ paths = {
     "security_policy_script": Path("scripts/check_security_policy.sh"),
     "ignore_hygiene_script": Path("scripts/check_ignore_hygiene.sh"),
     "backup_restore_drill_script": Path("scripts/check_backup_restore_drill.py"),
+    "target_security_review_script": Path("scripts/check_target_security_review.py"),
     "promotion_template_script": Path("scripts/check_promotion_template.py"),
     "security_policy": Path("SECURITY.md"),
     "audit_manifest_script": Path("scripts/export_audit_manifest.py"),
@@ -69,6 +71,7 @@ for phrase in (
     "make docker-smoke",
     "make dependency-audit",
     "make security-policy-check",
+    "make target-security-review-check",
     "make promotion-template-check",
     "make ignore-hygiene-check",
     "make operations-runbook-check",
@@ -89,6 +92,7 @@ for phrase in (
     "scripts/check_branding_assets.sh",
     "scripts/check_dependency_audit.sh",
     "scripts/check_security_policy.sh",
+    "scripts/check_target_security_review.py",
     "scripts/check_ignore_hygiene.sh",
     "scripts/check_backup_restore_drill.py",
     "scripts/check_promotion_template.py",
@@ -112,6 +116,7 @@ for phrase in (
     "SECURITY.md",
     ".dockerignore",
     "docs/releases/evidence/backup-restore-drill-template.md",
+    "docs/releases/evidence/target-security-review-template.md",
     "docs/releases/evidence/production-promotion-template.md",
     "JSON handoff",
     "coverage evidence derived from `backend/coverage.json`",
@@ -215,6 +220,12 @@ require(
     "production-promotion-template.md" in operations and "production-promotion-template.md" in release_process,
     "operations and release process must link the promotion evidence template",
 )
+require(
+    "target-security-review-template.md" in readme
+    and "target-security-review-template.md" in release_process
+    and "target-security-review-template.md" in paths["security_policy"].read_text(encoding="utf-8"),
+    "README, release process, and SECURITY.md must link the target security review template",
+)
 for heading in (
     "## Machine Evidence",
     "## Release Provenance",
@@ -235,6 +246,7 @@ require(
 )
 for gate in (
     "make env-security-check",
+    "make target-security-review-check",
     "make visual-audit-check",
     "make promotion-template-check",
 ):

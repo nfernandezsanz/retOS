@@ -90,8 +90,11 @@ promoting a release candidate. Human production promotion review starts from
 evidence, blockers, and acceptance checklist. Security reporting, secure defaults, and
 target-environment review requirements live in [SECURITY.md](../SECURITY.md).
 Use [docs/releases/evidence/production-promotion-template.md](releases/evidence/production-promotion-template.md)
-to record machine evidence, release provenance, backup/restore rehearsal, security review,
+to record machine evidence, release provenance, backup/restore rehearsal, final decision,
 and rollback ownership for the target environment. Use
+[docs/releases/evidence/target-security-review-template.md](releases/evidence/target-security-review-template.md)
+for the detailed target security review; validate the template with
+`make target-security-review-check`. Use
 [docs/releases/evidence/backup-restore-drill-template.md](releases/evidence/backup-restore-drill-template.md)
 for the detailed backup/restore rehearsal record; validate the template with
 `make backup-restore-drill-check`.
@@ -279,6 +282,7 @@ confirm the local tooling is available before handling a real export.
 ## Operational Security Checklist
 
 - Run `make security-policy-check` before promotion review.
+- Run `make target-security-review-check` before completing target-environment review.
 - Replace every development password from `.env.example` before exposing the stack.
 - Set a unique `RETOS_JWT_SECRET` with at least 32 characters.
 - Keep `RETOS_ALLOW_PAID_LLM=false` unless paid-provider use is intentional and budgeted.
