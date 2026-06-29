@@ -531,6 +531,15 @@ class SourceRepository:
         await self._session.flush()
         return source_from_record(record)
 
+    async def delete(self, source_id: str) -> Source | None:
+        record = await self._session.get(SourceRecord, source_id)
+        if record is None:
+            return None
+        source = source_from_record(record)
+        await self._session.delete(record)
+        await self._session.flush()
+        return source
+
 
 class DocumentRepository:
     def __init__(self, session: AsyncSession) -> None:

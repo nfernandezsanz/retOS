@@ -15,6 +15,7 @@ from retos.api.routes.domains import (
     SourceUpdate,
     create_domain,
     create_source,
+    delete_source,
     list_domains,
     update_domain,
     update_source,
@@ -176,6 +177,13 @@ class FakeSources:
             updated_at=NOW,
         )
         return self.source
+
+    async def delete(self, source_id: str) -> Source | None:
+        if self.source is None or self.source.id != source_id:
+            return None
+        source = self.source
+        self.source = None
+        return source
 
 
 class FakeJournalEvents:
@@ -622,6 +630,105 @@ def test_update_source_rejects_duplicate_uri(
     assert response.json()["detail"] == "Source URI already exists for domain"
 
 
+def test_delete_source_records_audit_event_and_keeps_documents(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    domain_response = domain_client.post(
+        "/domains",
+        json={"slug": "source-delete", "name": "Source Delete"},
+        headers=admin_headers,
+    )
+    domain_id = domain_response.json()["id"]
+    source_response = domain_client.post(
+        f"/domains/{domain_id}/sources",
+        json={"kind": "upload", "name": "Delete Me", "uri": "upload://delete-me"},
+        headers=admin_headers,
+    )
+    source_id = source_response.json()["id"]
+    document_response = domain_client.post(
+        f"/domains/{domain_id}/documents",
+        json={
+            "source_id": source_id,
+            "external_id": "delete-source-doc",
+            "title": "Delete Source Document",
+            "content_hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "source_uri": "upload://delete-me/document.txt",
+            "size_bytes": 32,
+            "metadata": {},
+        },
+        headers=admin_headers,
+    )
+
+    deleted = domain_client.delete(
+        f"/domains/{domain_id}/sources/{source_id}",
+        headers=admin_headers,
+    )
+    listed_sources = domain_client.get(f"/domains/{domain_id}/sources", headers=admin_headers)
+    listed_documents = domain_client.get(f"/domains/{domain_id}/documents", headers=admin_headers)
+    audit_events = domain_client.get("/audit/journal-events", headers=admin_headers)
+
+    assert document_response.status_code == 201
+    assert deleted.status_code == 200
+    assert deleted.json()["id"] == source_id
+    assert listed_sources.status_code == 200
+    assert listed_sources.json() == []
+    assert listed_documents.status_code == 200
+    assert listed_documents.json()[0]["title"] == "Delete Source Document"
+    assert listed_documents.json()[0]["source_id"] is None
+    event = next(event for event in audit_events.json() if event["event_type"] == "source.deleted")
+    assert event["entity_type"] == "source"
+    assert event["entity_id"] == source_id
+    assert event["payload"] == {
+        "domain_id": domain_id,
+        "source_id": source_id,
+        "kind": "upload",
+        "name": "Delete Me",
+        "uri": "upload://delete-me",
+    }
+
+
+def test_delete_source_requires_admin(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    domain_response = domain_client.post(
+        "/domains",
+        json={"slug": "source-delete-viewer", "name": "Source Delete Viewer"},
+        headers=admin_headers,
+    )
+    domain_id = domain_response.json()["id"]
+    source_response = domain_client.post(
+        f"/domains/{domain_id}/sources",
+        json={"kind": "upload", "name": "Viewer Delete", "uri": "upload://viewer-delete"},
+        headers=admin_headers,
+    )
+    domain_client.post(
+        "/admin/users",
+        headers=admin_headers,
+        json={
+            "email": "source-delete-viewer@retos.dev",
+            "password": "source-delete-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    login = domain_client.post(
+        "/auth/login",
+        json={
+            "email": "source-delete-viewer@retos.dev",
+            "password": "source-delete-viewer-password",
+        },
+    )
+    viewer_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = domain_client.delete(
+        f"/domains/{domain_id}/sources/{source_response.json()['id']}",
+        headers=viewer_headers,
+    )
+
+    assert response.status_code == 403
+
+
 @pytest.mark.asyncio
 async def test_update_source_rejects_missing_source() -> None:
     domain = domain_fixture()
@@ -720,6 +827,71 @@ async def test_update_source_rolls_integrity_race_into_conflict() -> None:
 
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail == "Source URI already exists for domain"
+
+
+@pytest.mark.asyncio
+async def test_delete_source_rejects_missing_domain() -> None:
+    uow = FakeDomainUnitOfWork()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await delete_source(
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id="missing-domain",
+            source_id="missing-source",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Domain not found"
+
+
+@pytest.mark.asyncio
+async def test_delete_source_rejects_missing_source() -> None:
+    domain = domain_fixture()
+    uow = FakeDomainUnitOfWork(domain=domain)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await delete_source(
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id=domain.id,
+            source_id="missing-source",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Source not found"
+
+
+@pytest.mark.asyncio
+async def test_delete_source_unit_records_snapshot() -> None:
+    domain = domain_fixture()
+    source = source_fixture(domain.id)
+    uow = FakeDomainUnitOfWork(domain=domain, source=source)
+
+    deleted = await delete_source(
+        actor="admin@retos.dev",
+        uow=uow,  # type: ignore[arg-type]
+        domain_id=domain.id,
+        source_id=source.id,
+    )
+
+    assert deleted.id == source.id
+    assert uow.sources.source is None
+    assert uow.journal_events.events == [
+        {
+            "actor": "admin@retos.dev",
+            "event_type": "source.deleted",
+            "entity_type": "source",
+            "entity_id": source.id,
+            "payload": {
+                "domain_id": domain.id,
+                "source_id": source.id,
+                "kind": "upload",
+                "name": "Source One",
+                "uri": "upload://source-one",
+            },
+        }
+    ]
 
 
 def test_list_sources_rejects_missing_domain(

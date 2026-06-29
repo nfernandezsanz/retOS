@@ -672,7 +672,16 @@ h2 {
 
 .section-content > .panel:not([hidden]) {
   max-height: calc(100vh - 196px);
+  overflow: hidden;
+}
+
+.section-content > .panel > [id]:not([hidden]) {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  max-height: calc(100vh - 286px);
   overflow: auto;
+  padding-right: 4px;
   scrollbar-gutter: stable;
 }
 
@@ -1382,7 +1391,7 @@ button:focus-visible {
 .source-list {
   display: grid;
   gap: 10px;
-  max-height: min(260px, 32vh);
+  max-height: min(230px, 28vh);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;

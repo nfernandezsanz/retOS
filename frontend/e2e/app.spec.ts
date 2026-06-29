@@ -1220,6 +1220,46 @@ async function mockProviderApi(page: Page) {
       });
       return;
     }
+    if (route.request().method() === "DELETE" && sourceId) {
+      const index = sources.findIndex(
+        (source) => source.domain_id === domainId && source.id === sourceId,
+      );
+      if (index === -1) {
+        await route.fulfill({
+          contentType: "application/json",
+          status: 404,
+          json: { detail: "Source not found" },
+        });
+        return;
+      }
+      const [deleted] = sources.splice(index, 1);
+      for (const document of documents) {
+        if (document.source_id === sourceId) {
+          document.source_id = null;
+        }
+      }
+      journalEvents.unshift({
+        id: `journal-source-deleted-${sourceId}`,
+        trace_id: null,
+        occurred_at: "2026-06-27T00:02:30Z",
+        actor: "admin@retos.dev",
+        event_type: "source.deleted",
+        entity_type: "source",
+        entity_id: sourceId,
+        payload: {
+          domain_id: domainId,
+          source_id: deleted.id,
+          kind: deleted.kind,
+          name: deleted.name,
+          uri: deleted.uri,
+        },
+      });
+      await route.fulfill({
+        contentType: "application/json",
+        json: deleted,
+      });
+      return;
+    }
     if (route.request().method() === "POST") {
       const created = {
         id: "source-456",
@@ -2055,6 +2095,12 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Domain sources").getByText("file:///corpus/policy-reviewed")).toBeVisible();
 
   await page.getByLabel("Domain sources").getByRole("button", { name: "Scan" }).first().click();
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain('Remove source "Policy Corpus Reviewed"');
+    await dialog.accept();
+  });
+  await page.getByRole("button", { name: "Remove Policy Corpus Reviewed" }).click();
+  await expect(page.getByLabel("Domain sources").getByText("Policy Corpus Reviewed")).toBeHidden();
 
   await page.getByRole("button", { name: "Rebuild index" }).click();
 

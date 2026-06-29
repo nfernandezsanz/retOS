@@ -234,6 +234,16 @@ curl --request PATCH http://localhost:8000/domains/<domain_id>/sources/<source_i
   --data '{"kind":"mount","name":"Reviewed corpus","uri":"file:///corpus/reviewed"}'
 ```
 
+Remove a source from a domain without deleting already-ingested documents. Existing
+documents and jobs keep their audit history and are detached from the removed source.
+The endpoint writes a `source.deleted` journal event with a snapshot of the removed
+source kind, name, and URI:
+
+```bash
+curl --request DELETE http://localhost:8000/domains/<domain_id>/sources/<source_id> \
+  --header "Authorization: Bearer <token>"
+```
+
 ## Documents
 
 Create a document with its immutable initial version:
@@ -1194,6 +1204,7 @@ Current console calls:
 - `GET /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/sources`
 - `PATCH /domains/{domain_id}/sources/{source_id}`
+- `DELETE /domains/{domain_id}/sources/{source_id}`
 - `POST /domains/{domain_id}/ingestions/text`
 - `POST /domains/{domain_id}/ingestions/upload`
 - `POST /sources/{source_id}/scan`
@@ -1233,8 +1244,8 @@ audited local accounts:
   account metadata, roles, and active/inactive state.
 
 The workspace can create domains, select an active domain, render its document and source
-inventory, inspect latest-version artifact and segment evidence, create and edit sources,
-queue text and file upload ingestions, queue source
+inventory, inspect latest-version artifact and segment evidence, create, edit, and remove
+sources, queue text and file upload ingestions, queue source
 scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/HotpotQA
 agent/Natural Questions/OCR benchmark evals, choose an eval domain scope for
 dataset-backed runs, filtered history/trends, and viewer-safe domain reruns, read recent

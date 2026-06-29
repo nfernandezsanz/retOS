@@ -24,6 +24,7 @@ import {
   Send,
   ServerCog,
   ShieldAlert,
+  Trash2,
   Power,
   UserPlus,
   Users,
@@ -1272,6 +1273,15 @@ async function updateSource(
   });
 }
 
+async function deleteSource(token: string, domainId: string, sourceId: string): Promise<SourceRead> {
+  return requestJson<SourceRead>(`/domains/${domainId}/sources/${sourceId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 async function ingestText(
   token: string,
   domainId: string,
@@ -1827,6 +1837,7 @@ function App() {
   const [sourceEditName, setSourceEditName] = useState("");
   const [sourceEditUri, setSourceEditUri] = useState("");
   const [isUpdatingSource, setIsUpdatingSource] = useState(false);
+  const [deletingSourceId, setDeletingSourceId] = useState<string | null>(null);
   const [isQueueingScan, setIsQueueingScan] = useState(false);
   const [isQueueingIndex, setIsQueueingIndex] = useState(false);
   const [queuedJobs, setQueuedJobs] = useState<JobRead[]>([]);
@@ -2687,6 +2698,37 @@ function App() {
       setWorkspaceError(sessionErrorMessage(error, "Source update failed"));
     } finally {
       setIsUpdatingSource(false);
+    }
+  }
+
+  async function handleDeleteSource(source: SourceRead) {
+    setWorkspaceError(null);
+    if (!selectedDomainId) {
+      setWorkspaceError("Select a domain before deleting a source");
+      return;
+    }
+    if (!window.confirm(`Remove source "${source.name}" from this domain? Documents stay available.`)) {
+      return;
+    }
+    setDeletingSourceId(source.id);
+    try {
+      const accessToken = await getAdminToken();
+      await deleteSource(accessToken, selectedDomainId, source.id);
+      setSources((current) => current.filter((item) => item.id !== source.id));
+      if (editingSourceId === source.id) {
+        handleCancelSourceEdit();
+      }
+      if (textSourceId === source.id) {
+        setTextSourceId("");
+      }
+      if (uploadSourceId === source.id) {
+        setUploadSourceId("");
+      }
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setWorkspaceError(sessionErrorMessage(error, "Source delete failed"));
+    } finally {
+      setDeletingSourceId(null);
     }
   }
 
@@ -4114,6 +4156,7 @@ function App() {
               <div className="source-list">
                 {sources.map((source) => {
                   const isEditing = editingSourceId === source.id;
+                  const isDeleting = deletingSourceId === source.id;
                   return (
                     <article className={`source-row${isEditing ? " editing" : ""}`} key={source.id}>
                       {isEditing ? (
@@ -4188,14 +4231,30 @@ function App() {
                               data-tooltip="Edit source kind, name, and URI"
                               title="Edit source"
                               type="button"
+                              disabled={isDeleting}
                               aria-label={`Edit ${source.name}`}
                               onClick={() => handleStartSourceEdit(source)}
                             >
                               <Pencil aria-hidden="true" />
                             </button>
                             <button
+                              className="icon-button danger"
+                              data-tooltip="Remove this source while keeping existing documents"
+                              title="Remove source"
+                              type="button"
+                              disabled={isDeleting}
+                              aria-label={`Remove ${source.name}`}
+                              onClick={() => void handleDeleteSource(source)}
+                            >
+                              {isDeleting ? (
+                                <RefreshCw aria-hidden="true" />
+                              ) : (
+                                <Trash2 aria-hidden="true" />
+                              )}
+                            </button>
+                            <button
                               className="ghost-action"
-                              disabled={source.kind !== "mount" || isQueueingScan}
+                              disabled={source.kind !== "mount" || isQueueingScan || isDeleting}
                               data-tooltip={
                                 source.kind === "mount"
                                   ? "Queue a scan for this mounted source"

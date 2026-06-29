@@ -297,3 +297,36 @@ async def update_source(
                 detail="Source URI already exists for domain",
             ) from exc
     return SourceRead.from_source(source)
+
+
+@router.delete("/{domain_id}/sources/{source_id}", response_model=SourceRead)
+async def delete_source(
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    domain_id: Annotated[str, Path(min_length=1)],
+    source_id: Annotated[str, Path(min_length=1)],
+) -> SourceRead:
+    async with uow:
+        domain = await uow.domains.get(domain_id)
+        if domain is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        existing = await uow.sources.get(source_id)
+        if existing is None or existing.domain_id != domain_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+        source = await uow.sources.delete(source_id)
+        assert source is not None
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="source.deleted",
+            entity_type="source",
+            entity_id=source.id,
+            payload={
+                "domain_id": domain_id,
+                "source_id": source.id,
+                "kind": existing.kind,
+                "name": existing.name,
+                "uri": existing.uri,
+            },
+        )
+        await uow.commit()
+    return SourceRead.from_source(source)

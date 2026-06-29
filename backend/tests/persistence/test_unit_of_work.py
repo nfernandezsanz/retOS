@@ -226,6 +226,73 @@ async def test_source_repository_update_details_returns_none_for_missing_source(
         await dispose_engine(engine)
 
 
+@pytest.mark.asyncio
+async def test_source_repository_deletes_source_and_detaches_documents(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'source-delete.db'}")
+    await create_schema(engine)
+    session_factory = create_session_factory(engine)
+
+    try:
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            domain = await uow.domains.add(
+                slug="source-delete",
+                name="Source Delete",
+                description=None,
+            )
+            source = await uow.sources.add(
+                domain_id=domain.id,
+                kind="upload",
+                name="Upload Source",
+                uri="upload://source",
+            )
+            document, _ = await uow.documents.add_with_initial_version(
+                domain_id=domain.id,
+                source_id=source.id,
+                external_id="source-delete-doc",
+                title="Source Delete Document",
+                content_hash="source-delete-hash",
+                metadata={},
+                source_uri="upload://source/doc.txt",
+                size_bytes=12,
+            )
+            await uow.commit()
+
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            deleted = await uow.sources.delete(source.id)
+            await uow.commit()
+
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            missing_source = await uow.sources.get(source.id)
+            fetched_document = await uow.documents.get(document.id)
+
+        assert deleted is not None
+        assert deleted.id == source.id
+        assert missing_source is None
+        assert fetched_document is not None
+        assert fetched_document.source_id is None
+    finally:
+        await dispose_engine(engine)
+
+
+@pytest.mark.asyncio
+async def test_source_repository_delete_returns_none_for_missing_source(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'missing-source-delete.db'}")
+    await create_schema(engine)
+    session_factory = create_session_factory(engine)
+
+    try:
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            result = await uow.sources.delete("missing-source")
+
+        assert result is None
+    finally:
+        await dispose_engine(engine)
+
+
 class FakeAdminRepository:
     def __init__(self, *, existing: object | None, fail_add: bool = False) -> None:
         self.existing = existing
