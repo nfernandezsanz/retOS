@@ -81,6 +81,13 @@ def replace_text(path: Path, old: str, new: str) -> None:
     path.write_text(content.replace(old, new), encoding="utf-8")
 
 
+def replace_regex(path: Path, pattern: str, replacement: str, *, count: int = 1) -> None:
+    content = path.read_text(encoding="utf-8")
+    updated, replacements = re.subn(pattern, replacement, content, count=count)
+    assert replacements >= 1
+    path.write_text(updated, encoding="utf-8")
+
+
 def test_versioned_release_notes_check_passes_for_current_contract(
     tmp_path: Path,
 ) -> None:
@@ -124,10 +131,11 @@ def test_versioned_release_notes_check_fails_when_pytest_count_is_stale(
     tmp_path: Path,
 ) -> None:
     repo = copy_minimal_repo(tmp_path)
-    replace_text(
+    replace_regex(
         repo / "docs" / "releases" / "2026.06.28-alpha.1.md",
-        "make check` passed with 695 tests",
+        r"make check` passed with [0-9]+ tests",
         "make check` passed with 694 tests",
+        count=0,
     )
 
     result = run_checker(repo)
