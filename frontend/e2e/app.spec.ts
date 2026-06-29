@@ -2177,6 +2177,20 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Document library context").getByText("Smoke Research")).toBeVisible();
   await expect(page.getByLabel("Document library context").getByText("Active only")).toBeVisible();
   await expect(
+    page.getByLabel("Create domain").locator("summary").filter({ hasText: "Create" }),
+  ).toHaveAttribute("data-tooltip", /creation form/);
+  await expect(
+    page.getByLabel("Current workspace editor").locator("summary").filter({ hasText: "Active" }),
+  ).toHaveAttribute("data-tooltip", /selected domain/);
+  expect(await page.getByLabel("Create domain").evaluate((node) => (node as HTMLDetailsElement).open)).toBe(
+    false,
+  );
+  expect(
+    await page
+      .getByLabel("Current workspace editor")
+      .evaluate((node) => (node as HTMLDetailsElement).open),
+  ).toBe(true);
+  await expect(
     page.getByLabel("Document library context").locator("[data-tooltip]").filter({
       hasText: "Visible documents",
     }),
@@ -2322,6 +2336,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Live progress events").getByText("Agent query started")).toBeVisible();
 
   await page.getByRole("link", { name: "Documents" }).first().click();
+  await page.getByLabel("Create domain").locator("summary").filter({ hasText: "Create" }).click();
   await page.getByLabel("Slug").fill("policy-research");
   await page.getByPlaceholder("Legal research").fill("Policy Research");
   await page.getByRole("textbox", { name: "Description", exact: true }).fill("Created from the console");

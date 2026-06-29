@@ -3872,16 +3872,11 @@ function App() {
                   <strong>{showArchivedDocuments ? "Including archived" : "Active only"}</strong>
                 </div>
               </div>
-              <section className="domain-block" aria-label="Create domain">
-                <div className="section-heading compact">
-                  <h3>Create</h3>
-                  <span
-                    className="badge muted"
-                    data-tooltip="Domains isolate documents, sources, queries, and grants"
-                  >
-                    Boundary
-                  </span>
-                </div>
+              <details className="domain-block collapsible-block" aria-label="Create domain">
+                <summary data-tooltip="Open the domain creation form only when a new boundary is needed">
+                  <span>Create</span>
+                  <strong>New domain boundary</strong>
+                </summary>
                 <form className="domain-form" onSubmit={handleCreateDomain}>
                   <label data-tooltip="Stable lowercase identifier used by APIs and audit records">
                     <span>Slug</span>
@@ -3920,17 +3915,12 @@ function App() {
                     {isCreatingDomain ? "Creating domain" : "Create domain"}
                   </button>
                 </form>
-              </section>
-              <section className="domain-block" aria-label="Current workspace editor">
-                <div className="section-heading compact">
-                  <h3>Active</h3>
-                  <span
-                    className="badge muted"
-                    data-tooltip="Name and description updates produce domain.updated journal events"
-                  >
-                    Audited edit
-                  </span>
-                </div>
+              </details>
+              <details className="domain-block collapsible-block" aria-label="Current workspace editor" open>
+                <summary data-tooltip="Review and edit the selected domain without leaving the library">
+                  <span>Active</span>
+                  <strong>{selectedDomain ? selectedDomain.name : "Workspace domain"}</strong>
+                </summary>
                 <div className="domain-toolbar">
                   <label data-tooltip="Switch the workspace domain without changing stored data">
                     <span>Active domain</span>
@@ -4043,7 +4033,7 @@ function App() {
                     </button>
                   )}
                 </div>
-              </section>
+              </details>
             </div>
             {workspaceError ? (
               <p className="inline-error" role="alert">

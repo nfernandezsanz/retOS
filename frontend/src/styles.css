@@ -1190,11 +1190,58 @@ button:focus-visible {
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #f8fafc;
-  padding: 10px;
 }
 
-.domain-block .section-heading {
-  min-height: 30px;
+.collapsible-block {
+  overflow: clip;
+}
+
+.collapsible-block summary {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.collapsible-block summary span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.collapsible-block summary strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.collapsible-block summary:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.collapsible-block[open] summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.collapsible-block > form,
+.collapsible-block > div,
+.collapsible-block > p {
+  margin: 10px;
+}
+
+.collapsible-block > form + div,
+.collapsible-block > p + form,
+.collapsible-block > form + .domain-lifecycle-actions {
+  margin-top: 0;
 }
 
 .domain-toolbar {
