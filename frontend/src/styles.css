@@ -2212,7 +2212,8 @@ button:focus-visible {
 
 .admin-user-form input,
 .admin-user-form select,
-.admin-user-actions input {
+.admin-user-actions input,
+.admin-user-actions select {
   min-height: 44px;
   width: 100%;
 }
@@ -2256,9 +2257,10 @@ button:focus-visible {
 
 .admin-user-actions {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 10px;
   align-items: center;
+  min-width: 0;
 }
 
 .admin-user-actions form {
@@ -2493,7 +2495,9 @@ button:focus-visible {
   }
 
   .live-toolbar .secondary-action,
-  .live-toolbar .ghost-action {
+  .live-toolbar .ghost-action,
+  .admin-user-actions .ghost-action {
+    min-width: 0;
     width: 100%;
   }
 

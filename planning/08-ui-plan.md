@@ -75,8 +75,8 @@ keeps local browser sessions short, scan-friendly, and easy to validate with Pla
   call so the bearer token stays in headers and the exported JSON can be retained for
   review.
 - The admin panel reads `/admin/users`, creates `admin` or `viewer` accounts, renders
-  account roles, updates active state, submits password resets, and manages per-domain
-  viewer grants without rendering hashes or secrets.
+  account roles, updates persisted roles, updates active state, submits password resets,
+  and manages per-domain viewer grants without rendering hashes or secrets.
 - The eval panel posts to `/evals/smoke`, `/evals/agent-multihop`, `/evals/squad`,
   `/evals/hotpotqa`, `/evals/hotpotqa-agent`, `/evals/natural-questions`, and
   `/evals/ocr-benchmark`, reads `/evals/runs?limit=6`,

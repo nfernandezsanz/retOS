@@ -1080,9 +1080,9 @@ audited local accounts:
 - `paid=true` means the UI must show a cost warning before future query execution.
 - `enabled=false` plus `reason` explains whether configuration or cost opt-in is missing.
 - API keys are never returned to the browser.
-- Admin passwords are write-only; the browser can create accounts with explicit roles
-  and submit resets, but only receives account metadata, roles, and active/inactive
-  state.
+- Admin passwords are write-only; the browser can create accounts with explicit roles,
+  update persisted roles, toggle active state, and submit resets, but only receives
+  account metadata, roles, and active/inactive state.
 
 The workspace can create domains, select an active domain, render its document and source
 inventory, inspect latest-version artifact and segment evidence, create mounted sources,

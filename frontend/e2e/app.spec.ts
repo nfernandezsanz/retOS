@@ -628,6 +628,22 @@ async function mockProviderApi(page: Page) {
       json: target,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/admin\/users\/[^/]+\/roles/, async (route) => {
+    const adminUserId = new URL(route.request().url()).pathname.split("/")[3];
+    const payload = route.request().postDataJSON() as { roles: string[] };
+    const target = adminUsers.find((user) => user.id === adminUserId);
+    if (!target) {
+      await route.fulfill({ contentType: "application/json", status: 404, json: { detail: "missing" } });
+      return;
+    }
+    target.roles = payload.roles;
+    target.updated_at = "2026-06-27T00:03:30Z";
+    recordAdminAudit(target.id, "admin_user.roles_updated", target.email);
+    await route.fulfill({
+      contentType: "application/json",
+      json: target,
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/admin\/users\/[^/]+\/password/, async (route) => {
     const adminUserId = new URL(route.request().url()).pathname.split("/")[3];
     const target = adminUsers.find((user) => user.id === adminUserId);
@@ -1663,6 +1679,10 @@ test("loads the operational console", async ({ page }) => {
   await expect(uiAdminRow.getByText("ui-admin@retos.dev", { exact: true })).toBeVisible();
   await expect(uiAdminRow.getByText("viewer", { exact: true })).toBeVisible();
   await expect(uiAdminRow.getByText("No domain grants")).toBeVisible();
+  await uiAdminRow.getByLabel("Role for ui-admin@retos.dev").selectOption("admin");
+  await uiAdminRow.getByRole("button", { name: "Update role" }).click();
+  await expect(uiAdminRow.getByText("admin", { exact: true })).toBeVisible();
+  await expect(page.getByText("Updated role for ui-admin@retos.dev")).toBeVisible();
   await uiAdminRow.getByLabel("Grant domain to ui-admin@retos.dev").selectOption("domain-123");
   await uiAdminRow.getByRole("button", { name: "Grant" }).click();
   await expect(uiAdminRow.locator(".grant-chip").getByText("smoke-research")).toBeVisible();

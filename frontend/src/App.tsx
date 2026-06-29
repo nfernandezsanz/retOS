@@ -773,6 +773,20 @@ async function updateAdminUserStatus(
   });
 }
 
+async function updateAdminUserRoles(
+  token: string,
+  adminUserId: string,
+  roles: string[],
+): Promise<AdminUserRead> {
+  return requestJson<AdminUserRead>(`/admin/users/${adminUserId}/roles`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ roles }),
+  });
+}
+
 async function resetAdminUserPassword(
   token: string,
   adminUserId: string,
@@ -1439,6 +1453,7 @@ function App() {
   const [adminUserEmail, setAdminUserEmail] = useState("");
   const [adminUserPassword, setAdminUserPassword] = useState("");
   const [adminUserRole, setAdminUserRole] = useState("admin");
+  const [adminRoleEdits, setAdminRoleEdits] = useState<Record<string, string>>({});
   const [adminPasswordResets, setAdminPasswordResets] = useState<Record<string, string>>({});
   const [adminDomainGrants, setAdminDomainGrants] = useState<
     Record<string, AdminUserDomainGrantRead[]>
@@ -1833,6 +1848,9 @@ function App() {
       const adminToken = accessToken ?? (await getAdminToken());
       const users = await loadAdminUsers(adminToken);
       setAdminUsers(users);
+      setAdminRoleEdits(
+        Object.fromEntries(users.map((user) => [user.id, user.roles.includes("admin") ? "admin" : "viewer"])),
+      );
       const grantsByUser = await Promise.all(
         users.map(async (user) => [user.id, await loadAdminUserDomainGrants(adminToken, user.id)] as const),
       );
@@ -1891,6 +1909,10 @@ function App() {
         roles: [adminUserRole],
       });
       setAdminUsers((current) => [...current.filter((user) => user.id !== created.id), created]);
+      setAdminRoleEdits((current) => ({
+        ...current,
+        [created.id]: created.roles.includes("admin") ? "admin" : "viewer",
+      }));
       setAdminUserEmail("");
       setAdminUserPassword("");
       setAdminUserRole("admin");
@@ -1917,6 +1939,26 @@ function App() {
       await refreshAudit(accessToken);
     } catch (error) {
       setAdminUserError(error instanceof Error ? error.message : "Admin status update failed");
+    } finally {
+      setSavingAdminUserId(null);
+    }
+  }
+
+  async function handleUpdateAdminUserRole(user: AdminUserRead) {
+    setSavingAdminUserId(user.id);
+    setAdminUserError(null);
+    setAdminUserMessage(null);
+    try {
+      const role = adminRoleEdits[user.id] ?? (user.roles.includes("admin") ? "admin" : "viewer");
+      const accessToken = await getAdminToken();
+      const updated = await updateAdminUserRoles(accessToken, user.id, [role]);
+      setAdminUsers((current) =>
+        current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
+      );
+      setAdminRoleEdits((current) => ({ ...current, [updated.id]: role }));
+      setAdminUserMessage(`Updated role for ${updated.email}`);
+    } catch (error) {
+      setAdminUserError(error instanceof Error ? error.message : "Admin role update failed");
     } finally {
       setSavingAdminUserId(null);
     }
@@ -2754,6 +2796,7 @@ function App() {
     setAdminUserEmail("");
     setAdminUserPassword("");
     setAdminUserRole("admin");
+    setAdminRoleEdits({});
     setAdminPasswordResets({});
     setAdminDomainGrants({});
     setAdminGrantDomainIds({});
@@ -4554,6 +4597,38 @@ function App() {
                       </form>
                     </div>
                     <div className="admin-user-actions">
+                      <form
+                        className="admin-role-form"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void handleUpdateAdminUserRole(user);
+                        }}
+                      >
+                        <label>
+                          <span>Role</span>
+                          <select
+                            aria-label={`Role for ${user.email}`}
+                            value={adminRoleEdits[user.id] ?? (user.roles.includes("admin") ? "admin" : "viewer")}
+                            onChange={(event) =>
+                              setAdminRoleEdits((current) => ({
+                                ...current,
+                                [user.id]: event.target.value,
+                              }))
+                            }
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="viewer">Viewer</option>
+                          </select>
+                        </label>
+                        <button
+                          className="ghost-action"
+                          disabled={savingAdminUserId === user.id}
+                          type="submit"
+                        >
+                          <Check aria-hidden="true" />
+                          Update role
+                        </button>
+                      </form>
                       <button
                         className="ghost-action"
                         disabled={savingAdminUserId === user.id || user.email === email.trim().toLowerCase()}
