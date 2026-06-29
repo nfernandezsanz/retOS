@@ -615,8 +615,9 @@ h2 {
 }
 
 .section-content > .panel:not([hidden]) {
-  max-height: calc(100vh - 236px);
+  max-height: calc(100vh - 248px);
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .panel.wide {
@@ -759,10 +760,11 @@ h2 {
 .event-ledger {
   display: grid;
   gap: 10px;
-  max-height: min(520px, 46vh);
+  max-height: min(380px, 38vh);
   margin-top: 16px;
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .live-progress-summary {
@@ -860,7 +862,7 @@ h2 {
 .eval-dataset-form select,
 .provider-login input,
 .runtime-plan-form select {
-  min-height: 112px;
+  min-height: 92px;
   width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -895,11 +897,11 @@ h2 {
 }
 
 .query-box textarea {
-  min-height: 96px;
+  min-height: 82px;
 }
 
 .text-ingestion-form textarea {
-  min-height: 124px;
+  min-height: 96px;
 }
 
 .query-box textarea:focus-visible,
@@ -981,10 +983,11 @@ button:focus-visible {
 .document-list {
   display: grid;
   gap: 10px;
-  max-height: min(440px, 42vh);
+  max-height: min(360px, 34vh);
   margin-top: 14px;
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .document-row {
@@ -1007,8 +1010,12 @@ button:focus-visible {
   display: grid;
   gap: 10px;
   grid-column: 1 / -1;
+  max-height: min(280px, 30vh);
+  overflow: auto;
   border-top: 1px solid #dbe3ef;
+  padding-right: 4px;
   padding-top: 12px;
+  scrollbar-gutter: stable;
 }
 
 .history-event {
@@ -1066,8 +1073,12 @@ button:focus-visible {
   display: grid;
   grid-column: 1 / -1;
   gap: 12px;
+  max-height: min(340px, 34vh);
+  overflow: auto;
   border-top: 1px solid #dbe3ef;
+  padding-right: 4px;
   padding-top: 12px;
+  scrollbar-gutter: stable;
 }
 
 .evidence-version {
@@ -1108,6 +1119,10 @@ button:focus-visible {
 .evidence-list {
   display: grid;
   gap: 8px;
+  max-height: min(220px, 26vh);
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .evidence-row {
@@ -1266,9 +1281,10 @@ button:focus-visible {
 .source-list {
   display: grid;
   gap: 10px;
-  max-height: min(360px, 34vh);
+  max-height: min(300px, 30vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .source-row {
@@ -1325,12 +1341,13 @@ button:focus-visible {
 .query-result {
   display: grid;
   gap: 12px;
-  max-height: min(430px, 42vh);
+  max-height: min(360px, 36vh);
   margin-top: 14px;
   overflow: auto;
   padding-right: 4px;
   border-top: 1px solid #dbe3ef;
   padding-top: 14px;
+  scrollbar-gutter: stable;
 }
 
 .query-result > p {
@@ -1433,9 +1450,10 @@ button:focus-visible {
 .citation-list {
   display: grid;
   gap: 10px;
-  max-height: min(320px, 32vh);
+  max-height: min(260px, 28vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .neighbor-list {
@@ -1677,9 +1695,10 @@ button:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 12px;
-  max-height: min(430px, 42vh);
+  max-height: min(350px, 36vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .eval-dataset-form {
@@ -1811,9 +1830,10 @@ button:focus-visible {
 .eval-case-list {
   display: grid;
   gap: 10px;
-  max-height: min(320px, 34vh);
+  max-height: min(260px, 30vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .eval-case-row {
@@ -1870,9 +1890,10 @@ button:focus-visible {
 .eval-history {
   display: grid;
   gap: 12px;
-  max-height: min(460px, 44vh);
+  max-height: min(360px, 36vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .eval-comparison {
@@ -2073,9 +2094,10 @@ button:focus-visible {
 .eval-run-list {
   display: grid;
   gap: 10px;
-  max-height: min(440px, 40vh);
+  max-height: min(300px, 32vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .eval-run-row {
@@ -2109,9 +2131,10 @@ button:focus-visible {
 .job-ledger {
   display: grid;
   gap: 12px;
-  max-height: min(430px, 42vh);
+  max-height: min(340px, 34vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .job-row {
@@ -2296,9 +2319,10 @@ button:focus-visible {
 .job-progress-list {
   display: grid;
   gap: 10px;
-  max-height: min(380px, 36vh);
+  max-height: min(320px, 32vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .job-progress-row {
@@ -2384,9 +2408,10 @@ button:focus-visible {
 .audit-event-list {
   display: grid;
   gap: 10px;
-  max-height: min(440px, 40vh);
+  max-height: min(340px, 34vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .audit-event-row {
@@ -2497,9 +2522,10 @@ button:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 8px;
-  max-height: min(260px, 30vh);
+  max-height: min(220px, 26vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .runtime-env-list div {
@@ -2529,10 +2555,11 @@ button:focus-visible {
 .provider-list {
   display: grid;
   gap: 10px;
-  max-height: min(340px, 34vh);
+  max-height: min(300px, 30vh);
   margin-top: 18px;
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .provider-row {
@@ -2605,9 +2632,10 @@ button:focus-visible {
 .admin-user-list {
   display: grid;
   gap: 10px;
-  max-height: min(400px, 38vh);
+  max-height: min(320px, 32vh);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .admin-user-row {

@@ -172,8 +172,8 @@ class Settings(BaseSettings):
                 "RETOS_BOOTSTRAP_ADMIN_PASSWORD must contain at least "
                 f"{MIN_ADMIN_PASSWORD_LENGTH} characters"
             )
-        if self.is_production and any(str(origin) == "*" for origin in self.allowed_origins):
-            raise ValueError("Wildcard CORS origins are not allowed in production")
+        if self.env != "development" and any(str(origin) == "*" for origin in self.allowed_origins):
+            raise ValueError("Wildcard CORS origins are only allowed in development")
         if self.provider not in KNOWN_PROVIDER_PROFILES:
             raise ValueError("RETOS_PROVIDER must be a known provider profile")
         if self.provider in PAID_PROVIDER_PROFILES and not self.allow_paid_llm:

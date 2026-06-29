@@ -190,15 +190,25 @@ def test_fake_provider_is_test_only() -> None:
     test_settings.validate_runtime_security()
 
 
-def test_runtime_security_rejects_wildcard_cors_in_production() -> None:
+def test_runtime_security_allows_wildcard_cors_in_development() -> None:
     settings = Settings(
-        env="production",
-        jwt_secret=SecretStr("production-secret-value-that-is-long-enough"),
-        bootstrap_admin_password=SecretStr("production-admin-password"),
+        env="development",
+        jwt_secret=SecretStr("development-secret-value-that-is-long-enough"),
         allowed_origins=["*"],
     )
 
-    with pytest.raises(ValueError, match="Wildcard CORS"):
+    settings.validate_runtime_security()
+
+
+def test_runtime_security_rejects_wildcard_cors_outside_development() -> None:
+    settings = Settings(
+        env="test",
+        provider="fake",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+        allowed_origins=["*"],
+    )
+
+    with pytest.raises(ValueError, match="development"):
         settings.validate_runtime_security()
 
 
