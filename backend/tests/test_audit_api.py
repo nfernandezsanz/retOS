@@ -7,7 +7,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from retos.api.app import create_app
-from retos.api.routes.audit import AuditHashChainEntryRead, validate_audit_chain
+from retos.api.routes.audit import (
+    AuditHashChainEntryRead,
+    audit_chain_failures,
+    validate_audit_chain,
+)
 from retos.core.audit_hash import audit_event_hash, audit_payload_hash
 from retos.core.config import Settings
 
@@ -199,6 +203,7 @@ def test_exports_audit_snapshot_with_download_headers(
     assert integrity["algorithm"] == "sha256"
     assert integrity["canonicalization"] == "json-sort-keys-v1"
     assert integrity["valid"] is True
+    assert integrity["failures"] == []
     assert integrity["event_count"] == len(body["journal_events"]) + len(body["progress_events"])
     assert integrity["head_hash"] == integrity["chain"][-1]["event_hash"]
     assert integrity["chain"][0]["prev_hash"] is None
@@ -252,6 +257,38 @@ def test_audit_hash_chain_validation_detects_tampering(
     ]
 
     assert validate_audit_chain(tampered) is False
+    failures = audit_chain_failures(tampered)
+    assert failures[0].reason == "event_hash_mismatch"
+    assert failures[0].event_id == entries[0].event_id
+
+
+def test_audit_hash_chain_validation_detects_prev_hash_gaps(
+    audit_client: TestClient,
+    audit_admin_headers: dict[str, str],
+) -> None:
+    domain_id = create_domain(audit_client, audit_admin_headers, "audit-prev-gap")
+    create_index_job(audit_client, audit_admin_headers, domain_id)
+    response = audit_client.get(
+        "/audit/export?limit=5",
+        headers=audit_admin_headers,
+    )
+    assert response.status_code == 200
+    entries = [
+        AuditHashChainEntryRead.model_validate(entry)
+        for entry in response.json()["integrity"]["chain"]
+    ]
+    assert len(entries) > 1
+
+    tampered = [
+        entry.model_copy(update={"prev_hash": "f" * 64}) if index == 1 else entry
+        for index, entry in enumerate(entries)
+    ]
+
+    assert validate_audit_chain(tampered) is False
+    failures = audit_chain_failures(tampered)
+    assert failures[0].reason == "prev_hash_mismatch"
+    assert failures[0].event_id == entries[1].event_id
+    assert failures[0].expected == entries[0].event_hash
 
 
 def test_audit_export_detects_persisted_payload_tampering(
@@ -291,6 +328,8 @@ def test_audit_export_detects_persisted_payload_tampering(
     assert export_response.status_code == 200
     body = export_response.json()
     assert body["integrity"]["valid"] is False
+    assert body["integrity"]["failures"]
+    assert body["integrity"]["failures"][0]["reason"] == "event_hash_mismatch"
     tampered_event = next(
         event
         for event in body["journal_events"]

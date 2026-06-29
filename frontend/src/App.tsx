@@ -759,6 +759,14 @@ type AuditExportRead = {
     valid: boolean;
     event_count: number;
     head_hash: string | null;
+    failures: Array<{
+      event_id: string;
+      event_stream: string;
+      event_type: string;
+      reason: string;
+      expected: string | null;
+      actual: string | null;
+    }>;
     chain: Array<{
       event_id: string;
       trace_id: string | null;
@@ -2122,7 +2130,7 @@ function App() {
       const { filename, snapshot } = await exportAuditSnapshot(accessToken);
       const integrity = snapshot.integrity;
       const integrityLabel = integrity
-        ? `, integrity ${integrity.valid ? "valid" : "invalid"} (${integrity.event_count} hashed)`
+        ? `, integrity ${integrity.valid ? "valid" : `invalid: ${integrity.failures.length} issue(s)`} (${integrity.event_count} hashed)`
         : "";
       setAuditExportMessage(
         `${filename}: ${snapshot.journal_events.length} journal, ${snapshot.progress_events.length} progress${integrityLabel}`,

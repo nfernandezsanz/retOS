@@ -82,7 +82,7 @@ for phrase in (
     "target-environment review",
     "Ollama `gemma4`",
     "95.25%",
-    "90.53%",
+    "90.54%",
 ):
     require(phrase in matrix, f"matrix missing audit phrase: {phrase}")
 

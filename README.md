@@ -12,7 +12,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 [![CI](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml?query=branch%3Amain)
 [![Release Images](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml/badge.svg)](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-95.25%25%20total%20%7C%2090.53%25%20branch-166534?style=flat-square)](#current-status)
+[![Coverage](https://img.shields.io/badge/coverage-95.25%25%20total%20%7C%2090.54%25%20branch-166534?style=flat-square)](#current-status)
 [![Stability](https://img.shields.io/badge/stability-pre--alpha-f97316?style=flat-square)](#current-status)
 
 **Action pills**
@@ -148,7 +148,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation; core product slices are being built phase by phase. |
-| Backend coverage | 95.25% total coverage; 90.53% branch-only coverage is ratcheted above the 90% target. |
+| Backend coverage | 95.25% total coverage; 90.54% branch-only coverage is ratcheted above the 90% target. |
 | Local runtime | Docker-first stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
 | Cost posture | Zero paid LLM calls by default; paid providers require explicit opt-in. |
 | Production status | Not production-promoted; final release still needs GHCR digests, SBOM/provenance, Cosign evidence, and human target-environment review. |
@@ -357,7 +357,7 @@ Every meaningful change should pass these gates:
 | Backend format | `make format-check` | Enforces Black formatting. |
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
-| Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.53%). |
+| Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.54%). |
 | Dependency audit | `make dependency-audit` | Runs `pip-audit` against backend runtime requirements and `npm audit --audit-level=high` against the frontend lockfile. |
 | Security policy | `make security-policy-check` | Validates security reporting, secure defaults, human production review guidance, and links from operational docs. |
 | Ignore hygiene | `make ignore-hygiene-check` | Validates `.gitignore` and `.dockerignore` keep secrets, generated files, local volumes, public datasets, reports, and backups out of Git and Docker contexts. |

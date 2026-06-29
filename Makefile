@@ -1,7 +1,7 @@
 ROOT_DIR := $(CURDIR)
 PYTHON ?= python3
 BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.venv/bin/python,$(PYTHON))
-BRANCH_COVERAGE_MIN ?= 90.53
+BRANCH_COVERAGE_MIN ?= 90.54
 AUDIT_MANIFEST_OUTPUT ?= evals/reports/audit-manifest.json
 AUDIT_HANDOFF_REPORT_OUTPUT ?= evals/reports/audit-handoff.md
 AUDIT_BUNDLE_OUTPUT ?= evals/reports/retos-audit-handoff.tar.gz

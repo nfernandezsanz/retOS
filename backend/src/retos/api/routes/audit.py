@@ -86,6 +86,15 @@ class AuditHashChainEntryRead(BaseModel):
     event_hash: str
 
 
+class AuditHashChainFailureRead(BaseModel):
+    event_id: str
+    event_stream: str
+    event_type: str
+    reason: str
+    expected: str | None
+    actual: str | None
+
+
 class AuditExportIntegrityRead(BaseModel):
     algorithm: str
     canonicalization: str
@@ -93,6 +102,7 @@ class AuditExportIntegrityRead(BaseModel):
     event_count: int
     head_hash: str | None
     chain: list[AuditHashChainEntryRead]
+    failures: list[AuditHashChainFailureRead]
 
 
 class AuditExportRead(BaseModel):
@@ -184,11 +194,31 @@ def build_audit_integrity(
         event_count=len(entries),
         head_hash=prev_hash,
         chain=entries,
+        failures=audit_chain_failures(entries),
     )
 
 
 def validate_audit_chain(entries: list[AuditHashChainEntryRead]) -> bool:
-    for entry in entries:
+    return not audit_chain_failures(entries)
+
+
+def audit_chain_failures(
+    entries: list[AuditHashChainEntryRead],
+) -> list[AuditHashChainFailureRead]:
+    failures: list[AuditHashChainFailureRead] = []
+    previous_hash: str | None = None
+    for index, entry in enumerate(entries):
+        if index > 0 and entry.prev_hash != previous_hash:
+            failures.append(
+                AuditHashChainFailureRead(
+                    event_id=entry.event_id,
+                    event_stream=entry.event_stream,
+                    event_type=entry.event_type,
+                    reason="prev_hash_mismatch",
+                    expected=previous_hash,
+                    actual=entry.prev_hash,
+                )
+            )
         expected_hash = audit_event_hash(
             event_id=entry.event_id,
             trace_id=entry.trace_id,
@@ -199,8 +229,18 @@ def validate_audit_chain(entries: list[AuditHashChainEntryRead]) -> bool:
             prev_hash=entry.prev_hash,
         )
         if entry.event_hash != expected_hash:
-            return False
-    return True
+            failures.append(
+                AuditHashChainFailureRead(
+                    event_id=entry.event_id,
+                    event_stream=entry.event_stream,
+                    event_type=entry.event_type,
+                    reason="event_hash_mismatch",
+                    expected=expected_hash,
+                    actual=entry.event_hash,
+                )
+            )
+        previous_hash = entry.event_hash
+    return failures
 
 
 @router.get("/journal-events", response_model=list[JournalEventRead])

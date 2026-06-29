@@ -41,11 +41,13 @@ producing mutations remain admin-only. Results return newest events first.
 progress event lists plus an offline integrity section. The integrity block uses
 SHA-256, sorted-key JSON canonicalization, per-event payload hashes recomputed from the
 returned payloads, chronological `trace_id`/`prev_hash`/`event_hash` links, a `head_hash`,
+continuity checks inside the exported slice, a `failures` list for mismatched entries,
 and a `valid` flag computed before the download is returned. New writes persist the same
 hash-chain fields in the database, and migration `0008_audit_hash_chain_columns` backfills
 existing rows. Because exports can be limited slices, `valid=true` means each included
-event's current payload still matches its persisted hash-chain material; a first
-`prev_hash` may legitimately point to an event outside the exported slice.
+event's current payload still matches its persisted hash-chain material and each
+non-first event links to the previous included event; a first `prev_hash` may legitimately
+point to an event outside the exported slice.
 
 ## Future Hardening
 

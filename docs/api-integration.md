@@ -1243,10 +1243,11 @@ also include an offline integrity section. RetOS canonicalizes each event payloa
 sorted JSON keys, hashes it with SHA-256, and persists `payload_hash`, `prev_hash`, and
 `event_hash` on each journal/progress event at write time. The export recalculates the
 payload hash from the payload being returned, compares that material against the
-persisted event hash chain, and validates each included event before returning the
-download. This catches payload edits even when the stored hash columns were not updated.
-It does not replace database backups, but it lets operators detect accidental or
-malicious edits to persisted audit rows or exported audit packages.
+persisted event hash chain, validates continuity between events in the exported slice,
+and returns a `failures` list with event ids, streams, reasons, expected values, and
+actual values when integrity fails. This catches payload edits even when the stored hash
+columns were not updated. It does not replace database backups, but it lets operators
+detect accidental or malicious edits to persisted audit rows or exported audit packages.
 
 Journal event shape:
 
@@ -1303,6 +1304,7 @@ Audit export shape:
     "valid": true,
     "event_count": 0,
     "head_hash": null,
+    "failures": [],
     "chain": [
       {
         "event_id": "<event_id>",
