@@ -2191,6 +2191,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Query budget usage").getByText("Contradictions 0")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Citations 1/5")).toBeVisible();
   await expect(page.getByLabel("Query budget usage").getByText("Route single segment")).toBeVisible();
+  await page.getByText("Query plan", { exact: true }).click();
   await expect(page.getByLabel("Query plan").getByText("multi hop evidence route")).toBeVisible();
   await expect(page.getByLabel("Query plan").getByText("expects multi document")).toBeVisible();
   await expect(page.getByLabel("Query plan").getByText("evidence mentions readiness search")).toBeVisible();

@@ -4788,7 +4788,7 @@ function App() {
                       {queryResult.usage.budget.max_evidence_tokens} tokens
                     </span>
                   </div>
-                  <details className="insight-section" open>
+                  <details className="insight-section">
                     <summary data-tooltip="Show the retrieval strategy and planned search steps">
                       Query plan
                     </summary>
