@@ -133,6 +133,17 @@ Local defaults are intentionally cheap: `RETOS_PROVIDER=local`,
 `make bootstrap-env` is idempotent: it creates `.env` from `.env.example` when missing
 and leaves an existing local `.env` untouched.
 
+## Local Troubleshooting
+
+| Symptom | Local check | What to do |
+| --- | --- | --- |
+| The console does not load | `make local-status` | Confirm `web`, `api`, Postgres, RabbitMQ, and host endpoints are reachable; rerun `make local-demo` if a required service is missing. |
+| API readiness is failing | `curl --fail http://localhost:8000/readyz` | Inspect `docker compose logs api postgres` and rerun `make doctor` before changing code or secrets. |
+| Demo data is missing | `make docker-seed-demo` | Re-seed the idempotent demo corpus, then refresh Documents or run `make local-status` to confirm the stack stayed healthy. |
+| A command would use paid providers | `make env-security-check` | Keep `RETOS_ALLOW_PAID_LLM=false` for local tests; paid provider calls require explicit opt-in and complete provider configuration. |
+| The UI looks wrong after edits | `make frontend-e2e && make frontend-visual-audit && make visual-audit-check` | Rebuild browser evidence locally and inspect the generated visual-audit screenshots before touching CI. |
+| You want to stop everything | `make docker-down` | Stops the Compose stack without deleting source code, docs, or committed evidence. |
+
 ## Local Audit Handoff
 
 For a local, auditor-friendly snapshot that does not depend on GitHub Actions:

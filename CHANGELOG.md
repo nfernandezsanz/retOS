@@ -17,6 +17,9 @@ tag in GitHub.
 - `make local-status` now gives operators a read-only local stack status check with
   Docker service state, console/API endpoint probes, and the useful local URLs after the
   demo stack is running.
+- README onboarding now includes a local troubleshooting table for console readiness,
+  API readiness, demo data, paid-provider safety, visual checks, and stack shutdown,
+  with the README usability gate protecting the section order.
 - File upload ingestion now rejects declared MIME/extension mismatches for `.txt`,
   `.md`, and `.pdf` uploads before writing bytes, and preserves declared
   `content_type` in job/document audit metadata.

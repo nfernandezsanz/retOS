@@ -12,6 +12,7 @@ REQUIRED_HEADINGS = (
     "# RetOS",
     "## First Minute",
     "## Local Quick Start",
+    "## Local Troubleshooting",
     "## Local Audit Handoff",
     "## Current Status",
     "## What You Can Do Today",
@@ -37,6 +38,10 @@ REQUIRED_PHRASES = (
     "make bootstrap-env",
     "docker compose up --build",
     "make docker-seed-demo",
+    "curl --fail http://localhost:8000/readyz",
+    "make docker-down",
+    "make env-security-check",
+    "make visual-audit-check",
     "make auditor-handoff-check",
     "make local-acceptance",
     "make check",
@@ -121,6 +126,16 @@ def validate_readme(readme_path: Path = README, makefile_path: Path = MAKEFILE) 
     require(
         content.index("## First Minute") < content.index("## Local Quick Start"),
         "First Minute must appear before Local Quick Start",
+    )
+    require(
+        content.index("## Local Quick Start")
+        < content.index("## Local Troubleshooting"),
+        "Local Troubleshooting must appear after Local Quick Start",
+    )
+    require(
+        content.index("## Local Troubleshooting")
+        < content.index("## Local Audit Handoff"),
+        "Local Troubleshooting must appear before Local Audit Handoff",
     )
     require(
         content.index("## Current Status") < content.index("## What You Can Do Today"),

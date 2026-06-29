@@ -97,6 +97,32 @@ def test_readme_usability_gate_rejects_wrong_status_order(tmp_path: Path) -> Non
         raise AssertionError("Expected wrong status order to fail")
 
 
+def test_readme_usability_gate_rejects_troubleshooting_after_audit_handoff(
+    tmp_path: Path,
+) -> None:
+    gate = load_readme_usability_gate()
+    content = (ROOT / "README.md").read_text(encoding="utf-8")
+    troubleshooting_start = content.index("## Local Troubleshooting")
+    audit_start = content.index("## Local Audit Handoff")
+    status_start = content.index("## Current Status")
+    troubleshooting = content[troubleshooting_start:audit_start]
+    reordered_content = (
+        content[:troubleshooting_start]
+        + content[audit_start:status_start]
+        + troubleshooting
+        + content[status_start:]
+    )
+    readme_path = write_readme(tmp_path, reordered_content)
+    makefile_path = write_makefile(tmp_path)
+
+    try:
+        gate.validate_readme(readme_path, makefile_path)
+    except SystemExit as exc:
+        assert "Local Troubleshooting must appear before Local Audit Handoff" in str(exc)
+    else:
+        raise AssertionError("Expected troubleshooting order drift to fail")
+
+
 def test_readme_usability_gate_rejects_missing_make_target(tmp_path: Path) -> None:
     gate = load_readme_usability_gate()
     readme_path = write_readme(tmp_path)
