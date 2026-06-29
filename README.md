@@ -117,7 +117,7 @@ verify the console/API endpoints from your machine.
 Run `make local-smoke` when you want a fast end-to-end check against the already-running
 stack: it loads the web console, checks API readiness/version metadata, logs in with the
 local bootstrap admin, re-seeds the demo corpus idempotently, and verifies demo search
-returns indexed evidence.
+returns indexed evidence plus journal/progress hash-chain events.
 
 For manual control, run `make bootstrap-env`, `make doctor`, `docker compose up --build`,
 then `make docker-seed-demo` in another shell.
@@ -148,7 +148,7 @@ and leaves an existing local `.env` untouched.
 | The console does not load | `make local-status` | Confirm `web`, `api`, Postgres, RabbitMQ, migrations, and host endpoints are reachable; rerun `make local-demo` if a required service is missing. |
 | API readiness is failing | `curl --fail http://localhost:8000/readyz` | Run `make local-logs` and rerun `make doctor` before changing code or secrets. |
 | Demo data is missing | `make docker-seed-demo` | Re-seed the idempotent demo corpus, then refresh Documents or run `make local-status` to confirm the stack stayed healthy. |
-| Search or demo flow feels broken | `make local-smoke` | Exercise login, idempotent demo seeding, indexed search, API readiness/version, and the web console against the running stack. |
+| Search or demo flow feels broken | `make local-smoke` | Exercise login, idempotent demo seeding, indexed search, API readiness/version, journal/progress hash-chain evidence, and the web console against the running stack. |
 | A command would use paid providers | `make env-security-check` | Keep `RETOS_ALLOW_PAID_LLM=false` for local tests; paid provider calls require explicit opt-in and complete provider configuration. |
 | The UI looks wrong after edits | `make frontend-e2e && make frontend-visual-audit && make visual-audit-check` | Rebuild browser evidence locally and inspect the generated visual-audit screenshots before touching CI. |
 | You want to stop everything | `make docker-down` | Stops the Compose stack without deleting source code, docs, or committed evidence. |
@@ -436,7 +436,7 @@ Every meaningful change should pass these gates:
 | --- | --- | --- |
 | Local demo | `make local-demo` | Boots the local Docker stack in the background, seeds auditable demo data, and prints the console/API/RabbitMQ URLs for hands-on review. |
 | Local status | `make local-status` | Prints useful local URLs, checks Docker service and migration state, and verifies the console/API endpoints without starting or mutating the stack. |
-| Local smoke | `make local-smoke` | Hits the already-running local web/API stack, authenticates with the bootstrap admin, re-seeds demo data idempotently, and verifies demo search evidence. |
+| Local smoke | `make local-smoke` | Hits the already-running local web/API stack, authenticates with the bootstrap admin, re-seeds demo data idempotently, and verifies demo search plus journal/progress hash-chain evidence. |
 | Local logs | `make local-logs` | Prints recent Compose logs for Postgres, RabbitMQ, migrations, API, worker, and web without following or mutating the stack. |
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Environment security | `make env-security-check` | Validates the active `.env` without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |

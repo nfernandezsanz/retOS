@@ -105,6 +105,26 @@ def decode_json(
     return parsed, None
 
 
+def decode_json_list(
+    name: str, body: str
+) -> tuple[list[Any] | None, SmokeCheck | None]:
+    try:
+        parsed = json.loads(body)
+    except json.JSONDecodeError as exc:
+        return None, fail(name, f"invalid JSON: {exc}")
+    if not isinstance(parsed, list):
+        return None, fail(name, "expected JSON array")
+    return parsed, None
+
+
+def hashed_event_count(events: list[Any]) -> int:
+    return sum(
+        1
+        for event in events
+        if isinstance(event, dict) and isinstance(event.get("event_hash"), str)
+    )
+
+
 def run_local_smoke(
     *,
     api_url: str,
@@ -246,6 +266,35 @@ def run_local_smoke(
                         )
                     else:
                         checks.append(fail("demo search", f"no hits for {query!r}"))
+
+        for name, path in (
+            ("audit journals", "/audit/journal-events?limit=20"),
+            ("audit progress", "/audit/progress-events?limit=20"),
+        ):
+            try:
+                audit_status, audit_body = requester(
+                    "GET",
+                    urljoin(api_url, path),
+                    headers,
+                    None,
+                    timeout,
+                )
+            except RuntimeError as exc:
+                checks.append(fail(name, str(exc)))
+                continue
+            error = require_success(name, audit_status, audit_body)
+            if error:
+                checks.append(error)
+                continue
+            events, json_error = decode_json_list(name, audit_body)
+            if json_error:
+                checks.append(json_error)
+                continue
+            hashed_count = hashed_event_count(events or [])
+            if events and hashed_count > 0:
+                checks.append(ok(name, f"{hashed_count}/{len(events)} hashed event(s)"))
+            else:
+                checks.append(fail(name, "no hash-chain events returned"))
 
     return checks
 

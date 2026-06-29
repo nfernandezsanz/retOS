@@ -157,8 +157,8 @@ the API, worker, web, Postgres, RabbitMQ, and one-shot migration service states 
 `make local-smoke` assumes the stack is already running. It loads the web console,
 checks API readiness and version metadata, authenticates with the local bootstrap admin,
 re-seeds the demo corpus idempotently, and verifies that demo search returns indexed
-evidence. Use it after UI/API changes when `make docker-smoke` would be heavier than the
-feedback you need.
+evidence plus journal/progress hash-chain events. Use it after UI/API changes when
+`make docker-smoke` would be heavier than the feedback you need.
 
 Use `make local-logs` for a bounded, non-following log snapshot across Postgres,
 RabbitMQ, migrations, API, worker, and web when a local readiness check fails.
