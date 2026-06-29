@@ -43,6 +43,8 @@ CRITICAL_FILES = (
     "scripts/check_release_workflow.sh",
     "scripts/check_published_release_evidence.sh",
     "scripts/export_audit_manifest.py",
+    "scripts/check_audit_handoff_report.py",
+    "scripts/export_audit_handoff_report.py",
 )
 
 LOCAL_GATES = (

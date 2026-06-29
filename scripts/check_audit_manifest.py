@@ -38,7 +38,9 @@ REQUIRED_CRITICAL_FILES = {
     "scripts/check_ci_status.sh",
     "scripts/check_auditor_evidence_matrix.sh",
     "scripts/check_audit_pack.sh",
+    "scripts/check_audit_handoff_report.py",
     "scripts/export_audit_manifest.py",
+    "scripts/export_audit_handoff_report.py",
 }
 REQUIRED_LOCAL_GATES = {
     "make check",

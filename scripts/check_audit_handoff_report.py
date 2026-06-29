@@ -61,6 +61,8 @@ def main() -> int:
         "docs/auditor-evidence-matrix.md",
         "docs/assets/retos-project-card.svg",
         "frontend/public/retos-mark.svg",
+        "scripts/check_audit_handoff_report.py",
+        "scripts/export_audit_handoff_report.py",
         "retos-visual-audit-",
         "production-promotion-template.md",
     ):

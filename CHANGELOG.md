@@ -13,6 +13,8 @@ tag in GitHub.
 
 - Human-readable audit handoff report generated from the JSON manifest, plus a local
   checker so the report preserves candidate, gate, blocker, hash, and visual evidence.
+- Audit manifests now hash the Markdown handoff exporter and checker so the human
+  report path is covered by the same critical-file evidence as the JSON manifest.
 - Auditor evidence matrix mapping the project objective to current evidence, local gates,
   and remaining external promotion blockers.
 - Production readiness audit pack with explicit promotion blockers, human review order,
