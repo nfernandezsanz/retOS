@@ -34,7 +34,7 @@ The first revision creates these tables:
 | --- | --- |
 | `admin_users` | Persisted admin identities and roles used by login, active-token checks, bootstrap, and account management. |
 | `admin_user_domain_grants` | Per-domain read grants for `viewer` accounts. Admin accounts bypass grants. |
-| `domains` | User-managed research workspaces. |
+| `domains` | User-managed research workspaces with soft archive state in `archived_at`. |
 | `sources` | Upload, mounted path, or URL inputs attached to a domain. |
 | `documents` | Canonical document records keyed by domain and content hash. |
 | `document_versions` | Immutable versions of document bytes or extracted content. |
@@ -68,6 +68,11 @@ The first API-backed workflows are document registration and job creation:
   endpoints and account management require a persisted active `admin` role.
 - Domain-scoped reads check `admin_user_domain_grants` for viewers. Admins retain full
   access and use grant endpoints only to manage viewer scope.
+- `DELETE /domains/{domain_id}` soft-archives a workspace by setting `archived_at`,
+  writes `domain.archived`, and preserves sources, documents, jobs, grants, and audit
+  history. Default domain lists hide archived workspaces.
+- `POST /domains/{domain_id}/restore` clears `archived_at`, writes `domain.restored`,
+  and returns the workspace to default domain lists.
 - `POST /domains/{domain_id}/documents` creates a document, writes version `1`,
   writes `document.created` journal/progress events, and emits a live SSE notification.
 - `PATCH /documents/{document_id}` updates mutable document title/metadata fields,

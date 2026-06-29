@@ -60,6 +60,11 @@ def test_initial_migration_creates_and_drops_catalog_schema(tmp_path: Path) -> N
         }
         admin_columns = {item["name"] for item in inspector.get_columns("admin_users")}
         assert "roles" in admin_columns
+        domain_columns = {item["name"] for item in inspector.get_columns("domains")}
+        assert "archived_at" in domain_columns
+        assert {item["name"] for item in inspector.get_indexes("domains")} >= {
+            "ix_domains_archived_at"
+        }
         assert {
             item["name"] for item in inspector.get_unique_constraints("admin_user_domain_grants")
         } == {"uq_admin_user_domain_grants_user_domain"}

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Path, status
+from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
@@ -35,6 +35,7 @@ class DomainRead(BaseModel):
     slug: str
     name: str
     description: str | None
+    archived_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -45,6 +46,7 @@ class DomainRead(BaseModel):
             slug=domain.slug,
             name=domain.name,
             description=domain.description,
+            archived_at=domain.archived_at,
             created_at=domain.created_at,
             updated_at=domain.updated_at,
         )
@@ -113,13 +115,20 @@ async def create_domain(
 
 
 @router.get("", response_model=list[DomainRead])
-async def list_domains(actor: ViewerSubjectDep, uow: UnitOfWorkDep) -> list[DomainRead]:
+async def list_domains(
+    actor: ViewerSubjectDep,
+    uow: UnitOfWorkDep,
+    include_archived: Annotated[bool, Query()] = False,
+) -> list[DomainRead]:
     async with uow:
         admin = await uow.admin_users.get_by_email(actor)
         if admin is not None and "admin" in admin.roles:
-            domains = await uow.domains.list()
+            domains = await uow.domains.list(include_archived=include_archived)
         elif admin is not None:
-            domains = await uow.domains.list_for_admin_user(admin.id)
+            domains = await uow.domains.list_for_admin_user(
+                admin.id,
+                include_archived=include_archived,
+            )
         else:
             domains = []
     return [DomainRead.from_domain(domain) for domain in domains]
@@ -136,6 +145,77 @@ async def get_domain(
         if domain is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
         await ensure_domain_access(actor=actor, domain_id=domain_id, uow=uow)
+    return DomainRead.from_domain(domain)
+
+
+@router.delete("/{domain_id}", response_model=DomainRead)
+async def archive_domain(
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    domain_id: Annotated[str, Path(min_length=1)],
+) -> DomainRead:
+    async with uow:
+        existing = await uow.domains.get(domain_id)
+        if existing is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        domain = await uow.domains.archive(domain_id)
+        assert domain is not None
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="domain.archived",
+            entity_type="domain",
+            entity_id=domain.id,
+            payload={
+                "domain_id": domain.id,
+                "slug": domain.slug,
+                "archived_at": domain.archived_at.isoformat() if domain.archived_at else None,
+                "changes": [
+                    {
+                        "field": "archived_at",
+                        "before": (
+                            existing.archived_at.isoformat() if existing.archived_at else None
+                        ),
+                        "after": domain.archived_at.isoformat() if domain.archived_at else None,
+                    }
+                ],
+            },
+        )
+        await uow.commit()
+    return DomainRead.from_domain(domain)
+
+
+@router.post("/{domain_id}/restore", response_model=DomainRead)
+async def restore_domain(
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    domain_id: Annotated[str, Path(min_length=1)],
+) -> DomainRead:
+    async with uow:
+        existing = await uow.domains.get(domain_id)
+        if existing is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        domain = await uow.domains.restore(domain_id)
+        assert domain is not None
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="domain.restored",
+            entity_type="domain",
+            entity_id=domain.id,
+            payload={
+                "domain_id": domain.id,
+                "slug": domain.slug,
+                "changes": [
+                    {
+                        "field": "archived_at",
+                        "before": (
+                            existing.archived_at.isoformat() if existing.archived_at else None
+                        ),
+                        "after": None,
+                    }
+                ],
+            },
+        )
+        await uow.commit()
     return DomainRead.from_domain(domain)
 
 

@@ -183,6 +183,14 @@ List domains:
 curl --header "Authorization: Bearer <token>" http://localhost:8000/domains
 ```
 
+Archived domains are hidden by default. Include them explicitly when reviewing or
+restoring old workspaces:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  "http://localhost:8000/domains?include_archived=true"
+```
+
 Read a domain:
 
 ```bash
@@ -199,9 +207,25 @@ curl --request PATCH http://localhost:8000/domains/<domain_id> \
   --data '{"name":"Research Review","description":"Updated corpus boundary"}'
 ```
 
+Archive a domain without deleting its sources, documents, jobs, grants, or audit history.
+The endpoint writes a `domain.archived` journal event and sets `archived_at`:
+
+```bash
+curl --request DELETE http://localhost:8000/domains/<domain_id> \
+  --header "Authorization: Bearer <token>"
+```
+
+Restore an archived domain. The endpoint writes a `domain.restored` journal event and
+clears `archived_at`:
+
+```bash
+curl --request POST http://localhost:8000/domains/<domain_id>/restore \
+  --header "Authorization: Bearer <token>"
+```
+
 The React console uses these endpoints to populate the workspace selector, refresh
-domain metrics, create new research domains, and edit the active domain name and
-description without requiring users to paste UUIDs.
+domain metrics, create new research domains, edit active domain details, and archive or
+restore domains without requiring users to paste UUIDs.
 
 ## Sources
 
@@ -1196,6 +1220,10 @@ Current console calls:
 - `POST /llm/runtime-plan`
 - `GET /domains`
 - `POST /domains`
+- `GET /domains/{domain_id}`
+- `PATCH /domains/{domain_id}`
+- `DELETE /domains/{domain_id}`
+- `POST /domains/{domain_id}/restore`
 - `GET /domains/{domain_id}/documents`
 - `PATCH /documents/{document_id}`
 - `DELETE /documents/{document_id}`
@@ -1243,9 +1271,9 @@ audited local accounts:
   update persisted roles, toggle active state, and submit resets, but only receives
   account metadata, roles, and active/inactive state.
 
-The workspace can create domains, select an active domain, render its document and source
-inventory, inspect latest-version artifact and segment evidence, create, edit, and remove
-sources, queue text and file upload ingestions, queue source
+The workspace can create domains, select an active domain, archive and restore domains,
+render document/source inventory for the active domain, inspect latest-version artifact
+and segment evidence, create, edit, and remove sources, queue text and file upload ingestions, queue source
 scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/HotpotQA
 agent/Natural Questions/OCR benchmark evals, choose an eval domain scope for
 dataset-backed runs, filtered history/trends, and viewer-safe domain reruns, read recent

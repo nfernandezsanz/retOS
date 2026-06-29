@@ -1072,7 +1072,7 @@ button:focus-visible {
 
 .domain-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 12px;
   align-items: end;
   margin-top: 0;
@@ -1084,6 +1084,19 @@ button:focus-visible {
 
 .domain-edit-form {
   margin-top: 0;
+}
+
+.domain-lifecycle-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.domain-lifecycle-actions .ghost-action,
+.domain-lifecycle-actions .secondary-action {
+  width: fit-content;
+  min-width: 170px;
+  margin-top: 0;
+  padding: 0 14px;
 }
 
 .document-list {
@@ -1320,6 +1333,12 @@ button:focus-visible {
   color: #b91c1c;
   border-color: #fecaca;
   background: #fff7f7;
+}
+
+.ghost-action.danger {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #b91c1c;
 }
 
 .source-workspace {
@@ -1737,6 +1756,16 @@ button:focus-visible {
   color: #991b1b;
   padding: 10px 12px;
   font-weight: 700;
+}
+
+.inline-warning {
+  margin: 0;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 10px 12px;
+  font-weight: 800;
 }
 
 .inline-success {

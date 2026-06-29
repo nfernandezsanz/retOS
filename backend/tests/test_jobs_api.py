@@ -133,6 +133,7 @@ def domain_fixture(domain_id: str = "domain-1") -> Domain:
         slug="domain-one",
         name="Domain One",
         description=None,
+        archived_at=None,
         created_at=now,
         updated_at=now,
     )

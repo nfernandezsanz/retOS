@@ -13,10 +13,12 @@ from retos.api.routes.domains import (
     DomainUpdate,
     SourceCreate,
     SourceUpdate,
+    archive_domain,
     create_domain,
     create_source,
     delete_source,
     list_domains,
+    restore_domain,
     update_domain,
     update_source,
 )
@@ -57,6 +59,7 @@ def domain_fixture(domain_id: str = "domain-1") -> Domain:
         slug="domain-one",
         name="Domain One",
         description=None,
+        archived_at=None,
         created_at=NOW,
         updated_at=NOW,
     )
@@ -95,16 +98,26 @@ class FakeDomains:
             slug=slug,
             name=name,
             description=description,
+            archived_at=None,
             created_at=NOW,
             updated_at=NOW,
         )
         return self.domain
 
-    async def list(self) -> list[Domain]:
-        return [self.domain] if self.domain is not None else []
+    async def list(self, *, include_archived: bool = False) -> list[Domain]:
+        if self.domain is None:
+            return []
+        if self.domain.archived_at is not None and not include_archived:
+            return []
+        return [self.domain]
 
-    async def list_for_admin_user(self, admin_id: str) -> list[Domain]:
-        return [self.domain] if self.domain is not None else []
+    async def list_for_admin_user(
+        self,
+        admin_id: str,
+        *,
+        include_archived: bool = False,
+    ) -> list[Domain]:
+        return await self.list(include_archived=include_archived)
 
     async def get(self, domain_id: str) -> Domain | None:
         return self.domain if self.domain is not None and self.domain.id == domain_id else None
@@ -123,6 +136,35 @@ class FakeDomains:
             slug=self.domain.slug,
             name=name,
             description=description,
+            archived_at=self.domain.archived_at,
+            created_at=self.domain.created_at,
+            updated_at=NOW,
+        )
+        return self.domain
+
+    async def archive(self, domain_id: str) -> Domain | None:
+        if self.domain is None or self.domain.id != domain_id:
+            return None
+        self.domain = Domain(
+            id=self.domain.id,
+            slug=self.domain.slug,
+            name=self.domain.name,
+            description=self.domain.description,
+            archived_at=NOW,
+            created_at=self.domain.created_at,
+            updated_at=NOW,
+        )
+        return self.domain
+
+    async def restore(self, domain_id: str) -> Domain | None:
+        if self.domain is None or self.domain.id != domain_id:
+            return None
+        self.domain = Domain(
+            id=self.domain.id,
+            slug=self.domain.slug,
+            name=self.domain.name,
+            description=self.domain.description,
+            archived_at=None,
             created_at=self.domain.created_at,
             updated_at=NOW,
         )
@@ -437,6 +479,173 @@ async def test_update_domain_unit_records_changes() -> None:
             },
         }
     ]
+
+
+def test_archive_and_restore_domain_records_audit_events(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    domain_response = domain_client.post(
+        "/domains",
+        json={"slug": "domain-archive", "name": "Domain Archive"},
+        headers=admin_headers,
+    )
+    domain_id = domain_response.json()["id"]
+    source_response = domain_client.post(
+        f"/domains/{domain_id}/sources",
+        json={"kind": "upload", "name": "Archive Source", "uri": "upload://archive-source"},
+        headers=admin_headers,
+    )
+    domain_client.post(
+        f"/domains/{domain_id}/documents",
+        json={
+            "source_id": source_response.json()["id"],
+            "external_id": "archive-domain-doc",
+            "title": "Archive Domain Document",
+            "content_hash": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+            "source_uri": "upload://archive-source/document.txt",
+            "size_bytes": 32,
+            "metadata": {},
+        },
+        headers=admin_headers,
+    )
+
+    archived = domain_client.delete(f"/domains/{domain_id}", headers=admin_headers)
+    listed = domain_client.get("/domains", headers=admin_headers)
+    listed_with_archived = domain_client.get(
+        "/domains?include_archived=true",
+        headers=admin_headers,
+    )
+    sources = domain_client.get(f"/domains/{domain_id}/sources", headers=admin_headers)
+    documents = domain_client.get(f"/domains/{domain_id}/documents", headers=admin_headers)
+    restored = domain_client.post(f"/domains/{domain_id}/restore", headers=admin_headers)
+    audit_events = domain_client.get("/audit/journal-events", headers=admin_headers)
+
+    assert archived.status_code == 200
+    assert archived.json()["archived_at"] is not None
+    assert domain_id not in [domain["id"] for domain in listed.json()]
+    assert domain_id in [domain["id"] for domain in listed_with_archived.json()]
+    assert sources.status_code == 200
+    assert sources.json()[0]["name"] == "Archive Source"
+    assert documents.status_code == 200
+    assert documents.json()[0]["title"] == "Archive Domain Document"
+    assert restored.status_code == 200
+    assert restored.json()["archived_at"] is None
+    event_types = [event["event_type"] for event in audit_events.json()]
+    assert "domain.archived" in event_types
+    assert "domain.restored" in event_types
+
+
+def test_archive_domain_requires_admin(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    domain_response = domain_client.post(
+        "/domains",
+        json={"slug": "domain-archive-viewer", "name": "Domain Archive Viewer"},
+        headers=admin_headers,
+    )
+    domain_client.post(
+        "/admin/users",
+        headers=admin_headers,
+        json={
+            "email": "domain-archive-viewer@retos.dev",
+            "password": "domain-archive-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    login = domain_client.post(
+        "/auth/login",
+        json={
+            "email": "domain-archive-viewer@retos.dev",
+            "password": "domain-archive-viewer-password",
+        },
+    )
+    viewer_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = domain_client.delete(
+        f"/domains/{domain_response.json()['id']}",
+        headers=viewer_headers,
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_archive_domain_rejects_missing_domain() -> None:
+    uow = FakeDomainUnitOfWork()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await archive_domain(
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id="missing-domain",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Domain not found"
+
+
+@pytest.mark.asyncio
+async def test_restore_domain_rejects_missing_domain() -> None:
+    uow = FakeDomainUnitOfWork()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await restore_domain(
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id="missing-domain",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Domain not found"
+
+
+@pytest.mark.asyncio
+async def test_archive_and_restore_domain_unit_records_changes() -> None:
+    domain = domain_fixture()
+    uow = FakeDomainUnitOfWork(domain=domain)
+
+    archived = await archive_domain(
+        actor="admin@retos.dev",
+        uow=uow,  # type: ignore[arg-type]
+        domain_id=domain.id,
+    )
+    restored = await restore_domain(
+        actor="admin@retos.dev",
+        uow=uow,  # type: ignore[arg-type]
+        domain_id=domain.id,
+    )
+
+    assert archived.archived_at is not None
+    assert restored.archived_at is None
+    assert [event["event_type"] for event in uow.journal_events.events] == [
+        "domain.archived",
+        "domain.restored",
+    ]
+    assert uow.journal_events.events[0]["payload"] == {
+        "domain_id": domain.id,
+        "slug": domain.slug,
+        "archived_at": NOW.isoformat(),
+        "changes": [
+            {
+                "field": "archived_at",
+                "before": None,
+                "after": NOW.isoformat(),
+            }
+        ],
+    }
+    assert uow.journal_events.events[1]["payload"] == {
+        "domain_id": domain.id,
+        "slug": domain.slug,
+        "changes": [
+            {
+                "field": "archived_at",
+                "before": NOW.isoformat(),
+                "after": None,
+            }
+        ],
+    }
 
 
 @pytest.mark.asyncio

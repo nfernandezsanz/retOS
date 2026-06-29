@@ -312,6 +312,7 @@ type DomainRead = {
   slug: string;
   name: string;
   description: string | null;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1017,8 +1018,9 @@ async function resetAdminUserPassword(
   });
 }
 
-async function loadDomains(token: string): Promise<DomainRead[]> {
-  return requestJson<DomainRead[]>("/domains", {
+async function loadDomains(token: string, includeArchived = false): Promise<DomainRead[]> {
+  const query = includeArchived ? "?include_archived=true" : "";
+  return requestJson<DomainRead[]>(`/domains${query}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -1049,6 +1051,24 @@ async function updateDomain(
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(payload),
+  });
+}
+
+async function archiveDomain(token: string, domainId: string): Promise<DomainRead> {
+  return requestJson<DomainRead>(`/domains/${domainId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+async function restoreDomain(token: string, domainId: string): Promise<DomainRead> {
+  return requestJson<DomainRead>(`/domains/${domainId}/restore`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 }
 
@@ -1828,6 +1848,9 @@ function App() {
   const [documentEvidence, setDocumentEvidence] = useState<DocumentEvidenceRead | null>(null);
   const [isLoadingDocumentEvidence, setIsLoadingDocumentEvidence] = useState(false);
   const [isCreatingDomain, setIsCreatingDomain] = useState(false);
+  const [showArchivedDomains, setShowArchivedDomains] = useState(false);
+  const [isArchivingDomain, setIsArchivingDomain] = useState(false);
+  const [isRestoringDomain, setIsRestoringDomain] = useState(false);
   const [isCreatingSource, setIsCreatingSource] = useState(false);
   const [sourceName, setSourceName] = useState("");
   const [sourceUri, setSourceUri] = useState("");
@@ -1949,6 +1972,7 @@ function App() {
     () => domains.find((domain) => domain.id === selectedDomainId) ?? null,
     [domains, selectedDomainId],
   );
+  const isSelectedDomainArchived = selectedDomain?.archived_at != null;
 
   useEffect(() => {
     setDomainEditName(selectedDomain?.name ?? "");
@@ -2132,7 +2156,7 @@ function App() {
     try {
       await refreshRuntimeStatus();
       const adminToken = accessToken ?? (await getAdminToken());
-      const nextDomains = await loadDomains(adminToken);
+      const nextDomains = await loadDomains(adminToken, showArchivedDomains);
       setDomains(nextDomains);
       if (evalDomainId && !nextDomains.some((domain) => domain.id === evalDomainId)) {
         setEvalDomainId("");
@@ -2604,6 +2628,10 @@ function App() {
       setWorkspaceError("Select a domain before updating details");
       return;
     }
+    if (isSelectedDomainArchived) {
+      setWorkspaceError("Restore this domain before editing details");
+      return;
+    }
     setIsUpdatingDomain(true);
     try {
       const name = domainEditName.trim();
@@ -2626,6 +2654,57 @@ function App() {
     }
   }
 
+  async function handleArchiveDomain() {
+    setWorkspaceError(null);
+    if (!selectedDomainId || !selectedDomain) {
+      setWorkspaceError("Select a domain before archiving it");
+      return;
+    }
+    if (!window.confirm(`Archive domain "${selectedDomain.name}"? Documents and audit history stay available.`)) {
+      return;
+    }
+    setIsArchivingDomain(true);
+    try {
+      const accessToken = await getAdminToken();
+      const archived = await archiveDomain(accessToken, selectedDomainId);
+      setShowArchivedDomains(true);
+      const nextDomains = await loadDomains(accessToken, true);
+      setDomains(
+        nextDomains.some((domain) => domain.id === archived.id)
+          ? nextDomains
+          : [...nextDomains, archived],
+      );
+      setSelectedDomainId(archived.id);
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setWorkspaceError(sessionErrorMessage(error, "Domain archive failed"));
+    } finally {
+      setIsArchivingDomain(false);
+    }
+  }
+
+  async function handleRestoreDomain() {
+    setWorkspaceError(null);
+    if (!selectedDomainId) {
+      setWorkspaceError("Select an archived domain before restoring it");
+      return;
+    }
+    setIsRestoringDomain(true);
+    try {
+      const accessToken = await getAdminToken();
+      const restored = await restoreDomain(accessToken, selectedDomainId);
+      setDomains((current) =>
+        current.map((domain) => (domain.id === restored.id ? restored : domain)),
+      );
+      await refreshWorkspace(accessToken, restored.id);
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setWorkspaceError(sessionErrorMessage(error, "Domain restore failed"));
+    } finally {
+      setIsRestoringDomain(false);
+    }
+  }
+
   async function handleCreateSource(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setWorkspaceError(null);
@@ -2633,6 +2712,9 @@ function App() {
     try {
       if (!selectedDomainId) {
         throw new Error("Select a domain before adding a source");
+      }
+      if (isSelectedDomainArchived) {
+        throw new Error("Restore this domain before adding sources");
       }
       const name = sourceName.trim();
       const uri = sourceUri.trim();
@@ -2656,6 +2738,10 @@ function App() {
   }
 
   function handleStartSourceEdit(source: SourceRead) {
+    if (isSelectedDomainArchived) {
+      setWorkspaceError("Restore this domain before editing sources");
+      return;
+    }
     setEditingSourceId(source.id);
     setSourceEditKind(source.kind);
     setSourceEditName(source.name);
@@ -2677,6 +2763,9 @@ function App() {
     try {
       if (!selectedDomainId || !editingSourceId) {
         throw new Error("Choose a source before updating it");
+      }
+      if (isSelectedDomainArchived) {
+        throw new Error("Restore this domain before updating sources");
       }
       const name = sourceEditName.trim();
       const uri = sourceEditUri.trim();
@@ -2707,6 +2796,10 @@ function App() {
       setWorkspaceError("Select a domain before deleting a source");
       return;
     }
+    if (isSelectedDomainArchived) {
+      setWorkspaceError("Restore this domain before removing sources");
+      return;
+    }
     if (!window.confirm(`Remove source "${source.name}" from this domain? Documents stay available.`)) {
       return;
     }
@@ -2733,6 +2826,10 @@ function App() {
   }
 
   function handleStartDocumentEdit(document: DocumentRead) {
+    if (isSelectedDomainArchived) {
+      setWorkspaceError("Restore this domain before editing documents");
+      return;
+    }
     setEditingDocumentId(document.id);
     setDocumentEditTitle(document.title);
     setWorkspaceError(null);
@@ -2761,6 +2858,9 @@ function App() {
       if (!editingDocumentId) {
         throw new Error("Choose a document before updating it");
       }
+      if (isSelectedDomainArchived) {
+        throw new Error("Restore this domain before updating documents");
+      }
       const title = documentEditTitle.trim();
       if (!title) {
         throw new Error("Document title is required");
@@ -2785,6 +2885,10 @@ function App() {
 
   async function handleArchiveDocument(documentId: string) {
     setWorkspaceError(null);
+    if (isSelectedDomainArchived) {
+      setWorkspaceError("Restore this domain before archiving documents");
+      return;
+    }
     setArchivingDocumentId(documentId);
     try {
       const accessToken = await getAdminToken();
@@ -2813,6 +2917,10 @@ function App() {
 
   async function handleRestoreDocument(documentId: string) {
     setWorkspaceError(null);
+    if (isSelectedDomainArchived) {
+      setWorkspaceError("Restore this domain before restoring documents");
+      return;
+    }
     setRestoringDocumentId(documentId);
     try {
       const accessToken = await getAdminToken();
@@ -2851,6 +2959,42 @@ function App() {
       setQueuedJobs(nextJobs);
     } catch (error) {
       setWorkspaceError(sessionErrorMessage(error, "Document refresh failed"));
+    } finally {
+      setIsLoadingWorkspace(false);
+    }
+  }
+
+  async function handleArchivedDomainsToggle(event: React.ChangeEvent<HTMLInputElement>) {
+    const nextShowArchived = event.target.checked;
+    setShowArchivedDomains(nextShowArchived);
+    setWorkspaceError(null);
+    setIsLoadingWorkspace(true);
+    try {
+      const accessToken = await getAdminToken();
+      const nextDomains = await loadDomains(accessToken, nextShowArchived);
+      setDomains(nextDomains);
+      const nextSelectedDomainId = nextDomains.some((domain) => domain.id === selectedDomainId)
+        ? selectedDomainId
+        : nextDomains[0]?.id ?? "";
+      setSelectedDomainId(nextSelectedDomainId);
+      if (nextSelectedDomainId) {
+        const [nextDocuments, nextSources, nextJobs] = await Promise.all([
+          loadDocuments(accessToken, nextSelectedDomainId, showArchivedDocuments),
+          loadSources(accessToken, nextSelectedDomainId),
+          loadJobs(accessToken),
+        ]);
+        setDocuments(nextDocuments);
+        setSources(nextSources);
+        setQueuedJobs(nextJobs);
+      } else {
+        setDocuments([]);
+        setSources([]);
+        setQueuedJobs(await loadJobs(accessToken));
+      }
+      clearDocumentEvidence();
+      clearDocumentHistory();
+    } catch (error) {
+      setWorkspaceError(sessionErrorMessage(error, "Domain refresh failed"));
     } finally {
       setIsLoadingWorkspace(false);
     }
@@ -2904,6 +3048,9 @@ function App() {
       if (!selectedDomainId) {
         throw new Error("Select a domain before ingesting text");
       }
+      if (isSelectedDomainArchived) {
+        throw new Error("Restore this domain before ingesting text");
+      }
       const title = textTitle.trim();
       const text = textBody.trim();
       if (!title || !text) {
@@ -2944,6 +3091,9 @@ function App() {
     try {
       if (!selectedDomainId) {
         throw new Error("Select a domain before uploading a file");
+      }
+      if (isSelectedDomainArchived) {
+        throw new Error("Restore this domain before uploading files");
       }
       if (!uploadFile) {
         throw new Error("Choose a supported .txt, .md, or .pdf file");
@@ -2997,6 +3147,9 @@ function App() {
       if (!selectedDomainId) {
         throw new Error("Select a domain before rebuilding the index");
       }
+      if (isSelectedDomainArchived) {
+        throw new Error("Restore this domain before rebuilding the index");
+      }
       const accessToken = await getAdminToken();
       const job = await rebuildIndex(accessToken, selectedDomainId);
       setQueuedJobs((current) => [job, ...current].slice(0, 6));
@@ -3027,6 +3180,9 @@ function App() {
       const trimmedQuestion = question.trim();
       if (!selectedDomainId || !trimmedQuestion) {
         throw new Error("Select a domain and write a question");
+      }
+      if (isSelectedDomainArchived) {
+        throw new Error("Restore this domain before running queries");
       }
       const accessToken = await getAdminToken();
       const response = await runAgentQuery(accessToken, selectedDomainId, trimmedQuestion);
@@ -3687,7 +3843,10 @@ function App() {
                   <Database aria-hidden="true" />
                   {isSeedingDemo ? "Seeding" : "Seed demo"}
                 </button>
-                <span className="status-pill">{selectedDomain ? selectedDomain.slug : "No domain"}</span>
+                <span className="status-pill">
+                  {selectedDomain ? selectedDomain.slug : "No domain"}
+                  {isSelectedDomainArchived ? " archived" : ""}
+                </span>
               </div>
             </div>
             <div
@@ -3766,9 +3925,21 @@ function App() {
                       {domains.map((domain) => (
                         <option key={domain.id} value={domain.id}>
                           {domain.name}
+                          {domain.archived_at ? " (archived)" : ""}
                         </option>
                       ))}
                     </select>
+                  </label>
+                  <label className="toggle-control">
+                    <input
+                      type="checkbox"
+                      checked={showArchivedDomains}
+                      disabled={isLoadingWorkspace}
+                      onChange={(event) => void handleArchivedDomainsToggle(event)}
+                    />
+                    <span data-tooltip="Show archived domains so they can be reviewed or restored">
+                      Show archived domains
+                    </span>
                   </label>
                   <label className="toggle-control">
                     <input
@@ -3792,6 +3963,11 @@ function App() {
                     {isLoadingWorkspace ? "Refreshing" : "Refresh"}
                   </button>
                 </div>
+                {isSelectedDomainArchived ? (
+                  <p className="inline-warning">
+                    This domain is archived. Evidence remains readable; restore it before making changes.
+                  </p>
+                ) : null}
                 <form
                   className="domain-edit-form"
                   aria-label="Edit domain details"
@@ -3802,7 +3978,7 @@ function App() {
                     <input
                       placeholder="Active domain name"
                       value={domainEditName}
-                      disabled={!selectedDomainId || isUpdatingDomain}
+                      disabled={!selectedDomainId || isUpdatingDomain || isSelectedDomainArchived}
                       onChange={(event) => setDomainEditName(event.target.value)}
                     />
                   </label>
@@ -3811,20 +3987,45 @@ function App() {
                     <input
                       placeholder="Purpose, scope, or data boundary"
                       value={domainEditDescription}
-                      disabled={!selectedDomainId || isUpdatingDomain}
+                      disabled={!selectedDomainId || isUpdatingDomain || isSelectedDomainArchived}
                       onChange={(event) => setDomainEditDescription(event.target.value)}
                     />
                   </label>
                   <button
                     className="secondary-action"
                     data-tooltip="Update the active domain name and description with an audit journal event"
-                    disabled={!selectedDomainId || isUpdatingDomain}
+                    disabled={!selectedDomainId || isUpdatingDomain || isSelectedDomainArchived}
                     type="submit"
                   >
                     <Pencil aria-hidden="true" />
                     {isUpdatingDomain ? "Saving domain" : "Save domain"}
                   </button>
                 </form>
+                <div className="domain-lifecycle-actions">
+                  {isSelectedDomainArchived ? (
+                    <button
+                      className="secondary-action"
+                      data-tooltip="Restore this domain so documents, sources, and queries can change again"
+                      disabled={!selectedDomainId || isRestoringDomain}
+                      type="button"
+                      onClick={() => void handleRestoreDomain()}
+                    >
+                      <RotateCcw aria-hidden="true" />
+                      {isRestoringDomain ? "Restoring domain" : "Restore domain"}
+                    </button>
+                  ) : (
+                    <button
+                      className="ghost-action danger"
+                      data-tooltip="Archive this domain without deleting documents, sources, jobs, or audit history"
+                      disabled={!selectedDomainId || isArchivingDomain}
+                      type="button"
+                      onClick={() => void handleArchiveDomain()}
+                    >
+                      <Archive aria-hidden="true" />
+                      {isArchivingDomain ? "Archiving domain" : "Archive domain"}
+                    </button>
+                  )}
+                </div>
               </section>
             </div>
             {workspaceError ? (
@@ -3905,7 +4106,13 @@ function App() {
                       <div className="document-actions">
                         <button
                           className="icon-button"
-                          disabled={isEditing || isArchiving || isRestoring || isArchived}
+                          disabled={
+                            isEditing ||
+                            isArchiving ||
+                            isRestoring ||
+                            isArchived ||
+                            isSelectedDomainArchived
+                          }
                           data-tooltip="Rename this document"
                           title="Edit document title"
                           type="button"
@@ -3947,7 +4154,7 @@ function App() {
                         {isArchived ? (
                           <button
                             className="icon-button"
-                            disabled={isEditing || isRestoring}
+                            disabled={isEditing || isRestoring || isSelectedDomainArchived}
                             data-tooltip="Restore this archived document"
                             title="Restore document"
                             type="button"
@@ -3959,7 +4166,7 @@ function App() {
                         ) : (
                           <button
                             className="icon-button danger"
-                            disabled={isEditing || isArchiving}
+                            disabled={isEditing || isArchiving || isSelectedDomainArchived}
                             data-tooltip="Archive without deleting audit history"
                             title="Archive document"
                             type="button"
@@ -4107,7 +4314,7 @@ function App() {
                 <button
                   className="ghost-action"
                   data-tooltip="Queue a local index rebuild for the active domain"
-                  disabled={!selectedDomainId || isQueueingIndex}
+                  disabled={!selectedDomainId || isQueueingIndex || isSelectedDomainArchived}
                   type="button"
                   onClick={() => void handleRebuildIndex()}
                 >
@@ -4146,7 +4353,7 @@ function App() {
                 <button
                   className="secondary-action"
                   data-tooltip="Register a reusable corpus source for this domain"
-                  disabled={!selectedDomainId || isCreatingSource}
+                  disabled={!selectedDomainId || isCreatingSource || isSelectedDomainArchived}
                   type="submit"
                 >
                   <FolderPlus aria-hidden="true" />
@@ -4231,7 +4438,7 @@ function App() {
                               data-tooltip="Edit source kind, name, and URI"
                               title="Edit source"
                               type="button"
-                              disabled={isDeleting}
+                              disabled={isDeleting || isSelectedDomainArchived}
                               aria-label={`Edit ${source.name}`}
                               onClick={() => handleStartSourceEdit(source)}
                             >
@@ -4242,7 +4449,7 @@ function App() {
                               data-tooltip="Remove this source while keeping existing documents"
                               title="Remove source"
                               type="button"
-                              disabled={isDeleting}
+                              disabled={isDeleting || isSelectedDomainArchived}
                               aria-label={`Remove ${source.name}`}
                               onClick={() => void handleDeleteSource(source)}
                             >
@@ -4254,7 +4461,12 @@ function App() {
                             </button>
                             <button
                               className="ghost-action"
-                              disabled={source.kind !== "mount" || isQueueingScan || isDeleting}
+                              disabled={
+                                source.kind !== "mount" ||
+                                isQueueingScan ||
+                                isDeleting ||
+                                isSelectedDomainArchived
+                              }
                               data-tooltip={
                                 source.kind === "mount"
                                   ? "Queue a scan for this mounted source"
@@ -4326,7 +4538,7 @@ function App() {
                 <button
                   className="secondary-action"
                   data-tooltip="Upload a file and queue it for local processing"
-                  disabled={!selectedDomainId || isUploadingFile}
+                  disabled={!selectedDomainId || isUploadingFile || isSelectedDomainArchived}
                   type="submit"
                 >
                   <FileSearch aria-hidden="true" />
@@ -4378,7 +4590,7 @@ function App() {
                 <button
                   className="secondary-action"
                   data-tooltip="Paste text and queue it as a traceable document"
-                  disabled={!selectedDomainId || isIngestingText}
+                  disabled={!selectedDomainId || isIngestingText || isSelectedDomainArchived}
                   type="submit"
                 >
                   <FileSearch aria-hidden="true" />
@@ -4416,7 +4628,7 @@ function App() {
               <button
                 className="secondary-action"
                 data-tooltip="Run a grounded query against the selected domain"
-                disabled={isRunningQuery}
+                disabled={isRunningQuery || !selectedDomainId || isSelectedDomainArchived}
                 type="submit"
               >
                 <Send aria-hidden="true" />

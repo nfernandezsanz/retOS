@@ -12,7 +12,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 [![CI](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml?query=branch%3Amain)
 [![Release Images](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml/badge.svg)](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-95.41%25%20total%20%7C%2090.77%25%20branch-166534?style=flat-square)](#current-status)
+[![Coverage](https://img.shields.io/badge/coverage-95.43%25%20total%20%7C%2090.78%25%20branch-166534?style=flat-square)](#current-status)
 [![Stability](https://img.shields.io/badge/stability-pre--alpha-f97316?style=flat-square)](#current-status)
 
 **Action pills**
@@ -173,7 +173,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation; core product slices are being built phase by phase. |
-| Backend coverage | 95.41% total coverage; 90.77% branch-only coverage is enforced by the 90.65% ratchet above the 90% target. |
+| Backend coverage | 95.43% total coverage; 90.78% branch-only coverage is enforced by the 90.65% ratchet above the 90% target. |
 | Local runtime | Docker-first stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
 | Cost posture | Zero paid LLM calls by default; paid providers require explicit opt-in. |
 | Production status | Not production-promoted; final release still needs GHCR digests, SBOM/provenance, Cosign evidence, and human target-environment review. |
@@ -183,7 +183,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 | Workflow | Local Action |
 | --- | --- |
 | Navigate the console | Use the compact Overview with runtime build/readiness metadata, seed the bundled demo corpus when needed, then switch to Documents, Queries, Evals, Audit, or Admin; each long screen has module pills and a current-context band for its main task areas |
-| Manage domains and sources | Create domains, edit domain details, create/edit/remove sources, scan mounted sources, and rebuild indexes from the React console at http://localhost:8080 |
+| Manage domains and sources | Create domains, edit/archive/restore domain details, create/edit/remove sources, scan mounted sources, and rebuild indexes from the React console at http://localhost:8080 |
 | Upload and manage documents | Upload files, paste text, inspect evidence, rename documents, archive/restore, and review document history in the React console |
 | Watch ingestion/indexing | Live job/progress views and SSE-backed updates in the UI |
 | Query with citations | Run grounded agent queries against indexed domains |
@@ -202,8 +202,9 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 - A Python 3.14 FastAPI backend scaffold with secure settings, JWT helpers, Argon2 password hashing, persisted-resume SSE progress streaming, and Celery/RabbitMQ wiring.
 - Initial SQLAlchemy async persistence for domain and source management through a Unit of Work.
 - Domain management API and UI for creating research domains, selecting the active
-  workspace, and updating domain name/description with auditable `domain.updated`
-  journal events.
+  workspace, updating domain name/description, and archiving/restoring domains without
+  deleting corpus evidence, with auditable `domain.updated`, `domain.archived`, and
+  `domain.restored` journal events.
 - Source management API and UI for creating sources, updating source kind/name/URI, and
   removing sources without deleting already-ingested documents, with auditable
   `source.updated` and `source.deleted` journal events.
@@ -240,7 +241,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
   a compact Overview plus hash-addressable Documents, Queries, Evals, Audit, and Admin
   sections, runtime build metadata from `/versionz`, readiness from `/readyz`, plus contextual module pills and current-context bands that shorten
   Documents, Queries, Evals, Audit, and Admin into scan-friendly task areas. The UI includes hover/focus tooltips,
-  bounded long lists, compact module scroll regions, domain detail editing, source detail editing/removal, document inventory, edit/archive/restore/history actions, jobs,
+  bounded long lists, compact module scroll regions, domain detail editing/archive/restore, source detail editing/removal, document inventory, edit/archive/restore/history actions, jobs,
   OCR, indexing, agent runs, local eval execution, and admin account management.
 - Docker Compose for Postgres, RabbitMQ, Ollama, web, and one shared backend image reused by API, worker, and migrations through role-specific commands.
 - Planning, ADRs, and architecture assets for the open source implementation path.

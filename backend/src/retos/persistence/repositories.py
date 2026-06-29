@@ -64,6 +64,7 @@ def domain_from_record(record: DomainRecord) -> Domain:
         slug=record.slug,
         name=record.name,
         description=record.description,
+        archived_at=record.archived_at,
         created_at=record.created_at,
         updated_at=record.updated_at,
     )
@@ -274,20 +275,30 @@ class DomainRepository:
         await self._session.flush()
         return domain_from_record(record)
 
-    async def list(self) -> list[Domain]:
-        result = await self._session.scalars(select(DomainRecord).order_by(DomainRecord.slug))
+    async def list(self, *, include_archived: bool = False) -> list[Domain]:
+        query = select(DomainRecord)
+        if not include_archived:
+            query = query.where(DomainRecord.archived_at.is_(None))
+        result = await self._session.scalars(query.order_by(DomainRecord.slug))
         return [domain_from_record(record) for record in result]
 
-    async def list_for_admin_user(self, admin_user_id: str) -> builtins.list[Domain]:
-        result = await self._session.scalars(
+    async def list_for_admin_user(
+        self,
+        admin_user_id: str,
+        *,
+        include_archived: bool = False,
+    ) -> builtins.list[Domain]:
+        query = (
             select(DomainRecord)
             .join(
                 AdminUserDomainGrantRecord,
                 AdminUserDomainGrantRecord.domain_id == DomainRecord.id,
             )
             .where(AdminUserDomainGrantRecord.admin_user_id == admin_user_id)
-            .order_by(DomainRecord.slug)
         )
+        if not include_archived:
+            query = query.where(DomainRecord.archived_at.is_(None))
+        result = await self._session.scalars(query.order_by(DomainRecord.slug))
         return [domain_from_record(record) for record in result]
 
     async def get(self, domain_id: str) -> Domain | None:
@@ -315,6 +326,22 @@ class DomainRepository:
             return None
         record.name = name
         record.description = description
+        await self._session.flush()
+        return domain_from_record(record)
+
+    async def archive(self, domain_id: str) -> Domain | None:
+        record = await self._session.get(DomainRecord, domain_id)
+        if record is None:
+            return None
+        record.archived_at = utc_now()
+        await self._session.flush()
+        return domain_from_record(record)
+
+    async def restore(self, domain_id: str) -> Domain | None:
+        record = await self._session.get(DomainRecord, domain_id)
+        if record is None:
+            return None
+        record.archived_at = None
         await self._session.flush()
         return domain_from_record(record)
 

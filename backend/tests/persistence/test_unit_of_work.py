@@ -158,6 +158,64 @@ async def test_domain_repository_update_details_returns_none_for_missing_domain(
 
 
 @pytest.mark.asyncio
+async def test_domain_repository_archives_lists_and_restores_domain(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'domain-archive.db'}")
+    await create_schema(engine)
+    session_factory = create_session_factory(engine)
+
+    try:
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            domain = await uow.domains.add(
+                slug="archive-policy",
+                name="Archive Policy",
+                description=None,
+            )
+            await uow.commit()
+
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            archived = await uow.domains.archive(domain.id)
+            default_domains = await uow.domains.list()
+            archived_domains = await uow.domains.list(include_archived=True)
+            await uow.commit()
+
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            restored = await uow.domains.restore(domain.id)
+            restored_domains = await uow.domains.list()
+            await uow.commit()
+
+        assert archived is not None
+        assert archived.archived_at is not None
+        assert default_domains == []
+        assert [item.id for item in archived_domains] == [domain.id]
+        assert restored is not None
+        assert restored.archived_at is None
+        assert [item.id for item in restored_domains] == [domain.id]
+    finally:
+        await dispose_engine(engine)
+
+
+@pytest.mark.asyncio
+async def test_domain_repository_archive_restore_return_none_for_missing_domain(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'missing-domain-archive.db'}")
+    await create_schema(engine)
+    session_factory = create_session_factory(engine)
+
+    try:
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            archived = await uow.domains.archive("missing-domain")
+            restored = await uow.domains.restore("missing-domain")
+
+        assert archived is None
+        assert restored is None
+    finally:
+        await dispose_engine(engine)
+
+
+@pytest.mark.asyncio
 async def test_source_repository_updates_details_through_unit_of_work(
     tmp_path: Path,
 ) -> None:

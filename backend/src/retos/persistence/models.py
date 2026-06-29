@@ -57,6 +57,11 @@ class DomainRecord(TimestampMixin, Base):
     slug: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        index=True,
+        nullable=True,
+    )
 
     sources: Mapped[list[SourceRecord]] = relationship(
         back_populates="domain",

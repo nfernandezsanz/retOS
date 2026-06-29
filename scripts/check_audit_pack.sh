@@ -110,8 +110,8 @@ for phrase in (
     "Cosign",
     "tag-to-digest resolution",
     "Branch coverage",
-    "95.41% total",
-    "90.77% branch-only",
+    "95.43% total",
+    "90.78% branch-only",
     "RETOS_ALLOW_PAID_LLM=false",
     "RETOS_OLLAMA_MODEL=gemma4",
     "/audit/export",
@@ -162,7 +162,7 @@ require(
     "release note must keep publish evidence blockers explicit",
 )
 require(
-    "90.77% branch" in readme,
+    "90.78% branch" in readme,
     "README must record current branch coverage evidence",
 )
 require(

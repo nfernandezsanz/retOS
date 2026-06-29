@@ -15,6 +15,7 @@ class Domain:
     slug: str
     name: str
     description: str | None
+    archived_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

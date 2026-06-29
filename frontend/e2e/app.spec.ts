@@ -49,6 +49,7 @@ async function mockProviderApi(page: Page) {
       slug: "smoke-research",
       name: "Smoke Research",
       description: "A smoke-test domain",
+      archived_at: null,
       created_at: "2026-06-27T00:00:00Z",
       updated_at: "2026-06-27T00:00:00Z",
     },
@@ -85,6 +86,7 @@ async function mockProviderApi(page: Page) {
     slug: "retos-demo",
     name: "RetOS Demo",
     description: "Local seeded corpus for evaluating RetOS document workflows.",
+    archived_at: null,
     created_at: "2026-06-27T00:08:00Z",
     updated_at: "2026-06-27T00:08:00Z",
   };
@@ -827,13 +829,14 @@ async function mockProviderApi(page: Page) {
       },
     });
   });
-  await page.route("http://localhost:8000/domains", async (route) => {
+  await page.route(/http:\/\/localhost:8000\/domains(?:\?.*)?$/, async (route) => {
     if (route.request().method() === "POST") {
       const created = {
         id: "domain-456",
         slug: "policy-research",
         name: "Policy Research",
         description: "Created from the console",
+        archived_at: null,
         created_at: "2026-06-27T00:00:00Z",
         updated_at: "2026-06-27T00:00:00Z",
       };
@@ -846,21 +849,19 @@ async function mockProviderApi(page: Page) {
       return;
     }
 
+    const includeArchived = new URL(route.request().url()).searchParams.get("include_archived") === "true";
     await route.fulfill({
       contentType: "application/json",
-      json: domains,
+      json: domains.filter((domain) => includeArchived || !domain.archived_at),
     });
   });
-  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+$/, async (route) => {
-    if (route.request().method() !== "PATCH") {
+  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+(?:\/restore)?$/, async (route) => {
+    if (!["PATCH", "DELETE", "POST"].includes(route.request().method())) {
       await route.fallback();
       return;
     }
-    const domainId = new URL(route.request().url()).pathname.split("/")[2];
-    const payload = route.request().postDataJSON() as {
-      name: string;
-      description: string | null;
-    };
+    const pathParts = new URL(route.request().url()).pathname.split("/");
+    const domainId = pathParts[2];
     const index = domains.findIndex((domain) => domain.id === domainId);
     if (index === -1) {
       await route.fulfill({
@@ -870,6 +871,64 @@ async function mockProviderApi(page: Page) {
       });
       return;
     }
+    if (route.request().method() === "DELETE") {
+      domains[index] = {
+        ...domains[index],
+        archived_at: "2026-06-27T00:06:00Z",
+        updated_at: "2026-06-27T00:06:00Z",
+      };
+      journalEvents.unshift({
+        id: `journal-domain-archived-${domainId}`,
+        trace_id: null,
+        occurred_at: "2026-06-27T00:06:00Z",
+        actor: "admin@retos.dev",
+        event_type: "domain.archived",
+        entity_type: "domain",
+        entity_id: domainId,
+        payload: {
+          domain_id: domainId,
+          slug: domains[index].slug,
+          archived_at: domains[index].archived_at,
+          changes: [{ field: "archived_at", before: null, after: domains[index].archived_at }],
+        },
+      });
+      await route.fulfill({
+        contentType: "application/json",
+        json: domains[index],
+      });
+      return;
+    }
+    if (route.request().method() === "POST" && pathParts[3] === "restore") {
+      const before = domains[index].archived_at;
+      domains[index] = {
+        ...domains[index],
+        archived_at: null,
+        updated_at: "2026-06-27T00:07:00Z",
+      };
+      journalEvents.unshift({
+        id: `journal-domain-restored-${domainId}`,
+        trace_id: null,
+        occurred_at: "2026-06-27T00:07:00Z",
+        actor: "admin@retos.dev",
+        event_type: "domain.restored",
+        entity_type: "domain",
+        entity_id: domainId,
+        payload: {
+          domain_id: domainId,
+          slug: domains[index].slug,
+          changes: [{ field: "archived_at", before, after: null }],
+        },
+      });
+      await route.fulfill({
+        contentType: "application/json",
+        json: domains[index],
+      });
+      return;
+    }
+    const payload = route.request().postDataJSON() as {
+      name: string;
+      description: string | null;
+    };
     domains[index] = {
       ...domains[index],
       name: payload.name,
@@ -1880,8 +1939,8 @@ test("clears expired stored admin sessions", async ({ page }) => {
 
 test("clears expired stored admin sessions from workspace refresh", async ({ page }) => {
   await page.evaluate(() => localStorage.setItem("retos.adminToken", "expired-token"));
-  await page.unroute("http://localhost:8000/domains");
-  await page.route("http://localhost:8000/domains", async (route) => {
+  await page.unroute(/http:\/\/localhost:8000\/domains(?:\?.*)?$/);
+  await page.route(/http:\/\/localhost:8000\/domains(?:\?.*)?$/, async (route) => {
     expect(route.request().headers().authorization).toBe("Bearer expired-token");
     await route.fulfill({
       contentType: "application/json",
@@ -2101,6 +2160,17 @@ test("loads the operational console", async ({ page }) => {
   });
   await page.getByRole("button", { name: "Remove Policy Corpus Reviewed" }).click();
   await expect(page.getByLabel("Domain sources").getByText("Policy Corpus Reviewed")).toBeHidden();
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Library" }).click();
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain('Archive domain "Policy Review"');
+    await dialog.accept();
+  });
+  await page.getByRole("button", { name: "Archive domain" }).click();
+  await expect(page.getByText("This domain is archived.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save domain" })).toBeDisabled();
+  await page.getByRole("button", { name: "Restore domain" }).click();
+  await expect(page.getByText("This domain is archived.")).toBeHidden();
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Sources" }).click();
 
   await page.getByRole("button", { name: "Rebuild index" }).click();
 
@@ -2130,7 +2200,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
   await page.getByRole("button", { name: "Archive Uploaded Fixture Reviewed" }).click();
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeHidden();
-  await page.getByLabel("Show archived").check();
+  await page.getByLabel("Show archived", { exact: true }).check();
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
   await page.getByRole("button", { name: "Restore Uploaded Fixture Reviewed" }).click();
   await expect(page.getByRole("button", { name: "Archive Uploaded Fixture Reviewed" })).toBeVisible();
@@ -2138,7 +2208,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("History for Uploaded Fixture Reviewed").getByText("document.updated")).toBeVisible();
   await expect(page.getByLabel("History for Uploaded Fixture Reviewed").getByText("Uploaded Fixture Reviewed")).toBeVisible();
   await page.getByRole("button", { name: "History Uploaded Fixture Reviewed" }).click();
-  await page.getByLabel("Show archived").uncheck();
+  await page.getByLabel("Show archived", { exact: true }).uncheck();
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
 
   await page.getByLabel("Documents modules").getByRole("link", { name: "Text" }).click();
