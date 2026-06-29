@@ -1037,6 +1037,20 @@ async function createDomain(
   });
 }
 
+async function updateDomain(
+  token: string,
+  domainId: string,
+  payload: { name: string; description: string | null },
+): Promise<DomainRead> {
+  return requestJson<DomainRead>(`/domains/${domainId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 async function seedDemoCorpus(token: string): Promise<DemoSeedResponse> {
   return requestJson<DemoSeedResponse>("/demo/seed", {
     method: "POST",
@@ -1807,6 +1821,9 @@ function App() {
   const [domainSlug, setDomainSlug] = useState("");
   const [domainName, setDomainName] = useState("");
   const [domainDescription, setDomainDescription] = useState("");
+  const [domainEditName, setDomainEditName] = useState("");
+  const [domainEditDescription, setDomainEditDescription] = useState("");
+  const [isUpdatingDomain, setIsUpdatingDomain] = useState(false);
   const [question, setQuestion] = useState("");
   const [queryResult, setQueryResult] = useState<AgentQueryResult | null>(null);
   const [queryJob, setQueryJob] = useState<JobRead | null>(null);
@@ -1901,6 +1918,11 @@ function App() {
     () => domains.find((domain) => domain.id === selectedDomainId) ?? null,
     [domains, selectedDomainId],
   );
+
+  useEffect(() => {
+    setDomainEditName(selectedDomain?.name ?? "");
+    setDomainEditDescription(selectedDomain?.description ?? "");
+  }, [selectedDomain]);
 
   const domainById = useMemo(
     () => new Map(domains.map((domain) => [domain.id, domain])),
@@ -2541,6 +2563,35 @@ function App() {
       setWorkspaceError(sessionErrorMessage(error, "Domain creation failed"));
     } finally {
       setIsCreatingDomain(false);
+    }
+  }
+
+  async function handleUpdateDomain(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWorkspaceError(null);
+    if (!selectedDomainId) {
+      setWorkspaceError("Select a domain before updating details");
+      return;
+    }
+    setIsUpdatingDomain(true);
+    try {
+      const name = domainEditName.trim();
+      if (!name) {
+        throw new Error("Domain name is required");
+      }
+      const accessToken = await getAdminToken();
+      const updated = await updateDomain(accessToken, selectedDomainId, {
+        name,
+        description: domainEditDescription.trim() || null,
+      });
+      setDomains((current) =>
+        current.map((domain) => (domain.id === updated.id ? updated : domain)),
+      );
+      await refreshWorkspace(accessToken, updated.id);
+    } catch (error) {
+      setWorkspaceError(sessionErrorMessage(error, "Domain update failed"));
+    } finally {
+      setIsUpdatingDomain(false);
     }
   }
 
@@ -3531,86 +3582,142 @@ function App() {
                 <span className="status-pill">{selectedDomain ? selectedDomain.slug : "No domain"}</span>
               </div>
             </div>
-            <form
-              className="domain-form"
-              hidden={activeModule !== "documents-library"}
-              onSubmit={handleCreateDomain}
-            >
-              <label>
-                <span>Slug</span>
-                <input
-                  placeholder="legal-research"
-                  value={domainSlug}
-                  onChange={(event) => setDomainSlug(event.target.value)}
-                />
-              </label>
-              <label>
-                <span>Name</span>
-                <input
-                  placeholder="Legal research"
-                  value={domainName}
-                  onChange={(event) => setDomainName(event.target.value)}
-                />
-              </label>
-              <label className="span-two">
-                <span>Description</span>
-                <input
-                  placeholder="Purpose, scope, or data boundary"
-                  value={domainDescription}
-                  onChange={(event) => setDomainDescription(event.target.value)}
-                />
-              </label>
-              <button
-                className="secondary-action"
-                data-tooltip="Create an isolated research domain for documents and queries"
-                disabled={isCreatingDomain}
-                type="submit"
-              >
-                <FolderPlus aria-hidden="true" />
-                {isCreatingDomain ? "Creating domain" : "Create domain"}
-              </button>
-            </form>
             <div
-              className="domain-toolbar"
+              className="domain-management"
               hidden={activeModule !== "documents-library"}
               id="documents-library"
               tabIndex={-1}
             >
-              <label>
-                <span>Active domain</span>
-                <select
-                  value={selectedDomainId}
-                  onChange={(event) => void handleDomainChange(event.target.value)}
+              <section className="domain-block" aria-label="Create domain">
+                <div className="section-heading compact">
+                  <h3>Create</h3>
+                  <span
+                    className="badge muted"
+                    data-tooltip="Domains isolate documents, sources, queries, and grants"
+                  >
+                    Boundary
+                  </span>
+                </div>
+                <form className="domain-form" onSubmit={handleCreateDomain}>
+                  <label data-tooltip="Stable lowercase identifier used by APIs and audit records">
+                    <span>Slug</span>
+                    <input
+                      placeholder="legal-research"
+                      value={domainSlug}
+                      onChange={(event) => setDomainSlug(event.target.value)}
+                    />
+                  </label>
+                  <label data-tooltip="Human-readable name shown throughout the console">
+                    <span>Name</span>
+                    <input
+                      placeholder="Legal research"
+                      value={domainName}
+                      onChange={(event) => setDomainName(event.target.value)}
+                    />
+                  </label>
+                  <label
+                    className="span-two"
+                    data-tooltip="Short purpose, scope, or data boundary note"
+                  >
+                    <span>Description</span>
+                    <input
+                      placeholder="Purpose, scope, or data boundary"
+                      value={domainDescription}
+                      onChange={(event) => setDomainDescription(event.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Create an isolated research domain for documents and queries"
+                    disabled={isCreatingDomain}
+                    type="submit"
+                  >
+                    <FolderPlus aria-hidden="true" />
+                    {isCreatingDomain ? "Creating domain" : "Create domain"}
+                  </button>
+                </form>
+              </section>
+              <section className="domain-block" aria-label="Current workspace editor">
+                <div className="section-heading compact">
+                  <h3>Active</h3>
+                  <span
+                    className="badge muted"
+                    data-tooltip="Name and description updates produce domain.updated journal events"
+                  >
+                    Audited edit
+                  </span>
+                </div>
+                <div className="domain-toolbar">
+                  <label data-tooltip="Switch the workspace domain without changing stored data">
+                    <span>Active domain</span>
+                    <select
+                      value={selectedDomainId}
+                      onChange={(event) => void handleDomainChange(event.target.value)}
+                    >
+                      <option value="">Select a domain</option>
+                      {domains.map((domain) => (
+                        <option key={domain.id} value={domain.id}>
+                          {domain.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="toggle-control">
+                    <input
+                      type="checkbox"
+                      checked={showArchivedDocuments}
+                      disabled={!selectedDomainId || isLoadingWorkspace}
+                      onChange={(event) => void handleArchivedToggle(event)}
+                    />
+                    <span data-tooltip="Include archived documents without deleting audit history">
+                      Show archived
+                    </span>
+                  </label>
+                  <button
+                    className="ghost-action"
+                    data-tooltip="Reload the active domain documents and jobs"
+                    disabled={isLoadingWorkspace}
+                    type="button"
+                    onClick={() => void refreshWorkspace()}
+                  >
+                    <RefreshCw aria-hidden="true" />
+                    {isLoadingWorkspace ? "Refreshing" : "Refresh"}
+                  </button>
+                </div>
+                <form
+                  className="domain-edit-form"
+                  aria-label="Edit domain details"
+                  onSubmit={handleUpdateDomain}
                 >
-                  <option value="">Select a domain</option>
-                  {domains.map((domain) => (
-                    <option key={domain.id} value={domain.id}>
-                      {domain.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="toggle-control">
-                <input
-                  type="checkbox"
-                  checked={showArchivedDocuments}
-                  disabled={!selectedDomainId || isLoadingWorkspace}
-                  onChange={(event) => void handleArchivedToggle(event)}
-                />
-                <span data-tooltip="Include archived documents without deleting audit history">
-                  Show archived
-                </span>
-              </label>
-              <button
-                className="ghost-action"
-                data-tooltip="Reload the active domain documents and jobs"
-                disabled={isLoadingWorkspace}
-                type="button"
-                onClick={() => void refreshWorkspace()}
-              >
-                <RefreshCw aria-hidden="true" />
-                {isLoadingWorkspace ? "Refreshing" : "Refresh"}
-              </button>
+                  <label data-tooltip="Display name used in dropdowns and domain summaries">
+                    <span>Domain name</span>
+                    <input
+                      placeholder="Active domain name"
+                      value={domainEditName}
+                      disabled={!selectedDomainId || isUpdatingDomain}
+                      onChange={(event) => setDomainEditName(event.target.value)}
+                    />
+                  </label>
+                  <label data-tooltip="Maintains an audit-visible note about purpose and boundaries">
+                    <span>Domain description</span>
+                    <input
+                      placeholder="Purpose, scope, or data boundary"
+                      value={domainEditDescription}
+                      disabled={!selectedDomainId || isUpdatingDomain}
+                      onChange={(event) => setDomainEditDescription(event.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Update the active domain name and description with an audit journal event"
+                    disabled={!selectedDomainId || isUpdatingDomain}
+                    type="submit"
+                  >
+                    <Pencil aria-hidden="true" />
+                    {isUpdatingDomain ? "Saving domain" : "Save domain"}
+                  </button>
+                </form>
+              </section>
             </div>
             {workspaceError ? (
               <p className="inline-error" role="alert">

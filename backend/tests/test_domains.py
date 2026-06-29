@@ -10,10 +10,12 @@ from sqlalchemy.exc import IntegrityError
 from retos.api.app import create_app
 from retos.api.routes.domains import (
     DomainCreate,
+    DomainUpdate,
     SourceCreate,
     create_domain,
     create_source,
     list_domains,
+    update_domain,
 )
 from retos.core.config import Settings
 from retos.domain.admin import AdminUser
@@ -104,6 +106,25 @@ class FakeDomains:
     async def get(self, domain_id: str) -> Domain | None:
         return self.domain if self.domain is not None and self.domain.id == domain_id else None
 
+    async def update_details(
+        self,
+        *,
+        domain_id: str,
+        name: str,
+        description: str | None,
+    ) -> Domain | None:
+        if self.domain is None or self.domain.id != domain_id:
+            return None
+        self.domain = Domain(
+            id=self.domain.id,
+            slug=self.domain.slug,
+            name=name,
+            description=description,
+            created_at=self.domain.created_at,
+            updated_at=NOW,
+        )
+        return self.domain
+
 
 class FakeSources:
     def __init__(self, source: Source | None = None) -> None:
@@ -131,6 +152,31 @@ class FakeSources:
         return self.source
 
 
+class FakeJournalEvents:
+    def __init__(self) -> None:
+        self.events: list[dict[str, object]] = []
+
+    async def add(
+        self,
+        *,
+        actor: str,
+        event_type: str,
+        entity_type: str,
+        entity_id: str,
+        payload: dict[str, object],
+    ) -> object:
+        self.events.append(
+            {
+                "actor": actor,
+                "event_type": event_type,
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "payload": payload,
+            }
+        )
+        return object()
+
+
 class FakeDomainUnitOfWork:
     def __init__(
         self,
@@ -143,6 +189,7 @@ class FakeDomainUnitOfWork:
         self.domains = FakeDomains(domain)
         self.sources = FakeSources(source)
         self.admin_users = FakeAdminUsers(admin)
+        self.journal_events = FakeJournalEvents()
         self.fail_commit = fail_commit
 
     async def __aenter__(self) -> FakeDomainUnitOfWork:
@@ -212,6 +259,150 @@ def test_rejects_duplicate_domain_slug(
 
     assert first.status_code == 201
     assert second.status_code == 409
+
+
+def test_update_domain_details_records_audit_event(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = domain_client.post(
+        "/domains",
+        json={
+            "slug": "policy",
+            "name": "Policy",
+            "description": "Initial boundary.",
+        },
+        headers=admin_headers,
+    )
+    domain_id = created.json()["id"]
+
+    updated = domain_client.patch(
+        f"/domains/{domain_id}",
+        json={
+            "name": "Policy Review",
+            "description": "Updated scope and retention boundary.",
+        },
+        headers=admin_headers,
+    )
+    fetched = domain_client.get(f"/domains/{domain_id}", headers=admin_headers)
+    audit_events = domain_client.get("/audit/journal-events", headers=admin_headers)
+
+    assert created.status_code == 201
+    assert updated.status_code == 200
+    assert updated.json()["slug"] == "policy"
+    assert updated.json()["name"] == "Policy Review"
+    assert updated.json()["description"] == "Updated scope and retention boundary."
+    assert fetched.json()["name"] == "Policy Review"
+    event = next(event for event in audit_events.json() if event["event_type"] == "domain.updated")
+    assert event["entity_type"] == "domain"
+    assert event["entity_id"] == domain_id
+    assert event["payload"]["slug"] == "policy"
+    assert {
+        "field": "name",
+        "before": "Policy",
+        "after": "Policy Review",
+    } in event[
+        "payload"
+    ]["changes"]
+    assert {
+        "field": "description",
+        "before": "Initial boundary.",
+        "after": "Updated scope and retention boundary.",
+    } in event["payload"]["changes"]
+
+
+def test_update_domain_requires_admin(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = domain_client.post(
+        "/domains",
+        json={"slug": "viewer-edit", "name": "Viewer Edit"},
+        headers=admin_headers,
+    )
+    created_viewer = domain_client.post(
+        "/admin/users",
+        headers=admin_headers,
+        json={
+            "email": "domain-editor-viewer@retos.dev",
+            "password": "domain-editor-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    login = domain_client.post(
+        "/auth/login",
+        json={
+            "email": "domain-editor-viewer@retos.dev",
+            "password": "domain-editor-viewer-password",
+        },
+    )
+    viewer_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = domain_client.patch(
+        f"/domains/{created.json()['id']}",
+        json={"name": "Nope", "description": None},
+        headers=viewer_headers,
+    )
+
+    assert created.status_code == 201
+    assert created_viewer.status_code == 201
+    assert login.status_code == 200
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_update_domain_rejects_missing_domain() -> None:
+    uow = FakeDomainUnitOfWork()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await update_domain(
+            DomainUpdate(name="Missing", description=None),
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id="missing-domain",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Domain not found"
+
+
+@pytest.mark.asyncio
+async def test_update_domain_unit_records_changes() -> None:
+    domain = domain_fixture()
+    uow = FakeDomainUnitOfWork(domain=domain)
+
+    updated = await update_domain(
+        DomainUpdate(name="Domain Updated", description="New scope"),
+        actor="admin@retos.dev",
+        uow=uow,  # type: ignore[arg-type]
+        domain_id=domain.id,
+    )
+
+    assert updated.name == "Domain Updated"
+    assert uow.journal_events.events == [
+        {
+            "actor": "admin@retos.dev",
+            "event_type": "domain.updated",
+            "entity_type": "domain",
+            "entity_id": domain.id,
+            "payload": {
+                "domain_id": domain.id,
+                "slug": domain.slug,
+                "changes": [
+                    {
+                        "field": "name",
+                        "before": "Domain One",
+                        "after": "Domain Updated",
+                    },
+                    {
+                        "field": "description",
+                        "before": None,
+                        "after": "New scope",
+                    },
+                ],
+            },
+        }
+    ]
 
 
 @pytest.mark.asyncio

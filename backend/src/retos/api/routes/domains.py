@@ -25,6 +25,11 @@ class DomainCreate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
 
 
+class DomainUpdate(BaseModel):
+    name: Name
+    description: str | None = Field(default=None, max_length=2000)
+
+
 class DomainRead(BaseModel):
     id: str
     slug: str
@@ -125,6 +130,49 @@ async def get_domain(
         if domain is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
         await ensure_domain_access(actor=actor, domain_id=domain_id, uow=uow)
+    return DomainRead.from_domain(domain)
+
+
+@router.patch("/{domain_id}", response_model=DomainRead)
+async def update_domain(
+    payload: DomainUpdate,
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    domain_id: Annotated[str, Path(min_length=1)],
+) -> DomainRead:
+    async with uow:
+        existing = await uow.domains.get(domain_id)
+        if existing is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        domain = await uow.domains.update_details(
+            domain_id=domain_id,
+            name=payload.name,
+            description=payload.description,
+        )
+        assert domain is not None
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="domain.updated",
+            entity_type="domain",
+            entity_id=domain.id,
+            payload={
+                "domain_id": domain.id,
+                "slug": domain.slug,
+                "changes": [
+                    {
+                        "field": "name",
+                        "before": existing.name,
+                        "after": domain.name,
+                    },
+                    {
+                        "field": "description",
+                        "before": existing.description,
+                        "after": domain.description,
+                    },
+                ],
+            },
+        )
+        await uow.commit()
     return DomainRead.from_domain(domain)
 
 

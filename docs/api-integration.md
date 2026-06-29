@@ -189,8 +189,19 @@ Read a domain:
 curl --header "Authorization: Bearer <token>" http://localhost:8000/domains/<domain_id>
 ```
 
+Update a domain's operator-facing details. The slug stays immutable; name and description
+changes write a `domain.updated` journal event with field-level before/after values:
+
+```bash
+curl --request PATCH http://localhost:8000/domains/<domain_id> \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"name":"Research Review","description":"Updated corpus boundary"}'
+```
+
 The React console uses these endpoints to populate the workspace selector, refresh
-domain metrics, and create new research domains without requiring users to paste UUIDs.
+domain metrics, create new research domains, and edit the active domain name and
+description without requiring users to paste UUIDs.
 
 ## Sources
 

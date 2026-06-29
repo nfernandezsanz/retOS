@@ -303,6 +303,21 @@ class DomainRepository:
             return None
         return domain_from_record(record)
 
+    async def update_details(
+        self,
+        *,
+        domain_id: str,
+        name: str,
+        description: str | None,
+    ) -> Domain | None:
+        record = await self._session.get(DomainRecord, domain_id)
+        if record is None:
+            return None
+        record.name = name
+        record.description = description
+        await self._session.flush()
+        return domain_from_record(record)
+
 
 class AdminUserRepository:
     def __init__(self, session: AsyncSession) -> None:

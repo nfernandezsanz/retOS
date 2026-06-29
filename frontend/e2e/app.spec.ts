@@ -851,6 +851,36 @@ async function mockProviderApi(page: Page) {
       json: domains,
     });
   });
+  await page.route(/http:\/\/localhost:8000\/domains\/[^/]+$/, async (route) => {
+    if (route.request().method() !== "PATCH") {
+      await route.fallback();
+      return;
+    }
+    const domainId = new URL(route.request().url()).pathname.split("/")[2];
+    const payload = route.request().postDataJSON() as {
+      name: string;
+      description: string | null;
+    };
+    const index = domains.findIndex((domain) => domain.id === domainId);
+    if (index === -1) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        json: { detail: "Domain not found" },
+      });
+      return;
+    }
+    domains[index] = {
+      ...domains[index],
+      name: payload.name,
+      description: payload.description,
+      updated_at: "2026-06-27T00:05:00Z",
+    };
+    await route.fulfill({
+      contentType: "application/json",
+      json: domains[index],
+    });
+  });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/documents/, async (route) => {
     const domainId = new URL(route.request().url()).pathname.split("/")[2];
     const includeArchived = new URL(route.request().url()).searchParams.get("include_archived") === "true";
@@ -1965,12 +1995,18 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("link", { name: "Documents" }).first().click();
   await page.getByLabel("Slug").fill("policy-research");
   await page.getByPlaceholder("Legal research").fill("Policy Research");
-  await page.getByLabel("Description").fill("Created from the console");
+  await page.getByRole("textbox", { name: "Description", exact: true }).fill("Created from the console");
   await page.getByRole("button", { name: "Create domain" }).click();
 
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-456");
   await expect(
     page.getByLabel("Active domain").getByRole("option", { name: "Policy Research" }),
+  ).toBeAttached();
+  await page.getByLabel("Domain name").fill("Policy Review");
+  await page.getByLabel("Domain description").fill("Updated from the console");
+  await page.getByRole("button", { name: "Save domain" }).click();
+  await expect(
+    page.getByLabel("Active domain").getByRole("option", { name: "Policy Review" }),
   ).toBeAttached();
 
   await page.getByLabel("Documents modules").getByRole("link", { name: "Sources" }).click();

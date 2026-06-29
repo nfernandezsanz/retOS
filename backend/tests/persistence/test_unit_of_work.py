@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from pydantic import SecretStr
 from sqlalchemy.exc import IntegrityError
@@ -6,6 +8,12 @@ from retos.core.config import Settings
 from retos.persistence import bootstrap as bootstrap_module
 from retos.persistence import unit_of_work as uow_module
 from retos.persistence.bootstrap import bootstrap_admin_user
+from retos.persistence.database import (
+    create_engine,
+    create_schema,
+    create_session_factory,
+    dispose_engine,
+)
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 
 
@@ -87,6 +95,66 @@ async def test_unit_of_work_commit_and_explicit_rollback(
     assert session.commits == 1
     assert session.rollbacks == 1
     assert session.closes == 1
+
+
+@pytest.mark.asyncio
+async def test_domain_repository_updates_details_through_unit_of_work(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'domain-update.db'}")
+    await create_schema(engine)
+    session_factory = create_session_factory(engine)
+
+    try:
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            domain = await uow.domains.add(
+                slug="policy",
+                name="Policy",
+                description="Initial boundary",
+            )
+            await uow.commit()
+
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            updated = await uow.domains.update_details(
+                domain_id=domain.id,
+                name="Policy Review",
+                description="Updated boundary",
+            )
+            await uow.commit()
+
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            fetched = await uow.domains.get(domain.id)
+
+        assert updated is not None
+        assert updated.slug == "policy"
+        assert updated.name == "Policy Review"
+        assert updated.description == "Updated boundary"
+        assert fetched is not None
+        assert fetched.name == "Policy Review"
+        assert fetched.description == "Updated boundary"
+    finally:
+        await dispose_engine(engine)
+
+
+@pytest.mark.asyncio
+async def test_domain_repository_update_details_returns_none_for_missing_domain(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'missing-domain-update.db'}")
+    await create_schema(engine)
+    session_factory = create_session_factory(engine)
+
+    try:
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            result = await uow.domains.update_details(
+                domain_id="missing-domain",
+                name="Missing",
+                description=None,
+            )
+
+        assert result is None
+    finally:
+        await dispose_engine(engine)
 
 
 class FakeAdminRepository:

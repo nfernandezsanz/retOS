@@ -905,6 +905,7 @@ h2 {
 .query-box textarea,
 .query-box input,
 .domain-form input,
+.domain-edit-form input,
 .domain-toolbar select,
 .source-form input,
 .source-form select,
@@ -937,6 +938,7 @@ h2 {
 
 .query-box input,
 .domain-form input,
+.domain-edit-form input,
 .domain-toolbar select,
 .source-form input,
 .source-form select,
@@ -963,6 +965,7 @@ h2 {
 .query-box textarea:focus-visible,
 .query-box input:focus-visible,
 .domain-form input:focus-visible,
+.domain-edit-form input:focus-visible,
 .domain-toolbar select:focus-visible,
 .source-form input:focus-visible,
 .source-form select:focus-visible,
@@ -987,6 +990,7 @@ button:focus-visible {
 }
 
 .domain-form,
+.domain-edit-form,
 .source-form,
 .file-upload-form,
 .text-ingestion-form,
@@ -997,6 +1001,7 @@ button:focus-visible {
 }
 
 .domain-form label,
+.domain-edit-form label,
 .domain-toolbar label,
 .source-form label,
 .file-upload-form label,
@@ -1017,6 +1022,7 @@ button:focus-visible {
 }
 
 .domain-form .secondary-action,
+.domain-edit-form .secondary-action,
 .source-form .secondary-action,
 .file-upload-form .secondary-action,
 .text-ingestion-form .secondary-action,
@@ -1024,16 +1030,41 @@ button:focus-visible {
   grid-column: 1 / -1;
 }
 
+.domain-management {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.92fr) minmax(320px, 1.08fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.domain-block {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.domain-block .section-heading {
+  min-height: 30px;
+}
+
 .domain-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: end;
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .domain-toolbar .ghost-action {
   min-width: 120px;
+}
+
+.domain-edit-form {
+  margin-top: 0;
 }
 
 .document-list {
@@ -3054,7 +3085,9 @@ button:focus-visible {
   .overview-actions,
   .overview-layout,
   .content-grid,
+  .domain-management,
   .domain-form,
+  .domain-edit-form,
   .domain-toolbar,
   .source-form,
   .file-upload-form,
@@ -3191,6 +3224,7 @@ button:focus-visible {
   }
 
   .domain-form,
+  .domain-edit-form,
   .domain-toolbar,
   .source-form,
   .file-upload-form,
@@ -3269,6 +3303,32 @@ button:focus-visible {
   [data-tooltip]::after {
     max-width: min(220px, calc(100vw - 24px));
     font-size: 11px;
+  }
+}
+
+@media (min-width: 521px) and (max-width: 980px) {
+  .domain-form,
+  .domain-edit-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .domain-form .span-two {
+    grid-column: 1 / -1;
+  }
+
+  .domain-form,
+  .domain-edit-form,
+  .domain-toolbar {
+    gap: 10px;
+  }
+
+  .domain-block {
+    padding: 10px;
+  }
+
+  .domain-block .secondary-action {
+    min-height: 40px;
+    margin-top: 4px;
   }
 }
 
