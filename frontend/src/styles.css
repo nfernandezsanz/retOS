@@ -1133,11 +1133,44 @@ button:focus-visible {
 .document-list {
   display: grid;
   gap: 10px;
-  max-height: min(260px, 34vh);
-  margin-top: 14px;
+  max-height: clamp(220px, calc(100vh - 520px), 300px);
+  margin-top: 4px;
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
+}
+
+.document-list-heading {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 9px 10px;
+}
+
+.document-list-heading div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.document-list-heading span:not(.badge) {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.document-list-heading strong {
+  color: #0f172a;
+  font-size: 15px;
+  overflow-wrap: anywhere;
 }
 
 .document-row {
@@ -1148,7 +1181,7 @@ button:focus-visible {
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #f8fafc;
-  padding: 12px;
+  padding: 10px;
 }
 
 .document-row.archived {

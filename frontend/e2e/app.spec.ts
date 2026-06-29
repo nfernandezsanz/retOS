@@ -2064,6 +2064,12 @@ test("loads the operational console", async ({ page }) => {
     "#documents-library",
   );
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
+  await expect(page.getByLabel("Domain documents").getByText("Corpus")).toBeVisible();
+  await expect(page.getByLabel("Domain documents").getByText("Documents", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Domain documents").getByText("1 visible")).toHaveAttribute(
+    "data-tooltip",
+    /selected domain/,
+  );
   await expect(page.getByText("Smoke Document")).toBeVisible();
   await page.getByLabel("Documents modules").getByRole("link", { name: "Sources" }).click();
   await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();

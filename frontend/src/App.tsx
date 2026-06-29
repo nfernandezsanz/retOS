@@ -4049,6 +4049,18 @@ function App() {
               aria-label="Domain documents"
               hidden={activeModule !== "documents-library"}
             >
+              <div className="document-list-heading">
+                <div>
+                  <span>Corpus</span>
+                  <strong>Documents</strong>
+                </div>
+                <span
+                  className="badge muted"
+                  data-tooltip="Documents visible for the selected domain and archive filter"
+                >
+                  {documents.length} visible
+                </span>
+              </div>
               {documents.map((document) => {
                 const isEditing = editingDocumentId === document.id;
                 const isArchived = document.archived_at !== null;
