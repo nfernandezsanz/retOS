@@ -6514,6 +6514,24 @@ function App() {
                 )}
               </section>
             ) : null}
+            <div
+              className="audit-context"
+              hidden={activeModule !== "audit-progress"}
+              aria-label="Audit progress context"
+            >
+              <div data-tooltip="Progress events are grouped by job id so repeated updates stay scannable">
+                <span>Grouped jobs</span>
+                <strong>{progressGroups.length}</strong>
+              </div>
+              <div data-tooltip="Persisted worker and query progress rows are available for replay and audit">
+                <span>Progress events</span>
+                <strong>{auditProgressEvents.length}</strong>
+              </div>
+              <div data-tooltip="Newest grouped progress state after sorting by last update time">
+                <span>Latest state</span>
+                <strong>{progressGroups[0]?.lastEventType ?? "Waiting"}</strong>
+              </div>
+            </div>
             <section
               className="job-progress-groups"
               hidden={activeModule !== "audit-progress"}

@@ -2303,6 +2303,13 @@ test("loads the operational console", async ({ page }) => {
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),
   ).toBeVisible();
   await page.getByLabel("Audit modules").getByRole("link", { name: "Progress", exact: true }).click();
+  await expect(page.getByLabel("Audit progress context").getByText("Grouped jobs")).toBeVisible();
+  await expect(page.getByLabel("Audit progress context").getByText("Progress events")).toBeVisible();
+  await expect(
+    page.getByLabel("Audit progress context").locator("[data-tooltip]").filter({
+      hasText: "Progress events",
+    }),
+  ).toHaveAttribute("data-tooltip", /replay and audit/);
   const scanProgressGroup = page
     .getByLabel("Progress grouped by job")
     .locator("article")
