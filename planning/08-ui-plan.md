@@ -39,7 +39,9 @@ section, active module, helper text, and module position so users can confirm wh
 are before acting.
 Repeated long lists, dense query results, eval dataset controls, and admin tables are
 bounded inside their modules so the page remains organized without hiding existing
-controls behind modal flows. The eval runner uses compact two-column dataset sections on
+controls behind modal flows. Query results split status, answer, budget, citations,
+query plan, evidence route, multi-hop audit, and neighbor context into compact
+tooltip-backed review sections. The eval runner uses compact two-column dataset sections on
 desktop and collapses to one column on smaller screens; Admin headings and status pills
 follow the active module so provider and user management do not feel like the same page.
 

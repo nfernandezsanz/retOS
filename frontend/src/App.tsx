@@ -32,7 +32,8 @@ import {
 } from "lucide-react";
 import "./styles.css";
 
-type ProviderName = "fake" | "local" | "openai" | "anthropic" | "google" | "openrouter" | "azure";
+type ProviderName =
+  "fake" | "local" | "openai" | "anthropic" | "google" | "openrouter" | "azure";
 
 type ProviderProfile = {
   name: ProviderName;
@@ -88,7 +89,8 @@ type RuntimeReadiness = {
   components: Record<string, string>;
 };
 
-type WorkspaceSection = "overview" | "documents" | "queries" | "evals" | "audit" | "admin";
+type WorkspaceSection =
+  "overview" | "documents" | "queries" | "evals" | "audit" | "admin";
 
 type WorkspaceModule = {
   id: string;
@@ -116,7 +118,8 @@ const workspaceSections: Array<{
     label: "Overview",
     eyebrow: "Console",
     title: "Operating snapshot",
-    description: "See corpus health, provider status, active jobs, and the next best place to work.",
+    description:
+      "See corpus health, provider status, active jobs, and the next best place to work.",
     tooltip: "Return to the short system snapshot",
   },
   {
@@ -124,7 +127,8 @@ const workspaceSections: Array<{
     label: "Documents",
     eyebrow: "Knowledge base",
     title: "Domains and documents",
-    description: "Create domains, attach sources, queue ingestion, and inspect document evidence.",
+    description:
+      "Create domains, attach sources, queue ingestion, and inspect document evidence.",
     tooltip: "Manage domains, sources, uploads, and indexed documents",
   },
   {
@@ -132,7 +136,8 @@ const workspaceSections: Array<{
     label: "Queries",
     eyebrow: "Research",
     title: "Grounded query workflow",
-    description: "Ask questions, inspect citations, and watch live processing events while work runs.",
+    description:
+      "Ask questions, inspect citations, and watch live processing events while work runs.",
     tooltip: "Ask grounded questions and follow live processing",
   },
   {
@@ -140,7 +145,8 @@ const workspaceSections: Array<{
     label: "Evals",
     eyebrow: "Quality",
     title: "Local evals",
-    description: "Run smoke, retrieval, multi-hop, dataset, OCR, and regression-gate checks locally.",
+    description:
+      "Run smoke, retrieval, multi-hop, dataset, OCR, and regression-gate checks locally.",
     tooltip: "Run local eval suites and compare quality trends",
   },
   {
@@ -148,7 +154,8 @@ const workspaceSections: Array<{
     label: "Audit",
     eyebrow: "Evidence",
     title: "Jobs and evidence ledger",
-    description: "Review jobs, retries, journal events, persisted progress, and exportable audit evidence.",
+    description:
+      "Review jobs, retries, journal events, persisted progress, and exportable audit evidence.",
     tooltip: "Inspect jobs, hashes, journals, and evidence exports",
   },
   {
@@ -156,7 +163,8 @@ const workspaceSections: Array<{
     label: "Admin",
     eyebrow: "Admin",
     title: "LLM providers",
-    description: "Load provider configuration, verify local defaults, and manage admin users.",
+    description:
+      "Load provider configuration, verify local defaults, and manage admin users.",
     tooltip: "Manage LLM providers and admin access",
   },
 ];
@@ -211,14 +219,16 @@ const workspaceModules: Record<WorkspaceSection, WorkspaceModule[]> = {
     {
       id: "evals-history",
       label: "History",
-      tooltip: "Compare runs, regression-gate candidates, rerun, and inspect trends",
+      tooltip:
+        "Compare runs, regression-gate candidates, rerun, and inspect trends",
     },
   ],
   audit: [
     {
       id: "audit-jobs",
       label: "Jobs",
-      tooltip: "Filter recent jobs, inspect details, retry failures, and export evidence",
+      tooltip:
+        "Filter recent jobs, inspect details, retry failures, and export evidence",
     },
     {
       id: "audit-progress",
@@ -267,7 +277,10 @@ function firstModuleForSection(section: WorkspaceSection): string | null {
   return workspaceModules[section][0]?.id ?? null;
 }
 
-function moduleFromHash(hash: string, section: WorkspaceSection): string | null {
+function moduleFromHash(
+  hash: string,
+  section: WorkspaceSection,
+): string | null {
   const candidate = hash.replace("#", "");
   if (workspaceModules[section].some((module) => module.id === candidate)) {
     return candidate;
@@ -509,7 +522,9 @@ function evidenceAuditFor(result: AgentQueryResult) {
     result.evidence_audit ?? {
       grounded: result.citations.length === 0,
       cited_segment_ids: [],
-      unreferenced_citation_ids: result.citations.map((citation) => citation.segment_id),
+      unreferenced_citation_ids: result.citations.map(
+        (citation) => citation.segment_id,
+      ),
     }
   );
 }
@@ -525,12 +540,15 @@ function contradictionAuditFor(result: AgentQueryResult) {
 }
 
 function multiHopAuditFor(result: AgentQueryResult): AgentMultiHopAudit {
-  const documentCount = new Set(result.citations.map((citation) => citation.document_id)).size;
+  const documentCount = new Set(
+    result.citations.map((citation) => citation.document_id),
+  ).size;
   return (
     result.multi_hop_audit ?? {
       checked: false,
       requires_multi_hop: false,
-      status: documentCount > 1 ? "opportunistic_multi_document" : "not_required",
+      status:
+        documentCount > 1 ? "opportunistic_multi_document" : "not_required",
       document_count: documentCount,
       bridge_terms: [],
       warnings: [],
@@ -548,14 +566,17 @@ function evidenceRouteFor(result: AgentQueryResult): AgentEvidenceRoute {
             ? "single_segment"
             : "single_document",
       segment_count: result.citations.length,
-      document_count: new Set(result.citations.map((citation) => citation.document_id)).size,
+      document_count: new Set(
+        result.citations.map((citation) => citation.document_id),
+      ).size,
       anchor_count: new Set(
         result.citations
           .filter((citation) => Boolean(citation.anchor))
           .map((citation) => `${citation.document_id}:${citation.anchor}`),
       ).size,
       multi_document:
-        new Set(result.citations.map((citation) => citation.document_id)).size > 1,
+        new Set(result.citations.map((citation) => citation.document_id)).size >
+        1,
       has_neighbor_context: (result.neighbor_context ?? []).length > 0,
       warnings: result.citations.length === 0 ? ["no_citations"] : [],
       documents: [],
@@ -813,10 +834,12 @@ type AuditExportSummary = {
 
 type LiveStatus = "disconnected" | "connecting" | "connected";
 
-const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
+const API_BASE_URL =
+  import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
 const TOKEN_STORAGE_KEY = "retos.adminToken";
 const JOB_LEDGER_LIMIT = 16;
-const SESSION_EXPIRED_MESSAGE = "Admin session expired. Enter the password and reconnect.";
+const SESSION_EXPIRED_MESSAGE =
+  "Admin session expired. Enter the password and reconnect.";
 
 class ApiRequestError extends Error {
   constructor(
@@ -842,7 +865,10 @@ async function responseErrorMessage(response: Response): Promise<string> {
 
 async function ensureOk(response: Response): Promise<void> {
   if (!response.ok) {
-    throw new ApiRequestError(response.status, await responseErrorMessage(response));
+    throw new ApiRequestError(
+      response.status,
+      await responseErrorMessage(response),
+    );
   }
 }
 
@@ -855,10 +881,26 @@ function readableError(error: unknown, fallback: string): string {
 }
 
 const pipelineSteps = [
-  { label: "Scan", value: "Discover mounted files and uploads", state: "ready" },
-  { label: "Hash", value: "Create deterministic content identities", state: "ready" },
-  { label: "OCR", value: "Extract text from scanned pages locally", state: "waiting" },
-  { label: "Index", value: "Build rebuildable Tantivy BM25 projections", state: "waiting" },
+  {
+    label: "Scan",
+    value: "Discover mounted files and uploads",
+    state: "ready",
+  },
+  {
+    label: "Hash",
+    value: "Create deterministic content identities",
+    state: "ready",
+  },
+  {
+    label: "OCR",
+    value: "Extract text from scanned pages locally",
+    state: "waiting",
+  },
+  {
+    label: "Index",
+    value: "Build rebuildable Tantivy BM25 projections",
+    state: "waiting",
+  },
 ];
 
 async function requestJson<T>(
@@ -895,7 +937,11 @@ async function loadProviderCatalog(token: string): Promise<ProviderCatalog> {
 
 async function previewRuntimePlan(
   token: string,
-  payload: { provider: ProviderName; agent_runtime: string; allow_paid_llm?: boolean },
+  payload: {
+    provider: ProviderName;
+    agent_runtime: string;
+    allow_paid_llm?: boolean;
+  },
 ): Promise<RuntimeSwitchPlan> {
   return requestJson<RuntimeSwitchPlan>("/llm/runtime-plan", {
     method: "POST",
@@ -935,11 +981,14 @@ async function loadAdminUserDomainGrants(
   token: string,
   adminUserId: string,
 ): Promise<AdminUserDomainGrantRead[]> {
-  return requestJson<AdminUserDomainGrantRead[]>(`/admin/users/${adminUserId}/domain-grants`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  return requestJson<AdminUserDomainGrantRead[]>(
+    `/admin/users/${adminUserId}/domain-grants`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 }
 
 async function createAdminUser(
@@ -960,13 +1009,16 @@ async function createAdminUserDomainGrant(
   adminUserId: string,
   domainId: string,
 ): Promise<AdminUserDomainGrantRead> {
-  return requestJson<AdminUserDomainGrantRead>(`/admin/users/${adminUserId}/domain-grants`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
+  return requestJson<AdminUserDomainGrantRead>(
+    `/admin/users/${adminUserId}/domain-grants`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ domain_id: domainId }),
     },
-    body: JSON.stringify({ domain_id: domainId }),
-  });
+  );
 }
 
 async function deleteAdminUserDomainGrant(
@@ -974,12 +1026,15 @@ async function deleteAdminUserDomainGrant(
   adminUserId: string,
   domainId: string,
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/admin/users/${adminUserId}/domain-grants/${domainId}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const response = await fetch(
+    `${API_BASE_URL}/admin/users/${adminUserId}/domain-grants/${domainId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
   await ensureOk(response);
 }
 
@@ -1025,7 +1080,10 @@ async function resetAdminUserPassword(
   });
 }
 
-async function loadDomains(token: string, includeArchived = false): Promise<DomainRead[]> {
+async function loadDomains(
+  token: string,
+  includeArchived = false,
+): Promise<DomainRead[]> {
   const query = includeArchived ? "?include_archived=true" : "";
   return requestJson<DomainRead[]>(`/domains${query}`, {
     headers: {
@@ -1061,7 +1119,10 @@ async function updateDomain(
   });
 }
 
-async function archiveDomain(token: string, domainId: string): Promise<DomainRead> {
+async function archiveDomain(
+  token: string,
+  domainId: string,
+): Promise<DomainRead> {
   return requestJson<DomainRead>(`/domains/${domainId}`, {
     method: "DELETE",
     headers: {
@@ -1070,7 +1131,10 @@ async function archiveDomain(token: string, domainId: string): Promise<DomainRea
   });
 }
 
-async function restoreDomain(token: string, domainId: string): Promise<DomainRead> {
+async function restoreDomain(
+  token: string,
+  domainId: string,
+): Promise<DomainRead> {
   return requestJson<DomainRead>(`/domains/${domainId}/restore`, {
     method: "POST",
     headers: {
@@ -1116,7 +1180,10 @@ async function updateDocument(
   });
 }
 
-async function archiveDocument(token: string, documentId: string): Promise<DocumentRead> {
+async function archiveDocument(
+  token: string,
+  documentId: string,
+): Promise<DocumentRead> {
   return requestJson<DocumentRead>(`/documents/${documentId}`, {
     method: "DELETE",
     headers: {
@@ -1125,7 +1192,10 @@ async function archiveDocument(token: string, documentId: string): Promise<Docum
   });
 }
 
-async function restoreDocument(token: string, documentId: string): Promise<DocumentRead> {
+async function restoreDocument(
+  token: string,
+  documentId: string,
+): Promise<DocumentRead> {
   return requestJson<DocumentRead>(`/documents/${documentId}/restore`, {
     method: "POST",
     headers: {
@@ -1134,7 +1204,10 @@ async function restoreDocument(token: string, documentId: string): Promise<Docum
   });
 }
 
-async function loadDocumentHistory(token: string, documentId: string): Promise<DocumentHistoryRead> {
+async function loadDocumentHistory(
+  token: string,
+  documentId: string,
+): Promise<DocumentHistoryRead> {
   return requestJson<DocumentHistoryRead>(`/documents/${documentId}/history`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -1146,27 +1219,42 @@ async function loadDocumentVersions(
   token: string,
   documentId: string,
 ): Promise<DocumentVersionRead[]> {
-  return requestJson<DocumentVersionRead[]>(`/documents/${documentId}/versions`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  return requestJson<DocumentVersionRead[]>(
+    `/documents/${documentId}/versions`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 }
 
-async function loadDocumentArtifacts(token: string, versionId: string): Promise<ArtifactRead[]> {
-  return requestJson<ArtifactRead[]>(`/document-versions/${versionId}/artifacts`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+async function loadDocumentArtifacts(
+  token: string,
+  versionId: string,
+): Promise<ArtifactRead[]> {
+  return requestJson<ArtifactRead[]>(
+    `/document-versions/${versionId}/artifacts`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 }
 
-async function loadDocumentSegments(token: string, versionId: string): Promise<SegmentRead[]> {
-  return requestJson<SegmentRead[]>(`/document-versions/${versionId}/segments`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+async function loadDocumentSegments(
+  token: string,
+  versionId: string,
+): Promise<SegmentRead[]> {
+  return requestJson<SegmentRead[]>(
+    `/document-versions/${versionId}/segments`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 }
 
 async function loadDocumentEvidence(
@@ -1175,7 +1263,8 @@ async function loadDocumentEvidence(
 ): Promise<DocumentEvidenceRead> {
   const versions = await loadDocumentVersions(token, documentId);
   const latestVersion = versions.reduce<DocumentVersionRead | null>(
-    (latest, version) => (latest === null || version.version > latest.version ? version : latest),
+    (latest, version) =>
+      latest === null || version.version > latest.version ? version : latest,
     null,
   );
   if (latestVersion === null) {
@@ -1188,7 +1277,10 @@ async function loadDocumentEvidence(
   return { version: latestVersion, artifacts, segments };
 }
 
-async function loadSources(token: string, domainId: string): Promise<SourceRead[]> {
+async function loadSources(
+  token: string,
+  domainId: string,
+): Promise<SourceRead[]> {
   return requestJson<SourceRead[]>(`/domains/${domainId}/sources`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -1229,7 +1321,9 @@ async function loadJournalEvents(token: string): Promise<JournalEventRead[]> {
   });
 }
 
-async function loadAuditProgressEvents(token: string): Promise<ProgressEventRead[]> {
+async function loadAuditProgressEvents(
+  token: string,
+): Promise<ProgressEventRead[]> {
   return requestJson<ProgressEventRead[]>("/audit/progress-events?limit=20", {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -1256,7 +1350,9 @@ async function exportAuditSnapshot(
   });
   await ensureOk(response);
   const snapshot = (await response.json()) as AuditExportRead;
-  const filename = auditExportFilename(response.headers.get("content-disposition"));
+  const filename = auditExportFilename(
+    response.headers.get("content-disposition"),
+  );
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
     type: "application/json",
   });
@@ -1300,7 +1396,11 @@ async function updateSource(
   });
 }
 
-async function deleteSource(token: string, domainId: string, sourceId: string): Promise<SourceRead> {
+async function deleteSource(
+  token: string,
+  domainId: string,
+  sourceId: string,
+): Promise<SourceRead> {
   return requestJson<SourceRead>(`/domains/${domainId}/sources/${sourceId}`, {
     method: "DELETE",
     headers: {
@@ -1348,13 +1448,16 @@ async function uploadDocumentFile(
     form.append("title", payload.title);
   }
   form.append("max_segment_tokens", "220");
-  const response = await fetch(`${API_BASE_URL}/domains/${domainId}/ingestions/upload`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const response = await fetch(
+    `${API_BASE_URL}/domains/${domainId}/ingestions/upload`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
     },
-    body: form,
-  });
+  );
   await ensureOk(response);
   return (await response.json()) as JobRead;
 }
@@ -1518,7 +1621,10 @@ async function runOcrBenchmarkEval(
   });
 }
 
-async function loadEvalRuns(token: string, domainId?: string): Promise<EvalRunRead[]> {
+async function loadEvalRuns(
+  token: string,
+  domainId?: string,
+): Promise<EvalRunRead[]> {
   const query = new URLSearchParams({ limit: "6" });
   if (domainId) {
     query.set("domain_id", domainId);
@@ -1530,16 +1636,22 @@ async function loadEvalRuns(token: string, domainId?: string): Promise<EvalRunRe
   });
 }
 
-async function loadEvalTrends(token: string, domainId?: string): Promise<EvalSuiteTrend[]> {
+async function loadEvalTrends(
+  token: string,
+  domainId?: string,
+): Promise<EvalSuiteTrend[]> {
   const query = new URLSearchParams({ limit: "60" });
   if (domainId) {
     query.set("domain_id", domainId);
   }
-  return requestJson<EvalSuiteTrend[]>(`/evals/runs/trends?${query.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  return requestJson<EvalSuiteTrend[]>(
+    `/evals/runs/trends?${query.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 }
 
 async function compareEvalRuns(
@@ -1555,11 +1667,14 @@ async function compareEvalRuns(
   if (domainId) {
     query.set("domain_id", domainId);
   }
-  return requestJson<EvalRunComparison>(`/evals/runs/compare?${query.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  return requestJson<EvalRunComparison>(
+    `/evals/runs/compare?${query.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 }
 
 async function runEvalRegressionGate(
@@ -1587,7 +1702,10 @@ async function runEvalRegressionGate(
   );
 }
 
-async function rerunEval(token: string, jobId: string): Promise<EvalRunResponse> {
+async function rerunEval(
+  token: string,
+  jobId: string,
+): Promise<EvalRunResponse> {
   return requestJson<EvalRunResponse>(`/evals/runs/${jobId}/rerun`, {
     method: "POST",
     headers: {
@@ -1606,7 +1724,9 @@ function providerLabel(name: ProviderName): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-function reportPathsFromPayload(payload: Record<string, unknown>): EvalReportPaths | null {
+function reportPathsFromPayload(
+  payload: Record<string, unknown>,
+): EvalReportPaths | null {
   const candidate = payload.report_paths;
   if (!candidate || typeof candidate !== "object") {
     return null;
@@ -1665,13 +1785,18 @@ function formatDateTime(value: string | null): string {
 }
 
 function summarizePayload(payload: Record<string, unknown>): string {
-  const entries = Object.entries(payload).filter(([, value]) => value !== null && value !== "");
+  const entries = Object.entries(payload).filter(
+    ([, value]) => value !== null && value !== "",
+  );
   if (entries.length === 0) {
     return "No payload";
   }
   return entries
     .slice(0, 4)
-    .map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`)
+    .map(
+      ([key, value]) =>
+        `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`,
+    )
     .join(" | ");
 }
 
@@ -1687,7 +1812,9 @@ function progressEventStatus(event: ProgressEvent): string | null {
 
 function progressEventOccurredAt(event: ProgressEvent): string | null {
   const occurredAt = event.data.occurred_at;
-  return typeof occurredAt === "string" && occurredAt.trim() ? occurredAt : null;
+  return typeof occurredAt === "string" && occurredAt.trim()
+    ? occurredAt
+    : null;
 }
 
 function progressEventMessage(event: ProgressEvent): string {
@@ -1698,15 +1825,23 @@ function progressEventMessage(event: ProgressEvent): string {
   return progressEventJobId(event) ?? "Progress update";
 }
 
-function mergeProgressEvents(current: ProgressEvent[], incoming: ProgressEvent[]): ProgressEvent[] {
-  const byKey = new Map(current.map((event) => [`${event.id}:${event.event}`, event]));
+function mergeProgressEvents(
+  current: ProgressEvent[],
+  incoming: ProgressEvent[],
+): ProgressEvent[] {
+  const byKey = new Map(
+    current.map((event) => [`${event.id}:${event.event}`, event]),
+  );
   for (const event of incoming) {
     byKey.set(`${event.id}:${event.event}`, event);
   }
   return [...byKey.values()].slice(-8);
 }
 
-function buildLiveProgressSummary(events: ProgressEvent[], jobs: JobRead[]): LiveProgressSummary {
+function buildLiveProgressSummary(
+  events: ProgressEvent[],
+  jobs: JobRead[],
+): LiveProgressSummary {
   const observedJobIds = new Set<string>();
   const statusCounts = {
     queued: 0,
@@ -1772,21 +1907,29 @@ function groupProgressByJob(
         lastOccurredAt: lastEvent?.occurred_at ?? "",
       };
     })
-    .sort((left, right) => right.lastOccurredAt.localeCompare(left.lastOccurredAt));
+    .sort((left, right) =>
+      right.lastOccurredAt.localeCompare(left.lastOccurredAt),
+    );
 }
 
 function formatHistoryValue(value: unknown): string {
   if (value === null || value === undefined) {
     return "null";
   }
-  const rendered = typeof value === "object" ? JSON.stringify(value) : String(value);
+  const rendered =
+    typeof value === "object" ? JSON.stringify(value) : String(value);
   return rendered.length > 160 ? `${rendered.slice(0, 157)}...` : rendered;
 }
 
 function evalMetadataEntries(report: EvalReport): [string, string][] {
   return Object.entries(report.metadata ?? {})
-    .filter(([, value]) => value !== null && value !== undefined && value !== "")
-    .map(([key, value]) => [key.replaceAll("_", " "), formatHistoryValue(value)]);
+    .filter(
+      ([, value]) => value !== null && value !== undefined && value !== "",
+    )
+    .map(([key, value]) => [
+      key.replaceAll("_", " "),
+      formatHistoryValue(value),
+    ]);
 }
 
 function formatScore(value: number): string {
@@ -1805,55 +1948,92 @@ function shortHash(value: string | null): string {
 function App() {
   const [email, setEmail] = useState("admin@retos.dev");
   const [password, setPassword] = useState("");
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY) ?? "");
+  const [token, setToken] = useState(
+    () => localStorage.getItem(TOKEN_STORAGE_KEY) ?? "",
+  );
   const [catalog, setCatalog] = useState<ProviderCatalog | null>(null);
-  const [runtimePlanProvider, setRuntimePlanProvider] = useState<ProviderName>("local");
-  const [runtimePlanAgentRuntime, setRuntimePlanAgentRuntime] = useState("deepagents");
+  const [runtimePlanProvider, setRuntimePlanProvider] =
+    useState<ProviderName>("local");
+  const [runtimePlanAgentRuntime, setRuntimePlanAgentRuntime] =
+    useState("deepagents");
   const [runtimePlanAllowPaid, setRuntimePlanAllowPaid] = useState(false);
-  const [runtimePlan, setRuntimePlan] = useState<RuntimeSwitchPlan | null>(null);
+  const [runtimePlan, setRuntimePlan] = useState<RuntimeSwitchPlan | null>(
+    null,
+  );
   const [isPreviewingRuntimePlan, setIsPreviewingRuntimePlan] = useState(false);
   const [runtimePlanError, setRuntimePlanError] = useState<string | null>(null);
   const [adminUsers, setAdminUsers] = useState<AdminUserRead[]>([]);
   const [adminUserEmail, setAdminUserEmail] = useState("");
   const [adminUserPassword, setAdminUserPassword] = useState("");
   const [adminUserRole, setAdminUserRole] = useState("admin");
-  const [adminRoleEdits, setAdminRoleEdits] = useState<Record<string, string>>({});
-  const [adminPasswordResets, setAdminPasswordResets] = useState<Record<string, string>>({});
+  const [adminRoleEdits, setAdminRoleEdits] = useState<Record<string, string>>(
+    {},
+  );
+  const [adminPasswordResets, setAdminPasswordResets] = useState<
+    Record<string, string>
+  >({});
   const [adminDomainGrants, setAdminDomainGrants] = useState<
     Record<string, AdminUserDomainGrantRead[]>
   >({});
-  const [adminGrantDomainIds, setAdminGrantDomainIds] = useState<Record<string, string>>({});
+  const [adminGrantDomainIds, setAdminGrantDomainIds] = useState<
+    Record<string, string>
+  >({});
   const [isCreatingAdminUser, setIsCreatingAdminUser] = useState(false);
-  const [savingAdminUserId, setSavingAdminUserId] = useState<string | null>(null);
+  const [savingAdminUserId, setSavingAdminUserId] = useState<string | null>(
+    null,
+  );
   const [adminUserError, setAdminUserError] = useState<string | null>(null);
   const [adminUserMessage, setAdminUserMessage] = useState<string | null>(null);
   const [isLoadingProvider, setIsLoadingProvider] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
-  const [runtimeVersion, setRuntimeVersion] = useState<RuntimeVersion | null>(null);
-  const [runtimeVersionError, setRuntimeVersionError] = useState<string | null>(null);
-  const [runtimeReadiness, setRuntimeReadiness] = useState<RuntimeReadiness | null>(null);
-  const [runtimeReadinessError, setRuntimeReadinessError] = useState<string | null>(null);
+  const [runtimeVersion, setRuntimeVersion] = useState<RuntimeVersion | null>(
+    null,
+  );
+  const [runtimeVersionError, setRuntimeVersionError] = useState<string | null>(
+    null,
+  );
+  const [runtimeReadiness, setRuntimeReadiness] =
+    useState<RuntimeReadiness | null>(null);
+  const [runtimeReadinessError, setRuntimeReadinessError] = useState<
+    string | null
+  >(null);
   const [domains, setDomains] = useState<DomainRead[]>([]);
   const [selectedDomainId, setSelectedDomainId] = useState("");
   const [documents, setDocuments] = useState<DocumentRead[]>([]);
   const [sources, setSources] = useState<SourceRead[]>([]);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
-  const [demoSeedResult, setDemoSeedResult] = useState<DemoSeedResponse | null>(null);
+  const [demoSeedResult, setDemoSeedResult] = useState<DemoSeedResponse | null>(
+    null,
+  );
   const [demoSeedError, setDemoSeedError] = useState<string | null>(null);
   const [isSeedingDemo, setIsSeedingDemo] = useState(false);
-  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(
+    null,
+  );
   const [documentEditTitle, setDocumentEditTitle] = useState("");
   const [isUpdatingDocument, setIsUpdatingDocument] = useState(false);
-  const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(null);
-  const [restoringDocumentId, setRestoringDocumentId] = useState<string | null>(null);
+  const [archivingDocumentId, setArchivingDocumentId] = useState<string | null>(
+    null,
+  );
+  const [restoringDocumentId, setRestoringDocumentId] = useState<string | null>(
+    null,
+  );
   const [showArchivedDocuments, setShowArchivedDocuments] = useState(false);
-  const [historyDocumentId, setHistoryDocumentId] = useState<string | null>(null);
-  const [documentHistory, setDocumentHistory] = useState<DocumentHistoryRead | null>(null);
-  const [isLoadingDocumentHistory, setIsLoadingDocumentHistory] = useState(false);
-  const [evidenceDocumentId, setEvidenceDocumentId] = useState<string | null>(null);
-  const [documentEvidence, setDocumentEvidence] = useState<DocumentEvidenceRead | null>(null);
-  const [isLoadingDocumentEvidence, setIsLoadingDocumentEvidence] = useState(false);
+  const [historyDocumentId, setHistoryDocumentId] = useState<string | null>(
+    null,
+  );
+  const [documentHistory, setDocumentHistory] =
+    useState<DocumentHistoryRead | null>(null);
+  const [isLoadingDocumentHistory, setIsLoadingDocumentHistory] =
+    useState(false);
+  const [evidenceDocumentId, setEvidenceDocumentId] = useState<string | null>(
+    null,
+  );
+  const [documentEvidence, setDocumentEvidence] =
+    useState<DocumentEvidenceRead | null>(null);
+  const [isLoadingDocumentEvidence, setIsLoadingDocumentEvidence] =
+    useState(false);
   const [isCreatingDomain, setIsCreatingDomain] = useState(false);
   const [showArchivedDomains, setShowArchivedDomains] = useState(false);
   const [isArchivingDomain, setIsArchivingDomain] = useState(false);
@@ -1892,23 +2072,31 @@ function App() {
   const [queryError, setQueryError] = useState<string | null>(null);
   const [evalReport, setEvalReport] = useState<EvalReport | null>(null);
   const [evalJob, setEvalJob] = useState<JobRead | null>(null);
-  const [evalReportPaths, setEvalReportPaths] = useState<EvalReportPaths | null>(null);
+  const [evalReportPaths, setEvalReportPaths] =
+    useState<EvalReportPaths | null>(null);
   const [evalDomainId, setEvalDomainId] = useState("");
   const [evalRuns, setEvalRuns] = useState<EvalRunRead[]>([]);
   const [evalTrends, setEvalTrends] = useState<EvalSuiteTrend[]>([]);
-  const [evalComparison, setEvalComparison] = useState<EvalRunComparison | null>(null);
+  const [evalComparison, setEvalComparison] =
+    useState<EvalRunComparison | null>(null);
   const [evalRegressionGate, setEvalRegressionGate] =
     useState<EvalRegressionGate | null>(null);
   const [isRunningEval, setIsRunningEval] = useState(false);
-  const [isRunningAgentMultihopEval, setIsRunningAgentMultihopEval] = useState(false);
+  const [isRunningAgentMultihopEval, setIsRunningAgentMultihopEval] =
+    useState(false);
   const [isRunningSquadEval, setIsRunningSquadEval] = useState(false);
   const [isRunningHotpotQAEval, setIsRunningHotpotQAEval] = useState(false);
-  const [isRunningHotpotQAAgentEval, setIsRunningHotpotQAAgentEval] = useState(false);
-  const [isRunningNaturalQuestionsEval, setIsRunningNaturalQuestionsEval] = useState(false);
-  const [isRunningOcrBenchmarkEval, setIsRunningOcrBenchmarkEval] = useState(false);
+  const [isRunningHotpotQAAgentEval, setIsRunningHotpotQAAgentEval] =
+    useState(false);
+  const [isRunningNaturalQuestionsEval, setIsRunningNaturalQuestionsEval] =
+    useState(false);
+  const [isRunningOcrBenchmarkEval, setIsRunningOcrBenchmarkEval] =
+    useState(false);
   const [isComparingEvals, setIsComparingEvals] = useState(false);
   const [isRunningRegressionGate, setIsRunningRegressionGate] = useState(false);
-  const [rerunningEvalJobId, setRerunningEvalJobId] = useState<string | null>(null);
+  const [rerunningEvalJobId, setRerunningEvalJobId] = useState<string | null>(
+    null,
+  );
   const [squadDatasetPath, setSquadDatasetPath] = useState("dev-v2.0.json");
   const [squadMaxCases, setSquadMaxCases] = useState("50");
   const [squadWriteReport, setSquadWriteReport] = useState(true);
@@ -1918,26 +2106,32 @@ function App() {
   );
   const [hotpotqaMaxCases, setHotpotqaMaxCases] = useState("50");
   const [hotpotqaWriteReport, setHotpotqaWriteReport] = useState(true);
-  const [hotpotqaReportStem, setHotpotqaReportStem] = useState("hotpotqa-dev-50");
-  const [naturalQuestionsDatasetPath, setNaturalQuestionsDatasetPath] = useState(
-    "nq-dev-sample.jsonl",
-  );
-  const [naturalQuestionsMaxCases, setNaturalQuestionsMaxCases] = useState("50");
-  const [naturalQuestionsWriteReport, setNaturalQuestionsWriteReport] = useState(true);
+  const [hotpotqaReportStem, setHotpotqaReportStem] =
+    useState("hotpotqa-dev-50");
+  const [naturalQuestionsDatasetPath, setNaturalQuestionsDatasetPath] =
+    useState("nq-dev-sample.jsonl");
+  const [naturalQuestionsMaxCases, setNaturalQuestionsMaxCases] =
+    useState("50");
+  const [naturalQuestionsWriteReport, setNaturalQuestionsWriteReport] =
+    useState(true);
   const [naturalQuestionsReportStem, setNaturalQuestionsReportStem] = useState(
     "natural-questions-dev-50",
   );
-  const [ocrBenchmarkDatasetPath, setOcrBenchmarkDatasetPath] =
-    useState("ocr-benchmark/manifest.json");
+  const [ocrBenchmarkDatasetPath, setOcrBenchmarkDatasetPath] = useState(
+    "ocr-benchmark/manifest.json",
+  );
   const [ocrBenchmarkFormat, setOcrBenchmarkFormat] = useState("manifest");
   const [ocrBenchmarkMaxCases, setOcrBenchmarkMaxCases] = useState("25");
   const [ocrBenchmarkWriteReport, setOcrBenchmarkWriteReport] = useState(true);
-  const [ocrBenchmarkReportStem, setOcrBenchmarkReportStem] = useState("ocr-benchmark-25");
+  const [ocrBenchmarkReportStem, setOcrBenchmarkReportStem] =
+    useState("ocr-benchmark-25");
   const [evalError, setEvalError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("disconnected");
   const [liveError, setLiveError] = useState<string | null>(null);
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
-  const [lastProgressCursor, setLastProgressCursor] = useState<string | null>(null);
+  const [lastProgressCursor, setLastProgressCursor] = useState<string | null>(
+    null,
+  );
   const [jobFilter, setJobFilter] = useState("all");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobRead | null>(null);
@@ -1945,12 +2139,17 @@ function App() {
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
   const [jobDetailError, setJobDetailError] = useState<string | null>(null);
   const [journalEvents, setJournalEvents] = useState<JournalEventRead[]>([]);
-  const [auditProgressEvents, setAuditProgressEvents] = useState<ProgressEventRead[]>([]);
+  const [auditProgressEvents, setAuditProgressEvents] = useState<
+    ProgressEventRead[]
+  >([]);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
   const [isExportingAudit, setIsExportingAudit] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
-  const [auditExportMessage, setAuditExportMessage] = useState<string | null>(null);
-  const [auditExportSummary, setAuditExportSummary] = useState<AuditExportSummary | null>(null);
+  const [auditExportMessage, setAuditExportMessage] = useState<string | null>(
+    null,
+  );
+  const [auditExportSummary, setAuditExportSummary] =
+    useState<AuditExportSummary | null>(null);
   const liveAbortRef = useRef<AbortController | null>(null);
   const lastPersistedEventIdRef = useRef<string | null>(null);
   const [activeSection, setActiveSection] = useState<WorkspaceSection>(() =>
@@ -1959,7 +2158,8 @@ function App() {
   const [activeModule, setActiveModule] = useState<string | null>(() =>
     moduleFromHash(window.location.hash, sectionFromHash(window.location.hash)),
   );
-  const [floatingTooltip, setFloatingTooltip] = useState<FloatingTooltip | null>(null);
+  const [floatingTooltip, setFloatingTooltip] =
+    useState<FloatingTooltip | null>(null);
 
   const activeProviderLabel = useMemo(() => {
     if (!catalog) {
@@ -1992,18 +2192,20 @@ function App() {
     [domains],
   );
 
-  const activeJobs = useMemo(
-    () => {
-      const eventJobs = progressEvents.filter((event) => {
-        const status = event.data.status;
-        return status === "queued" || status === "running" || event.event.endsWith(".started");
-      }).length;
-      const recentJobs = queuedJobs.filter((job) => job.status === "queued" || job.status === "running")
-        .length;
-      return Math.max(eventJobs, recentJobs);
-    },
-    [progressEvents, queuedJobs],
-  );
+  const activeJobs = useMemo(() => {
+    const eventJobs = progressEvents.filter((event) => {
+      const status = event.data.status;
+      return (
+        status === "queued" ||
+        status === "running" ||
+        event.event.endsWith(".started")
+      );
+    }).length;
+    const recentJobs = queuedJobs.filter(
+      (job) => job.status === "queued" || job.status === "running",
+    ).length;
+    return Math.max(eventJobs, recentJobs);
+  }, [progressEvents, queuedJobs]);
 
   const metrics = [
     {
@@ -2042,7 +2244,9 @@ function App() {
     () =>
       jobFilter === "all"
         ? queuedJobs
-        : queuedJobs.filter((job) => job.status === jobFilter || job.kind === jobFilter),
+        : queuedJobs.filter(
+            (job) => job.status === jobFilter || job.kind === jobFilter,
+          ),
     [jobFilter, queuedJobs],
   );
   const progressGroups = useMemo(
@@ -2075,13 +2279,20 @@ function App() {
     () => domains.find((domain) => domain.id === evalDomainId) ?? null,
     [domains, evalDomainId],
   );
-  const evalScopeLabel = selectedEvalDomain ? selectedEvalDomain.name : "All evals";
-  const evalDatasetScopeLabel = selectedEvalDomain ? selectedEvalDomain.name : "Global";
+  const evalScopeLabel = selectedEvalDomain
+    ? selectedEvalDomain.name
+    : "All evals";
+  const evalDatasetScopeLabel = selectedEvalDomain
+    ? selectedEvalDomain.name
+    : "Global";
   const activeSectionMeta =
-    workspaceSections.find((section) => section.id === activeSection) ?? workspaceSections[0];
+    workspaceSections.find((section) => section.id === activeSection) ??
+    workspaceSections[0];
   const activeModules = workspaceModules[activeSection];
   const activeModuleMeta =
-    activeModules.find((module) => module.id === activeModule) ?? activeModules[0] ?? null;
+    activeModules.find((module) => module.id === activeModule) ??
+    activeModules[0] ??
+    null;
   const activeModulePosition = activeModuleMeta
     ? activeModules.findIndex((module) => module.id === activeModuleMeta.id) + 1
     : 0;
@@ -2129,7 +2340,10 @@ function App() {
       if (event instanceof globalThis.MouseEvent) {
         const eventTarget = event.target;
         const relatedTarget = event.relatedTarget;
-        if (eventTarget instanceof Element && relatedTarget instanceof Element) {
+        if (
+          eventTarget instanceof Element &&
+          relatedTarget instanceof Element
+        ) {
           const tooltipTarget = eventTarget.closest("[data-tooltip]");
           if (tooltipTarget?.contains(relatedTarget)) {
             return;
@@ -2168,11 +2382,20 @@ function App() {
     setActiveSection(section);
     const nextModule = firstModuleForSection(section);
     setActiveModule(nextModule);
-    window.history.replaceState(null, "", nextModule ? `#${nextModule}` : `#${section}`);
-    window.requestAnimationFrame(() => document.getElementById("overview")?.focus());
+    window.history.replaceState(
+      null,
+      "",
+      nextModule ? `#${nextModule}` : `#${section}`,
+    );
+    window.requestAnimationFrame(() =>
+      document.getElementById("overview")?.focus(),
+    );
   }
 
-  function handleModuleClick(event: MouseEvent<HTMLAnchorElement>, moduleId: string) {
+  function handleModuleClick(
+    event: MouseEvent<HTMLAnchorElement>,
+    moduleId: string,
+  ) {
     event.preventDefault();
     activateModule(moduleId);
   }
@@ -2184,7 +2407,9 @@ function App() {
     }
     setActiveModule(moduleId);
     window.history.replaceState(null, "", `#${moduleId}`);
-    window.requestAnimationFrame(() => document.getElementById(moduleId)?.focus());
+    window.requestAnimationFrame(() =>
+      document.getElementById(moduleId)?.focus(),
+    );
   }
 
   useEffect(() => {
@@ -2204,7 +2429,9 @@ function App() {
       setRuntimeVersion(versionResult.value);
     } else {
       setRuntimeVersion(null);
-      setRuntimeVersionError(readableError(versionResult.reason, "Runtime metadata unavailable"));
+      setRuntimeVersionError(
+        readableError(versionResult.reason, "Runtime metadata unavailable"),
+      );
     }
     if (readinessResult.status === "fulfilled") {
       setRuntimeReadiness(readinessResult.value);
@@ -2216,7 +2443,10 @@ function App() {
     }
   }
 
-  async function refreshWorkspace(accessToken?: string, preferredDomainId?: string) {
+  async function refreshWorkspace(
+    accessToken?: string,
+    preferredDomainId?: string,
+  ) {
     setIsLoadingWorkspace(true);
     setWorkspaceError(null);
     try {
@@ -2224,21 +2454,30 @@ function App() {
       const adminToken = accessToken ?? (await getAdminToken());
       const nextDomains = await loadDomains(adminToken, showArchivedDomains);
       setDomains(nextDomains);
-      if (evalDomainId && !nextDomains.some((domain) => domain.id === evalDomainId)) {
+      if (
+        evalDomainId &&
+        !nextDomains.some((domain) => domain.id === evalDomainId)
+      ) {
         setEvalDomainId("");
       }
 
       const nextSelectedDomainId =
-        preferredDomainId && nextDomains.some((domain) => domain.id === preferredDomainId)
+        preferredDomainId &&
+        nextDomains.some((domain) => domain.id === preferredDomainId)
           ? preferredDomainId
-          : selectedDomainId && nextDomains.some((domain) => domain.id === selectedDomainId)
+          : selectedDomainId &&
+              nextDomains.some((domain) => domain.id === selectedDomainId)
             ? selectedDomainId
-            : nextDomains[0]?.id ?? "";
+            : (nextDomains[0]?.id ?? "");
 
       setSelectedDomainId(nextSelectedDomainId);
       if (nextSelectedDomainId) {
         const [nextDocuments, nextSources, nextJobs] = await Promise.all([
-          loadDocuments(adminToken, nextSelectedDomainId, showArchivedDocuments),
+          loadDocuments(
+            adminToken,
+            nextSelectedDomainId,
+            showArchivedDocuments,
+          ),
           loadSources(adminToken, nextSelectedDomainId),
           loadJobs(adminToken),
         ]);
@@ -2288,11 +2527,12 @@ function App() {
     setAuditExportMessage(null);
     try {
       const adminToken = accessToken ?? (await getAdminToken());
-      const [nextJournalEvents, nextProgressEvents, nextJobs] = await Promise.all([
-        loadJournalEvents(adminToken),
-        loadAuditProgressEvents(adminToken),
-        loadJobs(adminToken),
-      ]);
+      const [nextJournalEvents, nextProgressEvents, nextJobs] =
+        await Promise.all([
+          loadJournalEvents(adminToken),
+          loadAuditProgressEvents(adminToken),
+          loadJobs(adminToken),
+        ]);
       setJournalEvents(nextJournalEvents);
       setAuditProgressEvents(nextProgressEvents);
       setQueuedJobs(nextJobs);
@@ -2309,7 +2549,10 @@ function App() {
     setIsLoadingJobDetail(true);
     try {
       const accessToken = await getAdminToken();
-      const [job] = await Promise.all([loadJob(accessToken, jobId), refreshAudit(accessToken)]);
+      const [job] = await Promise.all([
+        loadJob(accessToken, jobId),
+        refreshAudit(accessToken),
+      ]);
       setSelectedJob(job);
       setQueuedJobs((current) =>
         [job, ...current.filter((candidate) => candidate.id !== job.id)].slice(
@@ -2318,7 +2561,9 @@ function App() {
         ),
       );
     } catch (error) {
-      setJobDetailError(sessionErrorMessage(error, "Job detail failed to load"));
+      setJobDetailError(
+        sessionErrorMessage(error, "Job detail failed to load"),
+      );
     } finally {
       setIsLoadingJobDetail(false);
     }
@@ -2337,10 +2582,10 @@ function App() {
       const accessToken = await getAdminToken();
       const retried = await retryJob(accessToken, jobId);
       setQueuedJobs((current) =>
-        [retried, ...current.filter((candidate) => candidate.id !== retried.id)].slice(
-          0,
-          JOB_LEDGER_LIMIT,
-        ),
+        [
+          retried,
+          ...current.filter((candidate) => candidate.id !== retried.id),
+        ].slice(0, JOB_LEDGER_LIMIT),
       );
       setSelectedJobId(retried.id);
       setSelectedJob(retried);
@@ -2375,7 +2620,10 @@ function App() {
     }
   }
 
-  async function refreshEvalRuns(accessToken?: string, domainId = evalDomainId) {
+  async function refreshEvalRuns(
+    accessToken?: string,
+    domainId = evalDomainId,
+  ) {
     setEvalError(null);
     try {
       const adminToken = accessToken ?? (await getAdminToken());
@@ -2389,7 +2637,9 @@ function App() {
       setEvalJob(runs[0]?.job ?? null);
       setEvalReport(latestWithReport?.report ?? null);
       setEvalReportPaths(
-        latestWithReport ? reportPathsFromPayload(latestWithReport.job.payload) : null,
+        latestWithReport
+          ? reportPathsFromPayload(latestWithReport.job.payload)
+          : null,
       );
       setEvalComparison(null);
       setEvalRegressionGate(null);
@@ -2410,14 +2660,27 @@ function App() {
       const users = await loadAdminUsers(adminToken);
       setAdminUsers(users);
       setAdminRoleEdits(
-        Object.fromEntries(users.map((user) => [user.id, user.roles.includes("admin") ? "admin" : "viewer"])),
+        Object.fromEntries(
+          users.map((user) => [
+            user.id,
+            user.roles.includes("admin") ? "admin" : "viewer",
+          ]),
+        ),
       );
       const grantsByUser = await Promise.all(
-        users.map(async (user) => [user.id, await loadAdminUserDomainGrants(adminToken, user.id)] as const),
+        users.map(
+          async (user) =>
+            [
+              user.id,
+              await loadAdminUserDomainGrants(adminToken, user.id),
+            ] as const,
+        ),
       );
       setAdminDomainGrants(Object.fromEntries(grantsByUser));
     } catch (error) {
-      setAdminUserError(sessionErrorMessage(error, "Admin users refresh failed"));
+      setAdminUserError(
+        sessionErrorMessage(error, "Admin users refresh failed"),
+      );
     }
   }
 
@@ -2455,7 +2718,9 @@ function App() {
     }
   }
 
-  async function handleCreateAdminUser(event: React.FormEvent<HTMLFormElement>) {
+  async function handleCreateAdminUser(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
     setIsCreatingAdminUser(true);
     setAdminUserError(null);
@@ -2474,7 +2739,10 @@ function App() {
         password: adminUserPassword,
         roles: [adminUserRole],
       });
-      setAdminUsers((current) => [...current.filter((user) => user.id !== created.id), created]);
+      setAdminUsers((current) => [
+        ...current.filter((user) => user.id !== created.id),
+        created,
+      ]);
       setAdminRoleEdits((current) => ({
         ...current,
         [created.id]: created.roles.includes("admin") ? "admin" : "viewer",
@@ -2491,7 +2759,9 @@ function App() {
     }
   }
 
-  async function handlePreviewRuntimePlan(event: React.FormEvent<HTMLFormElement>) {
+  async function handlePreviewRuntimePlan(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
     setIsPreviewingRuntimePlan(true);
     setRuntimePlanError(null);
@@ -2517,14 +2787,24 @@ function App() {
     setAdminUserMessage(null);
     try {
       const accessToken = await getAdminToken();
-      const updated = await updateAdminUserStatus(accessToken, user.id, !user.is_active);
-      setAdminUsers((current) =>
-        current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
+      const updated = await updateAdminUserStatus(
+        accessToken,
+        user.id,
+        !user.is_active,
       );
-      setAdminUserMessage(`${updated.email} is now ${updated.is_active ? "active" : "inactive"}`);
+      setAdminUsers((current) =>
+        current.map((candidate) =>
+          candidate.id === updated.id ? updated : candidate,
+        ),
+      );
+      setAdminUserMessage(
+        `${updated.email} is now ${updated.is_active ? "active" : "inactive"}`,
+      );
       await refreshAudit(accessToken);
     } catch (error) {
-      setAdminUserError(sessionErrorMessage(error, "Admin status update failed"));
+      setAdminUserError(
+        sessionErrorMessage(error, "Admin status update failed"),
+      );
     } finally {
       setSavingAdminUserId(null);
     }
@@ -2535,11 +2815,15 @@ function App() {
     setAdminUserError(null);
     setAdminUserMessage(null);
     try {
-      const role = adminRoleEdits[user.id] ?? (user.roles.includes("admin") ? "admin" : "viewer");
+      const role =
+        adminRoleEdits[user.id] ??
+        (user.roles.includes("admin") ? "admin" : "viewer");
       const accessToken = await getAdminToken();
       const updated = await updateAdminUserRoles(accessToken, user.id, [role]);
       setAdminUsers((current) =>
-        current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
+        current.map((candidate) =>
+          candidate.id === updated.id ? updated : candidate,
+        ),
       );
       setAdminRoleEdits((current) => ({ ...current, [updated.id]: role }));
       setAdminUserMessage(`Updated role for ${updated.email}`);
@@ -2564,15 +2848,23 @@ function App() {
         throw new Error("Admin password must be at least 12 characters");
       }
       const accessToken = await getAdminToken();
-      const updated = await resetAdminUserPassword(accessToken, user.id, nextPassword);
+      const updated = await resetAdminUserPassword(
+        accessToken,
+        user.id,
+        nextPassword,
+      );
       setAdminUsers((current) =>
-        current.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
+        current.map((candidate) =>
+          candidate.id === updated.id ? updated : candidate,
+        ),
       );
       setAdminPasswordResets((current) => ({ ...current, [user.id]: "" }));
       setAdminUserMessage(`Updated password for ${updated.email}`);
       await refreshAudit(accessToken);
     } catch (error) {
-      setAdminUserError(sessionErrorMessage(error, "Admin password reset failed"));
+      setAdminUserError(
+        sessionErrorMessage(error, "Admin password reset failed"),
+      );
     } finally {
       setSavingAdminUserId(null);
     }
@@ -2592,13 +2884,24 @@ function App() {
         throw new Error("Select a domain grant");
       }
       const accessToken = await getAdminToken();
-      const grant = await createAdminUserDomainGrant(accessToken, user.id, domainId);
+      const grant = await createAdminUserDomainGrant(
+        accessToken,
+        user.id,
+        domainId,
+      );
       setAdminDomainGrants((current) => ({
         ...current,
-        [user.id]: [...(current[user.id] ?? []).filter((item) => item.domain_id !== domainId), grant],
+        [user.id]: [
+          ...(current[user.id] ?? []).filter(
+            (item) => item.domain_id !== domainId,
+          ),
+          grant,
+        ],
       }));
       setAdminGrantDomainIds((current) => ({ ...current, [user.id]: "" }));
-      setAdminUserMessage(`Granted ${user.email} access to ${domainById.get(domainId)?.slug ?? domainId}`);
+      setAdminUserMessage(
+        `Granted ${user.email} access to ${domainById.get(domainId)?.slug ?? domainId}`,
+      );
       await refreshAudit(accessToken);
     } catch (error) {
       setAdminUserError(sessionErrorMessage(error, "Domain grant failed"));
@@ -2607,7 +2910,10 @@ function App() {
     }
   }
 
-  async function handleDeleteDomainGrant(user: AdminUserRead, domainId: string) {
+  async function handleDeleteDomainGrant(
+    user: AdminUserRead,
+    domainId: string,
+  ) {
     setSavingAdminUserId(user.id);
     setAdminUserError(null);
     setAdminUserMessage(null);
@@ -2616,9 +2922,13 @@ function App() {
       await deleteAdminUserDomainGrant(accessToken, user.id, domainId);
       setAdminDomainGrants((current) => ({
         ...current,
-        [user.id]: (current[user.id] ?? []).filter((grant) => grant.domain_id !== domainId),
+        [user.id]: (current[user.id] ?? []).filter(
+          (grant) => grant.domain_id !== domainId,
+        ),
       }));
-      setAdminUserMessage(`Revoked ${user.email} access to ${domainById.get(domainId)?.slug ?? domainId}`);
+      setAdminUserMessage(
+        `Revoked ${user.email} access to ${domainById.get(domainId)?.slug ?? domainId}`,
+      );
       await refreshAudit(accessToken);
     } catch (error) {
       setAdminUserError(sessionErrorMessage(error, "Domain revoke failed"));
@@ -2726,7 +3036,11 @@ function App() {
       setWorkspaceError("Select a domain before archiving it");
       return;
     }
-    if (!window.confirm(`Archive domain "${selectedDomain.name}"? Documents and audit history stay available.`)) {
+    if (
+      !window.confirm(
+        `Archive domain "${selectedDomain.name}"? Documents and audit history stay available.`,
+      )
+    ) {
       return;
     }
     setIsArchivingDomain(true);
@@ -2760,7 +3074,9 @@ function App() {
       const accessToken = await getAdminToken();
       const restored = await restoreDomain(accessToken, selectedDomainId);
       setDomains((current) =>
-        current.map((domain) => (domain.id === restored.id ? restored : domain)),
+        current.map((domain) =>
+          domain.id === restored.id ? restored : domain,
+        ),
       );
       await refreshWorkspace(accessToken, restored.id);
       await refreshAudit(accessToken);
@@ -2839,11 +3155,16 @@ function App() {
         throw new Error("Source name and URI are required");
       }
       const accessToken = await getAdminToken();
-      const updated = await updateSource(accessToken, selectedDomainId, editingSourceId, {
-        kind: sourceEditKind,
-        name,
-        uri,
-      });
+      const updated = await updateSource(
+        accessToken,
+        selectedDomainId,
+        editingSourceId,
+        {
+          kind: sourceEditKind,
+          name,
+          uri,
+        },
+      );
       setSources((current) =>
         current.map((source) => (source.id === updated.id ? updated : source)),
       );
@@ -2866,7 +3187,11 @@ function App() {
       setWorkspaceError("Restore this domain before removing sources");
       return;
     }
-    if (!window.confirm(`Remove source "${source.name}" from this domain? Documents stay available.`)) {
+    if (
+      !window.confirm(
+        `Remove source "${source.name}" from this domain? Documents stay available.`,
+      )
+    ) {
       return;
     }
     setDeletingSourceId(source.id);
@@ -2932,9 +3257,13 @@ function App() {
         throw new Error("Document title is required");
       }
       const accessToken = await getAdminToken();
-      const updated = await updateDocument(accessToken, editingDocumentId, { title });
+      const updated = await updateDocument(accessToken, editingDocumentId, {
+        title,
+      });
       setDocuments((current) =>
-        current.map((document) => (document.id === updated.id ? updated : document)),
+        current.map((document) =>
+          document.id === updated.id ? updated : document,
+        ),
       );
       setEditingDocumentId(null);
       setDocumentEditTitle("");
@@ -2961,7 +3290,9 @@ function App() {
       const archived = await archiveDocument(accessToken, documentId);
       setDocuments((current) =>
         showArchivedDocuments
-          ? current.map((document) => (document.id === archived.id ? archived : document))
+          ? current.map((document) =>
+              document.id === archived.id ? archived : document,
+            )
           : current.filter((document) => document.id !== archived.id),
       );
       if (editingDocumentId === documentId) {
@@ -2992,7 +3323,9 @@ function App() {
       const accessToken = await getAdminToken();
       const restored = await restoreDocument(accessToken, documentId);
       setDocuments((current) =>
-        current.map((document) => (document.id === restored.id ? restored : document)),
+        current.map((document) =>
+          document.id === restored.id ? restored : document,
+        ),
       );
       if (historyDocumentId === restored.id) {
         setDocumentHistory(await loadDocumentHistory(accessToken, restored.id));
@@ -3005,7 +3338,9 @@ function App() {
     }
   }
 
-  async function handleArchivedToggle(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleArchivedToggle(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const nextShowArchived = event.target.checked;
     setShowArchivedDocuments(nextShowArchived);
     handleCancelDocumentEdit();
@@ -3030,7 +3365,9 @@ function App() {
     }
   }
 
-  async function handleArchivedDomainsToggle(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleArchivedDomainsToggle(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const nextShowArchived = event.target.checked;
     setShowArchivedDomains(nextShowArchived);
     setWorkspaceError(null);
@@ -3039,13 +3376,19 @@ function App() {
       const accessToken = await getAdminToken();
       const nextDomains = await loadDomains(accessToken, nextShowArchived);
       setDomains(nextDomains);
-      const nextSelectedDomainId = nextDomains.some((domain) => domain.id === selectedDomainId)
+      const nextSelectedDomainId = nextDomains.some(
+        (domain) => domain.id === selectedDomainId,
+      )
         ? selectedDomainId
-        : nextDomains[0]?.id ?? "";
+        : (nextDomains[0]?.id ?? "");
       setSelectedDomainId(nextSelectedDomainId);
       if (nextSelectedDomainId) {
         const [nextDocuments, nextSources, nextJobs] = await Promise.all([
-          loadDocuments(accessToken, nextSelectedDomainId, showArchivedDocuments),
+          loadDocuments(
+            accessToken,
+            nextSelectedDomainId,
+            showArchivedDocuments,
+          ),
           loadSources(accessToken, nextSelectedDomainId),
           loadJobs(accessToken),
         ]);
@@ -3251,10 +3594,16 @@ function App() {
         throw new Error("Restore this domain before running queries");
       }
       const accessToken = await getAdminToken();
-      const response = await runAgentQuery(accessToken, selectedDomainId, trimmedQuestion);
+      const response = await runAgentQuery(
+        accessToken,
+        selectedDomainId,
+        trimmedQuestion,
+      );
       setQueryJob(response.job);
       if (!response.result) {
-        throw new Error("Query was queued; open Jobs to inspect worker progress");
+        throw new Error(
+          "Query was queued; open Jobs to inspect worker progress",
+        );
       }
       setQueryResult(response.result);
       activateModule("queries-runner");
@@ -3307,7 +3656,11 @@ function App() {
       if (!datasetPath) {
         throw new Error("SQuAD dataset path is required");
       }
-      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+      if (
+        !Number.isInteger(parsedMaxCases) ||
+        parsedMaxCases < 1 ||
+        parsedMaxCases > 1000
+      ) {
         throw new Error("SQuAD max cases must be between 1 and 1000");
       }
       const accessToken = await getAdminToken();
@@ -3328,7 +3681,9 @@ function App() {
     }
   }
 
-  async function handleRunHotpotQAEval(event: React.FormEvent<HTMLFormElement>) {
+  async function handleRunHotpotQAEval(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
     setIsRunningHotpotQAEval(true);
     setEvalError(null);
@@ -3338,7 +3693,11 @@ function App() {
       if (!datasetPath) {
         throw new Error("HotpotQA dataset path is required");
       }
-      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+      if (
+        !Number.isInteger(parsedMaxCases) ||
+        parsedMaxCases < 1 ||
+        parsedMaxCases > 1000
+      ) {
         throw new Error("HotpotQA max cases must be between 1 and 1000");
       }
       const accessToken = await getAdminToken();
@@ -3368,7 +3727,11 @@ function App() {
       if (!datasetPath) {
         throw new Error("HotpotQA dataset path is required");
       }
-      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+      if (
+        !Number.isInteger(parsedMaxCases) ||
+        parsedMaxCases < 1 ||
+        parsedMaxCases > 1000
+      ) {
         throw new Error("HotpotQA max cases must be between 1 and 1000");
       }
       const accessToken = await getAdminToken();
@@ -3389,7 +3752,9 @@ function App() {
     }
   }
 
-  async function handleRunNaturalQuestionsEval(event: React.FormEvent<HTMLFormElement>) {
+  async function handleRunNaturalQuestionsEval(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
     setIsRunningNaturalQuestionsEval(true);
     setEvalError(null);
@@ -3399,8 +3764,14 @@ function App() {
       if (!datasetPath) {
         throw new Error("Natural Questions dataset path is required");
       }
-      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
-        throw new Error("Natural Questions max cases must be between 1 and 1000");
+      if (
+        !Number.isInteger(parsedMaxCases) ||
+        parsedMaxCases < 1 ||
+        parsedMaxCases > 1000
+      ) {
+        throw new Error(
+          "Natural Questions max cases must be between 1 and 1000",
+        );
       }
       const accessToken = await getAdminToken();
       const response = await runNaturalQuestionsEval(accessToken, {
@@ -3420,7 +3791,9 @@ function App() {
     }
   }
 
-  async function handleRunOcrBenchmarkEval(event: React.FormEvent<HTMLFormElement>) {
+  async function handleRunOcrBenchmarkEval(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
     setIsRunningOcrBenchmarkEval(true);
     setEvalError(null);
@@ -3430,7 +3803,11 @@ function App() {
       if (!datasetPath) {
         throw new Error("OCR benchmark dataset path is required");
       }
-      if (!Number.isInteger(parsedMaxCases) || parsedMaxCases < 1 || parsedMaxCases > 1000) {
+      if (
+        !Number.isInteger(parsedMaxCases) ||
+        parsedMaxCases < 1 ||
+        parsedMaxCases > 1000
+      ) {
         throw new Error("OCR benchmark max cases must be between 1 and 1000");
       }
       const accessToken = await getAdminToken();
@@ -3458,7 +3835,9 @@ function App() {
     try {
       const [candidate, baseline] = comparableEvalRuns;
       if (!candidate || !baseline) {
-        throw new Error("At least two reported eval runs are required for comparison");
+        throw new Error(
+          "At least two reported eval runs are required for comparison",
+        );
       }
       const accessToken = await getAdminToken();
       const comparison = await compareEvalRuns(
@@ -3483,7 +3862,9 @@ function App() {
     try {
       const [candidate, baseline] = comparableEvalRuns;
       if (!candidate || !baseline) {
-        throw new Error("At least two reported eval runs are required for regression gating");
+        throw new Error(
+          "At least two reported eval runs are required for regression gating",
+        );
       }
       const accessToken = await getAdminToken();
       const gate = await runEvalRegressionGate(
@@ -3521,12 +3902,15 @@ function App() {
   function applyEvalResponse(response: EvalRunResponse) {
     setEvalJob(response.job);
     setEvalReport(response.report);
-    setEvalReportPaths(response.report_paths ?? reportPathsFromPayload(response.job.payload));
+    setEvalReportPaths(
+      response.report_paths ?? reportPathsFromPayload(response.job.payload),
+    );
     setEvalComparison(null);
     setEvalRegressionGate(null);
     activateModule("evals-results");
     setEvalRuns((current) => {
-      const matchesScope = !evalDomainId || response.job.domain_id === evalDomainId;
+      const matchesScope =
+        !evalDomainId || response.job.domain_id === evalDomainId;
       const nextRuns = current.filter((run) => run.job.id !== response.job.id);
       const scopedRuns = matchesScope
         ? [{ job: response.job, report: response.report }, ...nextRuns]
@@ -3534,10 +3918,10 @@ function App() {
       return scopedRuns.slice(0, 6);
     });
     setQueuedJobs((current) =>
-      [response.job, ...current.filter((job) => job.id !== response.job.id)].slice(
-        0,
-        JOB_LEDGER_LIMIT,
-      ),
+      [
+        response.job,
+        ...current.filter((job) => job.id !== response.job.id),
+      ].slice(0, JOB_LEDGER_LIMIT),
     );
   }
 
@@ -3598,7 +3982,9 @@ function App() {
             lastPersistedEventIdRef.current = lastPersisted.id;
             setLastProgressCursor(lastPersisted.id);
           }
-          setProgressEvents((current) => mergeProgressEvents(current, nextEvents));
+          setProgressEvents((current) =>
+            mergeProgressEvents(current, nextEvents),
+          );
         }
       }
 
@@ -3719,10 +4105,16 @@ function App() {
       </aside>
 
       <main className="workspace" id="overview" tabIndex={-1}>
-        <header className={activeSection === "overview" ? "topbar" : "topbar section-topbar"}>
+        <header
+          className={
+            activeSection === "overview" ? "topbar" : "topbar section-topbar"
+          }
+        >
           <div>
             <p className="eyebrow">
-              {activeSection === "overview" ? "Local-first research console" : activeSectionMeta.eyebrow}
+              {activeSection === "overview"
+                ? "Local-first research console"
+                : activeSectionMeta.eyebrow}
             </p>
             <h1>
               {activeSection === "overview"
@@ -3763,7 +4155,10 @@ function App() {
         </section>
 
         {activeModules.length > 0 ? (
-          <nav className="module-nav" aria-label={`${activeSectionMeta.label} modules`}>
+          <nav
+            className="module-nav"
+            aria-label={`${activeSectionMeta.label} modules`}
+          >
             {activeModules.map((module) => (
               <a
                 aria-current={activeModule === module.id ? "page" : undefined}
@@ -3780,7 +4175,10 @@ function App() {
         ) : null}
 
         {activeSection !== "overview" && activeModuleMeta ? (
-          <section className="workspace-context" aria-label="Current workspace context">
+          <section
+            className="workspace-context"
+            aria-label="Current workspace context"
+          >
             <div>
               <span>{activeSectionMeta.label}</span>
               <strong>{activeModuleMeta.label}</strong>
@@ -3798,8 +4196,14 @@ function App() {
         {activeSection === "overview" ? (
           <>
             <div className="overview-layout">
-              <section className="overview-section" aria-label="System snapshot">
-                <section className="brand-brief" aria-label="RetOS operating posture">
+              <section
+                className="overview-section"
+                aria-label="System snapshot"
+              >
+                <section
+                  className="brand-brief"
+                  aria-label="RetOS operating posture"
+                >
                   <div data-tooltip="API and worker run from the dockerized local stack">
                     <ServerCog aria-hidden="true" />
                     <span>Docker-first runtime</span>
@@ -3832,7 +4236,11 @@ function App() {
                   {metrics.map((metric) => {
                     const Icon = metric.icon;
                     return (
-                      <article className="metric" data-tooltip={metric.tooltip} key={metric.label}>
+                      <article
+                        className="metric"
+                        data-tooltip={metric.tooltip}
+                        key={metric.label}
+                      >
                         <Icon aria-hidden="true" />
                         <div>
                           <span>{metric.label}</span>
@@ -3844,8 +4252,14 @@ function App() {
                 </section>
               </section>
 
-              <section className="overview-section" aria-label="Primary workflows">
-                <section className="overview-actions" aria-label="Workflow shortcuts">
+              <section
+                className="overview-section"
+                aria-label="Primary workflows"
+              >
+                <section
+                  className="overview-actions"
+                  aria-label="Workflow shortcuts"
+                >
                   <button
                     className="workflow-card workflow-button"
                     data-tooltip="Load a small auditable local corpus and rebuild the BM25 index"
@@ -3854,8 +4268,13 @@ function App() {
                     onClick={() => void handleSeedDemoCorpus()}
                   >
                     <span>Demo</span>
-                    <strong>{isSeedingDemo ? "Seeding corpus" : "Seed local corpus"}</strong>
-                    <small>Apollo, incident, and field-note fixtures for trying documents and queries.</small>
+                    <strong>
+                      {isSeedingDemo ? "Seeding corpus" : "Seed local corpus"}
+                    </strong>
+                    <small>
+                      Apollo, incident, and field-note fixtures for trying
+                      documents and queries.
+                    </small>
                   </button>
                   {workspaceSections
                     .filter((section) => section.id !== "overview")
@@ -3865,7 +4284,9 @@ function App() {
                         data-tooltip={section.tooltip}
                         href={`#${section.id}`}
                         key={section.id}
-                        onClick={(event) => handleSectionClick(event, section.id)}
+                        onClick={(event) =>
+                          handleSectionClick(event, section.id)
+                        }
                       >
                         <span>{section.eyebrow}</span>
                         <strong>{section.title}</strong>
@@ -3888,14 +4309,19 @@ function App() {
             {demoSeedResult ? (
               <p className="inline-success overview-feedback" role="status">
                 Demo corpus ready: {demoSeedResult.created_documents} created,{" "}
-                {demoSeedResult.skipped_documents} skipped, {demoSeedResult.indexed_segments} indexed segments.
+                {demoSeedResult.skipped_documents} skipped,{" "}
+                {demoSeedResult.indexed_segments} indexed segments.
               </p>
             ) : null}
           </>
         ) : null}
 
         <section className="content-grid section-content">
-          <article className="panel" hidden={activeSection !== "documents"} id="documents">
+          <article
+            className="panel"
+            hidden={activeSection !== "documents"}
+            id="documents"
+          >
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Knowledge base</p>
@@ -3924,10 +4350,15 @@ function App() {
               id="documents-library"
               tabIndex={-1}
             >
-              <div className="document-context" aria-label="Document library context">
+              <div
+                className="document-context"
+                aria-label="Document library context"
+              >
                 <div data-tooltip="Documents and edits apply to the selected research domain">
                   <span>Active domain</span>
-                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                  <strong>
+                    {selectedDomain ? selectedDomain.name : "Select a domain"}
+                  </strong>
                 </div>
                 <div data-tooltip="Document count follows the active domain and archive visibility filter">
                   <span>Visible documents</span>
@@ -3935,10 +4366,17 @@ function App() {
                 </div>
                 <div data-tooltip="Archived domains and documents stay readable for audit review">
                   <span>Archive view</span>
-                  <strong>{showArchivedDocuments ? "Including archived" : "Active only"}</strong>
+                  <strong>
+                    {showArchivedDocuments
+                      ? "Including archived"
+                      : "Active only"}
+                  </strong>
                 </div>
               </div>
-              <details className="domain-block collapsible-block" aria-label="Create domain">
+              <details
+                className="domain-block collapsible-block"
+                aria-label="Create domain"
+              >
                 <summary data-tooltip="Open the domain creation form only when a new boundary is needed">
                   <span>Create</span>
                   <strong>New domain boundary</strong>
@@ -3968,7 +4406,9 @@ function App() {
                     <input
                       placeholder="Purpose, scope, or data boundary"
                       value={domainDescription}
-                      onChange={(event) => setDomainDescription(event.target.value)}
+                      onChange={(event) =>
+                        setDomainDescription(event.target.value)
+                      }
                     />
                   </label>
                   <button
@@ -3982,17 +4422,25 @@ function App() {
                   </button>
                 </form>
               </details>
-              <details className="domain-block collapsible-block" aria-label="Current workspace editor" open>
+              <details
+                className="domain-block collapsible-block"
+                aria-label="Current workspace editor"
+                open
+              >
                 <summary data-tooltip="Review and edit the selected domain without leaving the library">
                   <span>Active</span>
-                  <strong>{selectedDomain ? selectedDomain.name : "Workspace domain"}</strong>
+                  <strong>
+                    {selectedDomain ? selectedDomain.name : "Workspace domain"}
+                  </strong>
                 </summary>
                 <div className="domain-toolbar">
                   <label data-tooltip="Switch the workspace domain without changing stored data">
                     <span>Active domain</span>
                     <select
                       value={selectedDomainId}
-                      onChange={(event) => void handleDomainChange(event.target.value)}
+                      onChange={(event) =>
+                        void handleDomainChange(event.target.value)
+                      }
                     >
                       <option value="">Select a domain</option>
                       {domains.map((domain) => (
@@ -4008,7 +4456,9 @@ function App() {
                       type="checkbox"
                       checked={showArchivedDomains}
                       disabled={isLoadingWorkspace}
-                      onChange={(event) => void handleArchivedDomainsToggle(event)}
+                      onChange={(event) =>
+                        void handleArchivedDomainsToggle(event)
+                      }
                     />
                     <span data-tooltip="Show archived domains so they can be reviewed or restored">
                       Show archived domains
@@ -4038,7 +4488,8 @@ function App() {
                 </div>
                 {isSelectedDomainArchived ? (
                   <p className="inline-warning">
-                    This domain is archived. Evidence remains readable; restore it before making changes.
+                    This domain is archived. Evidence remains readable; restore
+                    it before making changes.
                   </p>
                 ) : null}
                 <form
@@ -4051,8 +4502,14 @@ function App() {
                     <input
                       placeholder="Active domain name"
                       value={domainEditName}
-                      disabled={!selectedDomainId || isUpdatingDomain || isSelectedDomainArchived}
-                      onChange={(event) => setDomainEditName(event.target.value)}
+                      disabled={
+                        !selectedDomainId ||
+                        isUpdatingDomain ||
+                        isSelectedDomainArchived
+                      }
+                      onChange={(event) =>
+                        setDomainEditName(event.target.value)
+                      }
                     />
                   </label>
                   <label data-tooltip="Maintains an audit-visible note about purpose and boundaries">
@@ -4060,14 +4517,24 @@ function App() {
                     <input
                       placeholder="Purpose, scope, or data boundary"
                       value={domainEditDescription}
-                      disabled={!selectedDomainId || isUpdatingDomain || isSelectedDomainArchived}
-                      onChange={(event) => setDomainEditDescription(event.target.value)}
+                      disabled={
+                        !selectedDomainId ||
+                        isUpdatingDomain ||
+                        isSelectedDomainArchived
+                      }
+                      onChange={(event) =>
+                        setDomainEditDescription(event.target.value)
+                      }
                     />
                   </label>
                   <button
                     className="secondary-action"
                     data-tooltip="Update the active domain name and description with an audit journal event"
-                    disabled={!selectedDomainId || isUpdatingDomain || isSelectedDomainArchived}
+                    disabled={
+                      !selectedDomainId ||
+                      isUpdatingDomain ||
+                      isSelectedDomainArchived
+                    }
                     type="submit"
                   >
                     <Pencil aria-hidden="true" />
@@ -4084,7 +4551,9 @@ function App() {
                       onClick={() => void handleRestoreDomain()}
                     >
                       <RotateCcw aria-hidden="true" />
-                      {isRestoringDomain ? "Restoring domain" : "Restore domain"}
+                      {isRestoringDomain
+                        ? "Restoring domain"
+                        : "Restore domain"}
                     </button>
                   ) : (
                     <button
@@ -4095,7 +4564,9 @@ function App() {
                       onClick={() => void handleArchiveDomain()}
                     >
                       <Archive aria-hidden="true" />
-                      {isArchivingDomain ? "Archiving domain" : "Archive domain"}
+                      {isArchivingDomain
+                        ? "Archiving domain"
+                        : "Archive domain"}
                     </button>
                   )}
                 </div>
@@ -4142,16 +4613,24 @@ function App() {
                 const isHistoryOpen = historyDocumentId === document.id;
                 const isEvidenceOpen = evidenceDocumentId === document.id;
                 return (
-                  <article className={`document-row${isArchived ? " archived" : ""}`} key={document.id}>
+                  <article
+                    className={`document-row${isArchived ? " archived" : ""}`}
+                    key={document.id}
+                  >
                     <div className="document-summary">
                       {isEditing ? (
-                        <form className="document-edit-form" onSubmit={handleUpdateDocument}>
+                        <form
+                          className="document-edit-form"
+                          onSubmit={handleUpdateDocument}
+                        >
                           <label>
                             <span>Document title</span>
                             <input
                               aria-label={`Document title for ${document.title}`}
                               value={documentEditTitle}
-                              onChange={(event) => setDocumentEditTitle(event.target.value)}
+                              onChange={(event) =>
+                                setDocumentEditTitle(event.target.value)
+                              }
                             />
                           </label>
                           <div className="document-actions">
@@ -4181,13 +4660,21 @@ function App() {
                       ) : (
                         <>
                           <strong>{document.title}</strong>
-                          <span>{document.source_uri ?? document.external_id ?? document.id}</span>
+                          <span>
+                            {document.source_uri ??
+                              document.external_id ??
+                              document.id}
+                          </span>
                         </>
                       )}
                     </div>
                     <div className="document-meta">
-                      <span className="badge muted">{document.content_hash.slice(0, 10)}</span>
-                      {isArchived ? <span className="badge warning">Archived</span> : null}
+                      <span className="badge muted">
+                        {document.content_hash.slice(0, 10)}
+                      </span>
+                      {isArchived ? (
+                        <span className="badge warning">Archived</span>
+                      ) : null}
                       <div className="document-actions">
                         <button
                           className="icon-button"
@@ -4213,7 +4700,9 @@ function App() {
                           title="View document history"
                           type="button"
                           aria-label={`History ${document.title}`}
-                          onClick={() => void handleDocumentHistory(document.id)}
+                          onClick={() =>
+                            void handleDocumentHistory(document.id)
+                          }
                         >
                           {isHistoryOpen && isLoadingDocumentHistory ? (
                             <RefreshCw aria-hidden="true" />
@@ -4228,7 +4717,9 @@ function App() {
                           title="Inspect document evidence"
                           type="button"
                           aria-label={`Evidence ${document.title}`}
-                          onClick={() => void handleDocumentEvidence(document.id)}
+                          onClick={() =>
+                            void handleDocumentEvidence(document.id)
+                          }
                         >
                           {isEvidenceOpen && isLoadingDocumentEvidence ? (
                             <RefreshCw aria-hidden="true" />
@@ -4239,135 +4730,217 @@ function App() {
                         {isArchived ? (
                           <button
                             className="icon-button"
-                            disabled={isEditing || isRestoring || isSelectedDomainArchived}
+                            disabled={
+                              isEditing ||
+                              isRestoring ||
+                              isSelectedDomainArchived
+                            }
                             data-tooltip="Restore this archived document"
                             title="Restore document"
                             type="button"
                             aria-label={`Restore ${document.title}`}
-                            onClick={() => void handleRestoreDocument(document.id)}
+                            onClick={() =>
+                              void handleRestoreDocument(document.id)
+                            }
                           >
-                            {isRestoring ? <RefreshCw aria-hidden="true" /> : <RotateCcw aria-hidden="true" />}
+                            {isRestoring ? (
+                              <RefreshCw aria-hidden="true" />
+                            ) : (
+                              <RotateCcw aria-hidden="true" />
+                            )}
                           </button>
                         ) : (
                           <button
                             className="icon-button danger"
-                            disabled={isEditing || isArchiving || isSelectedDomainArchived}
+                            disabled={
+                              isEditing ||
+                              isArchiving ||
+                              isSelectedDomainArchived
+                            }
                             data-tooltip="Archive without deleting audit history"
                             title="Archive document"
                             type="button"
                             aria-label={`Archive ${document.title}`}
-                            onClick={() => void handleArchiveDocument(document.id)}
+                            onClick={() =>
+                              void handleArchiveDocument(document.id)
+                            }
                           >
-                            {isArchiving ? <RefreshCw aria-hidden="true" /> : <Archive aria-hidden="true" />}
+                            {isArchiving ? (
+                              <RefreshCw aria-hidden="true" />
+                            ) : (
+                              <Archive aria-hidden="true" />
+                            )}
                           </button>
                         )}
                       </div>
                     </div>
                     {isEvidenceOpen ? (
-                      <section className="document-evidence" aria-label={`Evidence for ${document.title}`}>
+                      <section
+                        className="document-evidence"
+                        aria-label={`Evidence for ${document.title}`}
+                      >
                         {!documentEvidence || isLoadingDocumentEvidence ? (
-                          <p className="payload-summary">Loading document evidence</p>
+                          <p className="payload-summary">
+                            Loading document evidence
+                          </p>
                         ) : documentEvidence.version ? (
                           <>
                             <div className="evidence-version">
                               <div>
                                 <span>Latest version</span>
-                                <strong>v{documentEvidence.version.version}</strong>
+                                <strong>
+                                  v{documentEvidence.version.version}
+                                </strong>
                               </div>
                               <div>
                                 <span>Source</span>
-                                <strong>{documentEvidence.version.source_uri}</strong>
+                                <strong>
+                                  {documentEvidence.version.source_uri}
+                                </strong>
                               </div>
                               <div>
                                 <span>Hash</span>
-                                <strong>{documentEvidence.version.content_hash.slice(0, 16)}</strong>
+                                <strong>
+                                  {documentEvidence.version.content_hash.slice(
+                                    0,
+                                    16,
+                                  )}
+                                </strong>
                               </div>
                             </div>
                             <div className="evidence-columns">
-                              <section aria-label={`Artifacts for ${document.title}`}>
+                              <section
+                                aria-label={`Artifacts for ${document.title}`}
+                              >
                                 <div className="section-heading compact">
                                   <h3>Artifacts</h3>
-                                  <span className="badge muted">{documentEvidence.artifacts.length}</span>
+                                  <span className="badge muted">
+                                    {documentEvidence.artifacts.length}
+                                  </span>
                                 </div>
                                 <div className="evidence-list">
-                                  {documentEvidence.artifacts.map((artifact) => (
-                                    <article className="evidence-row" key={artifact.id}>
-                                      <div>
-                                        <strong>{artifact.kind}</strong>
-                                        <span>{artifact.uri}</span>
-                                      </div>
-                                      <span className="badge muted">{artifact.size_bytes} bytes</span>
-                                    </article>
-                                  ))}
+                                  {documentEvidence.artifacts.map(
+                                    (artifact) => (
+                                      <article
+                                        className="evidence-row"
+                                        key={artifact.id}
+                                      >
+                                        <div>
+                                          <strong>{artifact.kind}</strong>
+                                          <span>{artifact.uri}</span>
+                                        </div>
+                                        <span className="badge muted">
+                                          {artifact.size_bytes} bytes
+                                        </span>
+                                      </article>
+                                    ),
+                                  )}
                                   {documentEvidence.artifacts.length === 0 ? (
-                                    <p className="payload-summary">No artifacts registered yet.</p>
+                                    <p className="payload-summary">
+                                      No artifacts registered yet.
+                                    </p>
                                   ) : null}
                                 </div>
                               </section>
-                              <section aria-label={`Segments for ${document.title}`}>
+                              <section
+                                aria-label={`Segments for ${document.title}`}
+                              >
                                 <div className="section-heading compact">
                                   <h3>Segments</h3>
-                                  <span className="badge muted">{documentEvidence.segments.length}</span>
+                                  <span className="badge muted">
+                                    {documentEvidence.segments.length}
+                                  </span>
                                 </div>
                                 <div className="evidence-list">
-                                  {documentEvidence.segments.slice(0, 3).map((segment) => (
-                                    <article className="evidence-row vertical" key={segment.id}>
-                                      <div>
-                                        <strong>
-                                          #{segment.ordinal} {segment.anchor ?? "no anchor"}
-                                        </strong>
-                                        <span>{segment.token_count} tokens</span>
-                                      </div>
-                                      <p>{segment.text}</p>
-                                    </article>
-                                  ))}
+                                  {documentEvidence.segments
+                                    .slice(0, 3)
+                                    .map((segment) => (
+                                      <article
+                                        className="evidence-row vertical"
+                                        key={segment.id}
+                                      >
+                                        <div>
+                                          <strong>
+                                            #{segment.ordinal}{" "}
+                                            {segment.anchor ?? "no anchor"}
+                                          </strong>
+                                          <span>
+                                            {segment.token_count} tokens
+                                          </span>
+                                        </div>
+                                        <p>{segment.text}</p>
+                                      </article>
+                                    ))}
                                   {documentEvidence.segments.length > 3 ? (
                                     <p className="payload-summary">
-                                      Showing first 3 of {documentEvidence.segments.length} segments.
+                                      Showing first 3 of{" "}
+                                      {documentEvidence.segments.length}{" "}
+                                      segments.
                                     </p>
                                   ) : null}
                                   {documentEvidence.segments.length === 0 ? (
-                                    <p className="payload-summary">No segments registered yet.</p>
+                                    <p className="payload-summary">
+                                      No segments registered yet.
+                                    </p>
                                   ) : null}
                                 </div>
                               </section>
                             </div>
                           </>
                         ) : (
-                          <p className="payload-summary">No versions registered for this document.</p>
+                          <p className="payload-summary">
+                            No versions registered for this document.
+                          </p>
                         )}
                       </section>
                     ) : null}
                     {isHistoryOpen ? (
-                      <section className="document-history" aria-label={`History for ${document.title}`}>
+                      <section
+                        className="document-history"
+                        aria-label={`History for ${document.title}`}
+                      >
                         {!documentHistory || isLoadingDocumentHistory ? (
-                          <p className="payload-summary">Loading document history</p>
+                          <p className="payload-summary">
+                            Loading document history
+                          </p>
                         ) : documentHistory.events.length > 0 ? (
                           documentHistory.events.map((event) => (
                             <article className="history-event" key={event.id}>
                               <div>
                                 <strong>{event.event_type}</strong>
                                 <span>
-                                  {formatDateTime(event.occurred_at)} by {event.actor}
+                                  {formatDateTime(event.occurred_at)} by{" "}
+                                  {event.actor}
                                 </span>
                               </div>
                               {event.changes.length > 0 ? (
                                 <div className="history-changes">
                                   {event.changes.map((change) => (
-                                    <div className="history-change" key={`${event.id}-${change.field}`}>
+                                    <div
+                                      className="history-change"
+                                      key={`${event.id}-${change.field}`}
+                                    >
                                       <span>{change.field}</span>
-                                      <code>{formatHistoryValue(change.before)}</code>
-                                      <code>{formatHistoryValue(change.after)}</code>
+                                      <code>
+                                        {formatHistoryValue(change.before)}
+                                      </code>
+                                      <code>
+                                        {formatHistoryValue(change.after)}
+                                      </code>
                                     </div>
                                   ))}
                                 </div>
                               ) : (
-                                <p className="payload-summary">{summarizePayload(event.payload)}</p>
+                                <p className="payload-summary">
+                                  {summarizePayload(event.payload)}
+                                </p>
                               )}
                             </article>
                           ))
                         ) : (
-                          <p className="payload-summary">No document journal events recorded.</p>
+                          <p className="payload-summary">
+                            No document journal events recorded.
+                          </p>
                         )}
                       </section>
                     ) : null}
@@ -4383,7 +4956,10 @@ function App() {
               {!selectedDomain ? (
                 <div className="empty-state compact">
                   <Database aria-hidden="true" />
-                  <p>Create or select a domain to inspect documents and run grounded queries.</p>
+                  <p>
+                    Create or select a domain to inspect documents and run
+                    grounded queries.
+                  </p>
                 </div>
               ) : null}
             </div>
@@ -4394,10 +4970,15 @@ function App() {
               tabIndex={-1}
               aria-label="Domain sources"
             >
-              <div className="document-context" aria-label="Document sources context">
+              <div
+                className="document-context"
+                aria-label="Document sources context"
+              >
                 <div data-tooltip="Sources are scoped to the active domain before scans or uploads run">
                   <span>Target domain</span>
-                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                  <strong>
+                    {selectedDomain ? selectedDomain.name : "Select a domain"}
+                  </strong>
                 </div>
                 <div data-tooltip="Registered sources can be scanned, edited, or removed with audit evidence">
                   <span>Registered sources</span>
@@ -4413,7 +4994,11 @@ function App() {
                 <button
                   className="ghost-action"
                   data-tooltip="Queue a local index rebuild for the active domain"
-                  disabled={!selectedDomainId || isQueueingIndex || isSelectedDomainArchived}
+                  disabled={
+                    !selectedDomainId ||
+                    isQueueingIndex ||
+                    isSelectedDomainArchived
+                  }
                   type="button"
                   onClick={() => void handleRebuildIndex()}
                 >
@@ -4431,7 +5016,9 @@ function App() {
                     <span>Kind</span>
                     <select
                       value={sourceKind}
-                      onChange={(event) => setSourceKind(event.target.value as SourceKind)}
+                      onChange={(event) =>
+                        setSourceKind(event.target.value as SourceKind)
+                      }
                     >
                       <option value="mount">Mount</option>
                       <option value="upload">Upload</option>
@@ -4460,7 +5047,11 @@ function App() {
                   <button
                     className="secondary-action"
                     data-tooltip="Register a reusable corpus source for this domain"
-                    disabled={!selectedDomainId || isCreatingSource || isSelectedDomainArchived}
+                    disabled={
+                      !selectedDomainId ||
+                      isCreatingSource ||
+                      isSelectedDomainArchived
+                    }
                     type="submit"
                   >
                     <FolderPlus aria-hidden="true" />
@@ -4474,148 +5065,166 @@ function App() {
                   <strong>{sources.length} corpus inputs</strong>
                 </summary>
                 <div className="source-list">
-                <div className="source-list-heading">
-                  <div>
-                    <span>Corpus inputs</span>
-                    <strong>Registered sources</strong>
+                  <div className="source-list-heading">
+                    <div>
+                      <span>Corpus inputs</span>
+                      <strong>Registered sources</strong>
+                    </div>
+                    <span
+                      className="badge muted"
+                      data-tooltip="Sources registered for the active domain and available for scans or uploads"
+                    >
+                      {sources.length} registered
+                    </span>
                   </div>
-                  <span
-                    className="badge muted"
-                    data-tooltip="Sources registered for the active domain and available for scans or uploads"
-                  >
-                    {sources.length} registered
-                  </span>
+                  {sources.map((source) => {
+                    const isEditing = editingSourceId === source.id;
+                    const isDeleting = deletingSourceId === source.id;
+                    return (
+                      <article
+                        className={`source-row${isEditing ? " editing" : ""}`}
+                        key={source.id}
+                      >
+                        {isEditing ? (
+                          <form
+                            className="source-edit-form"
+                            onSubmit={handleUpdateSource}
+                          >
+                            <label>
+                              <span>Kind</span>
+                              <select
+                                aria-label={`Source kind for ${source.name}`}
+                                value={sourceEditKind}
+                                disabled={isUpdatingSource}
+                                onChange={(event) =>
+                                  setSourceEditKind(
+                                    event.target.value as SourceKind,
+                                  )
+                                }
+                              >
+                                <option value="mount">Mount</option>
+                                <option value="upload">Upload</option>
+                                <option value="url">URL</option>
+                              </select>
+                            </label>
+                            <label>
+                              <span>Source name</span>
+                              <input
+                                aria-label={`Source name for ${source.name}`}
+                                value={sourceEditName}
+                                disabled={isUpdatingSource}
+                                onChange={(event) =>
+                                  setSourceEditName(event.target.value)
+                                }
+                              />
+                            </label>
+                            <label className="span-two">
+                              <span>URI</span>
+                              <input
+                                aria-label={`Source URI for ${source.name}`}
+                                value={sourceEditUri}
+                                disabled={isUpdatingSource}
+                                onChange={(event) =>
+                                  setSourceEditUri(event.target.value)
+                                }
+                              />
+                            </label>
+                            <div className="source-edit-actions">
+                              <button
+                                className="icon-button"
+                                data-tooltip="Save source kind, name, and URI"
+                                disabled={isUpdatingSource}
+                                title="Save source"
+                                type="submit"
+                                aria-label={`Save ${source.name}`}
+                              >
+                                <Check aria-hidden="true" />
+                              </button>
+                              <button
+                                className="icon-button"
+                                data-tooltip="Discard source edits"
+                                disabled={isUpdatingSource}
+                                title="Cancel source edit"
+                                type="button"
+                                aria-label={`Cancel editing ${source.name}`}
+                                onClick={handleCancelSourceEdit}
+                              >
+                                <X aria-hidden="true" />
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <>
+                            <div>
+                              <strong>{source.name}</strong>
+                              <span>{source.uri}</span>
+                            </div>
+                            <span className="badge muted">{source.kind}</span>
+                            <div className="source-actions">
+                              <button
+                                className="icon-button"
+                                data-tooltip="Edit source kind, name, and URI"
+                                title="Edit source"
+                                type="button"
+                                disabled={
+                                  isDeleting || isSelectedDomainArchived
+                                }
+                                aria-label={`Edit ${source.name}`}
+                                onClick={() => handleStartSourceEdit(source)}
+                              >
+                                <Pencil aria-hidden="true" />
+                              </button>
+                              <button
+                                className="icon-button danger"
+                                data-tooltip="Remove this source while keeping existing documents"
+                                title="Remove source"
+                                type="button"
+                                disabled={
+                                  isDeleting || isSelectedDomainArchived
+                                }
+                                aria-label={`Remove ${source.name}`}
+                                onClick={() => void handleDeleteSource(source)}
+                              >
+                                {isDeleting ? (
+                                  <RefreshCw aria-hidden="true" />
+                                ) : (
+                                  <Trash2 aria-hidden="true" />
+                                )}
+                              </button>
+                              <button
+                                className="ghost-action"
+                                disabled={
+                                  source.kind !== "mount" ||
+                                  isQueueingScan ||
+                                  isDeleting ||
+                                  isSelectedDomainArchived
+                                }
+                                data-tooltip={
+                                  source.kind === "mount"
+                                    ? "Queue a scan for this mounted source"
+                                    : "Only mounted sources can be scanned locally"
+                                }
+                                type="button"
+                                onClick={() => void handleScanSource(source.id)}
+                              >
+                                <Play aria-hidden="true" />
+                                {isQueueingScan ? "Queueing" : "Scan"}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </article>
+                    );
+                  })}
+                  {selectedDomain && sources.length === 0 ? (
+                    <div className="empty-state compact">
+                      <Database aria-hidden="true" />
+                      <p>
+                        Add a mounted source to scan files into this domain.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
-                {sources.map((source) => {
-                  const isEditing = editingSourceId === source.id;
-                  const isDeleting = deletingSourceId === source.id;
-                  return (
-                    <article className={`source-row${isEditing ? " editing" : ""}`} key={source.id}>
-                      {isEditing ? (
-                        <form className="source-edit-form" onSubmit={handleUpdateSource}>
-                          <label>
-                            <span>Kind</span>
-                            <select
-                              aria-label={`Source kind for ${source.name}`}
-                              value={sourceEditKind}
-                              disabled={isUpdatingSource}
-                              onChange={(event) =>
-                                setSourceEditKind(event.target.value as SourceKind)
-                              }
-                            >
-                              <option value="mount">Mount</option>
-                              <option value="upload">Upload</option>
-                              <option value="url">URL</option>
-                            </select>
-                          </label>
-                          <label>
-                            <span>Source name</span>
-                            <input
-                              aria-label={`Source name for ${source.name}`}
-                              value={sourceEditName}
-                              disabled={isUpdatingSource}
-                              onChange={(event) => setSourceEditName(event.target.value)}
-                            />
-                          </label>
-                          <label className="span-two">
-                            <span>URI</span>
-                            <input
-                              aria-label={`Source URI for ${source.name}`}
-                              value={sourceEditUri}
-                              disabled={isUpdatingSource}
-                              onChange={(event) => setSourceEditUri(event.target.value)}
-                            />
-                          </label>
-                          <div className="source-edit-actions">
-                            <button
-                              className="icon-button"
-                              data-tooltip="Save source kind, name, and URI"
-                              disabled={isUpdatingSource}
-                              title="Save source"
-                              type="submit"
-                              aria-label={`Save ${source.name}`}
-                            >
-                              <Check aria-hidden="true" />
-                            </button>
-                            <button
-                              className="icon-button"
-                              data-tooltip="Discard source edits"
-                              disabled={isUpdatingSource}
-                              title="Cancel source edit"
-                              type="button"
-                              aria-label={`Cancel editing ${source.name}`}
-                              onClick={handleCancelSourceEdit}
-                            >
-                              <X aria-hidden="true" />
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <>
-                          <div>
-                            <strong>{source.name}</strong>
-                            <span>{source.uri}</span>
-                          </div>
-                          <span className="badge muted">{source.kind}</span>
-                          <div className="source-actions">
-                            <button
-                              className="icon-button"
-                              data-tooltip="Edit source kind, name, and URI"
-                              title="Edit source"
-                              type="button"
-                              disabled={isDeleting || isSelectedDomainArchived}
-                              aria-label={`Edit ${source.name}`}
-                              onClick={() => handleStartSourceEdit(source)}
-                            >
-                              <Pencil aria-hidden="true" />
-                            </button>
-                            <button
-                              className="icon-button danger"
-                              data-tooltip="Remove this source while keeping existing documents"
-                              title="Remove source"
-                              type="button"
-                              disabled={isDeleting || isSelectedDomainArchived}
-                              aria-label={`Remove ${source.name}`}
-                              onClick={() => void handleDeleteSource(source)}
-                            >
-                              {isDeleting ? (
-                                <RefreshCw aria-hidden="true" />
-                              ) : (
-                                <Trash2 aria-hidden="true" />
-                              )}
-                            </button>
-                            <button
-                              className="ghost-action"
-                              disabled={
-                                source.kind !== "mount" ||
-                                isQueueingScan ||
-                                isDeleting ||
-                                isSelectedDomainArchived
-                              }
-                              data-tooltip={
-                                source.kind === "mount"
-                                  ? "Queue a scan for this mounted source"
-                                  : "Only mounted sources can be scanned locally"
-                              }
-                              type="button"
-                              onClick={() => void handleScanSource(source.id)}
-                            >
-                              <Play aria-hidden="true" />
-                              {isQueueingScan ? "Queueing" : "Scan"}
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </article>
-                  );
-                })}
-                {selectedDomain && sources.length === 0 ? (
-                  <div className="empty-state compact">
-                    <Database aria-hidden="true" />
-                    <p>Add a mounted source to scan files into this domain.</p>
-                  </div>
-                ) : null}
-              </div>
               </details>
             </section>
             <section
@@ -4628,10 +5237,15 @@ function App() {
               <div className="section-heading">
                 <h3>File upload</h3>
               </div>
-              <div className="ingestion-context" aria-label="Upload ingestion context">
+              <div
+                className="ingestion-context"
+                aria-label="Upload ingestion context"
+              >
                 <div data-tooltip="Uploaded documents are stored under the active domain">
                   <span>Target domain</span>
-                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                  <strong>
+                    {selectedDomain ? selectedDomain.name : "Select a domain"}
+                  </strong>
                 </div>
                 <div data-tooltip="Uploads are validated locally before they are queued">
                   <span>Allowed files</span>
@@ -4650,7 +5264,9 @@ function App() {
                     accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf"
                     name="uploadFile"
                     type="file"
-                    onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
+                    onChange={(event) =>
+                      setUploadFile(event.target.files?.[0] ?? null)
+                    }
                   />
                 </label>
                 <label data-tooltip="Document title stored in the library and citations">
@@ -4661,7 +5277,10 @@ function App() {
                     onChange={(event) => setUploadTitle(event.target.value)}
                   />
                 </label>
-                <label className="span-two" data-tooltip="Optional source to link this upload to">
+                <label
+                  className="span-two"
+                  data-tooltip="Optional source to link this upload to"
+                >
                   <span>Source</span>
                   <select
                     value={uploadSourceId}
@@ -4678,7 +5297,11 @@ function App() {
                 <button
                   className="secondary-action"
                   data-tooltip="Upload a file and queue it for local processing"
-                  disabled={!selectedDomainId || isUploadingFile || isSelectedDomainArchived}
+                  disabled={
+                    !selectedDomainId ||
+                    isUploadingFile ||
+                    isSelectedDomainArchived
+                  }
                   type="submit"
                 >
                   <FileSearch aria-hidden="true" />
@@ -4696,10 +5319,15 @@ function App() {
               <div className="section-heading">
                 <h3>Text ingestion</h3>
               </div>
-              <div className="ingestion-context" aria-label="Pasted text context">
+              <div
+                className="ingestion-context"
+                aria-label="Pasted text context"
+              >
                 <div data-tooltip="Pasted text is queued as a document in the active domain">
                   <span>Target domain</span>
-                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                  <strong>
+                    {selectedDomain ? selectedDomain.name : "Select a domain"}
+                  </strong>
                 </div>
                 <div data-tooltip="Inline text creates normal ingestion, indexing, journal, and progress records">
                   <span>Processing</span>
@@ -4747,7 +5375,11 @@ function App() {
                 <button
                   className="secondary-action"
                   data-tooltip="Paste text and queue it as a traceable document"
-                  disabled={!selectedDomainId || isIngestingText || isSelectedDomainArchived}
+                  disabled={
+                    !selectedDomainId ||
+                    isIngestingText ||
+                    isSelectedDomainArchived
+                  }
                   type="submit"
                 >
                   <FileSearch aria-hidden="true" />
@@ -4759,7 +5391,9 @@ function App() {
 
           <article
             className="panel"
-            hidden={activeSection !== "queries" || activeModule !== "queries-runner"}
+            hidden={
+              activeSection !== "queries" || activeModule !== "queries-runner"
+            }
             id="queries"
           >
             <div className="panel-heading">
@@ -4769,15 +5403,26 @@ function App() {
               </div>
               <span className="status-pill local">Local model</span>
             </div>
-            <form className="query-form" id="queries-runner" tabIndex={-1} onSubmit={handleQuerySubmit}>
+            <form
+              className="query-form"
+              id="queries-runner"
+              tabIndex={-1}
+              onSubmit={handleQuerySubmit}
+            >
               <div className="selected-domain">
                 <span>Active domain</span>
-                <strong>{selectedDomain ? selectedDomain.name : "Select a domain first"}</strong>
+                <strong>
+                  {selectedDomain
+                    ? selectedDomain.name
+                    : "Select a domain first"}
+                </strong>
               </div>
               <div className="query-context" aria-label="Query run context">
                 <div data-tooltip="Queries run against the active domain and its indexed documents">
                   <span>Target corpus</span>
-                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                  <strong>
+                    {selectedDomain ? selectedDomain.name : "Select a domain"}
+                  </strong>
                 </div>
                 <div data-tooltip="Local runs default to the Deep Agents harness and mocked providers in tests">
                   <span>Runtime</span>
@@ -4799,7 +5444,11 @@ function App() {
               <button
                 className="secondary-action"
                 data-tooltip="Run a grounded query against the selected domain"
-                disabled={isRunningQuery || !selectedDomainId || isSelectedDomainArchived}
+                disabled={
+                  isRunningQuery ||
+                  !selectedDomainId ||
+                  isSelectedDomainArchived
+                }
                 type="submit"
               >
                 <Send aria-hidden="true" />
@@ -4820,203 +5469,329 @@ function App() {
                   const queryPlan = queryPlanFor(queryResult);
                   const evidenceRoute = evidenceRouteFor(queryResult);
                   return (
-                <>
-                  <div className="result-meta">
-                    <span>Job {queryJob?.status ?? "unknown"}</span>
-                    <span>{queryResult.runtime}</span>
-                    <span>{queryResult.model}</span>
-                    <span>{queryResult.citations.length} citations</span>
-                  </div>
-                  <div className="result-meta budget-meta" aria-label="Query budget usage">
-                    <span>{queryResult.usage.within_budget ? "Within budget" : "Budget exceeded"}</span>
-                    <span>
-                      {evidenceAudit.grounded ? "Evidence linked" : "Evidence missing"}{" "}
-                      {evidenceAudit.cited_segment_ids.length}/
-                      {queryResult.citations.length}
-                    </span>
-                    <span>
-                      {contradictionAudit.conflict_count === 0
-                        ? "Contradictions 0"
-                        : `Review ${contradictionAudit.conflict_count}`}
-                    </span>
-                    <span>
-                      Searches {queryResult.usage.search_count}/
-                      {queryResult.usage.budget.max_searches}
-                    </span>
-                    <span>
-                      Citations {queryResult.usage.citation_count}/
-                      {queryResult.usage.budget.max_citations}
-                    </span>
-                    <span>
-                      Route {evidenceRoute.coverage_level.replaceAll("_", " ")}
-                    </span>
-                    <span>
-                      Documents {evidenceRoute.document_count} / anchors{" "}
-                      {evidenceRoute.anchor_count}
-                    </span>
-                    <span>
-                      Evidence {queryResult.usage.evidence_tokens}/
-                      {queryResult.usage.budget.max_evidence_tokens} tokens
-                    </span>
-                  </div>
-                  <details className="insight-section">
-                    <summary data-tooltip="Show the retrieval strategy and planned search steps">
-                      Query plan
-                    </summary>
-                    <div className="query-plan" aria-label="Query plan">
-                      <div className="route-summary">
-                        <span className={queryPlan.requires_multi_hop ? "badge warning" : "badge muted"}>
-                          {queryPlan.strategy.replaceAll("_", " ")}
-                        </span>
-                        <span className={queryPlan.expected_evidence === "multi_document" ? "badge success" : "badge muted"}>
-                          expects {queryPlan.expected_evidence.replaceAll("_", " ")}
-                        </span>
-                        {queryPlan.warnings.map((warning) => (
-                          <span className="badge warning" key={warning}>
-                            {warning.replaceAll("_", " ")}
+                    <>
+                      <section
+                        className="query-status-card"
+                        aria-label="Query result status"
+                      >
+                        <div className="section-heading compact">
+                          <h3>Result status</h3>
+                          <span
+                            className="badge muted"
+                            data-tooltip="Runtime and citation count for this answer"
+                          >
+                            {queryResult.citations.length} citations
                           </span>
-                        ))}
-                      </div>
-                      {queryPlan.search_queries.length > 0 ? (
-                        <div className="query-plan-searches">
-                          {queryPlan.search_queries.slice(0, 4).map((searchQuery) => (
-                            <span key={searchQuery}>{searchQuery}</span>
-                          ))}
                         </div>
-                      ) : null}
-                      {queryPlan.steps.length > 0 ? (
-                        <ol>
-                          {queryPlan.steps.map((step) => (
-                            <li key={step.name}>
-                              <strong>{step.name}</strong>
-                              <span>{step.description}</span>
-                            </li>
-                          ))}
-                        </ol>
-                      ) : null}
-                    </div>
-                  </details>
-                  <p>{queryResult.answer}</p>
-                  <details className="insight-section">
-                    <summary data-tooltip="Review the exact cited snippets used by the answer">
-                      Citations
-                    </summary>
-                    <div className="citation-list" aria-label="Query citations">
-                      {queryResult.citations.map((citation) => (
-                        <article className="citation-row" key={citation.segment_id}>
-                          <div>
-                            <strong>{citation.title}</strong>
-                            <span>{citation.anchor ?? "No anchor"}</span>
-                          </div>
-                          <p>{citation.text}</p>
-                          <span className="badge muted">
-                            <Link2 aria-hidden="true" />
-                            {citation.segment_id.slice(0, 8)}
-                          </span>
-                        </article>
-                      ))}
-                    </div>
-                  </details>
-                  <details className="insight-section">
-                    <summary data-tooltip="Inspect document coverage and expanded context routing">
-                      Evidence route
-                    </summary>
-                    <div className="evidence-route" aria-label="Evidence route">
-                      <div className="route-summary">
-                        <span className={evidenceRoute.multi_document ? "badge success" : "badge muted"}>
-                          {evidenceRoute.multi_document ? "multi document" : "single document"}
-                        </span>
-                        <span className={evidenceRoute.has_neighbor_context ? "badge success" : "badge muted"}>
-                          {evidenceRoute.has_neighbor_context ? "context expanded" : "no context"}
-                        </span>
-                        {evidenceRoute.warnings.map((warning) => (
-                          <span className="badge warning" key={warning}>
-                            {warning.replaceAll("_", " ")}
-                          </span>
-                        ))}
-                      </div>
-                      {evidenceRoute.documents.length > 0 ? (
-                        <div className="route-documents">
-                          {evidenceRoute.documents.map((document) => (
-                            <article className="route-document" key={document.document_id}>
-                              <strong>{document.title}</strong>
-                              <span>
-                                {document.segment_ids.length} segments /{" "}
-                                {document.anchors.length} anchors
-                              </span>
-                            </article>
-                          ))}
+                        <div className="result-meta">
+                          <span>Job {queryJob?.status ?? "unknown"}</span>
+                          <span>{queryResult.runtime}</span>
+                          <span>{queryResult.model}</span>
                         </div>
-                      ) : null}
-                    </div>
-                  </details>
-                  <details className="insight-section">
-                    <summary data-tooltip="Check whether the answer needed multiple documents or bridge terms">
-                      Multi-hop audit
-                    </summary>
-                    <div className="evidence-route multi-hop-audit" aria-label="Multi-hop audit">
-                      <div className="route-summary">
-                        <span
-                          className={
-                            multiHopAudit.status === "supported_multi_document"
-                              ? "badge success"
-                              : multiHopAudit.requires_multi_hop
-                                ? "badge warning"
-                                : "badge muted"
-                          }
+                        <div
+                          className="result-meta budget-meta"
+                          aria-label="Query budget usage"
                         >
-                          {multiHopAudit.status.replaceAll("_", " ")}
-                        </span>
-                        <span className={multiHopAudit.requires_multi_hop ? "badge warning" : "badge muted"}>
-                          {multiHopAudit.requires_multi_hop ? "multi-hop question" : "single-hop question"}
-                        </span>
-                        <span className={multiHopAudit.document_count > 1 ? "badge success" : "badge muted"}>
-                          {multiHopAudit.document_count} documents
-                        </span>
-                        {multiHopAudit.warnings.map((warning) => (
-                          <span className="badge warning" key={warning}>
-                            {warning.replaceAll("_", " ")}
+                          <span>
+                            {queryResult.usage.within_budget
+                              ? "Within budget"
+                              : "Budget exceeded"}
                           </span>
-                        ))}
-                      </div>
-                      {multiHopAudit.bridge_terms.length > 0 ? (
-                        <p className="audit-note">
-                          Bridge terms: {multiHopAudit.bridge_terms.join(", ")}
-                        </p>
-                      ) : null}
-                    </div>
-                  </details>
-                  {(queryResult.neighbor_context ?? []).length > 0 ? (
-                    <details className="insight-section">
-                      <summary data-tooltip="Show nearby segments used to validate context">
-                        Neighbor context
-                      </summary>
-                      <div className="citation-list neighbor-list" aria-label="Neighbor context">
-                        {(queryResult.neighbor_context ?? []).map((context) => (
-                          <article className="citation-row" key={context.segment_id}>
-                            <div>
-                              <strong>{context.title}</strong>
-                              <span>
-                                {context.anchor ?? "No anchor"} near{" "}
-                                {context.source_segment_id.slice(0, 8)}
+                          <span>
+                            {evidenceAudit.grounded
+                              ? "Evidence linked"
+                              : "Evidence missing"}{" "}
+                            {evidenceAudit.cited_segment_ids.length}/
+                            {queryResult.citations.length}
+                          </span>
+                          <span>
+                            {contradictionAudit.conflict_count === 0
+                              ? "Contradictions 0"
+                              : `Review ${contradictionAudit.conflict_count}`}
+                          </span>
+                          <span>
+                            Searches {queryResult.usage.search_count}/
+                            {queryResult.usage.budget.max_searches}
+                          </span>
+                          <span>
+                            Citations {queryResult.usage.citation_count}/
+                            {queryResult.usage.budget.max_citations}
+                          </span>
+                          <span>
+                            Route{" "}
+                            {evidenceRoute.coverage_level.replaceAll("_", " ")}
+                          </span>
+                          <span>
+                            Documents {evidenceRoute.document_count} / anchors{" "}
+                            {evidenceRoute.anchor_count}
+                          </span>
+                          <span>
+                            Evidence {queryResult.usage.evidence_tokens}/
+                            {queryResult.usage.budget.max_evidence_tokens}{" "}
+                            tokens
+                          </span>
+                        </div>
+                      </section>
+                      <section
+                        className="answer-card"
+                        aria-label="Grounded answer"
+                      >
+                        <div className="section-heading compact">
+                          <h3>Answer</h3>
+                          <span
+                            className={
+                              evidenceAudit.grounded
+                                ? "badge success"
+                                : "badge warning"
+                            }
+                            data-tooltip="Whether cited segment ids are linked back to the answer evidence"
+                          >
+                            {evidenceAudit.grounded
+                              ? "Evidence linked"
+                              : "Review evidence"}
+                          </span>
+                        </div>
+                        <p>{queryResult.answer}</p>
+                      </section>
+                      <section
+                        className="query-review-grid"
+                        aria-label="Query evidence review"
+                      >
+                        <details className="insight-section">
+                          <summary data-tooltip="Show the retrieval strategy and planned search steps">
+                            Query plan
+                          </summary>
+                          <div className="query-plan" aria-label="Query plan">
+                            <div className="route-summary">
+                              <span
+                                className={
+                                  queryPlan.requires_multi_hop
+                                    ? "badge warning"
+                                    : "badge muted"
+                                }
+                              >
+                                {queryPlan.strategy.replaceAll("_", " ")}
                               </span>
+                              <span
+                                className={
+                                  queryPlan.expected_evidence ===
+                                  "multi_document"
+                                    ? "badge success"
+                                    : "badge muted"
+                                }
+                              >
+                                expects{" "}
+                                {queryPlan.expected_evidence.replaceAll(
+                                  "_",
+                                  " ",
+                                )}
+                              </span>
+                              {queryPlan.warnings.map((warning) => (
+                                <span className="badge warning" key={warning}>
+                                  {warning.replaceAll("_", " ")}
+                                </span>
+                              ))}
                             </div>
-                            <p>{context.text}</p>
-                            <span className="badge muted">
-                              {context.token_count} tokens
-                            </span>
-                          </article>
-                        ))}
-                      </div>
-                    </details>
-                  ) : null}
-                </>
+                            {queryPlan.search_queries.length > 0 ? (
+                              <div className="query-plan-searches">
+                                {queryPlan.search_queries
+                                  .slice(0, 4)
+                                  .map((searchQuery) => (
+                                    <span key={searchQuery}>{searchQuery}</span>
+                                  ))}
+                              </div>
+                            ) : null}
+                            {queryPlan.steps.length > 0 ? (
+                              <ol>
+                                {queryPlan.steps.map((step) => (
+                                  <li key={step.name}>
+                                    <strong>{step.name}</strong>
+                                    <span>{step.description}</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            ) : null}
+                          </div>
+                        </details>
+                        <details className="insight-section">
+                          <summary data-tooltip="Review the exact cited snippets used by the answer">
+                            Citations
+                          </summary>
+                          <div
+                            className="citation-list"
+                            aria-label="Query citations"
+                          >
+                            {queryResult.citations.map((citation) => (
+                              <article
+                                className="citation-row"
+                                key={citation.segment_id}
+                              >
+                                <div>
+                                  <strong>{citation.title}</strong>
+                                  <span>{citation.anchor ?? "No anchor"}</span>
+                                </div>
+                                <p>{citation.text}</p>
+                                <span className="badge muted">
+                                  <Link2 aria-hidden="true" />
+                                  {citation.segment_id.slice(0, 8)}
+                                </span>
+                              </article>
+                            ))}
+                          </div>
+                        </details>
+                        <details className="insight-section">
+                          <summary data-tooltip="Inspect document coverage and expanded context routing">
+                            Evidence route
+                          </summary>
+                          <div
+                            className="evidence-route"
+                            aria-label="Evidence route"
+                          >
+                            <div className="route-summary">
+                              <span
+                                className={
+                                  evidenceRoute.multi_document
+                                    ? "badge success"
+                                    : "badge muted"
+                                }
+                              >
+                                {evidenceRoute.multi_document
+                                  ? "multi document"
+                                  : "single document"}
+                              </span>
+                              <span
+                                className={
+                                  evidenceRoute.has_neighbor_context
+                                    ? "badge success"
+                                    : "badge muted"
+                                }
+                              >
+                                {evidenceRoute.has_neighbor_context
+                                  ? "context expanded"
+                                  : "no context"}
+                              </span>
+                              {evidenceRoute.warnings.map((warning) => (
+                                <span className="badge warning" key={warning}>
+                                  {warning.replaceAll("_", " ")}
+                                </span>
+                              ))}
+                            </div>
+                            {evidenceRoute.documents.length > 0 ? (
+                              <div className="route-documents">
+                                {evidenceRoute.documents.map((document) => (
+                                  <article
+                                    className="route-document"
+                                    key={document.document_id}
+                                  >
+                                    <strong>{document.title}</strong>
+                                    <span>
+                                      {document.segment_ids.length} segments /{" "}
+                                      {document.anchors.length} anchors
+                                    </span>
+                                  </article>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        </details>
+                        <details className="insight-section">
+                          <summary data-tooltip="Check whether the answer needed multiple documents or bridge terms">
+                            Multi-hop audit
+                          </summary>
+                          <div
+                            className="evidence-route multi-hop-audit"
+                            aria-label="Multi-hop audit"
+                          >
+                            <div className="route-summary">
+                              <span
+                                className={
+                                  multiHopAudit.status ===
+                                  "supported_multi_document"
+                                    ? "badge success"
+                                    : multiHopAudit.requires_multi_hop
+                                      ? "badge warning"
+                                      : "badge muted"
+                                }
+                              >
+                                {multiHopAudit.status.replaceAll("_", " ")}
+                              </span>
+                              <span
+                                className={
+                                  multiHopAudit.requires_multi_hop
+                                    ? "badge warning"
+                                    : "badge muted"
+                                }
+                              >
+                                {multiHopAudit.requires_multi_hop
+                                  ? "multi-hop question"
+                                  : "single-hop question"}
+                              </span>
+                              <span
+                                className={
+                                  multiHopAudit.document_count > 1
+                                    ? "badge success"
+                                    : "badge muted"
+                                }
+                              >
+                                {multiHopAudit.document_count} documents
+                              </span>
+                              {multiHopAudit.warnings.map((warning) => (
+                                <span className="badge warning" key={warning}>
+                                  {warning.replaceAll("_", " ")}
+                                </span>
+                              ))}
+                            </div>
+                            {multiHopAudit.bridge_terms.length > 0 ? (
+                              <p className="audit-note">
+                                Bridge terms:{" "}
+                                {multiHopAudit.bridge_terms.join(", ")}
+                              </p>
+                            ) : null}
+                          </div>
+                        </details>
+                        {(queryResult.neighbor_context ?? []).length > 0 ? (
+                          <details className="insight-section">
+                            <summary data-tooltip="Show nearby segments used to validate context">
+                              Neighbor context
+                            </summary>
+                            <div
+                              className="citation-list neighbor-list"
+                              aria-label="Neighbor context"
+                            >
+                              {(queryResult.neighbor_context ?? []).map(
+                                (context) => (
+                                  <article
+                                    className="citation-row"
+                                    key={context.segment_id}
+                                  >
+                                    <div>
+                                      <strong>{context.title}</strong>
+                                      <span>
+                                        {context.anchor ?? "No anchor"} near{" "}
+                                        {context.source_segment_id.slice(0, 8)}
+                                      </span>
+                                    </div>
+                                    <p>{context.text}</p>
+                                    <span className="badge muted">
+                                      {context.token_count} tokens
+                                    </span>
+                                  </article>
+                                ),
+                              )}
+                            </div>
+                          </details>
+                        ) : null}
+                      </section>
+                    </>
                   );
                 })()
               ) : (
                 <div className="empty-state compact">
                   <Bot aria-hidden="true" />
-                  <p>Run a query to inspect the answer, citations, provider, and job status.</p>
+                  <p>
+                    Run a query to inspect the answer, citations, provider, and
+                    job status.
+                  </p>
                 </div>
               )}
             </section>
@@ -5024,20 +5799,32 @@ function App() {
 
           <article
             className="panel wide"
-            hidden={activeSection !== "queries" || activeModule !== "queries-live"}
+            hidden={
+              activeSection !== "queries" || activeModule !== "queries-live"
+            }
           >
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Pipeline</p>
                 <h2>Processing timeline</h2>
               </div>
-              <span className={liveStatus === "connected" ? "status-pill local" : "status-pill"}>
+              <span
+                className={
+                  liveStatus === "connected"
+                    ? "status-pill local"
+                    : "status-pill"
+                }
+              >
                 {liveStatus === "connected" ? "Live" : "Offline"}
               </span>
             </div>
             <div className="live-toolbar" id="queries-live" tabIndex={-1}>
               <button
-                className={liveStatus === "connected" ? "ghost-action" : "secondary-action"}
+                className={
+                  liveStatus === "connected"
+                    ? "ghost-action"
+                    : "secondary-action"
+                }
                 data-tooltip="Open an SSE stream to watch processing updates"
                 type="button"
                 onClick={() => void handleConnectLiveUpdates()}
@@ -5059,7 +5846,9 @@ function App() {
                 </p>
               ) : null}
               {lastProgressCursor ? (
-                <span className="resume-cursor">Resume {lastProgressCursor.slice(0, 18)}</span>
+                <span className="resume-cursor">
+                  Resume {lastProgressCursor.slice(0, 18)}
+                </span>
               ) : null}
             </div>
             <ol className="timeline" aria-live="polite">
@@ -5073,25 +5862,44 @@ function App() {
             <div className="live-context" aria-label="Live progress context">
               <div data-tooltip="Authenticated SSE stream keeps operators close to indexing and query progress">
                 <span>Connection</span>
-                <strong>{liveStatus === "connected" ? "SSE connected" : "SSE stream"}</strong>
+                <strong>
+                  {liveStatus === "connected" ? "SSE connected" : "SSE stream"}
+                </strong>
               </div>
               <div data-tooltip="Reconnects resume from the persisted event cursor when one exists">
                 <span>Replay cursor</span>
-                <strong>{lastProgressCursor ? lastProgressCursor.slice(0, 18) : "Awaiting events"}</strong>
+                <strong>
+                  {lastProgressCursor
+                    ? lastProgressCursor.slice(0, 18)
+                    : "Awaiting events"}
+                </strong>
               </div>
               <div data-tooltip="Progress events are mirrored into durable audit records for later review">
                 <span>Audit trail</span>
                 <strong>Persisted progress</strong>
               </div>
             </div>
-            <section className="event-ledger" aria-label="Live progress events" aria-live="polite">
-              <div className="live-progress-summary" aria-label="Live progress summary">
+            <section
+              className="event-ledger"
+              aria-label="Live progress events"
+              aria-live="polite"
+            >
+              <div
+                className="live-progress-summary"
+                aria-label="Live progress summary"
+              >
                 <div>
                   <span>Last event</span>
-                  <strong>{liveProgressSummary.lastEvent?.event ?? "Waiting"}</strong>
+                  <strong>
+                    {liveProgressSummary.lastEvent?.event ?? "Waiting"}
+                  </strong>
                   <small>
                     {liveProgressSummary.lastEvent
-                      ? formatDateTime(progressEventOccurredAt(liveProgressSummary.lastEvent))
+                      ? formatDateTime(
+                          progressEventOccurredAt(
+                            liveProgressSummary.lastEvent,
+                          ),
+                        )
                       : "Connect SSE"}
                   </small>
                 </div>
@@ -5121,13 +5929,18 @@ function App() {
                 </div>
               ) : null}
               {progressEvents.map((event) => (
-                <article className="event-row" key={`${event.id}-${event.event}`}>
+                <article
+                  className="event-row"
+                  key={`${event.id}-${event.event}`}
+                >
                   <span className="event-id">#{event.id}</span>
                   <div>
                     <strong>{event.event}</strong>
                     <span>{progressEventMessage(event)}</span>
                     {progressEventOccurredAt(event) ? (
-                      <span>{formatDateTime(progressEventOccurredAt(event))}</span>
+                      <span>
+                        {formatDateTime(progressEventOccurredAt(event))}
+                      </span>
                     ) : null}
                   </div>
                 </article>
@@ -5135,20 +5948,35 @@ function App() {
               {progressEvents.length === 0 ? (
                 <div className="empty-state compact">
                   <Activity aria-hidden="true" />
-                  <p>Connect live updates to watch job and ingestion progress as events arrive.</p>
+                  <p>
+                    Connect live updates to watch job and ingestion progress as
+                    events arrive.
+                  </p>
                 </div>
               ) : null}
             </section>
           </article>
 
-          <article className="panel wide" hidden={activeSection !== "evals"} id="evals">
+          <article
+            className="panel wide"
+            hidden={activeSection !== "evals"}
+            id="evals"
+          >
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Quality</p>
                 <h2>Local evals</h2>
               </div>
-              <span className={evalReport?.passed ? "status-pill local" : "status-pill"}>
-                {evalReport ? (evalReport.passed ? "Passing" : "Failing") : "Not run"}
+              <span
+                className={
+                  evalReport?.passed ? "status-pill local" : "status-pill"
+                }
+              >
+                {evalReport
+                  ? evalReport.passed
+                    ? "Passing"
+                    : "Failing"
+                  : "Not run"}
               </span>
             </div>
             <div
@@ -5192,7 +6020,9 @@ function App() {
                 <select
                   aria-label="Eval domain scope"
                   value={evalDomainId}
-                  onChange={(event) => void handleEvalDomainChange(event.target.value)}
+                  onChange={(event) =>
+                    void handleEvalDomainChange(event.target.value)
+                  }
                 >
                   <option value="">All evals</option>
                   {domains.map((domain) => (
@@ -5221,7 +6051,10 @@ function App() {
                 <strong>No paid calls</strong>
               </div>
             </div>
-            <div className="eval-runner-forms" hidden={activeModule !== "evals-runner"}>
+            <div
+              className="eval-runner-forms"
+              hidden={activeModule !== "evals-runner"}
+            >
               <details className="dataset-accordion" open>
                 <summary data-tooltip="Configure and run the SQuAD single-hop fixture">
                   <span>SQuAD</span>
@@ -5231,64 +6064,75 @@ function App() {
                   className="eval-dataset-form"
                   onSubmit={(event) => void handleRunSquadEval(event)}
                 >
-                <div className="dataset-form-heading">
-                  <div>
-                    <span>Dataset</span>
-                    <strong>SQuAD</strong>
+                  <div className="dataset-form-heading">
+                    <div>
+                      <span>Dataset</span>
+                      <strong>SQuAD</strong>
+                    </div>
+                    <span
+                      className="badge muted"
+                      data-tooltip="Single-hop answer grounding fixture"
+                    >
+                      QA
+                    </span>
                   </div>
-                  <span className="badge muted" data-tooltip="Single-hop answer grounding fixture">
-                    QA
-                  </span>
-                </div>
-                <label className="span-two">
-                  SQuAD dataset path
-                  <input
-                    aria-label="SQuAD dataset path"
-                    value={squadDatasetPath}
-                    onChange={(event) => setSquadDatasetPath(event.target.value)}
-                    placeholder="dev-v2.0.json"
-                  />
-                </label>
-                <label>
-                  Max cases
-                  <input
-                    aria-label="SQuAD max cases"
-                    inputMode="numeric"
-                    min="1"
-                    max="1000"
-                    type="number"
-                    value={squadMaxCases}
-                    onChange={(event) => setSquadMaxCases(event.target.value)}
-                  />
-                </label>
-                <label>
-                  Report stem
-                  <input
-                    aria-label="SQuAD report stem"
-                    disabled={!squadWriteReport}
-                    value={squadReportStem}
-                    onChange={(event) => setSquadReportStem(event.target.value)}
-                    placeholder="squad-v2-dev-50"
-                  />
-                </label>
-                <label className="checkbox-field">
-                  <input
-                    aria-label="Write SQuAD reports"
-                    checked={squadWriteReport}
-                    type="checkbox"
-                    onChange={(event) => setSquadWriteReport(event.target.checked)}
-                  />
-                  <span>Write reports</span>
-                </label>
-                <button
-                  className="secondary-action"
-                  data-tooltip="Run a local SQuAD-style retrieval eval"
-                  disabled={isAnyEvalRunning}
-                  type="submit"
-                >
-                  <FileSearch aria-hidden="true" />
-                  {isRunningSquadEval ? "Running SQuAD eval" : "Run SQuAD eval"}
-                </button>
+                  <label className="span-two">
+                    SQuAD dataset path
+                    <input
+                      aria-label="SQuAD dataset path"
+                      value={squadDatasetPath}
+                      onChange={(event) =>
+                        setSquadDatasetPath(event.target.value)
+                      }
+                      placeholder="dev-v2.0.json"
+                    />
+                  </label>
+                  <label>
+                    Max cases
+                    <input
+                      aria-label="SQuAD max cases"
+                      inputMode="numeric"
+                      min="1"
+                      max="1000"
+                      type="number"
+                      value={squadMaxCases}
+                      onChange={(event) => setSquadMaxCases(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Report stem
+                    <input
+                      aria-label="SQuAD report stem"
+                      disabled={!squadWriteReport}
+                      value={squadReportStem}
+                      onChange={(event) =>
+                        setSquadReportStem(event.target.value)
+                      }
+                      placeholder="squad-v2-dev-50"
+                    />
+                  </label>
+                  <label className="checkbox-field">
+                    <input
+                      aria-label="Write SQuAD reports"
+                      checked={squadWriteReport}
+                      type="checkbox"
+                      onChange={(event) =>
+                        setSquadWriteReport(event.target.checked)
+                      }
+                    />
+                    <span>Write reports</span>
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Run a local SQuAD-style retrieval eval"
+                    disabled={isAnyEvalRunning}
+                    type="submit"
+                  >
+                    <FileSearch aria-hidden="true" />
+                    {isRunningSquadEval
+                      ? "Running SQuAD eval"
+                      : "Run SQuAD eval"}
+                  </button>
                 </form>
               </details>
               <details className="dataset-accordion">
@@ -5300,76 +6144,89 @@ function App() {
                   className="eval-dataset-form"
                   onSubmit={(event) => void handleRunHotpotQAEval(event)}
                 >
-                <div className="dataset-form-heading">
-                  <div>
-                    <span>Dataset</span>
-                    <strong>HotpotQA</strong>
+                  <div className="dataset-form-heading">
+                    <div>
+                      <span>Dataset</span>
+                      <strong>HotpotQA</strong>
+                    </div>
+                    <span
+                      className="badge warning"
+                      data-tooltip="Multi-hop retrieval and Deep Agents checks"
+                    >
+                      Multi-hop
+                    </span>
                   </div>
-                  <span className="badge warning" data-tooltip="Multi-hop retrieval and Deep Agents checks">
-                    Multi-hop
-                  </span>
-                </div>
-                <label className="span-two">
-                  HotpotQA dataset path
-                  <input
-                    aria-label="HotpotQA dataset path"
-                    value={hotpotqaDatasetPath}
-                    onChange={(event) => setHotpotqaDatasetPath(event.target.value)}
-                    placeholder="hotpot_dev_distractor_v1.json"
-                  />
-                </label>
-                <label>
-                  Max cases
-                  <input
-                    aria-label="HotpotQA max cases"
-                    inputMode="numeric"
-                    min="1"
-                    max="1000"
-                    type="number"
-                    value={hotpotqaMaxCases}
-                    onChange={(event) => setHotpotqaMaxCases(event.target.value)}
-                  />
-                </label>
-                <label>
-                  Report stem
-                  <input
-                    aria-label="HotpotQA report stem"
-                    disabled={!hotpotqaWriteReport}
-                    value={hotpotqaReportStem}
-                    onChange={(event) => setHotpotqaReportStem(event.target.value)}
-                    placeholder="hotpotqa-dev-50"
-                  />
-                </label>
-                <label className="checkbox-field">
-                  <input
-                    aria-label="Write HotpotQA reports"
-                    checked={hotpotqaWriteReport}
-                    type="checkbox"
-                    onChange={(event) => setHotpotqaWriteReport(event.target.checked)}
-                  />
-                  <span>Write reports</span>
-                </label>
-                <button
-                  className="secondary-action"
-                  data-tooltip="Run a local HotpotQA multi-hop retrieval eval"
-                  disabled={isAnyEvalRunning}
-                  type="submit"
-                >
-                  <FileSearch aria-hidden="true" />
-                  {isRunningHotpotQAEval ? "Running HotpotQA eval" : "Run HotpotQA eval"}
-                </button>
-                <button
-                  className="secondary-action"
-                  data-tooltip="Run HotpotQA through the Deep Agents harness"
-                  disabled={isAnyEvalRunning}
-                  type="button"
-                  onClick={() => void handleRunHotpotQAAgentEval()}
-                >
-                  <GitCompare aria-hidden="true" />
-                  {isRunningHotpotQAAgentEval
-                    ? "Running HotpotQA agent"
-                    : "Run HotpotQA agent"}
-                </button>
+                  <label className="span-two">
+                    HotpotQA dataset path
+                    <input
+                      aria-label="HotpotQA dataset path"
+                      value={hotpotqaDatasetPath}
+                      onChange={(event) =>
+                        setHotpotqaDatasetPath(event.target.value)
+                      }
+                      placeholder="hotpot_dev_distractor_v1.json"
+                    />
+                  </label>
+                  <label>
+                    Max cases
+                    <input
+                      aria-label="HotpotQA max cases"
+                      inputMode="numeric"
+                      min="1"
+                      max="1000"
+                      type="number"
+                      value={hotpotqaMaxCases}
+                      onChange={(event) =>
+                        setHotpotqaMaxCases(event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    Report stem
+                    <input
+                      aria-label="HotpotQA report stem"
+                      disabled={!hotpotqaWriteReport}
+                      value={hotpotqaReportStem}
+                      onChange={(event) =>
+                        setHotpotqaReportStem(event.target.value)
+                      }
+                      placeholder="hotpotqa-dev-50"
+                    />
+                  </label>
+                  <label className="checkbox-field">
+                    <input
+                      aria-label="Write HotpotQA reports"
+                      checked={hotpotqaWriteReport}
+                      type="checkbox"
+                      onChange={(event) =>
+                        setHotpotqaWriteReport(event.target.checked)
+                      }
+                    />
+                    <span>Write reports</span>
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Run a local HotpotQA multi-hop retrieval eval"
+                    disabled={isAnyEvalRunning}
+                    type="submit"
+                  >
+                    <FileSearch aria-hidden="true" />
+                    {isRunningHotpotQAEval
+                      ? "Running HotpotQA eval"
+                      : "Run HotpotQA eval"}
+                  </button>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Run HotpotQA through the Deep Agents harness"
+                    disabled={isAnyEvalRunning}
+                    type="button"
+                    onClick={() => void handleRunHotpotQAAgentEval()}
+                  >
+                    <GitCompare aria-hidden="true" />
+                    {isRunningHotpotQAAgentEval
+                      ? "Running HotpotQA agent"
+                      : "Run HotpotQA agent"}
+                  </button>
                 </form>
               </details>
               <details className="dataset-accordion">
@@ -5379,68 +6236,81 @@ function App() {
                 </summary>
                 <form
                   className="eval-dataset-form"
-                  onSubmit={(event) => void handleRunNaturalQuestionsEval(event)}
+                  onSubmit={(event) =>
+                    void handleRunNaturalQuestionsEval(event)
+                  }
                 >
-                <div className="dataset-form-heading">
-                  <div>
-                    <span>Dataset</span>
-                    <strong>Natural Questions</strong>
+                  <div className="dataset-form-heading">
+                    <div>
+                      <span>Dataset</span>
+                      <strong>Natural Questions</strong>
+                    </div>
+                    <span
+                      className="badge muted"
+                      data-tooltip="Open-domain local retrieval fixture"
+                    >
+                      Open QA
+                    </span>
                   </div>
-                  <span className="badge muted" data-tooltip="Open-domain local retrieval fixture">
-                    Open QA
-                  </span>
-                </div>
-                <label className="span-two">
-                  Natural Questions dataset path
-                  <input
-                    aria-label="Natural Questions dataset path"
-                    value={naturalQuestionsDatasetPath}
-                    onChange={(event) => setNaturalQuestionsDatasetPath(event.target.value)}
-                    placeholder="nq-dev-sample.jsonl"
-                  />
-                </label>
-                <label>
-                  Max cases
-                  <input
-                    aria-label="Natural Questions max cases"
-                    inputMode="numeric"
-                    min="1"
-                    max="1000"
-                    type="number"
-                    value={naturalQuestionsMaxCases}
-                    onChange={(event) => setNaturalQuestionsMaxCases(event.target.value)}
-                  />
-                </label>
-                <label>
-                  Report stem
-                  <input
-                    aria-label="Natural Questions report stem"
-                    disabled={!naturalQuestionsWriteReport}
-                    value={naturalQuestionsReportStem}
-                    onChange={(event) => setNaturalQuestionsReportStem(event.target.value)}
-                    placeholder="natural-questions-dev-50"
-                  />
-                </label>
-                <label className="checkbox-field">
-                  <input
-                    aria-label="Write Natural Questions reports"
-                    checked={naturalQuestionsWriteReport}
-                    type="checkbox"
-                    onChange={(event) => setNaturalQuestionsWriteReport(event.target.checked)}
-                  />
-                  <span>Write reports</span>
-                </label>
-                <button
-                  className="secondary-action"
-                  data-tooltip="Run a local Natural Questions eval"
-                  disabled={isAnyEvalRunning}
-                  type="submit"
-                >
-                  <FileSearch aria-hidden="true" />
-                  {isRunningNaturalQuestionsEval
-                    ? "Running Natural Questions eval"
-                    : "Run Natural Questions eval"}
-                </button>
+                  <label className="span-two">
+                    Natural Questions dataset path
+                    <input
+                      aria-label="Natural Questions dataset path"
+                      value={naturalQuestionsDatasetPath}
+                      onChange={(event) =>
+                        setNaturalQuestionsDatasetPath(event.target.value)
+                      }
+                      placeholder="nq-dev-sample.jsonl"
+                    />
+                  </label>
+                  <label>
+                    Max cases
+                    <input
+                      aria-label="Natural Questions max cases"
+                      inputMode="numeric"
+                      min="1"
+                      max="1000"
+                      type="number"
+                      value={naturalQuestionsMaxCases}
+                      onChange={(event) =>
+                        setNaturalQuestionsMaxCases(event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    Report stem
+                    <input
+                      aria-label="Natural Questions report stem"
+                      disabled={!naturalQuestionsWriteReport}
+                      value={naturalQuestionsReportStem}
+                      onChange={(event) =>
+                        setNaturalQuestionsReportStem(event.target.value)
+                      }
+                      placeholder="natural-questions-dev-50"
+                    />
+                  </label>
+                  <label className="checkbox-field">
+                    <input
+                      aria-label="Write Natural Questions reports"
+                      checked={naturalQuestionsWriteReport}
+                      type="checkbox"
+                      onChange={(event) =>
+                        setNaturalQuestionsWriteReport(event.target.checked)
+                      }
+                    />
+                    <span>Write reports</span>
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Run a local Natural Questions eval"
+                    disabled={isAnyEvalRunning}
+                    type="submit"
+                  >
+                    <FileSearch aria-hidden="true" />
+                    {isRunningNaturalQuestionsEval
+                      ? "Running Natural Questions eval"
+                      : "Run Natural Questions eval"}
+                  </button>
                 </form>
               </details>
               <details className="dataset-accordion">
@@ -5452,78 +6322,91 @@ function App() {
                   className="eval-dataset-form"
                   onSubmit={(event) => void handleRunOcrBenchmarkEval(event)}
                 >
-                <div className="dataset-form-heading">
-                  <div>
-                    <span>Dataset</span>
-                    <strong>OCR benchmark</strong>
+                  <div className="dataset-form-heading">
+                    <div>
+                      <span>Dataset</span>
+                      <strong>OCR benchmark</strong>
+                    </div>
+                    <span
+                      className="badge muted"
+                      data-tooltip="Document extraction accuracy fixture"
+                    >
+                      OCR
+                    </span>
                   </div>
-                  <span className="badge muted" data-tooltip="Document extraction accuracy fixture">
-                    OCR
-                  </span>
-                </div>
-                <label className="span-two">
-                  OCR benchmark path
-                  <input
-                    aria-label="OCR benchmark path"
-                    value={ocrBenchmarkDatasetPath}
-                    onChange={(event) => setOcrBenchmarkDatasetPath(event.target.value)}
-                    placeholder="ocr-benchmark/manifest.json"
-                  />
-                </label>
-                <label>
-                  Format
-                  <select
-                    aria-label="OCR benchmark format"
-                    value={ocrBenchmarkFormat}
-                    onChange={(event) => setOcrBenchmarkFormat(event.target.value)}
+                  <label className="span-two">
+                    OCR benchmark path
+                    <input
+                      aria-label="OCR benchmark path"
+                      value={ocrBenchmarkDatasetPath}
+                      onChange={(event) =>
+                        setOcrBenchmarkDatasetPath(event.target.value)
+                      }
+                      placeholder="ocr-benchmark/manifest.json"
+                    />
+                  </label>
+                  <label>
+                    Format
+                    <select
+                      aria-label="OCR benchmark format"
+                      value={ocrBenchmarkFormat}
+                      onChange={(event) =>
+                        setOcrBenchmarkFormat(event.target.value)
+                      }
+                    >
+                      <option value="manifest">Manifest</option>
+                      <option value="funsd">FUNSD</option>
+                      <option value="sroie">SROIE</option>
+                    </select>
+                  </label>
+                  <label>
+                    Max cases
+                    <input
+                      aria-label="OCR benchmark max cases"
+                      inputMode="numeric"
+                      min="1"
+                      max="1000"
+                      type="number"
+                      value={ocrBenchmarkMaxCases}
+                      onChange={(event) =>
+                        setOcrBenchmarkMaxCases(event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    Report stem
+                    <input
+                      aria-label="OCR benchmark report stem"
+                      disabled={!ocrBenchmarkWriteReport}
+                      value={ocrBenchmarkReportStem}
+                      onChange={(event) =>
+                        setOcrBenchmarkReportStem(event.target.value)
+                      }
+                      placeholder="ocr-benchmark-25"
+                    />
+                  </label>
+                  <label className="checkbox-field">
+                    <input
+                      aria-label="Write OCR benchmark reports"
+                      checked={ocrBenchmarkWriteReport}
+                      type="checkbox"
+                      onChange={(event) =>
+                        setOcrBenchmarkWriteReport(event.target.checked)
+                      }
+                    />
+                    <span>Write reports</span>
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Run a local OCR benchmark without paid providers"
+                    disabled={isAnyEvalRunning}
+                    type="submit"
                   >
-                    <option value="manifest">Manifest</option>
-                    <option value="funsd">FUNSD</option>
-                    <option value="sroie">SROIE</option>
-                  </select>
-                </label>
-                <label>
-                  Max cases
-                  <input
-                    aria-label="OCR benchmark max cases"
-                    inputMode="numeric"
-                    min="1"
-                    max="1000"
-                    type="number"
-                    value={ocrBenchmarkMaxCases}
-                    onChange={(event) => setOcrBenchmarkMaxCases(event.target.value)}
-                  />
-                </label>
-                <label>
-                  Report stem
-                  <input
-                    aria-label="OCR benchmark report stem"
-                    disabled={!ocrBenchmarkWriteReport}
-                    value={ocrBenchmarkReportStem}
-                    onChange={(event) => setOcrBenchmarkReportStem(event.target.value)}
-                    placeholder="ocr-benchmark-25"
-                  />
-                </label>
-                <label className="checkbox-field">
-                  <input
-                    aria-label="Write OCR benchmark reports"
-                    checked={ocrBenchmarkWriteReport}
-                    type="checkbox"
-                    onChange={(event) => setOcrBenchmarkWriteReport(event.target.checked)}
-                  />
-                  <span>Write reports</span>
-                </label>
-                <button
-                  className="secondary-action"
-                  data-tooltip="Run a local OCR benchmark without paid providers"
-                  disabled={isAnyEvalRunning}
-                  type="submit"
-                >
-                  <FileSearch aria-hidden="true" />
-                  {isRunningOcrBenchmarkEval
-                    ? "Running OCR benchmark"
-                    : "Run OCR benchmark"}
-                </button>
+                    <FileSearch aria-hidden="true" />
+                    {isRunningOcrBenchmarkEval
+                      ? "Running OCR benchmark"
+                      : "Run OCR benchmark"}
+                  </button>
                 </form>
               </details>
             </div>
@@ -5540,18 +6423,25 @@ function App() {
               aria-label="Eval smoke results"
               aria-live="polite"
             >
-              <div className="eval-scope-note eval-context" aria-label="Eval results context">
+              <div
+                className="eval-scope-note eval-context"
+                aria-label="Eval results context"
+              >
                 <div data-tooltip="Most recent local eval suite rendered in the result panel">
                   <span>Result suite</span>
                   <strong>{evalReport?.suite_name ?? "Run an eval"}</strong>
                 </div>
                 <div data-tooltip="Metric cards are computed locally from deterministic reports">
                   <span>Metrics</span>
-                  <strong>{evalReport ? Object.keys(evalReport.metrics).length : 0}</strong>
+                  <strong>
+                    {evalReport ? Object.keys(evalReport.metrics).length : 0}
+                  </strong>
                 </div>
                 <div data-tooltip="Case rows expose pass/fail evidence without paid provider calls">
                   <span>Cases</span>
-                  <strong>{evalReport?.case_count ?? evalReport?.cases.length ?? 0}</strong>
+                  <strong>
+                    {evalReport?.case_count ?? evalReport?.cases.length ?? 0}
+                  </strong>
                 </div>
               </div>
               {evalReport ? (
@@ -5578,7 +6468,13 @@ function App() {
                     {evalReport.cases.map((evalCase) => (
                       <article className="eval-case-row" key={evalCase.case_id}>
                         <div>
-                          <span className={evalCase.passed ? "badge success" : "badge warning"}>
+                          <span
+                            className={
+                              evalCase.passed
+                                ? "badge success"
+                                : "badge warning"
+                            }
+                          >
                             {evalCase.passed ? "pass" : "fail"}
                           </span>
                           <strong>{evalCase.case_id}</strong>
@@ -5594,14 +6490,19 @@ function App() {
                             {(evalCase.citations ?? []).length} citations
                           </span>
                           <span className="badge muted">
-                            {evalCase.failures.length ? evalCase.failures.join(", ") : "no failures"}
+                            {evalCase.failures.length
+                              ? evalCase.failures.join(", ")
+                              : "no failures"}
                           </span>
                         </div>
                       </article>
                     ))}
                   </div>
                   {evalReportPaths ? (
-                    <div className="eval-report-paths" aria-label="Eval report paths">
+                    <div
+                      className="eval-report-paths"
+                      aria-label="Eval report paths"
+                    >
                       <div>
                         <span>JSON report</span>
                         <strong>{evalReportPaths.json}</strong>
@@ -5616,7 +6517,10 @@ function App() {
               ) : (
                 <div className="empty-state compact">
                   <CheckCircle2 aria-hidden="true" />
-                  <p>Run a local eval to verify retrieval, citations, grounding, multi-hop behavior, and budget compliance.</p>
+                  <p>
+                    Run a local eval to verify retrieval, citations, grounding,
+                    multi-hop behavior, and budget compliance.
+                  </p>
                 </div>
               )}
             </section>
@@ -5627,7 +6531,10 @@ function App() {
               tabIndex={-1}
               aria-label="Eval run history"
             >
-              <div className="eval-scope-note eval-context" aria-label="Eval history context">
+              <div
+                className="eval-scope-note eval-context"
+                aria-label="Eval history context"
+              >
                 <div data-tooltip="History and trend rows are filtered by the active eval scope">
                   <span>Review scope</span>
                   <strong>{evalScopeLabel}</strong>
@@ -5672,7 +6579,9 @@ function App() {
                     onClick={() => void handleRunRegressionGate()}
                   >
                     <ShieldAlert aria-hidden="true" />
-                    {isRunningRegressionGate ? "Checking gate" : "Regression gate"}
+                    {isRunningRegressionGate
+                      ? "Checking gate"
+                      : "Regression gate"}
                   </button>
                   <button
                     className="icon-button"
@@ -5686,7 +6595,11 @@ function App() {
                 </div>
               </div>
               {evalComparison ? (
-                <div className="eval-comparison" aria-label="Eval comparison" aria-live="polite">
+                <div
+                  className="eval-comparison"
+                  aria-label="Eval comparison"
+                  aria-live="polite"
+                >
                   <div className="comparison-summary">
                     <div>
                       <span>Baseline</span>
@@ -5700,7 +6613,9 @@ function App() {
                     </div>
                     <div>
                       <span>Average delta</span>
-                      <strong>{formatDelta(evalComparison.average_delta)}</strong>
+                      <strong>
+                        {formatDelta(evalComparison.average_delta)}
+                      </strong>
                       <small>{evalComparison.status}</small>
                     </div>
                   </div>
@@ -5716,7 +6631,11 @@ function App() {
                         <strong>{metric.name.replaceAll("_", " ")}</strong>
                         <span>{formatScore(metric.baseline)}</span>
                         <span>{formatScore(metric.candidate)}</span>
-                        <span className={metric.delta < 0 ? "delta negative" : "delta"}>
+                        <span
+                          className={
+                            metric.delta < 0 ? "delta negative" : "delta"
+                          }
+                        >
                           {formatDelta(metric.delta)}
                         </span>
                       </article>
@@ -5733,21 +6652,31 @@ function App() {
                   <div className="gate-summary">
                     <div>
                       <span>Decision</span>
-                      <strong>{evalRegressionGate.passed ? "Promote" : "Block"}</strong>
+                      <strong>
+                        {evalRegressionGate.passed ? "Promote" : "Block"}
+                      </strong>
                       <small>
-                        {evalRegressionGate.regressions.length} metric regressions
+                        {evalRegressionGate.regressions.length} metric
+                        regressions
                       </small>
                     </div>
                     <div>
                       <span>Average normalized delta</span>
-                      <strong>{formatDelta(evalRegressionGate.average_normalized_delta)}</strong>
+                      <strong>
+                        {formatDelta(
+                          evalRegressionGate.average_normalized_delta,
+                        )}
+                      </strong>
                       <small>
-                        Limit {formatScore(evalRegressionGate.average_drop_tolerance)}
+                        Limit{" "}
+                        {formatScore(evalRegressionGate.average_drop_tolerance)}
                       </small>
                     </div>
                     <div>
                       <span>Metric tolerance</span>
-                      <strong>{formatScore(evalRegressionGate.metric_drop_tolerance)}</strong>
+                      <strong>
+                        {formatScore(evalRegressionGate.metric_drop_tolerance)}
+                      </strong>
                       <small>
                         {evalRegressionGate.baseline.suite_name} to{" "}
                         {evalRegressionGate.candidate.suite_name}
@@ -5766,8 +6695,14 @@ function App() {
                         <strong>{metric.name.replaceAll("_", " ")}</strong>
                         <span>{formatScore(metric.baseline)}</span>
                         <span>{formatScore(metric.candidate)}</span>
-                        <span className={metric.regressed ? "delta negative" : "delta"}>
-                          {metric.regressed ? "regressed" : formatDelta(metric.normalized_delta)}
+                        <span
+                          className={
+                            metric.regressed ? "delta negative" : "delta"
+                          }
+                        >
+                          {metric.regressed
+                            ? "regressed"
+                            : formatDelta(metric.normalized_delta)}
                         </span>
                       </article>
                     ))}
@@ -5777,28 +6712,48 @@ function App() {
               {evalRuns.length > 0 ? (
                 <div className="eval-run-list">
                   {evalRuns.map((run) => {
-                    const metrics = run.report ? Object.values(run.report.metrics) : [];
+                    const metrics = run.report
+                      ? Object.values(run.report.metrics)
+                      : [];
                     const averageScore =
                       metrics.length > 0
-                        ? formatScore(metrics.reduce((total, value) => total + value, 0) / metrics.length)
+                        ? formatScore(
+                            metrics.reduce((total, value) => total + value, 0) /
+                              metrics.length,
+                          )
                         : "No report";
                     const isRerunning = rerunningEvalJobId === run.job.id;
                     return (
                       <article className="eval-run-row" key={run.job.id}>
                         <div>
-                          <span className={run.job.status === "succeeded" ? "badge success" : "badge warning"}>
+                          <span
+                            className={
+                              run.job.status === "succeeded"
+                                ? "badge success"
+                                : "badge warning"
+                            }
+                          >
                             {run.job.status}
                           </span>
-                          <strong>{run.report?.suite_name ?? "retos-smoke"}</strong>
-                          <span>{formatDateTime(run.job.completed_at ?? run.job.updated_at)}</span>
+                          <strong>
+                            {run.report?.suite_name ?? "retos-smoke"}
+                          </strong>
+                          <span>
+                            {formatDateTime(
+                              run.job.completed_at ?? run.job.updated_at,
+                            )}
+                          </span>
                         </div>
                         <div className="provider-badges">
                           <span className="badge muted">
                             {run.job.domain_id
-                              ? domainById.get(run.job.domain_id)?.name ?? "Domain scoped"
+                              ? (domainById.get(run.job.domain_id)?.name ??
+                                "Domain scoped")
                               : "Global"}
                           </span>
-                          <span className="badge muted">{run.report?.case_count ?? 0} cases</span>
+                          <span className="badge muted">
+                            {run.report?.case_count ?? 0} cases
+                          </span>
                           <span className="badge muted">{averageScore}</span>
                           <button
                             className="secondary-action compact-action"
@@ -5832,7 +6787,13 @@ function App() {
                         <strong>{trend.suite_name}</strong>
                         <span>{trend.run_count} runs</span>
                       </div>
-                      <span className={trend.latest.passed ? "badge success" : "badge warning"}>
+                      <span
+                        className={
+                          trend.latest.passed
+                            ? "badge success"
+                            : "badge warning"
+                        }
+                      >
                         {formatScore(trend.pass_rate)} pass
                       </span>
                     </div>
@@ -5856,14 +6817,28 @@ function App() {
             ) : null}
           </article>
 
-          <article className="panel wide" hidden={activeSection !== "admin"} id="admin">
+          <article
+            className="panel wide"
+            hidden={activeSection !== "admin"}
+            id="admin"
+          >
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Admin</p>
-                <h2>{activeModule === "admin-users" ? "Admin users" : "LLM providers"}</h2>
+                <h2>
+                  {activeModule === "admin-users"
+                    ? "Admin users"
+                    : "LLM providers"}
+                </h2>
               </div>
-              <span className={catalog?.active.can_call ? "status-pill local" : "status-pill"}>
-                {activeModule === "admin-users" ? `${adminUsers.length} users` : providerStatus}
+              <span
+                className={
+                  catalog?.active.can_call ? "status-pill local" : "status-pill"
+                }
+              >
+                {activeModule === "admin-users"
+                  ? `${adminUsers.length} users`
+                  : providerStatus}
               </span>
             </div>
 
@@ -5904,7 +6879,11 @@ function App() {
                     {isLoadingProvider ? "Loading providers" : "Load providers"}
                   </button>
                   {token ? (
-                    <button className="ghost-action" type="button" onClick={handleDisconnect}>
+                    <button
+                      className="ghost-action"
+                      type="button"
+                      onClick={handleDisconnect}
+                    >
                       Disconnect
                     </button>
                   ) : null}
@@ -5916,14 +6895,23 @@ function App() {
                 ) : null}
               </form>
 
-              <section className="provider-context" aria-label="Provider runtime context">
+              <section
+                className="provider-context"
+                aria-label="Provider runtime context"
+              >
                 <div data-tooltip="Local Ollama is the default runtime profile for development and tests">
                   <span>Default provider</span>
-                  <strong>{catalog ? providerLabel(catalog.active.provider) : "Ollama local"}</strong>
+                  <strong>
+                    {catalog
+                      ? providerLabel(catalog.active.provider)
+                      : "Ollama local"}
+                  </strong>
                 </div>
                 <div data-tooltip="RetOS routes agent work through the Deep Agents harness by default">
                   <span>Agent harness</span>
-                  <strong>{catalog ? catalog.agent_runtime : "deepagents"}</strong>
+                  <strong>
+                    {catalog ? catalog.agent_runtime : "deepagents"}
+                  </strong>
                 </div>
                 <div data-tooltip="Paid calls require explicit configuration and opt-in">
                   <span>Cost policy</span>
@@ -5939,16 +6927,22 @@ function App() {
                 <div>
                   <span>Active provider</span>
                   <strong>
-                    {catalog ? providerLabel(catalog.active.provider) : "Connect admin session"}
+                    {catalog
+                      ? providerLabel(catalog.active.provider)
+                      : "Connect admin session"}
                   </strong>
                 </div>
                 <div>
                   <span>Active model</span>
-                  <strong>{catalog ? catalog.active.model : "Waiting for login"}</strong>
+                  <strong>
+                    {catalog ? catalog.active.model : "Waiting for login"}
+                  </strong>
                 </div>
                 <div>
                   <span>Agent runtime</span>
-                  <strong>{catalog ? catalog.agent_runtime : "Waiting for login"}</strong>
+                  <strong>
+                    {catalog ? catalog.agent_runtime : "Waiting for login"}
+                  </strong>
                 </div>
                 <div>
                   <span>Cost guardrail</span>
@@ -5960,7 +6954,9 @@ function App() {
                 </div>
                 <div>
                   <span>Status</span>
-                  <strong>{catalog ? providerStatus : "Waiting for login"}</strong>
+                  <strong>
+                    {catalog ? providerStatus : "Waiting for login"}
+                  </strong>
                 </div>
               </section>
             </div>
@@ -5976,17 +6972,32 @@ function App() {
                     <h3>Runtime switch plan</h3>
                     <span>Restart required</span>
                   </div>
-                  <span className={runtimePlan?.can_start ? "badge success" : "badge muted"}>
-                    {runtimePlan ? (runtimePlan.can_start ? "Ready" : "Needs config") : "Not previewed"}
+                  <span
+                    className={
+                      runtimePlan?.can_start ? "badge success" : "badge muted"
+                    }
+                  >
+                    {runtimePlan
+                      ? runtimePlan.can_start
+                        ? "Ready"
+                        : "Needs config"
+                      : "Not previewed"}
                   </span>
                 </div>
-                <form className="runtime-plan-form" onSubmit={handlePreviewRuntimePlan}>
+                <form
+                  className="runtime-plan-form"
+                  onSubmit={handlePreviewRuntimePlan}
+                >
                   <label>
                     <span>Provider</span>
                     <select
                       aria-label="Runtime plan provider"
                       value={runtimePlanProvider}
-                      onChange={(event) => setRuntimePlanProvider(event.target.value as ProviderName)}
+                      onChange={(event) =>
+                        setRuntimePlanProvider(
+                          event.target.value as ProviderName,
+                        )
+                      }
                     >
                       {catalog.providers.map((provider) => (
                         <option key={provider.name} value={provider.name}>
@@ -6000,7 +7011,9 @@ function App() {
                     <select
                       aria-label="Runtime plan agent runtime"
                       value={runtimePlanAgentRuntime}
-                      onChange={(event) => setRuntimePlanAgentRuntime(event.target.value)}
+                      onChange={(event) =>
+                        setRuntimePlanAgentRuntime(event.target.value)
+                      }
                     >
                       <option value="deepagents">Deep Agents</option>
                       <option value="deterministic">Deterministic</option>
@@ -6010,7 +7023,9 @@ function App() {
                     <input
                       type="checkbox"
                       checked={runtimePlanAllowPaid}
-                      onChange={(event) => setRuntimePlanAllowPaid(event.target.checked)}
+                      onChange={(event) =>
+                        setRuntimePlanAllowPaid(event.target.checked)
+                      }
                     />
                     <span>Allow paid providers</span>
                   </label>
@@ -6021,7 +7036,9 @@ function App() {
                     type="submit"
                   >
                     <ServerCog aria-hidden="true" />
-                    {isPreviewingRuntimePlan ? "Previewing plan" : "Preview plan"}
+                    {isPreviewingRuntimePlan
+                      ? "Previewing plan"
+                      : "Preview plan"}
                   </button>
                 </form>
                 {runtimePlanError ? (
@@ -6030,13 +7047,32 @@ function App() {
                   </p>
                 ) : null}
                 {runtimePlan ? (
-                  <div className="runtime-plan-output" aria-label="Runtime environment plan">
+                  <div
+                    className="runtime-plan-output"
+                    aria-label="Runtime environment plan"
+                  >
                     <div className="runtime-plan-summary">
-                      <span className={runtimePlan.can_start ? "badge success" : "badge warning"}>
-                        {runtimePlan.can_start ? "Can start after restart" : runtimePlan.reason}
+                      <span
+                        className={
+                          runtimePlan.can_start
+                            ? "badge success"
+                            : "badge warning"
+                        }
+                      >
+                        {runtimePlan.can_start
+                          ? "Can start after restart"
+                          : runtimePlan.reason}
                       </span>
-                      <span className={runtimePlan.paid_provider ? "badge warning" : "badge success"}>
-                        {runtimePlan.paid_provider ? "Paid provider" : "Local/test provider"}
+                      <span
+                        className={
+                          runtimePlan.paid_provider
+                            ? "badge warning"
+                            : "badge success"
+                        }
+                      >
+                        {runtimePlan.paid_provider
+                          ? "Paid provider"
+                          : "Local/test provider"}
                       </span>
                       {runtimePlan.missing_config.map((item) => (
                         <span className="badge warning" key={item}>
@@ -6068,32 +7104,57 @@ function App() {
               aria-label="Available LLM providers"
             >
               {(catalog?.providers ?? []).map((provider) => {
-                const isActiveProvider = catalog?.active.provider === provider.name;
+                const isActiveProvider =
+                  catalog?.active.provider === provider.name;
                 return (
                   <article className="provider-row" key={provider.name}>
                     <div>
                       <strong>{provider.label}</strong>
                       <span>{provider.default_model}</span>
-                      {provider.base_url ? <span>{provider.base_url}</span> : null}
+                      {provider.base_url ? (
+                        <span>{provider.base_url}</span>
+                      ) : null}
                     </div>
                     <div className="provider-badges">
-                      <span className={isActiveProvider ? "badge success" : "badge muted"}>
+                      <span
+                        className={
+                          isActiveProvider ? "badge success" : "badge muted"
+                        }
+                      >
                         {isActiveProvider ? "Active" : "Available"}
                       </span>
-                      <span className={provider.configured ? "badge success" : "badge muted"}>
+                      <span
+                        className={
+                          provider.configured ? "badge success" : "badge muted"
+                        }
+                      >
                         {provider.configured ? "Configured" : "Missing config"}
                       </span>
-                      <span className={provider.paid ? "badge warning" : "badge success"}>
+                      <span
+                        className={
+                          provider.paid ? "badge warning" : "badge success"
+                        }
+                      >
                         {provider.paid ? "Paid" : "Local/test"}
                       </span>
-                      <span className={provider.enabled ? "badge success" : "badge muted"}>
+                      <span
+                        className={
+                          provider.enabled ? "badge success" : "badge muted"
+                        }
+                      >
                         {provider.enabled ? "Enabled" : "Blocked"}
                       </span>
                     </div>
                     {provider.enabled ? (
-                      <CheckCircle2 aria-label="Provider enabled" className="row-icon success" />
+                      <CheckCircle2
+                        aria-label="Provider enabled"
+                        className="row-icon success"
+                      />
                     ) : (
-                      <ShieldAlert aria-label={provider.reason ?? "Provider blocked"} className="row-icon" />
+                      <ShieldAlert
+                        aria-label={provider.reason ?? "Provider blocked"}
+                        className="row-icon"
+                      />
                     )}
                     {provider.missing_config.length > 0 || provider.reason ? (
                       <p className="provider-missing">
@@ -6108,7 +7169,10 @@ function App() {
               {!catalog ? (
                 <div className="empty-state compact">
                   <LockKeyhole aria-hidden="true" />
-                  <p>Load the provider catalog to inspect local and paid runtime readiness.</p>
+                  <p>
+                    Load the provider catalog to inspect local and paid runtime
+                    readiness.
+                  </p>
                 </div>
               ) : null}
             </div>
@@ -6132,10 +7196,15 @@ function App() {
                   <RefreshCw aria-hidden="true" />
                 </button>
               </div>
-              <div className="admin-user-context" aria-label="Admin users context">
+              <div
+                className="admin-user-context"
+                aria-label="Admin users context"
+              >
                 <div data-tooltip="Active local accounts that can sign in right now">
                   <span>Active users</span>
-                  <strong>{adminUsers.filter((user) => user.is_active).length}</strong>
+                  <strong>
+                    {adminUsers.filter((user) => user.is_active).length}
+                  </strong>
                 </div>
                 <div data-tooltip="Viewer access is limited by explicit domain grants">
                   <span>Grant model</span>
@@ -6151,7 +7220,10 @@ function App() {
                   <span>Create user</span>
                   <strong>New local admin account</strong>
                 </summary>
-                <form className="admin-user-form" onSubmit={(event) => void handleCreateAdminUser(event)}>
+                <form
+                  className="admin-user-form"
+                  onSubmit={(event) => void handleCreateAdminUser(event)}
+                >
                   <label>
                     <span>Email</span>
                     <input
@@ -6159,7 +7231,9 @@ function App() {
                       autoComplete="off"
                       type="email"
                       value={adminUserEmail}
-                      onChange={(event) => setAdminUserEmail(event.target.value)}
+                      onChange={(event) =>
+                        setAdminUserEmail(event.target.value)
+                      }
                     />
                   </label>
                   <label>
@@ -6169,7 +7243,9 @@ function App() {
                       autoComplete="new-password"
                       type="password"
                       value={adminUserPassword}
-                      onChange={(event) => setAdminUserPassword(event.target.value)}
+                      onChange={(event) =>
+                        setAdminUserPassword(event.target.value)
+                      }
                     />
                   </label>
                   <label>
@@ -6210,162 +7286,203 @@ function App() {
                   <strong>{adminUsers.length} accounts</strong>
                 </summary>
                 <div className="admin-user-list">
-                {adminUsers.map((user) => (
-                  <article className="admin-user-row" key={user.id}>
-                    <div>
-                      <span className={user.is_active ? "badge success" : "badge muted"}>
-                        {user.is_active ? "active" : "inactive"}
-                      </span>
-                      <strong>{user.email}</strong>
-                      <span>{user.roles.join(", ")}</span>
-                      <span>{formatDateTime(user.updated_at)}</span>
-                    </div>
-                    <div className="admin-domain-grants" aria-label={`Domain grants for ${user.email}`}>
-                      <div className="grant-list">
-                        {(adminDomainGrants[user.id] ?? []).map((grant) => {
-                          const grantedDomain = domainById.get(grant.domain_id);
-                          return (
-                            <span className="grant-chip" key={grant.id}>
-                              {grantedDomain?.slug ?? grant.domain_id}
-                              <button
-                                type="button"
-                                aria-label={`Revoke ${grantedDomain?.slug ?? grant.domain_id} from ${user.email}`}
-                                disabled={savingAdminUserId === user.id}
-                                onClick={() => void handleDeleteDomainGrant(user, grant.domain_id)}
-                              >
-                                <X aria-hidden="true" />
-                              </button>
-                            </span>
-                          );
-                        })}
-                        {(adminDomainGrants[user.id] ?? []).length === 0 ? (
-                          <span className="muted-inline">No domain grants</span>
-                        ) : null}
-                      </div>
-                      <form
-                        className="grant-form"
-                        onSubmit={(event) => void handleCreateDomainGrant(event, user)}
-                      >
-                        <label>
-                          <span>Grant domain</span>
-                          <select
-                            aria-label={`Grant domain to ${user.email}`}
-                            value={adminGrantDomainIds[user.id] ?? ""}
-                            onChange={(event) =>
-                              setAdminGrantDomainIds((current) => ({
-                                ...current,
-                                [user.id]: event.target.value,
-                              }))
-                            }
-                          >
-                            <option value="">Select domain</option>
-                            {domains.map((domain) => (
-                              <option key={domain.id} value={domain.id}>
-                                {domain.slug}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <button
-                          className="ghost-action"
-                          data-tooltip="Grant this user access to the selected domain"
-                          disabled={savingAdminUserId === user.id || domains.length === 0}
-                          type="submit"
-                        >
-                          <Check aria-hidden="true" />
-                          Grant
-                        </button>
-                      </form>
-                    </div>
-                    <div className="admin-user-actions">
-                      <form
-                        className="admin-role-form"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          void handleUpdateAdminUserRole(user);
-                        }}
-                      >
-                        <label>
-                          <span>Role</span>
-                          <select
-                            aria-label={`Role for ${user.email}`}
-                            value={adminRoleEdits[user.id] ?? (user.roles.includes("admin") ? "admin" : "viewer")}
-                            onChange={(event) =>
-                              setAdminRoleEdits((current) => ({
-                                ...current,
-                                [user.id]: event.target.value,
-                              }))
-                            }
-                          >
-                            <option value="admin">Admin</option>
-                            <option value="viewer">Viewer</option>
-                          </select>
-                        </label>
-                        <button
-                          className="ghost-action"
-                          data-tooltip="Persist this user's role change"
-                          disabled={savingAdminUserId === user.id}
-                          type="submit"
-                        >
-                          <Check aria-hidden="true" />
-                          Update role
-                        </button>
-                      </form>
-                      <button
-                        className="ghost-action"
-                        data-tooltip="Toggle whether this local admin user can sign in"
-                        disabled={savingAdminUserId === user.id || user.email === email.trim().toLowerCase()}
-                        type="button"
-                        onClick={() => void handleUpdateAdminUserStatus(user)}
-                      >
-                        <Power aria-hidden="true" />
-                        {user.is_active ? "Deactivate" : "Activate"}
-                      </button>
-                      <form onSubmit={(event) => void handleResetAdminPassword(event, user)}>
-                        <input
-                          aria-label={`New password for ${user.email}`}
-                          autoComplete="new-password"
-                          placeholder="New password"
-                          type="password"
-                          value={adminPasswordResets[user.id] ?? ""}
-                          onChange={(event) =>
-                            setAdminPasswordResets((current) => ({
-                              ...current,
-                              [user.id]: event.target.value,
-                            }))
+                  {adminUsers.map((user) => (
+                    <article className="admin-user-row" key={user.id}>
+                      <div>
+                        <span
+                          className={
+                            user.is_active ? "badge success" : "badge muted"
                           }
-                        />
+                        >
+                          {user.is_active ? "active" : "inactive"}
+                        </span>
+                        <strong>{user.email}</strong>
+                        <span>{user.roles.join(", ")}</span>
+                        <span>{formatDateTime(user.updated_at)}</span>
+                      </div>
+                      <div
+                        className="admin-domain-grants"
+                        aria-label={`Domain grants for ${user.email}`}
+                      >
+                        <div className="grant-list">
+                          {(adminDomainGrants[user.id] ?? []).map((grant) => {
+                            const grantedDomain = domainById.get(
+                              grant.domain_id,
+                            );
+                            return (
+                              <span className="grant-chip" key={grant.id}>
+                                {grantedDomain?.slug ?? grant.domain_id}
+                                <button
+                                  type="button"
+                                  aria-label={`Revoke ${grantedDomain?.slug ?? grant.domain_id} from ${user.email}`}
+                                  disabled={savingAdminUserId === user.id}
+                                  onClick={() =>
+                                    void handleDeleteDomainGrant(
+                                      user,
+                                      grant.domain_id,
+                                    )
+                                  }
+                                >
+                                  <X aria-hidden="true" />
+                                </button>
+                              </span>
+                            );
+                          })}
+                          {(adminDomainGrants[user.id] ?? []).length === 0 ? (
+                            <span className="muted-inline">
+                              No domain grants
+                            </span>
+                          ) : null}
+                        </div>
+                        <form
+                          className="grant-form"
+                          onSubmit={(event) =>
+                            void handleCreateDomainGrant(event, user)
+                          }
+                        >
+                          <label>
+                            <span>Grant domain</span>
+                            <select
+                              aria-label={`Grant domain to ${user.email}`}
+                              value={adminGrantDomainIds[user.id] ?? ""}
+                              onChange={(event) =>
+                                setAdminGrantDomainIds((current) => ({
+                                  ...current,
+                                  [user.id]: event.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">Select domain</option>
+                              {domains.map((domain) => (
+                                <option key={domain.id} value={domain.id}>
+                                  {domain.slug}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button
+                            className="ghost-action"
+                            data-tooltip="Grant this user access to the selected domain"
+                            disabled={
+                              savingAdminUserId === user.id ||
+                              domains.length === 0
+                            }
+                            type="submit"
+                          >
+                            <Check aria-hidden="true" />
+                            Grant
+                          </button>
+                        </form>
+                      </div>
+                      <div className="admin-user-actions">
+                        <form
+                          className="admin-role-form"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void handleUpdateAdminUserRole(user);
+                          }}
+                        >
+                          <label>
+                            <span>Role</span>
+                            <select
+                              aria-label={`Role for ${user.email}`}
+                              value={
+                                adminRoleEdits[user.id] ??
+                                (user.roles.includes("admin")
+                                  ? "admin"
+                                  : "viewer")
+                              }
+                              onChange={(event) =>
+                                setAdminRoleEdits((current) => ({
+                                  ...current,
+                                  [user.id]: event.target.value,
+                                }))
+                              }
+                            >
+                              <option value="admin">Admin</option>
+                              <option value="viewer">Viewer</option>
+                            </select>
+                          </label>
+                          <button
+                            className="ghost-action"
+                            data-tooltip="Persist this user's role change"
+                            disabled={savingAdminUserId === user.id}
+                            type="submit"
+                          >
+                            <Check aria-hidden="true" />
+                            Update role
+                          </button>
+                        </form>
                         <button
                           className="ghost-action"
-                          data-tooltip="Set a new password for this local user"
-                          disabled={savingAdminUserId === user.id}
-                          type="submit"
+                          data-tooltip="Toggle whether this local admin user can sign in"
+                          disabled={
+                            savingAdminUserId === user.id ||
+                            user.email === email.trim().toLowerCase()
+                          }
+                          type="button"
+                          onClick={() => void handleUpdateAdminUserStatus(user)}
                         >
-                          <KeyRound aria-hidden="true" />
-                          Reset
+                          <Power aria-hidden="true" />
+                          {user.is_active ? "Deactivate" : "Activate"}
                         </button>
-                      </form>
+                        <form
+                          onSubmit={(event) =>
+                            void handleResetAdminPassword(event, user)
+                          }
+                        >
+                          <input
+                            aria-label={`New password for ${user.email}`}
+                            autoComplete="new-password"
+                            placeholder="New password"
+                            type="password"
+                            value={adminPasswordResets[user.id] ?? ""}
+                            onChange={(event) =>
+                              setAdminPasswordResets((current) => ({
+                                ...current,
+                                [user.id]: event.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            className="ghost-action"
+                            data-tooltip="Set a new password for this local user"
+                            disabled={savingAdminUserId === user.id}
+                            type="submit"
+                          >
+                            <KeyRound aria-hidden="true" />
+                            Reset
+                          </button>
+                        </form>
+                      </div>
+                    </article>
+                  ))}
+                  {adminUsers.length === 0 ? (
+                    <div className="empty-state compact">
+                      <Users aria-hidden="true" />
+                      <p>
+                        Connect an admin session to manage local admin accounts.
+                      </p>
                     </div>
-                  </article>
-                ))}
-                {adminUsers.length === 0 ? (
-                  <div className="empty-state compact">
-                    <Users aria-hidden="true" />
-                    <p>Connect an admin session to manage local admin accounts.</p>
-                  </div>
-                ) : null}
-              </div>
+                  ) : null}
+                </div>
               </details>
             </section>
           </article>
 
-          <article className="panel wide" hidden={activeSection !== "audit"} id="audit">
+          <article
+            className="panel wide"
+            hidden={activeSection !== "audit"}
+            id="audit"
+          >
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Audit</p>
                 <h2>Jobs and evidence ledger</h2>
               </div>
-              <span className="status-pill">{queuedJobs.length} recent jobs</span>
+              <span className="status-pill">
+                {queuedJobs.length} recent jobs
+              </span>
             </div>
             <div
               className="audit-context"
@@ -6393,7 +7510,10 @@ function App() {
             >
               <label>
                 <span>Filter jobs</span>
-                <select value={jobFilter} onChange={(event) => setJobFilter(event.target.value)}>
+                <select
+                  value={jobFilter}
+                  onChange={(event) => setJobFilter(event.target.value)}
+                >
                   <option value="all">All jobs</option>
                   <option value="queued">Queued</option>
                   <option value="running">Running</option>
@@ -6437,7 +7557,10 @@ function App() {
               </p>
             ) : null}
             {auditExportSummary && activeModule === "audit-jobs" ? (
-              <section className="audit-export-summary" aria-label="Audit export integrity">
+              <section
+                className="audit-export-summary"
+                aria-label="Audit export integrity"
+              >
                 <div className="section-heading compact">
                   <div>
                     <h3>Export integrity</h3>
@@ -6451,17 +7574,23 @@ function App() {
                     }
                     data-tooltip="Recomputed hash-chain status for the downloaded export"
                   >
-                    {auditExportSummary.snapshot.integrity?.valid ? "valid" : "review"}
+                    {auditExportSummary.snapshot.integrity?.valid
+                      ? "valid"
+                      : "review"}
                   </span>
                 </div>
                 <div className="audit-export-grid">
                   <div>
                     <span>Schema</span>
-                    <strong>{auditExportSummary.snapshot.schema_version}</strong>
+                    <strong>
+                      {auditExportSummary.snapshot.schema_version}
+                    </strong>
                   </div>
                   <div>
                     <span>Generated</span>
-                    <strong>{formatDateTime(auditExportSummary.snapshot.generated_at)}</strong>
+                    <strong>
+                      {formatDateTime(auditExportSummary.snapshot.generated_at)}
+                    </strong>
                   </div>
                   <div>
                     <span>Events</span>
@@ -6473,19 +7602,33 @@ function App() {
                   </div>
                   <div>
                     <span>Head hash</span>
-                    <strong>{shortHash(auditExportSummary.snapshot.integrity?.head_hash ?? null)}</strong>
+                    <strong>
+                      {shortHash(
+                        auditExportSummary.snapshot.integrity?.head_hash ??
+                          null,
+                      )}
+                    </strong>
                   </div>
                   <div>
                     <span>Algorithm</span>
-                    <strong>{auditExportSummary.snapshot.integrity?.algorithm ?? "unknown"}</strong>
+                    <strong>
+                      {auditExportSummary.snapshot.integrity?.algorithm ??
+                        "unknown"}
+                    </strong>
                   </div>
                   <div>
                     <span>Failures</span>
-                    <strong>{auditExportSummary.snapshot.integrity?.failures.length ?? 0}</strong>
+                    <strong>
+                      {auditExportSummary.snapshot.integrity?.failures.length ??
+                        0}
+                    </strong>
                   </div>
                   <div>
                     <span>Continuity gaps</span>
-                    <strong>{auditExportSummary.snapshot.integrity?.continuity_gaps.length ?? 0}</strong>
+                    <strong>
+                      {auditExportSummary.snapshot.integrity?.continuity_gaps
+                        .length ?? 0}
+                    </strong>
                   </div>
                   <div>
                     <span>Offline check</span>
@@ -6494,19 +7637,29 @@ function App() {
                 </div>
                 {auditExportSummary.snapshot.integrity &&
                 (auditExportSummary.snapshot.integrity.failures.length > 0 ||
-                  auditExportSummary.snapshot.integrity.continuity_gaps.length > 0) ? (
-                  <div className="audit-export-findings" aria-label="Audit export findings">
+                  auditExportSummary.snapshot.integrity.continuity_gaps.length >
+                    0) ? (
+                  <div
+                    className="audit-export-findings"
+                    aria-label="Audit export findings"
+                  >
                     {auditExportSummary.snapshot.integrity.failures
                       .slice(0, 3)
                       .map((failure) => (
-                        <span className="badge warning" key={`${failure.event_id}-${failure.reason}`}>
+                        <span
+                          className="badge warning"
+                          key={`${failure.event_id}-${failure.reason}`}
+                        >
                           {failure.reason}
                         </span>
                       ))}
                     {auditExportSummary.snapshot.integrity.continuity_gaps
                       .slice(0, 3)
                       .map((gap) => (
-                        <span className="badge muted" key={`${gap.event_id}-${gap.reason}`}>
+                        <span
+                          className="badge muted"
+                          key={`${gap.event_id}-${gap.reason}`}
+                        >
                           {gap.reason}
                         </span>
                       ))}
@@ -6522,7 +7675,9 @@ function App() {
               {filteredJobs.map((job) => (
                 <article className="job-row" key={job.id}>
                   <div className="job-row-main">
-                    <span className={`badge ${job.status === "failed" ? "warning" : "muted"}`}>
+                    <span
+                      className={`badge ${job.status === "failed" ? "warning" : "muted"}`}
+                    >
                       {job.status}
                     </span>
                     <div>
@@ -6553,7 +7708,9 @@ function App() {
                       {job.error}
                     </p>
                   ) : null}
-                  <p className="payload-summary">{summarizePayload(job.payload)}</p>
+                  <p className="payload-summary">
+                    {summarizePayload(job.payload)}
+                  </p>
                   <button
                     className="ghost-action job-inspect-action"
                     data-tooltip="Open payload and persisted progress for this job"
@@ -6562,7 +7719,9 @@ function App() {
                     onClick={() => void handleInspectJob(job.id)}
                   >
                     <Eye aria-hidden="true" />
-                    {isLoadingJobDetail && selectedJobId === job.id ? "Inspecting" : "Inspect"}
+                    {isLoadingJobDetail && selectedJobId === job.id
+                      ? "Inspecting"
+                      : "Inspect"}
                   </button>
                   {job.status === "failed" || job.status === "cancelled" ? (
                     <button
@@ -6586,7 +7745,10 @@ function App() {
               ) : null}
             </div>
             {selectedJobId && activeModule === "audit-jobs" ? (
-              <section className="job-detail-panel" aria-label="Selected job detail">
+              <section
+                className="job-detail-panel"
+                aria-label="Selected job detail"
+              >
                 <div className="section-heading compact">
                   <div>
                     <h3>Job detail</h3>
@@ -6628,11 +7790,15 @@ function App() {
                       </div>
                       <div>
                         <span>Started</span>
-                        <strong>{formatDateTime(selectedJob.started_at)}</strong>
+                        <strong>
+                          {formatDateTime(selectedJob.started_at)}
+                        </strong>
                       </div>
                       <div>
                         <span>Updated</span>
-                        <strong>{formatDateTime(selectedJob.updated_at)}</strong>
+                        <strong>
+                          {formatDateTime(selectedJob.updated_at)}
+                        </strong>
                       </div>
                     </div>
                     {selectedJob.error ? (
@@ -6643,7 +7809,9 @@ function App() {
                     <div className="job-detail-columns">
                       <div>
                         <span>Payload</span>
-                        <pre>{JSON.stringify(selectedJob.payload, null, 2)}</pre>
+                        <pre>
+                          {JSON.stringify(selectedJob.payload, null, 2)}
+                        </pre>
                       </div>
                       <div>
                         <span>Persisted progress</span>
@@ -6769,7 +7937,10 @@ function App() {
               id="audit-events"
               tabIndex={-1}
             >
-              <section className="audit-event-panel" aria-label="Journal events">
+              <section
+                className="audit-event-panel"
+                aria-label="Journal events"
+              >
                 <div className="section-heading compact">
                   <h3>Journal events</h3>
                   <span className="badge muted">{journalEvents.length}</span>
@@ -6787,9 +7958,13 @@ function App() {
                         <span>{event.actor}</span>
                         <span>{formatDateTime(event.occurred_at)}</span>
                       </div>
-                      <p className="payload-summary">{summarizePayload(event.payload)}</p>
+                      <p className="payload-summary">
+                        {summarizePayload(event.payload)}
+                      </p>
                       {event.event_hash ? (
-                        <p className="payload-summary">Hash {event.event_hash.slice(0, 16)}</p>
+                        <p className="payload-summary">
+                          Hash {event.event_hash.slice(0, 16)}
+                        </p>
                       ) : null}
                     </article>
                   ))}
@@ -6801,10 +7976,15 @@ function App() {
                   ) : null}
                 </div>
               </section>
-              <section className="audit-event-panel" aria-label="Persisted progress events">
+              <section
+                className="audit-event-panel"
+                aria-label="Persisted progress events"
+              >
                 <div className="section-heading compact">
                   <h3>Persisted progress</h3>
-                  <span className="badge muted">{auditProgressEvents.length}</span>
+                  <span className="badge muted">
+                    {auditProgressEvents.length}
+                  </span>
                 </div>
                 <div className="audit-event-list">
                   {auditProgressEvents.map((event) => (
@@ -6817,9 +7997,13 @@ function App() {
                         <span>{event.job_id ?? "system"}</span>
                         <span>{formatDateTime(event.occurred_at)}</span>
                       </div>
-                      <p className="payload-summary">{summarizePayload(event.payload)}</p>
+                      <p className="payload-summary">
+                        {summarizePayload(event.payload)}
+                      </p>
                       {event.event_hash ? (
-                        <p className="payload-summary">Hash {event.event_hash.slice(0, 16)}</p>
+                        <p className="payload-summary">
+                          Hash {event.event_hash.slice(0, 16)}
+                        </p>
                       ) : null}
                     </article>
                   ))}
