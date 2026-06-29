@@ -74,6 +74,7 @@ for phrase in (
     "make audit-manifest",
     "make audit-bundle",
     "make audit-bundle-check",
+    "make audit-export-check",
     "make ci-status-check",
     "make production-preflight",
     "make release-evidence-check",
@@ -85,6 +86,7 @@ for phrase in (
     "scripts/check_security_policy.sh",
     "scripts/check_ignore_hygiene.sh",
     "scripts/check_operations_runbook.sh",
+    "scripts/check_audit_export.py",
     "scripts/check_ci_status.sh",
     "pip-audit",
     "npm audit --audit-level=high",
@@ -93,8 +95,8 @@ for phrase in (
     "Cosign",
     "tag-to-digest resolution",
     "Branch coverage",
-    "95.25% total",
-    "90.54% branch-only",
+    "95.26% total",
+    "90.56% branch-only",
     "RETOS_ALLOW_PAID_LLM=false",
     "RETOS_OLLAMA_MODEL=gemma4",
     "/audit/export",
@@ -142,7 +144,7 @@ require(
     "release note must keep publish evidence blockers explicit",
 )
 require(
-    "90.54% branch" in readme,
+    "90.56% branch" in readme,
     "README must record current branch coverage evidence",
 )
 require(

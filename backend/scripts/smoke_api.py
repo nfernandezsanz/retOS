@@ -1451,7 +1451,10 @@ def main() -> None:
                 audit_integrity["canonicalization"] == "json-sort-keys-v1",
                 "audit export canonicalization changed",
             )
-            require(audit_integrity["valid"] is True, "audit export integrity chain is invalid")
+            require(
+                audit_integrity["valid"] is True,
+                f"audit export integrity chain is invalid: {audit_integrity.get('failures')}",
+            )
             require(
                 audit_integrity["event_count"]
                 == len(audit_export_body["journal_events"])

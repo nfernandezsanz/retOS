@@ -10,14 +10,14 @@ production pilot.
 | --- | --- | --- |
 | Product maturity | Pre-alpha candidate | `planning/04-process-tracker.md` keeps phases 0-6 in progress. |
 | CI health | Must be checked against current `HEAD` | `make ci-status-check` queries GitHub Actions for the current commit; `docs/releases/2026.06.28-alpha.1.md` records release-candidate evidence. |
-| Backend coverage | Passing total and branch coverage | `README.md` records 95.25% total and 90.54% branch-only coverage. |
+| Backend coverage | Passing total and branch coverage | `README.md` records 95.26% total and 90.56% branch-only coverage. |
 | Runtime topology | Guarded | `scripts/check_docker_topology.sh` and `scripts/check_backend_runtime_image.sh` protect the shared API/worker/migrate backend image model. |
 | Dependency advisories | Guarded | `make dependency-audit` runs `pip-audit` and `npm audit --audit-level=high`; CI runs both checks. |
 | Branding assets and UI contract | Guarded | `make brand-check` runs `scripts/check_branding_assets.sh` to validate project identity assets, palette tokens, README visibility, and Playwright brand smoke coverage. |
 | Local cost safety | Guarded | `.env.example` keeps `RETOS_ALLOW_PAID_LLM=false`, `RETOS_PROVIDER=local`, and `RETOS_OLLAMA_MODEL=gemma4`. |
 | Audit ledger | Implemented foundation | `docs/database.md` and `planning/06-auditability-journals.md` describe persisted journal/progress hash chains and export validation. |
 | Release publishing | Not complete | GHCR digest, SBOM/provenance, and Cosign evidence are pending until the release workflow runs for a tag. |
-| Final branch target | Complete | Branch coverage is ratcheted at 90.54%, above the 90% target. |
+| Final branch target | Complete | Branch coverage is ratcheted at 90.56%, above the 90% target. |
 
 ## Auditor Review Order
 
@@ -63,6 +63,7 @@ make audit-manifest OUTPUT=evals/reports/audit-manifest.json
 make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md
 make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true
 make audit-bundle-check
+make audit-export-check
 make release-notes-check
 make versioned-release-notes-check
 make docker-smoke
@@ -92,7 +93,7 @@ auditor a stable local entry point:
 | Area | Gate | Proves |
 | --- | --- | --- |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 557 pytest cases, eval smoke, agent multi-hop eval, 95.25% total coverage, and 90.54% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 561 pytest cases, eval smoke, agent multi-hop eval, 95.26% total coverage, and 90.56% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
@@ -113,6 +114,7 @@ auditor a stable local entry point:
 | Promotion decision checklist | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Generated checklist showing clean worktree, CI success, critical file hashes, local visual evidence, and remaining external promotion decisions. |
 | Audit handoff bundle | `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` | Local tarball plus `.sha256` sidecar containing the JSON manifest, Markdown handoff, production readiness pack, release process, operations guide, branding guide, release note, promotion template, and CI/release workflows. |
 | Audit handoff bundle schema | `make audit-bundle-check` | Offline check that the generated tarball has the required members and checksum. |
+| Audit export verifier | `make audit-export-check` or `make audit-export-check EXPORT=retos-audit-export.json` | Self-tests the offline `/audit/export` verifier or validates a downloaded export by recomputing payload hashes, event hashes, continuity, head hash, and failure reasons. |
 | Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, docker, final audit-evidence jobs, and required backend-coverage/visual-audit/audit-manifest/audit-handoff artifacts for the current commit. |
 
 ## External Promotion Evidence
@@ -158,6 +160,7 @@ These items must be closed before a final production release:
 - [ ] `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` was exported for the promotion record.
 - [ ] `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` was exported for human review.
 - [ ] `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` was exported with its `.sha256` sidecar.
+- [ ] `make audit-export-check EXPORT=retos-audit-export.json` passed for a fresh target-environment `/audit/export` download.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
 - [ ] Desktop and mobile visual audit PNGs were reviewed and accepted or tracked.
@@ -188,6 +191,7 @@ These items must be closed before a final production release:
 | Audit manifest schema | `scripts/check_audit_manifest.py`, `make audit-manifest-check` |
 | Audit handoff report | `scripts/export_audit_handoff_report.py`, `scripts/check_audit_handoff_report.py`, `make audit-handoff-report` |
 | Audit handoff bundle | `scripts/export_audit_bundle.py`, `scripts/check_audit_bundle.py`, `make audit-bundle` |
+| Audit export verifier | `scripts/check_audit_export.py`, `make audit-export-check` |
 | Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check`, the `retos-backend-coverage-<commit>` artifact, the `retos-visual-audit-<commit>` artifact, the `retos-audit-manifest-<commit>` artifact, and the `retos-audit-handoff-<commit>` artifact |
 | Audit handoff manifest | `scripts/export_audit_manifest.py`, `make audit-manifest` |
 | Release procedure | `docs/release-process.md` |

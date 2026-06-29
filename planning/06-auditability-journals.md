@@ -41,18 +41,23 @@ producing mutations remain admin-only. Results return newest events first.
 progress event lists plus an offline integrity section. The integrity block uses
 SHA-256, sorted-key JSON canonicalization, per-event payload hashes recomputed from the
 returned payloads, chronological `trace_id`/`prev_hash`/`event_hash` links, a `head_hash`,
-continuity checks inside the exported slice, a `failures` list for mismatched entries,
-and a `valid` flag computed before the download is returned. New writes persist the same
-hash-chain fields in the database, and migration `0008_audit_hash_chain_columns` backfills
-existing rows. Because exports can be limited slices, `valid=true` means each included
-event's current payload still matches its persisted hash-chain material and each
-non-first event links to the previous included event; a first `prev_hash` may legitimately
-point to an event outside the exported slice.
+a `failures` list for mismatched entries, a `continuity_gaps` list for omitted predecessor
+events in limited or scoped exports, and a `valid` flag computed before the download is
+returned. New writes persist the same hash-chain fields in the database, and migration
+`0008_audit_hash_chain_columns` backfills existing rows. Because exports can be limited
+or viewer-scoped slices, `valid=true` means each included event's current payload still
+matches its persisted hash-chain material; continuity gaps explain where an event links
+to a predecessor outside the exported slice.
+
+`make audit-export-check EXPORT=retos-audit-export.json` validates a downloaded export
+offline by recalculating payload hashes, event hashes, slice continuity, head hash, and
+reported failure/gap reasons. Without `EXPORT`, the same target runs a self-test fixture
+so operators can verify the local toolchain before handling environment evidence.
 
 ## Future Hardening
 
 The next audit hardening pass should add optional OpenTelemetry propagation for external
-traces and operator tooling for full-ledger verification reports.
+traces and richer full-ledger reporting over large exports.
 
 ## Base Events
 

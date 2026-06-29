@@ -634,7 +634,7 @@ h2 {
   bottom: calc(100% + 8px);
   left: 50%;
   width: max-content;
-  max-width: 240px;
+  max-width: min(240px, calc(100vw - 32px));
   padding: 8px 10px;
   border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 8px;
@@ -2810,6 +2810,11 @@ button:focus-visible {
 
   .sidebar {
     position: static;
+    padding: 16px;
+  }
+
+  .brand {
+    margin-bottom: 14px;
   }
 
   .sidebar nav {
@@ -2829,6 +2834,31 @@ button:focus-visible {
   .section-topbar {
     flex-direction: row;
     align-items: center;
+  }
+
+  .section-switcher,
+  .module-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-gutter: stable;
+  }
+
+  .section-switcher a,
+  .module-nav a {
+    flex: 0 0 auto;
+  }
+
+  .sidebar [data-tooltip]::after {
+    top: auto;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translate(-50%, 4px);
+  }
+
+  .sidebar [data-tooltip]:hover::after,
+  .sidebar [data-tooltip]:focus-visible::after {
+    transform: translate(-50%, 0);
   }
 
   .section-topbar .primary-action {
@@ -2951,7 +2981,7 @@ button:focus-visible {
 
 @media (max-width: 760px) {
   .workspace {
-    padding: 16px;
+    padding: 14px;
   }
 
   .section-topbar h1 {
@@ -2994,31 +3024,77 @@ button:focus-visible {
 
   .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metric {
+    padding: 12px;
+  }
+
+  .metric strong {
+    font-size: 18px;
+  }
+
+  .brand-brief {
+    grid-auto-columns: minmax(178px, 68%);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-gutter: stable;
+  }
+
+  .brand-brief div {
+    min-height: 44px;
+    padding: 10px;
   }
 
   .overview-actions {
     display: grid;
-    gap: 12px;
-    grid-template-columns: 1fr;
+    grid-auto-columns: minmax(174px, 68%);
+    grid-auto-flow: column;
+    gap: 10px;
+    grid-template-columns: none;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-gutter: stable;
   }
 
   .workflow-card {
-    min-height: 94px;
+    min-height: 84px;
+    padding: 12px;
   }
 
   .workflow-card small {
     display: none;
   }
 
-  [data-tooltip]::after {
+  .workflow-card strong {
+    font-size: 15px;
+    line-height: 1.25;
+  }
+
+  .topbar {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  .hero-copy {
     display: none;
   }
 
-  [data-tooltip]:hover::after,
-  [data-tooltip]:focus-visible::after,
-  .sidebar [data-tooltip]:hover::after,
-  .sidebar [data-tooltip]:focus-visible::after {
-    display: none;
+  .section-content > .panel:not([hidden]) {
+    max-height: calc(100vh - 226px);
+  }
+
+  [data-tooltip]::after {
+    max-width: min(220px, calc(100vw - 24px));
+    font-size: 11px;
   }
 }
 

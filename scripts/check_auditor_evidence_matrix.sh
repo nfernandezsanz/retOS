@@ -63,6 +63,7 @@ for gate in (
     "make api-smoke",
     "make eval-agent-multihop",
     "make audit-manifest-check",
+    "make audit-export-check",
     "make frontend-e2e",
     "make frontend-visual-audit",
     "make docker-smoke",
@@ -81,8 +82,8 @@ for phrase in (
     "Cosign evidence",
     "target-environment review",
     "Ollama `gemma4`",
-    "95.25%",
-    "90.54%",
+    "95.26%",
+    "90.56%",
 ):
     require(phrase in matrix, f"matrix missing audit phrase: {phrase}")
 

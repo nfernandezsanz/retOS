@@ -42,6 +42,8 @@ for phrase in (
     "make local-acceptance",
     "make docker-smoke",
     "make api-smoke",
+    "make audit-export-check",
+    "EXPORT=retos-audit-export.json",
     "curl --fail http://localhost:8000/versionz",
     "RETOS_VERSION",
     "RETOS_REVISION",
@@ -77,6 +79,7 @@ require("/audit/export" in api_smoke, "API smoke must exercise audit export")
 for phrase in (
     "Backup and restore commands were rehearsed against a disposable environment",
     "/audit/export` validates hash-chain fields",
+    "make audit-export-check EXPORT=retos-audit-export.json",
     "Operator has recorded rollback steps and previous image tag",
 ):
     require(

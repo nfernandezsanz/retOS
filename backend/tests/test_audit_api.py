@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from retos.api.app import create_app
 from retos.api.routes.audit import (
     AuditHashChainEntryRead,
+    audit_chain_continuity_gaps,
     audit_chain_failures,
     validate_audit_chain,
 )
@@ -204,6 +205,7 @@ def test_exports_audit_snapshot_with_download_headers(
     assert integrity["canonicalization"] == "json-sort-keys-v1"
     assert integrity["valid"] is True
     assert integrity["failures"] == []
+    assert "continuity_gaps" in integrity
     assert integrity["event_count"] == len(body["journal_events"]) + len(body["progress_events"])
     assert integrity["head_hash"] == integrity["chain"][-1]["event_hash"]
     assert integrity["chain"][0]["prev_hash"] is None
@@ -225,12 +227,8 @@ def test_exports_audit_snapshot_with_download_headers(
         entry["payload_hash"] == persisted_events[entry["event_id"]]["payload_hash"]
         for entry in integrity["chain"]
     )
-    assert [
-        (entry["occurred_at"], entry["event_stream"], entry["event_id"])
-        for entry in integrity["chain"]
-    ] == sorted(
-        (entry["occurred_at"], entry["event_stream"], entry["event_id"])
-        for entry in integrity["chain"]
+    assert [(entry["occurred_at"], entry["event_id"]) for entry in integrity["chain"]] == sorted(
+        (entry["occurred_at"], entry["event_id"]) for entry in integrity["chain"]
     )
 
 
@@ -262,7 +260,7 @@ def test_audit_hash_chain_validation_detects_tampering(
     assert failures[0].event_id == entries[0].event_id
 
 
-def test_audit_hash_chain_validation_detects_prev_hash_gaps(
+def test_audit_hash_chain_validation_reports_prev_hash_gaps(
     audit_client: TestClient,
     audit_admin_headers: dict[str, str],
 ) -> None:
@@ -286,9 +284,11 @@ def test_audit_hash_chain_validation_detects_prev_hash_gaps(
 
     assert validate_audit_chain(tampered) is False
     failures = audit_chain_failures(tampered)
-    assert failures[0].reason == "prev_hash_mismatch"
-    assert failures[0].event_id == entries[1].event_id
-    assert failures[0].expected == entries[0].event_hash
+    gaps = audit_chain_continuity_gaps(tampered)
+    assert failures[0].reason == "event_hash_mismatch"
+    assert gaps[0].reason == "prev_hash_gap"
+    assert gaps[0].event_id == entries[1].event_id
+    assert gaps[0].expected == entries[0].event_hash
 
 
 def test_audit_export_detects_persisted_payload_tampering(

@@ -256,6 +256,19 @@ For a live local API smoke with fake providers and no paid calls:
 make api-smoke
 ```
 
+For an audit-export integrity check after downloading `/audit/export` from a running
+environment:
+
+```bash
+curl --header "Authorization: Bearer <token>" \
+  --output retos-audit-export.json \
+  "http://localhost:8000/audit/export?limit=1000"
+make audit-export-check EXPORT=retos-audit-export.json
+```
+
+Without `EXPORT`, `make audit-export-check` runs the verifier self-test so operators can
+confirm the local tooling is available before handling a real export.
+
 ## Operational Security Checklist
 
 - Run `make security-policy-check` before promotion review.

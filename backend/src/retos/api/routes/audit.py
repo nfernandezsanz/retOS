@@ -103,6 +103,7 @@ class AuditExportIntegrityRead(BaseModel):
     head_hash: str | None
     chain: list[AuditHashChainEntryRead]
     failures: list[AuditHashChainFailureRead]
+    continuity_gaps: list[AuditHashChainFailureRead]
 
 
 class AuditExportRead(BaseModel):
@@ -150,7 +151,7 @@ def build_audit_integrity(
             )
             for event in progress_events
         ],
-        key=lambda item: (item[3], item[0], item[1]),
+        key=lambda item: (item[3], item[1]),
     )
     for (
         event_stream,
@@ -195,6 +196,7 @@ def build_audit_integrity(
         head_hash=prev_hash,
         chain=entries,
         failures=audit_chain_failures(entries),
+        continuity_gaps=audit_chain_continuity_gaps(entries),
     )
 
 
@@ -206,19 +208,7 @@ def audit_chain_failures(
     entries: list[AuditHashChainEntryRead],
 ) -> list[AuditHashChainFailureRead]:
     failures: list[AuditHashChainFailureRead] = []
-    previous_hash: str | None = None
-    for index, entry in enumerate(entries):
-        if index > 0 and entry.prev_hash != previous_hash:
-            failures.append(
-                AuditHashChainFailureRead(
-                    event_id=entry.event_id,
-                    event_stream=entry.event_stream,
-                    event_type=entry.event_type,
-                    reason="prev_hash_mismatch",
-                    expected=previous_hash,
-                    actual=entry.prev_hash,
-                )
-            )
+    for entry in entries:
         expected_hash = audit_event_hash(
             event_id=entry.event_id,
             trace_id=entry.trace_id,
@@ -239,8 +229,28 @@ def audit_chain_failures(
                     actual=entry.event_hash,
                 )
             )
-        previous_hash = entry.event_hash
     return failures
+
+
+def audit_chain_continuity_gaps(
+    entries: list[AuditHashChainEntryRead],
+) -> list[AuditHashChainFailureRead]:
+    gaps: list[AuditHashChainFailureRead] = []
+    previous_hash: str | None = None
+    for index, entry in enumerate(entries):
+        if index > 0 and entry.prev_hash != previous_hash:
+            gaps.append(
+                AuditHashChainFailureRead(
+                    event_id=entry.event_id,
+                    event_stream=entry.event_stream,
+                    event_type=entry.event_type,
+                    reason="prev_hash_gap",
+                    expected=previous_hash,
+                    actual=entry.prev_hash,
+                )
+            )
+        previous_hash = entry.event_hash
+    return gaps
 
 
 @router.get("/journal-events", response_model=list[JournalEventRead])

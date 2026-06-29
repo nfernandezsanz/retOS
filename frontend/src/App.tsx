@@ -767,6 +767,14 @@ type AuditExportRead = {
       expected: string | null;
       actual: string | null;
     }>;
+    continuity_gaps: Array<{
+      event_id: string;
+      event_stream: string;
+      event_type: string;
+      reason: string;
+      expected: string | null;
+      actual: string | null;
+    }>;
     chain: Array<{
       event_id: string;
       trace_id: string | null;

@@ -1229,6 +1229,7 @@ Export a combined audit snapshot:
 curl --header "Authorization: Bearer <token>" \
   --output retos-audit-export.json \
   "http://localhost:8000/audit/export?limit=200"
+make audit-export-check EXPORT=retos-audit-export.json
 ```
 
 Both endpoints require a bearer token and accept `limit` from `1` to `200`. Results are
@@ -1243,11 +1244,14 @@ also include an offline integrity section. RetOS canonicalizes each event payloa
 sorted JSON keys, hashes it with SHA-256, and persists `payload_hash`, `prev_hash`, and
 `event_hash` on each journal/progress event at write time. The export recalculates the
 payload hash from the payload being returned, compares that material against the
-persisted event hash chain, validates continuity between events in the exported slice,
+persisted event hash chain, reports continuity gaps caused by limited or scoped exports,
 and returns a `failures` list with event ids, streams, reasons, expected values, and
 actual values when integrity fails. This catches payload edits even when the stored hash
 columns were not updated. It does not replace database backups, but it lets operators
 detect accidental or malicious edits to persisted audit rows or exported audit packages.
+Run `make audit-export-check EXPORT=retos-audit-export.json` against a downloaded export
+to recompute payload hashes, event hashes, head hash, failure reasons, and continuity-gap
+metadata offline.
 
 Journal event shape:
 
@@ -1305,6 +1309,7 @@ Audit export shape:
     "event_count": 0,
     "head_hash": null,
     "failures": [],
+    "continuity_gaps": [],
     "chain": [
       {
         "event_id": "<event_id>",
