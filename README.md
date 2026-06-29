@@ -404,7 +404,7 @@ Every meaningful change should pass these gates:
 | Backup/restore drill template | `make backup-restore-drill-check` | Validates the detailed backup/restore rehearsal evidence template for backup artifacts, restore commands, health checks, audit-export verification, and promotion impact. |
 | Promotion template | `make promotion-template-check` | Validates the human promotion evidence template contract: required sections, local gates, release provenance, visual/security review, backup/restore rehearsal, rollback, and decision fields. |
 | Auditor evidence matrix | `make auditor-evidence-matrix-check` | Validates the objective-to-evidence matrix so requirements, local gates, and external promotion blockers stay traceable. |
-| Auditor static pack | `make auditor-static-check` | Runs the non-destructive auditor gates for dependency advisories, security policy, ignore hygiene, operations runbooks, branding, release workflow, release notes, production preflight, and audit-pack alignment. |
+| Auditor static pack | `make auditor-static-check` | Runs the non-destructive auditor gates for dependency advisories, security policy, ignore hygiene, operations runbooks, branding, CI/release workflow contracts, release notes, production preflight, and audit-pack alignment. |
 | Auditor handoff | `make auditor-handoff-check` | Runs the local static auditor pack and exports the offline manifest, Markdown handoff with promotion decision checklist, and checksummed bundle under `evals/reports/`. |
 | Audit handoff manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | Exports commit state, generation context, coverage evidence from `backend/coverage.json`, required gates, critical file hashes including the auditor evidence matrix and branding assets, visual audit screenshot records, and remaining external promotion evidence as JSON. |
 | Audit manifest schema | `make audit-manifest-check` | Validates the audit manifest schema, required gates, critical file hashes, visual artifact names, and external blockers offline. |
@@ -437,6 +437,7 @@ Every meaningful change should pass these gates:
 | Production audit pack | `make audit-pack-check` | Validates that production readiness evidence, blockers, and auditor links stay current. |
 | Production preflight | `make production-preflight` | Validates local evidence, branding, release docs, and external release blockers are aligned for human review. |
 | Brand contract | `make brand-check` | Validates the project card, favicon mark, palette, branding guide, README visibility, and Playwright brand smoke coverage. |
+| CI workflow | `make ci-workflow-check` | Validates GitHub Actions CI jobs, local gates, root Python script checks, evidence artifacts, and audit handoff export steps offline. |
 | Current HEAD CI | `make ci-status-check` | Queries GitHub Actions and verifies the current commit has successful backend, frontend, docker, final audit-evidence jobs, and required backend-coverage/visual-audit/audit-manifest/audit-handoff artifacts. |
 | Release notes | `make release-notes-check` | Validates changelog, release-process guidance, and docs links for auditable releases. |
 | Versioned release notes | `make versioned-release-notes-check` | Validates concrete release note artifacts with evidence, limits, and rollback details. |

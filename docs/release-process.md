@@ -36,6 +36,7 @@ RETOS_REQUIRE_BUILT_IMAGES=1 scripts/check_image_size.sh
 3. Validate the publishing workflow contract:
 
 ```bash
+make ci-workflow-check
 scripts/check_release_workflow.sh
 scripts/check_versioned_release_notes.sh
 ```
@@ -50,6 +51,7 @@ For targeted reruns, the local gate expands to:
 
 ```bash
 make release-check
+make ci-workflow-check
 make audit-pack-check
 make production-preflight
 make backup-restore-drill-check

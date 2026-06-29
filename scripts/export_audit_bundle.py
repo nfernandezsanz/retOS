@@ -29,6 +29,7 @@ STATIC_EVIDENCE_FILES = (
     "docs/releases/evidence/target-security-review-template.md",
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",
+    "scripts/check_ci_workflow.sh",
 )
 
 OPTIONAL_EVIDENCE_FILES = (

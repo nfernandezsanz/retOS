@@ -111,6 +111,7 @@ auditor a stable local entry point:
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
 | Visual audit evidence | `make visual-audit-check` | Offline check that the local visual-audit manifest, expected desktop/mobile screenshot records, PNG files, byte sizes, SHA-256 hashes, and viewport dimensions match. |
 | Docker runtime | `make docker-smoke` | Built API/web images, Postgres, RabbitMQ, API, worker, migrate, web, HTTP smoke, worker-backed jobs, and one shared backend image ID. |
+| CI workflow contract | `make ci-workflow-check` | GitHub Actions CI jobs, local gates, root Python script checks, required artifacts, and audit handoff export steps are statically guarded. |
 | Static release guardrails | `make release-check` | Required docs, Docker topology, image metadata source, image size budgets, workflow contract, release notes, calibration evidence gates, audit pack, branding assets, safe defaults, and a dry-run of the published evidence verifier. |
 | Production preflight | `make production-preflight` | Local evidence, branding, release docs, and external promotion blockers are aligned. |
 | Dependency advisories | `make dependency-audit` | Python runtime and frontend lockfile dependency advisory checks pass without paid providers. |
@@ -207,6 +208,7 @@ These items must be closed before a final production release:
 | Evidence | Location |
 | --- | --- |
 | Quality gates and commands | `README.md`, `Makefile`, `.github/workflows/ci.yml` |
+| CI workflow contract | `.github/workflows/ci.yml`, `scripts/check_ci_workflow.sh`, `make ci-workflow-check` |
 | Objective-to-evidence traceability | `docs/auditor-evidence-matrix.md`, `scripts/check_auditor_evidence_matrix.sh`, `make auditor-evidence-matrix-check` |
 | Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit`, `frontend/visual-audit/manifest.json`, and the release workflow `retos-release-visual-audit-<commit>` artifact |
 | Visual audit verifier | `scripts/check_visual_audit.py`, `make visual-audit-check` |

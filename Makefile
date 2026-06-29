@@ -8,7 +8,7 @@ AUDIT_BUNDLE_OUTPUT ?= evals/reports/retos-audit-handoff.tar.gz
 AUDIT_MANIFEST_SKIP_CI ?= false
 ROOT_PY_SCRIPTS := scripts
 
-.PHONY: help doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check target-security-review-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check target-security-review-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-workflow-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -73,6 +73,7 @@ help:
 	@printf "  make audit-pack-check Validate production readiness audit evidence\n"
 	@printf "  make production-preflight Validate local preflight evidence and external release blockers\n"
 	@printf "  make brand-check      Validate project branding assets and UI brand smoke coverage\n"
+	@printf "  make ci-workflow-check Validate CI workflow jobs, gates, and evidence artifacts\n"
 	@printf "  make ci-status-check  Validate GitHub Actions is green for current HEAD\n"
 	@printf "  make release-notes-check Validate changelog and release note guidance\n"
 	@printf "  make versioned-release-notes-check Validate versioned release note artifacts\n"
@@ -140,7 +141,7 @@ promotion-template-check:
 auditor-evidence-matrix-check:
 	scripts/check_auditor_evidence_matrix.sh
 
-auditor-static-check: dependency-audit security-policy-check target-security-review-check env-security-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check brand-check visual-audit-check release-workflow-check release-notes-check versioned-release-notes-check eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
+auditor-static-check: dependency-audit security-policy-check target-security-review-check env-security-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check brand-check visual-audit-check ci-workflow-check release-workflow-check release-notes-check versioned-release-notes-check eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
 
 auditor-handoff-check: auditor-static-check
 	$(MAKE) audit-manifest OUTPUT="$(AUDIT_MANIFEST_OUTPUT)" AUDIT_MANIFEST_SKIP_CI=true
@@ -289,6 +290,9 @@ production-preflight:
 
 brand-check:
 	scripts/check_branding_assets.sh
+
+ci-workflow-check:
+	scripts/check_ci_workflow.sh
 
 ci-status-check:
 	scripts/check_ci_status.sh

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 scripts/check_release_readiness.sh >/dev/null
+scripts/check_ci_workflow.sh >/dev/null
 scripts/check_audit_pack.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null

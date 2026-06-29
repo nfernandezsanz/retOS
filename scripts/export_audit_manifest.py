@@ -48,6 +48,7 @@ CRITICAL_FILES = (
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/production-promotion-template.md",
     "docs/releases/evidence/target-security-review-template.md",
+    "scripts/check_ci_workflow.sh",
     "scripts/check_ci_status.sh",
     "scripts/check_auditor_evidence_matrix.sh",
     "scripts/check_audit_pack.sh",
