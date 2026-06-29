@@ -17,15 +17,15 @@ The UI is a working console, not a landing page. It must make background process
 
 | View | Purpose |
 | --- | --- |
-| Overview | Short operating snapshot with posture, runtime build metadata, metrics, and workflow entry cards. |
+| Overview | Short operating snapshot with posture, runtime build/readiness metadata, metrics, and workflow entry cards. |
 | Documents | Manage domains, sources, uploads, mounted scans, indexing, archive/history, and document evidence. |
 | Queries | Ask grounded questions, inspect citations, budgets, query plans, evidence routes, and live SSE progress. |
 | Evals | Run and inspect local evals, report paths, history, trends, comparisons, reruns, and regression gates. |
 | Audit | Review jobs, retries, journal events, persisted progress, per-job detail, and exportable evidence. |
 | Admin | Load provider readiness and manage admin/viewer accounts plus per-domain grants. |
 
-The Overview reads `/versionz` without requiring admin auth and surfaces the runtime
-version/revision beside the local posture chips. The console uses hash-addressable sections (`#overview`, `#documents`, `#queries`,
+The Overview reads `/versionz` and `/readyz` without requiring admin auth and surfaces
+runtime version/revision plus API/database readiness beside the local posture chips. The console uses hash-addressable sections (`#overview`, `#documents`, `#queries`,
 `#evals`, `#audit`, and `#admin`) rather than one long page. The sidebar and
 workspace section switcher keep the same destinations, expose `aria-current`, and use
 hover/focus tooltips on navigation and primary actions so operators can understand each

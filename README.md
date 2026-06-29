@@ -157,7 +157,7 @@ visual-audit, audit-manifest, and audit-handoff artifacts.
 
 | Workflow | Local Action |
 | --- | --- |
-| Navigate the console | Use the compact Overview with runtime build metadata, then switch to Documents, Queries, Evals, Audit, or Admin; each long screen has module pills and a current-context band for its main task areas |
+| Navigate the console | Use the compact Overview with runtime build/readiness metadata, then switch to Documents, Queries, Evals, Audit, or Admin; each long screen has module pills and a current-context band for its main task areas |
 | Upload and manage documents | Use the React console at http://localhost:8080 |
 | Watch ingestion/indexing | Live job/progress views and SSE-backed updates in the UI |
 | Query with citations | Run grounded agent queries against indexed domains |
@@ -204,7 +204,7 @@ visual-audit, audit-manifest, and audit-handoff artifacts.
   traceability.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for
   a compact Overview plus hash-addressable Documents, Queries, Evals, Audit, and Admin
-  sections, runtime build metadata from `/versionz`, plus contextual module pills and current-context bands that shorten
+  sections, runtime build metadata from `/versionz`, readiness from `/readyz`, plus contextual module pills and current-context bands that shorten
   Documents, Queries, Evals, Audit, and Admin into scan-friendly task areas. The UI includes hover/focus tooltips,
   bounded long lists, document inventory, edit/archive/restore/history actions, jobs,
   OCR, indexing, agent runs, local eval execution, and admin account management.
@@ -384,7 +384,7 @@ Every meaningful change should pass these gates:
 | Natural Questions eval | `make eval-natural-questions NQ_PATH=...` | Runs opt-in Natural Questions real-query evals from a user-provided JSONL/JSON dataset file and can write JSON/Markdown reports. |
 | API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, agent multi-hop/SQuAD/HotpotQA/HotpotQA-agent/Natural Questions evals, eval rerun/comparison/trends, generic eval job retry, job lifecycle, audit export, and SSE over HTTP. OCR benchmark API smoke is opt-in for Docker where Tesseract is present. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
-| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies section navigation, tooltip contract, runtime build metadata, contextual module pills, current-context bands, visible UI state, admin user management, document edit/archive/restore/history, agent multi-hop and dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
+| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies section navigation, tooltip contract, runtime build/readiness metadata, contextual module pills, current-context bands, visible UI state, admin user management, document edit/archive/restore/history, agent multi-hop and dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
 | Visual audit screenshots | `make frontend-visual-audit` | Generates ignored desktop/mobile PNG snapshots and `frontend/visual-audit/manifest.json` with viewport, size, SHA-256 metadata, section-navigation evidence, and responsive no-overflow coverage; CI uploads them as a `retos-visual-audit-<commit>` artifact. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |

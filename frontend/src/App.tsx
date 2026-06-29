@@ -65,6 +65,12 @@ type RuntimeVersion = {
   created: string;
 };
 
+type RuntimeReadiness = {
+  status: string;
+  service: string;
+  components: Record<string, string>;
+};
+
 type WorkspaceSection = "overview" | "documents" | "queries" | "evals" | "audit" | "admin";
 
 type WorkspaceModule = {
@@ -833,6 +839,19 @@ async function loadProviderCatalog(token: string): Promise<ProviderCatalog> {
 
 async function loadRuntimeVersion(): Promise<RuntimeVersion> {
   return requestJson<RuntimeVersion>("/versionz");
+}
+
+async function loadRuntimeReadiness(): Promise<RuntimeReadiness> {
+  const response = await fetch(`${API_BASE_URL}/readyz`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (response.status === 503) {
+    return (await response.json()) as RuntimeReadiness;
+  }
+  await ensureOk(response);
+  return (await response.json()) as RuntimeReadiness;
 }
 
 async function loadAdminUsers(token: string): Promise<AdminUserRead[]> {
@@ -1666,6 +1685,8 @@ function App() {
   const [providerError, setProviderError] = useState<string | null>(null);
   const [runtimeVersion, setRuntimeVersion] = useState<RuntimeVersion | null>(null);
   const [runtimeVersionError, setRuntimeVersionError] = useState<string | null>(null);
+  const [runtimeReadiness, setRuntimeReadiness] = useState<RuntimeReadiness | null>(null);
+  const [runtimeReadinessError, setRuntimeReadinessError] = useState<string | null>(null);
   const [domains, setDomains] = useState<DomainRead[]>([]);
   const [selectedDomainId, setSelectedDomainId] = useState("");
   const [documents, setDocuments] = useState<DocumentRead[]>([]);
@@ -1785,6 +1806,12 @@ function App() {
   }, [catalog]);
 
   const providerStatus = catalog?.active.can_call ? "Ready" : "Needs attention";
+  const runtimeReadinessLabel =
+    runtimeReadiness?.status === "ok"
+      ? `API ready: database ${runtimeReadiness.components.database ?? "unknown"}`
+      : runtimeReadinessError
+        ? "API readiness unavailable"
+        : "API readiness loading";
 
   const selectedDomain = useMemo(
     () => domains.find((domain) => domain.id === selectedDomainId) ?? null,
@@ -1878,7 +1905,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    void refreshRuntimeVersion();
+    void refreshRuntimeStatus();
   }, []);
 
   function handleSectionClick(
@@ -1910,13 +1937,26 @@ function App() {
     };
   }, []);
 
-  async function refreshRuntimeVersion() {
+  async function refreshRuntimeStatus() {
     setRuntimeVersionError(null);
-    try {
-      setRuntimeVersion(await loadRuntimeVersion());
-    } catch (error) {
+    setRuntimeReadinessError(null);
+    const [versionResult, readinessResult] = await Promise.allSettled([
+      loadRuntimeVersion(),
+      loadRuntimeReadiness(),
+    ]);
+    if (versionResult.status === "fulfilled") {
+      setRuntimeVersion(versionResult.value);
+    } else {
       setRuntimeVersion(null);
-      setRuntimeVersionError(readableError(error, "Runtime metadata unavailable"));
+      setRuntimeVersionError(readableError(versionResult.reason, "Runtime metadata unavailable"));
+    }
+    if (readinessResult.status === "fulfilled") {
+      setRuntimeReadiness(readinessResult.value);
+    } else {
+      setRuntimeReadiness(null);
+      setRuntimeReadinessError(
+        readableError(readinessResult.reason, "Runtime readiness unavailable"),
+      );
     }
   }
 
@@ -1924,7 +1964,7 @@ function App() {
     setIsLoadingWorkspace(true);
     setWorkspaceError(null);
     try {
-      await refreshRuntimeVersion();
+      await refreshRuntimeStatus();
       const adminToken = accessToken ?? (await getAdminToken());
       const nextDomains = await loadDomains(adminToken);
       setDomains(nextDomains);
@@ -3215,6 +3255,10 @@ function App() {
                       ? "Runtime metadata unavailable"
                       : "Runtime metadata loading"}
                 </span>
+              </div>
+              <div>
+                <Database aria-hidden="true" />
+                <span>{runtimeReadinessLabel}</span>
               </div>
               <div>
                 <ShieldAlert aria-hidden="true" />

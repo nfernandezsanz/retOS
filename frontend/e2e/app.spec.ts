@@ -561,6 +561,16 @@ async function mockProviderApi(page: Page) {
       },
     });
   });
+  await page.route("http://localhost:8000/readyz", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        status: "ok",
+        service: "retos-api",
+        components: { database: "ok" },
+      },
+    });
+  });
   await page.route("http://localhost:8000/admin/users", async (route) => {
     if (route.request().method() === "POST") {
       const payload = route.request().postDataJSON() as {
@@ -1531,6 +1541,7 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
 
   await expect(page.locator(".brand-brief")).toContainText("Docker-first runtime");
   await expect(page.locator(".brand-brief")).toContainText("Revision abcdef123456");
+  await expect(page.locator(".brand-brief")).toContainText("API ready: database ok");
   await expect(page.locator(".brand-brief")).toContainText("Hash-chained journals");
   await expect(page.locator(".brand-brief")).toContainText("No paid calls in tests");
   await expect(page.getByLabel("System metrics").getByText("Build")).toBeVisible();

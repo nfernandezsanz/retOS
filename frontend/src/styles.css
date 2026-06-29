@@ -547,10 +547,14 @@ h2 {
 }
 
 .brand-brief div:nth-child(3) svg {
-  color: var(--retos-warning);
+  color: var(--retos-success);
 }
 
 .brand-brief div:nth-child(4) svg {
+  color: var(--retos-warning);
+}
+
+.brand-brief div:nth-child(5) svg {
   color: var(--retos-success);
 }
 
