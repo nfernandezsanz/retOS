@@ -393,7 +393,7 @@ button:disabled {
   grid-auto-rows: max-content;
   align-content: start;
   gap: 12px;
-  max-height: calc(100vh - 142px);
+  max-height: calc(100vh - 158px);
   overflow: auto;
   padding-right: 4px;
   min-height: 0;
@@ -412,7 +412,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  max-height: calc(100vh - 158px);
+  max-height: calc(100vh - 174px);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -685,7 +685,7 @@ h2 {
 .section-content > .panel:not([hidden]) {
   display: grid;
   align-content: start;
-  max-height: calc(100vh - 176px);
+  max-height: calc(100vh - 188px);
   overflow: auto;
   scrollbar-gutter: stable;
 }
@@ -694,7 +694,7 @@ h2 {
   display: grid;
   align-content: start;
   gap: 10px;
-  max-height: calc(100vh - 256px);
+  max-height: calc(100vh - 268px);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -724,7 +724,7 @@ h2 {
 
 [data-tooltip]::after {
   position: absolute;
-  z-index: 40;
+  z-index: 60;
   bottom: calc(100% + 8px);
   left: 50%;
   width: max-content;
@@ -751,8 +751,24 @@ h2 {
 }
 
 .module-nav [data-tooltip]::after,
-.section-switcher [data-tooltip]::after {
+.section-switcher [data-tooltip]::after,
+.topbar [data-tooltip]::after,
+.workspace-context [data-tooltip]::after {
+  top: calc(100% + 8px);
+  bottom: auto;
   max-width: 260px;
+  transform: translate(-50%, -4px);
+}
+
+.module-nav [data-tooltip]:hover::after,
+.module-nav [data-tooltip]:focus-visible::after,
+.section-switcher [data-tooltip]:hover::after,
+.section-switcher [data-tooltip]:focus-visible::after,
+.topbar [data-tooltip]:hover::after,
+.topbar [data-tooltip]:focus-visible::after,
+.workspace-context [data-tooltip]:hover::after,
+.workspace-context [data-tooltip]:focus-visible::after {
+  transform: translate(-50%, 0);
 }
 
 [data-tooltip]:hover::after,
@@ -1213,7 +1229,7 @@ button:focus-visible {
 .document-list {
   display: grid;
   gap: 10px;
-  max-height: clamp(240px, calc(100vh - 456px), 360px);
+  max-height: clamp(220px, calc(100vh - 476px), 340px);
   margin-top: 4px;
   overflow: auto;
   padding-right: 4px;
@@ -2310,6 +2326,15 @@ button:focus-visible {
   margin: 10px;
 }
 
+.workflow-section[open] > form,
+.workflow-section[open] > .source-list,
+.workflow-section[open] > .admin-user-list {
+  max-height: min(300px, calc(100vh - 380px));
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
 .workflow-section > .source-list,
 .workflow-section > .admin-user-list {
   margin-top: 12px;
@@ -2354,11 +2379,14 @@ button:focus-visible {
 .eval-dataset-form {
   align-content: start;
   grid-template-columns: minmax(0, 1fr) minmax(92px, 0.42fr);
+  max-height: min(300px, calc(100vh - 388px));
+  overflow: auto;
   margin-bottom: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   padding: 10px;
+  scrollbar-gutter: stable;
 }
 
 .dataset-accordion .dataset-form-heading {

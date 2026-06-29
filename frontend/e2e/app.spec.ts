@@ -2071,6 +2071,15 @@ test("loads the operational console", async ({ page }) => {
     "data-tooltip",
     /provider readiness/,
   );
+  const chromeTooltipPlacement = await page.locator(".module-nav a[href='#admin-providers']").evaluate((element) => {
+    const tooltipStyle = getComputedStyle(element, "::after");
+    return {
+      bottom: tooltipStyle.bottom,
+      top: tooltipStyle.top,
+    };
+  });
+  expect(chromeTooltipPlacement.top).not.toBe("auto");
+  expect(chromeTooltipPlacement.bottom).toBe("auto");
   await expect(page.getByLabel("Admin modules").getByRole("link", { name: "Users" })).toHaveAttribute(
     "href",
     "#admin-users",
