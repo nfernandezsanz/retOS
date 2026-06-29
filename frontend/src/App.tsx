@@ -5151,10 +5151,15 @@ function App() {
               </div>
             </div>
             <div className="eval-runner-forms" hidden={activeModule !== "evals-runner"}>
-              <form
-                className="eval-dataset-form"
-                onSubmit={(event) => void handleRunSquadEval(event)}
-              >
+              <details className="dataset-accordion" open>
+                <summary data-tooltip="Configure and run the SQuAD single-hop fixture">
+                  <span>SQuAD</span>
+                  <strong>Single-hop QA</strong>
+                </summary>
+                <form
+                  className="eval-dataset-form"
+                  onSubmit={(event) => void handleRunSquadEval(event)}
+                >
                 <div className="dataset-form-heading">
                   <div>
                     <span>Dataset</span>
@@ -5213,11 +5218,17 @@ function App() {
                   <FileSearch aria-hidden="true" />
                   {isRunningSquadEval ? "Running SQuAD eval" : "Run SQuAD eval"}
                 </button>
-              </form>
-              <form
-                className="eval-dataset-form"
-                onSubmit={(event) => void handleRunHotpotQAEval(event)}
-              >
+                </form>
+              </details>
+              <details className="dataset-accordion">
+                <summary data-tooltip="Configure and run multi-hop retrieval and agent checks">
+                  <span>HotpotQA</span>
+                  <strong>Multi-hop QA</strong>
+                </summary>
+                <form
+                  className="eval-dataset-form"
+                  onSubmit={(event) => void handleRunHotpotQAEval(event)}
+                >
                 <div className="dataset-form-heading">
                   <div>
                     <span>Dataset</span>
@@ -5288,11 +5299,17 @@ function App() {
                     ? "Running HotpotQA agent"
                     : "Run HotpotQA agent"}
                 </button>
-              </form>
-              <form
-                className="eval-dataset-form"
-                onSubmit={(event) => void handleRunNaturalQuestionsEval(event)}
-              >
+                </form>
+              </details>
+              <details className="dataset-accordion">
+                <summary data-tooltip="Configure and run the Natural Questions open QA fixture">
+                  <span>Natural Questions</span>
+                  <strong>Open QA</strong>
+                </summary>
+                <form
+                  className="eval-dataset-form"
+                  onSubmit={(event) => void handleRunNaturalQuestionsEval(event)}
+                >
                 <div className="dataset-form-heading">
                   <div>
                     <span>Dataset</span>
@@ -5353,11 +5370,17 @@ function App() {
                     ? "Running Natural Questions eval"
                     : "Run Natural Questions eval"}
                 </button>
-              </form>
-              <form
-                className="eval-dataset-form"
-                onSubmit={(event) => void handleRunOcrBenchmarkEval(event)}
-              >
+                </form>
+              </details>
+              <details className="dataset-accordion">
+                <summary data-tooltip="Configure and run local OCR extraction accuracy checks">
+                  <span>OCR benchmark</span>
+                  <strong>Extraction quality</strong>
+                </summary>
+                <form
+                  className="eval-dataset-form"
+                  onSubmit={(event) => void handleRunOcrBenchmarkEval(event)}
+                >
                 <div className="dataset-form-heading">
                   <div>
                     <span>Dataset</span>
@@ -5430,7 +5453,8 @@ function App() {
                     ? "Running OCR benchmark"
                     : "Run OCR benchmark"}
                 </button>
-              </form>
+                </form>
+              </details>
             </div>
             {evalError ? (
               <p className="inline-error" role="alert">

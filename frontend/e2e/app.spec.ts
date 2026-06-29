@@ -2446,6 +2446,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval run history").getByText("2 cases")).toBeVisible();
 
   await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
+  await page.locator("summary").filter({ hasText: "HotpotQA" }).click();
   await page.getByLabel("HotpotQA dataset path").fill("ui-hotpotqa.json");
   await page.getByLabel("HotpotQA max cases").fill("1");
   await page.getByLabel("HotpotQA report stem").fill("ui-hotpotqa");
@@ -2472,6 +2473,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval run history").getByText("hotpotqa-agent")).toBeVisible();
 
   await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
+  await page.locator("summary").filter({ hasText: "Natural Questions" }).click();
   await page.getByLabel("Natural Questions dataset path").fill("ui-nq.jsonl");
   await page.getByLabel("Natural Questions max cases").fill("1");
   await page.getByLabel("Natural Questions report stem").fill("ui-natural-questions");
@@ -2483,6 +2485,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval run history").getByText("natural-questions")).toBeVisible();
 
   await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
+  await page.locator("summary").filter({ hasText: "OCR benchmark" }).click();
   await page.getByLabel("OCR benchmark path").fill("ocr-benchmark/manifest.json");
   await page.getByLabel("OCR benchmark format").selectOption("manifest");
   await page.getByLabel("OCR benchmark max cases").fill("1");

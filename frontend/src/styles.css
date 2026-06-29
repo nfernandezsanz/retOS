@@ -2233,22 +2233,69 @@ button:focus-visible {
 
 .eval-runner-forms {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
-  max-height: min(360px, calc(100vh - 318px));
+  max-height: min(390px, calc(100vh - 304px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
+}
+
+.dataset-accordion {
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.dataset-accordion summary {
+  position: relative;
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.dataset-accordion summary span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dataset-accordion summary strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.dataset-accordion summary:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.dataset-accordion[open] summary {
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .eval-dataset-form {
   align-content: start;
   grid-template-columns: minmax(0, 1fr) minmax(92px, 0.42fr);
   margin-bottom: 0;
-  border: 1px solid #dbe3ef;
-  border-radius: 8px;
-  background: #ffffff;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   padding: 12px;
+}
+
+.dataset-accordion .dataset-form-heading {
+  display: none;
 }
 
 .dataset-form-heading {
