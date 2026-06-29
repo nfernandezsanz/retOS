@@ -27,11 +27,20 @@ def write_readme(tmp_path: Path, content: str | None = None) -> Path:
     return readme_path
 
 
+def write_makefile(tmp_path: Path, content: str | None = None) -> Path:
+    makefile_path = tmp_path / "Makefile"
+    makefile_path.write_text(
+        content or (ROOT / "Makefile").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    return makefile_path
+
+
 def test_readme_usability_gate_accepts_current_contract(tmp_path: Path) -> None:
     gate = load_readme_usability_gate()
     readme_path = write_readme(tmp_path)
+    makefile_path = write_makefile(tmp_path)
 
-    gate.validate_readme(readme_path)
+    gate.validate_readme(readme_path, makefile_path)
 
 
 def test_readme_usability_gate_rejects_missing_status_heading(tmp_path: Path) -> None:
@@ -40,9 +49,10 @@ def test_readme_usability_gate_rejects_missing_status_heading(tmp_path: Path) ->
         tmp_path,
         (ROOT / "README.md").read_text(encoding="utf-8").replace("## Current Status", "## Status"),
     )
+    makefile_path = write_makefile(tmp_path)
 
     try:
-        gate.validate_readme(readme_path)
+        gate.validate_readme(readme_path, makefile_path)
     except SystemExit as exc:
         assert "missing heading: ## Current Status" in str(exc)
     else:
@@ -55,9 +65,10 @@ def test_readme_usability_gate_rejects_missing_local_action(tmp_path: Path) -> N
         tmp_path,
         (ROOT / "README.md").read_text(encoding="utf-8").replace("make local-acceptance", ""),
     )
+    makefile_path = write_makefile(tmp_path)
 
     try:
-        gate.validate_readme(readme_path)
+        gate.validate_readme(readme_path, makefile_path)
     except SystemExit as exc:
         assert "missing phrase: make local-acceptance" in str(exc)
     else:
@@ -76,10 +87,57 @@ def test_readme_usability_gate_rejects_wrong_status_order(tmp_path: Path) -> Non
         tmp_path,
         swapped_content,
     )
+    makefile_path = write_makefile(tmp_path)
 
     try:
-        gate.validate_readme(readme_path)
+        gate.validate_readme(readme_path, makefile_path)
     except SystemExit as exc:
         assert "Current Status must appear before workflow details" in str(exc)
     else:
         raise AssertionError("Expected wrong status order to fail")
+
+
+def test_readme_usability_gate_rejects_missing_make_target(tmp_path: Path) -> None:
+    gate = load_readme_usability_gate()
+    readme_path = write_readme(tmp_path)
+    local_acceptance_target = (
+        "\nlocal-acceptance: doctor check integration frontend-test "
+        "frontend-visual-audit docker-config auditor-handoff-check docker-smoke\n"
+    )
+    renamed_acceptance_target = (
+        "\nlocal-preflight: doctor check integration frontend-test "
+        "frontend-visual-audit docker-config auditor-handoff-check docker-smoke\n"
+    )
+    makefile_content = (
+        (ROOT / "Makefile")
+        .read_text(encoding="utf-8")
+        .replace(local_acceptance_target, renamed_acceptance_target)
+    )
+    makefile_path = write_makefile(tmp_path, makefile_content)
+
+    try:
+        gate.validate_readme(readme_path, makefile_path)
+    except SystemExit as exc:
+        assert "README command references missing Make target: local-acceptance" in str(exc)
+    else:
+        raise AssertionError("Expected missing Make target to fail")
+
+
+def test_readme_usability_gate_rejects_missing_make_command_text(
+    tmp_path: Path,
+) -> None:
+    gate = load_readme_usability_gate()
+    readme_path = write_readme(
+        tmp_path,
+        (ROOT / "README.md")
+        .read_text(encoding="utf-8")
+        .replace("make docker-smoke", "make stack-smoke"),
+    )
+    makefile_path = write_makefile(tmp_path)
+
+    try:
+        gate.validate_readme(readme_path, makefile_path)
+    except SystemExit as exc:
+        assert "missing phrase: make docker-smoke" in str(exc)
+    else:
+        raise AssertionError("Expected missing README command to fail")

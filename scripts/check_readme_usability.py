@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
+MAKEFILE = ROOT / "Makefile"
 
 REQUIRED_HEADINGS = (
     "# RetOS",
@@ -52,18 +54,44 @@ FIRST_MINUTE_ROWS = (
     "| Work with agents |",
 )
 
+REQUIRED_MAKE_TARGETS = (
+    "check",
+    "local-acceptance",
+    "auditor-handoff-check",
+    "audit-bundle-check",
+    "frontend-e2e",
+    "frontend-visual-audit",
+    "docker-smoke",
+    "production-preflight",
+)
+
 
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise SystemExit(f"README usability failed: {message}")
 
 
-def validate_readme(readme_path: Path = README) -> None:
+def make_targets(makefile_path: Path = MAKEFILE) -> set[str]:
+    require(
+        makefile_path.is_file() and makefile_path.stat().st_size > 0,
+        "missing or empty Makefile",
+    )
+    targets: set[str] = set()
+    target_pattern = re.compile(r"^([A-Za-z0-9_.-]+):(?:\s|$)")
+    for line in makefile_path.read_text(encoding="utf-8").splitlines():
+        match = target_pattern.match(line)
+        if match and not line.startswith("."):
+            targets.add(match.group(1))
+    return targets
+
+
+def validate_readme(readme_path: Path = README, makefile_path: Path = MAKEFILE) -> None:
     require(
         readme_path.is_file() and readme_path.stat().st_size > 0,
         "missing or empty README.md",
     )
     content = readme_path.read_text(encoding="utf-8")
+    targets = make_targets(makefile_path)
 
     for heading in REQUIRED_HEADINGS:
         require(heading in content, f"missing heading: {heading}")
@@ -73,6 +101,16 @@ def validate_readme(readme_path: Path = README) -> None:
 
     for row in FIRST_MINUTE_ROWS:
         require(row in content, f"First Minute table missing row: {row}")
+
+    for target in REQUIRED_MAKE_TARGETS:
+        require(
+            target in targets,
+            f"README command references missing Make target: {target}",
+        )
+        require(
+            f"make {target}" in content,
+            f"README missing command for Make target: {target}",
+        )
 
     require(
         content.index("## First Minute") < content.index("## Local Quick Start"),
