@@ -2285,6 +2285,12 @@ test("loads the operational console", async ({ page }) => {
     "data-tooltip",
     /regression-gate/,
   );
+  await expect(page.getByLabel("Active eval scope").getByText("Dataset reports")).toBeVisible();
+  await expect(
+    page.getByLabel("Active eval scope").locator("[data-tooltip]").filter({
+      hasText: "No paid calls",
+    }),
+  ).toHaveAttribute("data-tooltip", /mocked providers/);
   await page.getByRole("button", { name: "Run eval smoke" }).click();
   await expect(page.getByLabel("Eval metrics").getByText("retrieval recall")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("built-in")).toBeVisible();

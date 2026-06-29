@@ -2000,21 +2000,32 @@ button:focus-visible {
 }
 
 .eval-scope-note {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.eval-scope-note div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #f8fafc;
-  color: #475569;
-  font-size: 13px;
-  margin-bottom: 10px;
-  padding: 10px 12px;
+  padding: 10px;
+}
+
+.eval-scope-note span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .eval-scope-note strong {
   color: #0f172a;
+  overflow-wrap: anywhere;
 }
 
 .eval-runner-forms {
@@ -3314,6 +3325,7 @@ button:focus-visible {
   .eval-trends,
   .trend-metric-row,
   .eval-toolbar,
+  .eval-scope-note,
   .eval-runner-forms,
   .eval-metrics,
   .ingestion-context,

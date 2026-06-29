@@ -5077,14 +5077,22 @@ function App() {
               </label>
             </div>
             <div
-              className="eval-scope-note"
+              className="eval-scope-note eval-context"
               hidden={activeModule !== "evals-runner"}
               aria-label="Active eval scope"
             >
-              <span>Dataset evals save under</span>
-              <strong>{evalDatasetScopeLabel}</strong>
-              <span>and history, trends, comparison, and regression gate show</span>
-              <strong>{evalScopeLabel}</strong>
+              <div data-tooltip="Dataset eval jobs and reports are stored under this scope">
+                <span>Dataset reports</span>
+                <strong>{evalDatasetScopeLabel}</strong>
+              </div>
+              <div data-tooltip="History, trend, comparison, and regression-gate views use this filter">
+                <span>Review scope</span>
+                <strong>{evalScopeLabel}</strong>
+              </div>
+              <div data-tooltip="Local eval buttons use fixtures and mocked providers by default">
+                <span>Cost guard</span>
+                <strong>No paid calls</strong>
+              </div>
             </div>
             <div className="eval-runner-forms" hidden={activeModule !== "evals-runner"}>
               <form
