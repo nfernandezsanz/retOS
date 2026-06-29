@@ -166,7 +166,7 @@ button:disabled {
 }
 
 .workspace {
-  padding: 28px;
+  padding: 22px 26px;
 }
 
 .workspace:focus {
@@ -182,14 +182,24 @@ button:disabled {
 }
 
 .section-topbar {
-  margin-bottom: 14px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.section-topbar h1 {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.section-topbar .hero-copy {
+  display: none;
 }
 
 .section-switcher {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .section-switcher a {
@@ -238,7 +248,7 @@ button:disabled {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  margin: -4px 0 16px;
+  margin: -2px 0 12px;
   border: 1px solid var(--retos-border);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
@@ -289,7 +299,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: -4px 0 16px;
+  margin: -2px 0 12px;
   border-left: 4px solid var(--retos-primary);
   border-radius: 8px;
   background: #f8fafc;
@@ -598,7 +608,7 @@ h2 {
 }
 
 .panel {
-  padding: 20px;
+  padding: 16px;
 }
 
 .panel.wide {
@@ -666,7 +676,7 @@ h2 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .status-pill {
@@ -691,12 +701,12 @@ h2 {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .timeline li {
   border-left: 4px solid #cbd5e1;
-  padding: 4px 0 4px 12px;
+  padding: 2px 0 2px 12px;
 }
 
 .timeline li.ready {
@@ -741,7 +751,7 @@ h2 {
 .event-ledger {
   display: grid;
   gap: 10px;
-  max-height: min(620px, 54vh);
+  max-height: min(520px, 46vh);
   margin-top: 16px;
   overflow: auto;
   padding-right: 4px;
@@ -840,8 +850,9 @@ h2 {
 .eval-scope-control select,
 .eval-dataset-form input,
 .eval-dataset-form select,
-.provider-login input {
-  min-height: 140px;
+.provider-login input,
+.runtime-plan-form select {
+  min-height: 112px;
   width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -870,8 +881,17 @@ h2 {
 .eval-scope-control select,
 .eval-dataset-form input,
 .eval-dataset-form select,
+.runtime-plan-form select,
 .query-box.compact-field input {
   min-height: 44px;
+}
+
+.query-box textarea {
+  min-height: 96px;
+}
+
+.text-ingestion-form textarea {
+  min-height: 180px;
 }
 
 .query-box textarea:focus-visible,
@@ -889,6 +909,7 @@ h2 {
 .eval-dataset-form input:focus-visible,
 .eval-dataset-form select:focus-visible,
 .provider-login input:focus-visible,
+.runtime-plan-form select:focus-visible,
 button:focus-visible {
   outline: 3px solid #93c5fd;
   outline-offset: 2px;
@@ -952,7 +973,7 @@ button:focus-visible {
 .document-list {
   display: grid;
   gap: 10px;
-  max-height: min(680px, 58vh);
+  max-height: min(560px, 48vh);
   margin-top: 14px;
   overflow: auto;
   padding-right: 4px;
@@ -1237,7 +1258,7 @@ button:focus-visible {
 .source-list {
   display: grid;
   gap: 10px;
-  max-height: min(420px, 42vh);
+  max-height: min(360px, 34vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -1296,12 +1317,12 @@ button:focus-visible {
 .query-result {
   display: grid;
   gap: 12px;
-  max-height: min(660px, 56vh);
-  margin-top: 16px;
+  max-height: min(560px, 48vh);
+  margin-top: 14px;
   overflow: auto;
   padding-right: 4px;
   border-top: 1px solid #dbe3ef;
-  padding-top: 16px;
+  padding-top: 14px;
 }
 
 .query-result > p {
@@ -1337,10 +1358,32 @@ button:focus-visible {
 .query-plan {
   display: grid;
   gap: 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.insight-section {
+  display: grid;
+  gap: 10px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #ffffff;
-  padding: 12px;
+  padding: 10px 12px;
+}
+
+.insight-section summary {
+  position: relative;
+  cursor: pointer;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.insight-section[open] summary {
+  margin-bottom: 10px;
 }
 
 .query-plan-searches {
@@ -1382,6 +1425,9 @@ button:focus-visible {
 .citation-list {
   display: grid;
   gap: 10px;
+  max-height: min(320px, 32vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .neighbor-list {
@@ -1396,10 +1442,10 @@ button:focus-visible {
 .evidence-route {
   display: grid;
   gap: 10px;
-  border: 1px solid #dbe3ef;
-  border-radius: 8px;
-  background: #ffffff;
-  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .multi-hop-audit {
@@ -1623,7 +1669,7 @@ button:focus-visible {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  max-height: min(540px, 48vh);
+  max-height: min(480px, 42vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -1728,7 +1774,7 @@ button:focus-visible {
 .eval-case-list {
   display: grid;
   gap: 10px;
-  max-height: min(460px, 46vh);
+  max-height: min(380px, 38vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -1787,7 +1833,7 @@ button:focus-visible {
 .eval-history {
   display: grid;
   gap: 12px;
-  max-height: min(720px, 62vh);
+  max-height: min(560px, 50vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -1990,7 +2036,7 @@ button:focus-visible {
 .eval-run-list {
   display: grid;
   gap: 10px;
-  max-height: min(520px, 48vh);
+  max-height: min(440px, 40vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -2026,7 +2072,7 @@ button:focus-visible {
 .job-ledger {
   display: grid;
   gap: 12px;
-  max-height: min(640px, 56vh);
+  max-height: min(520px, 46vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -2213,7 +2259,7 @@ button:focus-visible {
 .job-progress-list {
   display: grid;
   gap: 10px;
-  max-height: min(460px, 44vh);
+  max-height: min(380px, 36vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -2301,7 +2347,7 @@ button:focus-visible {
 .audit-event-list {
   display: grid;
   gap: 10px;
-  max-height: min(560px, 52vh);
+  max-height: min(440px, 40vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -2359,10 +2405,94 @@ button:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.runtime-plan-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.runtime-plan-panel .section-heading span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.runtime-plan-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 0.8fr) auto auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.runtime-plan-form label:not(.toggle-control) {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.runtime-plan-form .secondary-action {
+  min-width: 152px;
+  margin-top: 0;
+}
+
+.runtime-plan-toggle {
+  align-self: end;
+}
+
+.runtime-plan-output {
+  display: grid;
+  gap: 10px;
+}
+
+.runtime-plan-summary,
+.runtime-warning-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.runtime-env-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: min(260px, 30vh);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.runtime-env-list div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.runtime-env-list span,
+.runtime-warning-list span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.runtime-env-list strong {
+  color: #0f172a;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .provider-list {
   display: grid;
   gap: 10px;
-  max-height: min(520px, 48vh);
+  max-height: min(420px, 38vh);
   margin-top: 18px;
   overflow: auto;
   padding-right: 4px;
@@ -2438,7 +2568,7 @@ button:focus-visible {
 .admin-user-list {
   display: grid;
   gap: 10px;
-  max-height: min(620px, 54vh);
+  max-height: min(480px, 42vh);
   overflow: auto;
   padding-right: 4px;
 }
@@ -2621,10 +2751,25 @@ button:focus-visible {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .topbar,
   .panel-heading {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-topbar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .section-topbar .primary-action {
+    min-width: 0;
+    width: auto;
+    padding: 0 12px;
   }
 
   .metrics,
@@ -2648,6 +2793,7 @@ button:focus-visible {
   .eval-toolbar,
   .eval-runner-forms,
   .eval-metrics,
+  .runtime-plan-form,
   .live-progress-summary,
   .job-row-grid,
   .job-detail-grid,
@@ -2739,6 +2885,48 @@ button:focus-visible {
 }
 
 @media (max-width: 760px) {
+  .workspace {
+    padding: 16px;
+  }
+
+  .section-topbar h1 {
+    font-size: 24px;
+  }
+
+  .section-topbar .primary-action {
+    min-height: 40px;
+    font-size: 0;
+  }
+
+  .section-topbar .primary-action svg {
+    margin: 0;
+  }
+
+  .workspace-context small {
+    display: none;
+  }
+
+  .workspace-context {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .domain-form,
+  .domain-toolbar,
+  .source-form,
+  .file-upload-form,
+  .text-ingestion-form,
+  .query-form,
+  .provider-login,
+  .runtime-plan-panel,
+  .admin-users {
+    gap: 10px;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
   .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

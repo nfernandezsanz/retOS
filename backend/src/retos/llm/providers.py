@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl
 
-from retos.core.config import Settings
+from retos.core.config import AgentRuntimeMode, Settings
 
 ProviderName = Literal["fake", "local", "openai", "anthropic", "google", "openrouter", "azure"]
 
@@ -25,6 +25,20 @@ class ActiveProvider(BaseModel):
     model: str
     paid: bool
     can_call: bool
+    reason: str | None = None
+
+
+class RuntimeSwitchPlan(BaseModel):
+    provider: ProviderName
+    model: str
+    agent_runtime: AgentRuntimeMode
+    paid_provider: bool
+    paid_providers_enabled: bool
+    can_start: bool
+    restart_required: bool = True
+    env: dict[str, str]
+    missing_config: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     reason: str | None = None
 
 
@@ -67,6 +81,27 @@ def provider_model(settings: Settings, provider: ProviderName) -> str:
         "azure": settings.azure_openai_deployment or "unconfigured",
     }
     return models[provider]
+
+
+def provider_model_env_key(provider: ProviderName) -> str | None:
+    keys = {
+        "fake": None,
+        "local": "RETOS_OLLAMA_MODEL",
+        "openai": "RETOS_OPENAI_MODEL",
+        "anthropic": "RETOS_ANTHROPIC_MODEL",
+        "google": "RETOS_GOOGLE_MODEL",
+        "openrouter": "RETOS_OPENROUTER_MODEL",
+        "azure": "RETOS_AZURE_OPENAI_DEPLOYMENT",
+    }
+    return keys[provider]
+
+
+def requested_model(settings: Settings, provider: ProviderName) -> str:
+    if provider == settings.provider and settings.model:
+        return settings.model
+    if provider == "local":
+        return f"ollama:{settings.ollama_model}"
+    return provider_model(settings, provider)
 
 
 def provider_is_configured(settings: Settings, provider: ProviderName) -> bool:
@@ -123,4 +158,55 @@ def active_provider(settings: Settings) -> ActiveProvider:
         paid=profile.paid,
         can_call=profile.enabled,
         reason=profile.reason,
+    )
+
+
+def plan_runtime_switch(
+    settings: Settings,
+    *,
+    provider: ProviderName,
+    agent_runtime: AgentRuntimeMode,
+    allow_paid_llm: bool | None = None,
+) -> RuntimeSwitchPlan:
+    definition = next(item for item in PROVIDER_DEFINITIONS if item.name == provider)
+    paid_enabled = settings.allow_paid_llm if allow_paid_llm is None else allow_paid_llm
+    missing_config = missing_provider_config(settings, provider)
+    configured = not missing_config
+    reason = provider_reason(
+        configured=configured,
+        paid=definition.paid,
+        allow_paid=paid_enabled,
+    )
+    model = requested_model(settings, provider)
+    env = {
+        "RETOS_PROVIDER": provider,
+        "RETOS_AGENT_RUNTIME": agent_runtime,
+        "RETOS_MODEL": model,
+        "RETOS_ALLOW_PAID_LLM": str(paid_enabled).lower(),
+    }
+    model_env_key = provider_model_env_key(provider)
+    if model_env_key is not None:
+        env[model_env_key] = provider_model(settings, provider)
+    if provider == "local":
+        env["RETOS_OLLAMA_BASE_URL"] = settings.ollama_base_url
+
+    warnings = ["Restart API and worker after changing runtime environment."]
+    if agent_runtime == "deepagents":
+        warnings.append("Deep Agents synthesis may call the active provider during queries.")
+    if definition.paid:
+        warnings.append("Paid provider use requires an explicit budget owner and key review.")
+    if missing_config:
+        warnings.append("Set missing provider configuration before restart.")
+
+    return RuntimeSwitchPlan(
+        provider=provider,
+        model=model,
+        agent_runtime=agent_runtime,
+        paid_provider=definition.paid,
+        paid_providers_enabled=paid_enabled,
+        can_start=reason is None,
+        env=env,
+        missing_config=missing_config,
+        warnings=warnings,
+        reason=reason,
     )

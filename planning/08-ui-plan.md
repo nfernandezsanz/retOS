@@ -48,6 +48,9 @@ follow the active module so provider and user management do not feel like the sa
 - The admin provider panel logs in through `/auth/login` and reads `/llm/providers`.
 - The provider catalog is rendered as operational status, not as editable secret
   management.
+- The provider panel previews runtime switch plans through `/llm/runtime-plan`, rendering
+  non-secret env values, missing safe config names, paid-provider warnings, and restart
+  status without mutating the running process.
 - Paid providers are visibly marked and remain blocked unless backend configuration and
   `RETOS_ALLOW_PAID_LLM=true` allow them.
 - The workspace reads `/domains`, creates domains through `POST /domains`, keeps an

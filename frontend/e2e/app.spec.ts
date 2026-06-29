@@ -719,6 +719,36 @@ async function mockProviderApi(page: Page) {
       },
     });
   });
+  await page.route("http://localhost:8000/llm/runtime-plan", async (route) => {
+    const payload = route.request().postDataJSON() as {
+      provider: string;
+      agent_runtime: string;
+      allow_paid_llm: boolean;
+    };
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        provider: payload.provider,
+        model: payload.provider === "local" ? "ollama:gemma4" : "gpt-5-mini",
+        agent_runtime: payload.agent_runtime,
+        paid_provider: payload.provider !== "local",
+        paid_providers_enabled: payload.allow_paid_llm,
+        can_start: payload.provider === "local",
+        restart_required: true,
+        env: {
+          RETOS_PROVIDER: payload.provider,
+          RETOS_AGENT_RUNTIME: payload.agent_runtime,
+          RETOS_MODEL: payload.provider === "local" ? "ollama:gemma4" : "gpt-5-mini",
+          RETOS_ALLOW_PAID_LLM: String(payload.allow_paid_llm),
+          RETOS_OLLAMA_MODEL: "gemma4",
+          RETOS_OLLAMA_BASE_URL: "http://ollama:11434",
+        },
+        missing_config: [],
+        warnings: ["Restart API and worker after changing runtime environment."],
+        reason: null,
+      },
+    });
+  });
   await page.route("http://localhost:8000/domains", async (route) => {
     if (route.request().method() === "POST") {
       const created = {
@@ -1697,10 +1727,17 @@ test("loads the operational console", async ({ page }) => {
 
   await expect(page.getByText("Active provider")).toBeVisible();
   await expect(page.getByText("Active model")).toBeVisible();
-  await expect(page.getByText("Agent runtime")).toBeVisible();
+  await expect(page.locator(".provider-summary").getByText("Agent runtime")).toBeVisible();
   await expect(page.getByText("ollama:gemma4")).toBeVisible();
   await expect(page.getByText("deepagents")).toBeVisible();
   await expect(page.getByText("Paid providers blocked")).toBeVisible();
+  await expect(page.getByLabel("Runtime switch planner")).toBeVisible();
+  await page.getByLabel("Runtime plan provider").selectOption("local");
+  await page.getByLabel("Runtime plan agent runtime").selectOption("deepagents");
+  await page.getByRole("button", { name: "Preview plan" }).click();
+  await expect(page.getByLabel("Runtime environment plan").getByText("Can start after restart")).toBeVisible();
+  await expect(page.getByLabel("Runtime environment plan").getByText("RETOS_AGENT_RUNTIME")).toBeVisible();
+  await expect(page.getByLabel("Runtime environment plan").getByText("deepagents")).toBeVisible();
   const localProviderRow = page
     .getByLabel("Available LLM providers")
     .locator(".provider-row")
@@ -1791,12 +1828,15 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Query plan").getByText("multi hop evidence route")).toBeVisible();
   await expect(page.getByLabel("Query plan").getByText("expects multi document")).toBeVisible();
   await expect(page.getByLabel("Query plan").getByText("evidence mentions readiness search")).toBeVisible();
+  await page.getByText("Evidence route", { exact: true }).click();
   await expect(page.getByLabel("Evidence route").getByText("single citation")).toBeVisible();
   await expect(page.getByLabel("Evidence route").getByText("Smoke Document")).toBeVisible();
+  await page.getByText("Multi-hop audit", { exact: true }).click();
   await expect(page.getByLabel("Multi-hop audit").getByText("supported multi document")).toBeVisible();
   await expect(page.getByLabel("Multi-hop audit").getByText("multi-hop question")).toBeVisible();
   await expect(page.getByLabel("Multi-hop audit").getByText("Bridge terms: search, readiness")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
+  await page.getByText("Neighbor context", { exact: true }).click();
   await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("page=1")).toBeVisible();
 
@@ -2074,7 +2114,7 @@ test("keeps provider controls usable on mobile", async ({ page }) => {
   await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
 
-  await expect(page.getByText("Ollama local runtime")).toBeVisible();
+  await expect(page.getByLabel("Available LLM providers").getByText("Ollama local runtime")).toBeVisible();
   await page.getByRole("link", { name: "Evals" }).first().click();
   await expect(page.locator("#evals").getByRole("heading", { name: "Local evals" })).toBeVisible();
   await page.getByRole("link", { name: "Audit" }).first().click();

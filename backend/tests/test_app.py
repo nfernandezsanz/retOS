@@ -25,6 +25,7 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/jobs/{job_id}/start" in route_paths
     assert "/jobs/{job_id}/complete" in route_paths
     assert "/llm/providers" in route_paths
+    assert "/llm/runtime-plan" in route_paths
     assert "/domains/{domain_id}/queries" in route_paths
     assert "/domains/{domain_id}/ingestions/upload" in route_paths
     assert "/evals/smoke" in route_paths

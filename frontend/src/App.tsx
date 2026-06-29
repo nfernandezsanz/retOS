@@ -60,6 +60,20 @@ type ProviderCatalog = {
   providers: ProviderProfile[];
 };
 
+type RuntimeSwitchPlan = {
+  provider: ProviderName;
+  model: string;
+  agent_runtime: string;
+  paid_provider: boolean;
+  paid_providers_enabled: boolean;
+  can_start: boolean;
+  restart_required: boolean;
+  env: Record<string, string>;
+  missing_config: string[];
+  warnings: string[];
+  reason: string | null;
+};
+
 type RuntimeVersion = {
   service: string;
   version: string;
@@ -836,6 +850,19 @@ async function loadProviderCatalog(token: string): Promise<ProviderCatalog> {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  });
+}
+
+async function previewRuntimePlan(
+  token: string,
+  payload: { provider: ProviderName; agent_runtime: string; allow_paid_llm?: boolean },
+): Promise<RuntimeSwitchPlan> {
+  return requestJson<RuntimeSwitchPlan>("/llm/runtime-plan", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
   });
 }
 
@@ -1669,6 +1696,12 @@ function App() {
   const [password, setPassword] = useState("");
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY) ?? "");
   const [catalog, setCatalog] = useState<ProviderCatalog | null>(null);
+  const [runtimePlanProvider, setRuntimePlanProvider] = useState<ProviderName>("local");
+  const [runtimePlanAgentRuntime, setRuntimePlanAgentRuntime] = useState("deepagents");
+  const [runtimePlanAllowPaid, setRuntimePlanAllowPaid] = useState(false);
+  const [runtimePlan, setRuntimePlan] = useState<RuntimeSwitchPlan | null>(null);
+  const [isPreviewingRuntimePlan, setIsPreviewingRuntimePlan] = useState(false);
+  const [runtimePlanError, setRuntimePlanError] = useState<string | null>(null);
   const [adminUsers, setAdminUsers] = useState<AdminUserRead[]>([]);
   const [adminUserEmail, setAdminUserEmail] = useState("");
   const [adminUserPassword, setAdminUserPassword] = useState("");
@@ -2157,6 +2190,11 @@ function App() {
       setToken(accessToken);
       const nextCatalog = await loadProviderCatalog(accessToken);
       setCatalog(nextCatalog);
+      setRuntimePlanProvider(nextCatalog.active.provider);
+      setRuntimePlanAgentRuntime(nextCatalog.agent_runtime);
+      setRuntimePlanAllowPaid(nextCatalog.paid_providers_enabled);
+      setRuntimePlan(null);
+      setRuntimePlanError(null);
       await refreshAdminUsers(accessToken);
       await refreshWorkspace(accessToken);
       await refreshAudit(accessToken);
@@ -2209,6 +2247,26 @@ function App() {
       setAdminUserError(error instanceof Error ? error.message : "Admin user create failed");
     } finally {
       setIsCreatingAdminUser(false);
+    }
+  }
+
+  async function handlePreviewRuntimePlan(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsPreviewingRuntimePlan(true);
+    setRuntimePlanError(null);
+    try {
+      const accessToken = await getAdminToken();
+      const plan = await previewRuntimePlan(accessToken, {
+        provider: runtimePlanProvider,
+        agent_runtime: runtimePlanAgentRuntime,
+        allow_paid_llm: runtimePlanAllowPaid,
+      });
+      setRuntimePlan(plan);
+    } catch (error) {
+      setRuntimePlan(null);
+      setRuntimePlanError(readableError(error, "Runtime plan failed"));
+    } finally {
+      setIsPreviewingRuntimePlan(false);
     }
   }
 
@@ -3087,6 +3145,12 @@ function App() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setToken("");
     setCatalog(null);
+    setRuntimePlanProvider("local");
+    setRuntimePlanAgentRuntime("deepagents");
+    setRuntimePlanAllowPaid(false);
+    setRuntimePlan(null);
+    setRuntimePlanError(null);
+    setIsPreviewingRuntimePlan(false);
     setAdminUsers([]);
     setAdminUserEmail("");
     setAdminUserPassword("");
@@ -3460,6 +3524,7 @@ function App() {
                         <button
                           className="icon-button"
                           disabled={isEditing || isArchiving || isRestoring || isArchived}
+                          data-tooltip="Rename this document"
                           title="Edit document title"
                           type="button"
                           aria-label={`Edit ${document.title}`}
@@ -3470,6 +3535,7 @@ function App() {
                         <button
                           className="icon-button"
                           disabled={isEditing || isLoadingDocumentHistory}
+                          data-tooltip="Open the document journal history"
                           title="View document history"
                           type="button"
                           aria-label={`History ${document.title}`}
@@ -3484,6 +3550,7 @@ function App() {
                         <button
                           className="icon-button"
                           disabled={isEditing || isLoadingDocumentEvidence}
+                          data-tooltip="Inspect versions, artifacts, and segments"
                           title="Inspect document evidence"
                           type="button"
                           aria-label={`Evidence ${document.title}`}
@@ -3499,6 +3566,7 @@ function App() {
                           <button
                             className="icon-button"
                             disabled={isEditing || isRestoring}
+                            data-tooltip="Restore this archived document"
                             title="Restore document"
                             type="button"
                             aria-label={`Restore ${document.title}`}
@@ -3510,6 +3578,7 @@ function App() {
                           <button
                             className="icon-button danger"
                             disabled={isEditing || isArchiving}
+                            data-tooltip="Archive without deleting audit history"
                             title="Archive document"
                             type="button"
                             aria-label={`Archive ${document.title}`}
@@ -3713,6 +3782,11 @@ function App() {
                     <button
                       className="ghost-action"
                       disabled={source.kind !== "mount" || isQueueingScan}
+                      data-tooltip={
+                        source.kind === "mount"
+                          ? "Queue a scan for this mounted source"
+                          : "Only mounted sources can be scanned locally"
+                      }
                       type="button"
                       onClick={() => void handleScanSource(source.id)}
                     >
@@ -3925,131 +3999,156 @@ function App() {
                       {queryResult.usage.budget.max_evidence_tokens} tokens
                     </span>
                   </div>
-                  <div className="query-plan" aria-label="Query plan">
-                    <div className="route-summary">
-                      <span className={queryPlan.requires_multi_hop ? "badge warning" : "badge muted"}>
-                        {queryPlan.strategy.replaceAll("_", " ")}
-                      </span>
-                      <span className={queryPlan.expected_evidence === "multi_document" ? "badge success" : "badge muted"}>
-                        expects {queryPlan.expected_evidence.replaceAll("_", " ")}
-                      </span>
-                      {queryPlan.warnings.map((warning) => (
-                        <span className="badge warning" key={warning}>
-                          {warning.replaceAll("_", " ")}
+                  <details className="insight-section" open>
+                    <summary data-tooltip="Show the retrieval strategy and planned search steps">
+                      Query plan
+                    </summary>
+                    <div className="query-plan" aria-label="Query plan">
+                      <div className="route-summary">
+                        <span className={queryPlan.requires_multi_hop ? "badge warning" : "badge muted"}>
+                          {queryPlan.strategy.replaceAll("_", " ")}
                         </span>
-                      ))}
-                    </div>
-                    {queryPlan.search_queries.length > 0 ? (
-                      <div className="query-plan-searches">
-                        {queryPlan.search_queries.slice(0, 4).map((searchQuery) => (
-                          <span key={searchQuery}>{searchQuery}</span>
+                        <span className={queryPlan.expected_evidence === "multi_document" ? "badge success" : "badge muted"}>
+                          expects {queryPlan.expected_evidence.replaceAll("_", " ")}
+                        </span>
+                        {queryPlan.warnings.map((warning) => (
+                          <span className="badge warning" key={warning}>
+                            {warning.replaceAll("_", " ")}
+                          </span>
                         ))}
                       </div>
-                    ) : null}
-                    {queryPlan.steps.length > 0 ? (
-                      <ol>
-                        {queryPlan.steps.map((step) => (
-                          <li key={step.name}>
-                            <strong>{step.name}</strong>
-                            <span>{step.description}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    ) : null}
-                  </div>
-                  <p>{queryResult.answer}</p>
-                  <div className="citation-list" aria-label="Query citations">
-                    {queryResult.citations.map((citation) => (
-                      <article className="citation-row" key={citation.segment_id}>
-                        <div>
-                          <strong>{citation.title}</strong>
-                          <span>{citation.anchor ?? "No anchor"}</span>
+                      {queryPlan.search_queries.length > 0 ? (
+                        <div className="query-plan-searches">
+                          {queryPlan.search_queries.slice(0, 4).map((searchQuery) => (
+                            <span key={searchQuery}>{searchQuery}</span>
+                          ))}
                         </div>
-                        <p>{citation.text}</p>
-                        <span className="badge muted">
-                          <Link2 aria-hidden="true" />
-                          {citation.segment_id.slice(0, 8)}
-                        </span>
-                      </article>
-                    ))}
-                  </div>
-                  <div className="evidence-route" aria-label="Evidence route">
-                    <div className="route-summary">
-                      <span className={evidenceRoute.multi_document ? "badge success" : "badge muted"}>
-                        {evidenceRoute.multi_document ? "multi document" : "single document"}
-                      </span>
-                      <span className={evidenceRoute.has_neighbor_context ? "badge success" : "badge muted"}>
-                        {evidenceRoute.has_neighbor_context ? "context expanded" : "no context"}
-                      </span>
-                      {evidenceRoute.warnings.map((warning) => (
-                        <span className="badge warning" key={warning}>
-                          {warning.replaceAll("_", " ")}
-                        </span>
-                      ))}
+                      ) : null}
+                      {queryPlan.steps.length > 0 ? (
+                        <ol>
+                          {queryPlan.steps.map((step) => (
+                            <li key={step.name}>
+                              <strong>{step.name}</strong>
+                              <span>{step.description}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : null}
                     </div>
-                    {evidenceRoute.documents.length > 0 ? (
-                      <div className="route-documents">
-                        {evidenceRoute.documents.map((document) => (
-                          <article className="route-document" key={document.document_id}>
-                            <strong>{document.title}</strong>
-                            <span>
-                              {document.segment_ids.length} segments /{" "}
-                              {document.anchors.length} anchors
-                            </span>
-                          </article>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="evidence-route multi-hop-audit" aria-label="Multi-hop audit">
-                    <div className="route-summary">
-                      <span
-                        className={
-                          multiHopAudit.status === "supported_multi_document"
-                            ? "badge success"
-                            : multiHopAudit.requires_multi_hop
-                              ? "badge warning"
-                              : "badge muted"
-                        }
-                      >
-                        {multiHopAudit.status.replaceAll("_", " ")}
-                      </span>
-                      <span className={multiHopAudit.requires_multi_hop ? "badge warning" : "badge muted"}>
-                        {multiHopAudit.requires_multi_hop ? "multi-hop question" : "single-hop question"}
-                      </span>
-                      <span className={multiHopAudit.document_count > 1 ? "badge success" : "badge muted"}>
-                        {multiHopAudit.document_count} documents
-                      </span>
-                      {multiHopAudit.warnings.map((warning) => (
-                        <span className="badge warning" key={warning}>
-                          {warning.replaceAll("_", " ")}
-                        </span>
-                      ))}
-                    </div>
-                    {multiHopAudit.bridge_terms.length > 0 ? (
-                      <p className="audit-note">
-                        Bridge terms: {multiHopAudit.bridge_terms.join(", ")}
-                      </p>
-                    ) : null}
-                  </div>
-                  {(queryResult.neighbor_context ?? []).length > 0 ? (
-                    <div className="citation-list neighbor-list" aria-label="Neighbor context">
-                      {(queryResult.neighbor_context ?? []).map((context) => (
-                        <article className="citation-row" key={context.segment_id}>
+                  </details>
+                  <p>{queryResult.answer}</p>
+                  <details className="insight-section" open>
+                    <summary data-tooltip="Review the exact cited snippets used by the answer">
+                      Citations
+                    </summary>
+                    <div className="citation-list" aria-label="Query citations">
+                      {queryResult.citations.map((citation) => (
+                        <article className="citation-row" key={citation.segment_id}>
                           <div>
-                            <strong>{context.title}</strong>
-                            <span>
-                              {context.anchor ?? "No anchor"} near{" "}
-                              {context.source_segment_id.slice(0, 8)}
-                            </span>
+                            <strong>{citation.title}</strong>
+                            <span>{citation.anchor ?? "No anchor"}</span>
                           </div>
-                          <p>{context.text}</p>
+                          <p>{citation.text}</p>
                           <span className="badge muted">
-                            {context.token_count} tokens
+                            <Link2 aria-hidden="true" />
+                            {citation.segment_id.slice(0, 8)}
                           </span>
                         </article>
                       ))}
                     </div>
+                  </details>
+                  <details className="insight-section">
+                    <summary data-tooltip="Inspect document coverage and expanded context routing">
+                      Evidence route
+                    </summary>
+                    <div className="evidence-route" aria-label="Evidence route">
+                      <div className="route-summary">
+                        <span className={evidenceRoute.multi_document ? "badge success" : "badge muted"}>
+                          {evidenceRoute.multi_document ? "multi document" : "single document"}
+                        </span>
+                        <span className={evidenceRoute.has_neighbor_context ? "badge success" : "badge muted"}>
+                          {evidenceRoute.has_neighbor_context ? "context expanded" : "no context"}
+                        </span>
+                        {evidenceRoute.warnings.map((warning) => (
+                          <span className="badge warning" key={warning}>
+                            {warning.replaceAll("_", " ")}
+                          </span>
+                        ))}
+                      </div>
+                      {evidenceRoute.documents.length > 0 ? (
+                        <div className="route-documents">
+                          {evidenceRoute.documents.map((document) => (
+                            <article className="route-document" key={document.document_id}>
+                              <strong>{document.title}</strong>
+                              <span>
+                                {document.segment_ids.length} segments /{" "}
+                                {document.anchors.length} anchors
+                              </span>
+                            </article>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </details>
+                  <details className="insight-section">
+                    <summary data-tooltip="Check whether the answer needed multiple documents or bridge terms">
+                      Multi-hop audit
+                    </summary>
+                    <div className="evidence-route multi-hop-audit" aria-label="Multi-hop audit">
+                      <div className="route-summary">
+                        <span
+                          className={
+                            multiHopAudit.status === "supported_multi_document"
+                              ? "badge success"
+                              : multiHopAudit.requires_multi_hop
+                                ? "badge warning"
+                                : "badge muted"
+                          }
+                        >
+                          {multiHopAudit.status.replaceAll("_", " ")}
+                        </span>
+                        <span className={multiHopAudit.requires_multi_hop ? "badge warning" : "badge muted"}>
+                          {multiHopAudit.requires_multi_hop ? "multi-hop question" : "single-hop question"}
+                        </span>
+                        <span className={multiHopAudit.document_count > 1 ? "badge success" : "badge muted"}>
+                          {multiHopAudit.document_count} documents
+                        </span>
+                        {multiHopAudit.warnings.map((warning) => (
+                          <span className="badge warning" key={warning}>
+                            {warning.replaceAll("_", " ")}
+                          </span>
+                        ))}
+                      </div>
+                      {multiHopAudit.bridge_terms.length > 0 ? (
+                        <p className="audit-note">
+                          Bridge terms: {multiHopAudit.bridge_terms.join(", ")}
+                        </p>
+                      ) : null}
+                    </div>
+                  </details>
+                  {(queryResult.neighbor_context ?? []).length > 0 ? (
+                    <details className="insight-section">
+                      <summary data-tooltip="Show nearby segments used to validate context">
+                        Neighbor context
+                      </summary>
+                      <div className="citation-list neighbor-list" aria-label="Neighbor context">
+                        {(queryResult.neighbor_context ?? []).map((context) => (
+                          <article className="citation-row" key={context.segment_id}>
+                            <div>
+                              <strong>{context.title}</strong>
+                              <span>
+                                {context.anchor ?? "No anchor"} near{" "}
+                                {context.source_segment_id.slice(0, 8)}
+                              </span>
+                            </div>
+                            <p>{context.text}</p>
+                            <span className="badge muted">
+                              {context.token_count} tokens
+                            </span>
+                          </article>
+                        ))}
+                      </div>
+                    </details>
                   ) : null}
                 </>
                   );
@@ -4873,6 +4972,103 @@ function App() {
                 </div>
               </section>
             </div>
+
+            {catalog ? (
+              <section
+                className="runtime-plan-panel"
+                hidden={activeModule !== "admin-providers"}
+                aria-label="Runtime switch planner"
+              >
+                <div className="section-heading compact">
+                  <div>
+                    <h3>Runtime switch plan</h3>
+                    <span>Restart required</span>
+                  </div>
+                  <span className={runtimePlan?.can_start ? "badge success" : "badge muted"}>
+                    {runtimePlan ? (runtimePlan.can_start ? "Ready" : "Needs config") : "Not previewed"}
+                  </span>
+                </div>
+                <form className="runtime-plan-form" onSubmit={handlePreviewRuntimePlan}>
+                  <label>
+                    <span>Provider</span>
+                    <select
+                      aria-label="Runtime plan provider"
+                      value={runtimePlanProvider}
+                      onChange={(event) => setRuntimePlanProvider(event.target.value as ProviderName)}
+                    >
+                      {catalog.providers.map((provider) => (
+                        <option key={provider.name} value={provider.name}>
+                          {provider.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Agent runtime</span>
+                    <select
+                      aria-label="Runtime plan agent runtime"
+                      value={runtimePlanAgentRuntime}
+                      onChange={(event) => setRuntimePlanAgentRuntime(event.target.value)}
+                    >
+                      <option value="deepagents">Deep Agents</option>
+                      <option value="deterministic">Deterministic</option>
+                    </select>
+                  </label>
+                  <label className="toggle-control runtime-plan-toggle">
+                    <input
+                      type="checkbox"
+                      checked={runtimePlanAllowPaid}
+                      onChange={(event) => setRuntimePlanAllowPaid(event.target.checked)}
+                    />
+                    <span>Allow paid providers</span>
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Preview safe environment values for the selected runtime"
+                    disabled={isPreviewingRuntimePlan}
+                    type="submit"
+                  >
+                    <ServerCog aria-hidden="true" />
+                    {isPreviewingRuntimePlan ? "Previewing plan" : "Preview plan"}
+                  </button>
+                </form>
+                {runtimePlanError ? (
+                  <p className="inline-error" role="alert">
+                    {runtimePlanError}
+                  </p>
+                ) : null}
+                {runtimePlan ? (
+                  <div className="runtime-plan-output" aria-label="Runtime environment plan">
+                    <div className="runtime-plan-summary">
+                      <span className={runtimePlan.can_start ? "badge success" : "badge warning"}>
+                        {runtimePlan.can_start ? "Can start after restart" : runtimePlan.reason}
+                      </span>
+                      <span className={runtimePlan.paid_provider ? "badge warning" : "badge success"}>
+                        {runtimePlan.paid_provider ? "Paid provider" : "Local/test provider"}
+                      </span>
+                      {runtimePlan.missing_config.map((item) => (
+                        <span className="badge warning" key={item}>
+                          Missing {item}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="runtime-env-list">
+                      {Object.entries(runtimePlan.env).map(([key, value]) => (
+                        <div key={key}>
+                          <span>{key}</span>
+                          <strong>{value}</strong>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="runtime-warning-list">
+                      {runtimePlan.warnings.map((warning) => (
+                        <span key={warning}>{warning}</span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
 
             <div
               className="provider-list"

@@ -66,15 +66,21 @@ The endpoint never returns API keys and never performs a model call. This gives 
 safe way to render provider switches and warnings before the Deep Agents runtime is
 connected.
 
+`POST /llm/runtime-plan` accepts a target provider, target agent runtime, and optional
+paid-provider opt-in flag. It returns a non-secret env patch, missing safe configuration
+names, restart warnings, and a `can_start` flag. The planner does not persist changes
+and does not call providers; it is an operator-safe bridge between read-only catalog
+visibility and a future persisted audited runtime settings model.
+
 The implemented Admin UI currently keeps provider configuration read-only and
 operator-safe: it marks the active provider/model, labels profiles as active or
 available, distinguishes configured profiles from missing configuration, shows the
-active agent runtime and paid-provider process policy, and surfaces only safe hints such
-as missing environment variable names or the Ollama base URL. Live runtime switching is
-intentionally deferred until there is a persisted, audited configuration story; today
-switching profiles is done by changing `RETOS_PROVIDER`, `RETOS_AGENT_RUNTIME`, and
-related environment variables, then letting startup validation fail fast if the choice is
-unsafe.
+active agent runtime and paid-provider process policy, previews safe switch plans, and
+surfaces only safe hints such as missing environment variable names or the Ollama base
+URL. Live runtime switching is intentionally deferred until there is a persisted,
+audited configuration story; today switching profiles is done by applying a generated
+env plan for `RETOS_PROVIDER`, `RETOS_AGENT_RUNTIME`, and related variables, then letting
+startup validation fail fast if the choice is unsafe.
 
 Runtime startup uses the same configuration checks as the catalog. Selecting a paid
 provider requires both `RETOS_ALLOW_PAID_LLM=true` and complete provider configuration;

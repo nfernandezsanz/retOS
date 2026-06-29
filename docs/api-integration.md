@@ -754,6 +754,45 @@ URL or missing environment variable names. It does not write provider settings o
 secrets; runtime switching remains an explicit environment/configuration change that is
 validated on startup.
 
+Preview a safe local runtime switch plan:
+
+```bash
+curl --request POST http://localhost:8000/llm/runtime-plan \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"provider":"local","agent_runtime":"deepagents","allow_paid_llm":false}'
+```
+
+The response is a non-secret `.env` patch plus warnings and missing configuration names:
+
+```json
+{
+  "provider": "local",
+  "model": "ollama:gemma4",
+  "agent_runtime": "deepagents",
+  "paid_provider": false,
+  "paid_providers_enabled": false,
+  "can_start": true,
+  "restart_required": true,
+  "env": {
+    "RETOS_PROVIDER": "local",
+    "RETOS_AGENT_RUNTIME": "deepagents",
+    "RETOS_MODEL": "ollama:gemma4",
+    "RETOS_ALLOW_PAID_LLM": "false",
+    "RETOS_OLLAMA_MODEL": "gemma4",
+    "RETOS_OLLAMA_BASE_URL": "http://localhost:11434"
+  },
+  "missing_config": [],
+  "warnings": ["Restart API and worker after changing runtime environment."],
+  "reason": null
+}
+```
+
+The planner never persists the switch, never returns API keys, and never performs a
+provider call. Operators still apply the env changes through `.env`, Compose overrides,
+or deployment configuration, then restart API and worker so startup validation can
+enforce the selected profile.
+
 ## Evals
 
 Run the deterministic local smoke eval suite:
@@ -1080,6 +1119,7 @@ Current console calls:
 - `PATCH /admin/users/{admin_user_id}/roles`
 - `POST /admin/users/{admin_user_id}/password`
 - `GET /llm/providers`
+- `POST /llm/runtime-plan`
 - `GET /domains`
 - `POST /domains`
 - `GET /domains/{domain_id}/documents`
@@ -1120,6 +1160,8 @@ audited local accounts:
 - `active.can_call=true` means the selected profile is ready to call.
 - `paid=true` means the UI must show a cost warning before future query execution.
 - `enabled=false` plus `reason` explains whether configuration or cost opt-in is missing.
+- Runtime switch plans are previews only; they render non-secret env changes, missing
+  config names, and restart warnings without mutating the running process.
 - API keys are never returned to the browser.
 - Admin passwords are write-only; the browser can create accounts with explicit roles,
   update persisted roles, toggle active state, and submit resets, but only receives

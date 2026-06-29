@@ -2,7 +2,12 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from retos.core.config import Settings
-from retos.llm.providers import active_provider, list_provider_profiles, provider_is_configured
+from retos.llm.providers import (
+    active_provider,
+    list_provider_profiles,
+    plan_runtime_switch,
+    provider_is_configured,
+)
 
 
 def auth_headers(client: TestClient) -> dict[str, str]:
@@ -134,6 +139,111 @@ def test_provider_is_configured_matches_missing_config() -> None:
     assert provider_is_configured(settings, "openai") is False
 
 
+def test_runtime_switch_plan_renders_local_deepagents_env(settings: Settings) -> None:
+    plan = plan_runtime_switch(
+        settings,
+        provider="local",
+        agent_runtime="deepagents",
+    )
+
+    assert plan.can_start is True
+    assert plan.provider == "local"
+    assert plan.model == "ollama:gemma4"
+    assert plan.env == {
+        "RETOS_PROVIDER": "local",
+        "RETOS_AGENT_RUNTIME": "deepagents",
+        "RETOS_MODEL": "ollama:gemma4",
+        "RETOS_ALLOW_PAID_LLM": "false",
+        "RETOS_OLLAMA_MODEL": "gemma4",
+        "RETOS_OLLAMA_BASE_URL": "http://localhost:11434",
+    }
+    assert "Deep Agents synthesis" in " ".join(plan.warnings)
+
+
+def test_runtime_switch_plan_blocks_paid_provider_without_opt_in() -> None:
+    settings = Settings(
+        env="test",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+        openai_api_key=SecretStr("sk-test"),
+    )
+
+    plan = plan_runtime_switch(
+        settings,
+        provider="openai",
+        agent_runtime="deepagents",
+    )
+
+    assert plan.can_start is False
+    assert plan.paid_provider is True
+    assert plan.paid_providers_enabled is False
+    assert plan.reason == "Paid providers are disabled by RETOS_ALLOW_PAID_LLM=false"
+    assert "sk-test" not in str(plan)
+
+
+def test_runtime_switch_plan_allows_configured_paid_provider_with_opt_in() -> None:
+    settings = Settings(
+        env="test",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+        openai_api_key=SecretStr("sk-test"),
+    )
+
+    plan = plan_runtime_switch(
+        settings,
+        provider="openai",
+        agent_runtime="deterministic",
+        allow_paid_llm=True,
+    )
+
+    assert plan.can_start is True
+    assert plan.paid_providers_enabled is True
+    assert plan.env["RETOS_ALLOW_PAID_LLM"] == "true"
+    assert plan.env["RETOS_OPENAI_MODEL"] == "gpt-5-mini"
+    assert "Deep Agents synthesis" not in " ".join(plan.warnings)
+    assert "sk-test" not in str(plan)
+
+
+def test_runtime_switch_plan_reports_missing_paid_provider_config() -> None:
+    settings = Settings(
+        env="test",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+    )
+
+    plan = plan_runtime_switch(
+        settings,
+        provider="anthropic",
+        agent_runtime="deterministic",
+        allow_paid_llm=True,
+    )
+
+    assert plan.can_start is False
+    assert plan.reason == "Missing required configuration"
+    assert plan.missing_config == ["RETOS_ANTHROPIC_API_KEY"]
+    assert "Set missing provider configuration" in " ".join(plan.warnings)
+
+
+def test_runtime_switch_plan_supports_fake_test_profile_without_model_env() -> None:
+    settings = Settings(
+        env="test",
+        provider="fake",
+        model="fake:deterministic",
+        jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
+    )
+
+    plan = plan_runtime_switch(
+        settings,
+        provider="fake",
+        agent_runtime="deterministic",
+    )
+
+    assert plan.can_start is True
+    assert plan.env == {
+        "RETOS_PROVIDER": "fake",
+        "RETOS_AGENT_RUNTIME": "deterministic",
+        "RETOS_MODEL": "fake:deterministic",
+        "RETOS_ALLOW_PAID_LLM": "false",
+    }
+
+
 def test_llm_providers_endpoint_requires_admin(client: TestClient) -> None:
     response = client.get("/llm/providers")
 
@@ -166,3 +276,19 @@ def test_llm_providers_endpoint_returns_safe_catalog(client: TestClient) -> None
     providers = {provider["name"]: provider for provider in body["providers"]}
     assert providers["openai"]["missing_config"] == ["RETOS_OPENAI_API_KEY"]
     assert "sk-test" not in str(body)
+
+
+def test_runtime_plan_endpoint_returns_safe_env_patch(client: TestClient) -> None:
+    response = client.post(
+        "/llm/runtime-plan",
+        headers=auth_headers(client),
+        json={"provider": "local", "agent_runtime": "deepagents"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["can_start"] is True
+    assert body["restart_required"] is True
+    assert body["env"]["RETOS_PROVIDER"] == "local"
+    assert body["env"]["RETOS_AGENT_RUNTIME"] == "deepagents"
+    assert body["env"]["RETOS_MODEL"] == "ollama:gemma4"
