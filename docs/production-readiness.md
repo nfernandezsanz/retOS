@@ -108,7 +108,7 @@ auditor a stable local entry point:
 | Environment security | `make env-security-check` | Active `.env` security posture is validated without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Local demo corpus | `make docker-seed-demo`, `make api-smoke`, and `make frontend-e2e` | The running Docker stack, real HTTP smoke, and React console can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black and Ruff/PEP 8 for backend code plus root Python audit/release scripts, mypy, 793 pytest cases, eval smoke, agent multi-hop eval, 95.42% total coverage, and 90.75% branch coverage. |
+| Backend quality | `make check` | Black and Ruff/PEP 8 for backend code plus root Python audit/release scripts, mypy, 794 pytest cases, eval smoke, agent multi-hop eval, 95.42% total coverage, and 90.75% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend format | `make frontend-format-check` | Version-pinned Prettier check for React, TypeScript, CSS, browser tests, and frontend config files. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |

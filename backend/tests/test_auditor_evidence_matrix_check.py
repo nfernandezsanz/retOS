@@ -63,6 +63,25 @@ def test_auditor_evidence_matrix_checker_rejects_missing_document_context(
     assert "compact document context cards" in result.stderr + result.stdout
 
 
+def test_auditor_evidence_matrix_checker_rejects_missing_frontend_format_gate(
+    tmp_path: Path,
+) -> None:
+    repo = copy_minimal_repo(tmp_path)
+    matrix = repo / "docs/auditor-evidence-matrix.md"
+    matrix.write_text(
+        matrix.read_text(encoding="utf-8").replace(
+            "make frontend-format-check",
+            "make frontend-style-check",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_checker(repo)
+
+    assert result.returncode != 0
+    assert "matrix missing local gate: make frontend-format-check" in result.stderr + result.stdout
+
+
 def test_auditor_evidence_matrix_checker_rejects_missing_readme_trace(
     tmp_path: Path,
 ) -> None:
