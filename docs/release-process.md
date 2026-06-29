@@ -52,6 +52,7 @@ For targeted reruns, the local gate expands to:
 make release-check
 make audit-pack-check
 make production-preflight
+make promotion-template-check
 make auditor-static-check
 make auditor-handoff-check
 make audit-manifest-check

@@ -25,6 +25,7 @@ paths = {
     "dependency_audit_script": Path("scripts/check_dependency_audit.sh"),
     "security_policy_script": Path("scripts/check_security_policy.sh"),
     "ignore_hygiene_script": Path("scripts/check_ignore_hygiene.sh"),
+    "promotion_template_script": Path("scripts/check_promotion_template.py"),
     "security_policy": Path("SECURITY.md"),
     "audit_manifest_script": Path("scripts/export_audit_manifest.py"),
 }
@@ -66,6 +67,7 @@ for phrase in (
     "make docker-smoke",
     "make dependency-audit",
     "make security-policy-check",
+    "make promotion-template-check",
     "make ignore-hygiene-check",
     "make operations-runbook-check",
     "make auditor-static-check",
@@ -85,6 +87,7 @@ for phrase in (
     "scripts/check_dependency_audit.sh",
     "scripts/check_security_policy.sh",
     "scripts/check_ignore_hygiene.sh",
+    "scripts/check_promotion_template.py",
     "scripts/check_operations_runbook.sh",
     "scripts/check_audit_export.py",
     "scripts/check_ci_status.sh",
@@ -228,6 +231,7 @@ require(
 for gate in (
     "make env-security-check",
     "make visual-audit-check",
+    "make promotion-template-check",
 ):
     require(
         gate in promotion_template,

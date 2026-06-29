@@ -65,6 +65,9 @@ tag in GitHub.
   manifest, screenshot existence, byte-size, SHA-256, and viewport verification.
 - Production promotion evidence template now requires `make env-security-check` and
   `make visual-audit-check` output alongside the human security and visual reviews.
+- Standalone `make promotion-template-check` gate for required production promotion
+  template sections, machine gates, release provenance, visual/security review,
+  backup/restore rehearsal, rollback, and decision fields.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.

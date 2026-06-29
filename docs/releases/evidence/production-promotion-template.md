@@ -29,6 +29,8 @@ Paste or link the output for each gate:
 - `make security-policy-check`
 - `make env-security-check`
 - `make ignore-hygiene-check`
+- `make operations-runbook-check`
+- `make promotion-template-check`
 - `make integration`
 - `make frontend-test`
 - `make frontend-e2e`
@@ -40,6 +42,11 @@ Paste or link the output for each gate:
 - `make release-check`
 - `make production-preflight`
 - `make auditor-static-check`
+- `make audit-manifest-check`
+- `make audit-handoff-report`
+- `make audit-bundle`
+- `make audit-bundle-check`
+- `make audit-export-check`
 - `make release-evidence-check`
 
 ## Release Provenance

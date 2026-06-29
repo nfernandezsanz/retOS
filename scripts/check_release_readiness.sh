@@ -25,6 +25,7 @@ required_files=(
   "scripts/check_production_preflight.sh"
   "scripts/check_published_release_evidence.sh"
   "scripts/check_env_security.py"
+  "scripts/check_promotion_template.py"
   "scripts/check_eval_calibration_evidence.py"
   "scripts/check_eval_calibration_trend.py"
   "scripts/check_visual_audit.py"
@@ -48,6 +49,7 @@ scripts/check_release_workflow.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
 python3 scripts/check_env_security.py >/dev/null
+python3 scripts/check_promotion_template.py >/dev/null
 python3 scripts/check_eval_calibration_evidence.py >/dev/null
 python3 scripts/check_eval_calibration_trend.py >/dev/null
 python3 scripts/check_visual_audit.py >/dev/null
@@ -180,6 +182,11 @@ require(
     and "make env-security-check" in docker_docs
     and "make env-security-check" in audit_pack,
     "README, Docker docs, and production readiness pack must expose env-security-check",
+)
+require(
+    "make promotion-template-check" in readme
+    and "make promotion-template-check" in audit_pack,
+    "README and production readiness pack must expose promotion-template-check",
 )
 require(
     "make docker-seed-demo" in readme and "make docker-seed-demo" in docker_docs,
