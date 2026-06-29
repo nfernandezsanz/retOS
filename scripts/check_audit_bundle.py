@@ -28,9 +28,11 @@ REQUIRED_MEMBERS = {
     f"{BUNDLE_ROOT}/docs/releases/evidence/backup-restore-drill-template.md",
     f"{BUNDLE_ROOT}/docs/releases/evidence/production-promotion-template.md",
     f"{BUNDLE_ROOT}/docs/releases/evidence/target-security-review-template.md",
+    f"{BUNDLE_ROOT}/docs/releases/evidence/visual-review-template.md",
     f"{BUNDLE_ROOT}/.github/workflows/ci.yml",
     f"{BUNDLE_ROOT}/.github/workflows/release.yml",
     f"{BUNDLE_ROOT}/scripts/check_readme_usability.py",
+    f"{BUNDLE_ROOT}/scripts/check_visual_review.py",
     f"{BUNDLE_ROOT}/scripts/check_ci_workflow.sh",
 }
 

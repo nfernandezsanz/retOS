@@ -56,6 +56,7 @@ make audit-pack-check
 make production-preflight
 make backup-restore-drill-check
 make target-security-review-check
+make visual-review-check
 make calibration-scope-decision-check
 make promotion-template-check
 make auditor-static-check
@@ -121,6 +122,7 @@ make release-evidence-check
 | Rollback notes | Yes |
 | Backup/restore drill template | Yes |
 | Target security review template | Yes |
+| Visual review template | Yes |
 | Calibration scope decision template | Yes |
 | Production promotion template | Yes |
 
@@ -131,6 +133,8 @@ Use [docs/releases/evidence/production-promotion-template.md](releases/evidence/
 for the final human promotion record.
 Use [docs/releases/evidence/target-security-review-template.md](releases/evidence/target-security-review-template.md)
 for the target-environment security review record.
+Use [docs/releases/evidence/visual-review-template.md](releases/evidence/visual-review-template.md)
+for the human desktop/mobile visual acceptance record.
 Use [docs/releases/evidence/calibration-scope-decision-template.md](releases/evidence/calibration-scope-decision-template.md)
 to record accepted bounded pilot scope or attached broader public-slice trend evidence.
 

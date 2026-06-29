@@ -22,6 +22,7 @@ paths = {
     "calibration_scope_template": Path("docs/releases/evidence/calibration-scope-decision-template.md"),
     "backup_restore_drill_template": Path("docs/releases/evidence/backup-restore-drill-template.md"),
     "target_security_review_template": Path("docs/releases/evidence/target-security-review-template.md"),
+    "visual_review_template": Path("docs/releases/evidence/visual-review-template.md"),
     "promotion_template": Path("docs/releases/evidence/production-promotion-template.md"),
     "ci": Path(".github/workflows/ci.yml"),
     "ci_status_script": Path("scripts/check_ci_status.sh"),
@@ -31,6 +32,7 @@ paths = {
     "calibration_scope_script": Path("scripts/check_calibration_scope_decision.py"),
     "backup_restore_drill_script": Path("scripts/check_backup_restore_drill.py"),
     "target_security_review_script": Path("scripts/check_target_security_review.py"),
+    "visual_review_script": Path("scripts/check_visual_review.py"),
     "promotion_template_script": Path("scripts/check_promotion_template.py"),
     "security_policy": Path("SECURITY.md"),
     "audit_manifest_script": Path("scripts/export_audit_manifest.py"),
@@ -74,6 +76,7 @@ for phrase in (
     "make dependency-audit",
     "make security-policy-check",
     "make target-security-review-check",
+    "make visual-review-check",
     "make calibration-scope-decision-check",
     "make promotion-template-check",
     "make ignore-hygiene-check",
@@ -96,6 +99,7 @@ for phrase in (
     "scripts/check_dependency_audit.sh",
     "scripts/check_security_policy.sh",
     "scripts/check_target_security_review.py",
+    "scripts/check_visual_review.py",
     "scripts/check_calibration_scope_decision.py",
     "scripts/check_ignore_hygiene.sh",
     "scripts/check_backup_restore_drill.py",
@@ -122,6 +126,7 @@ for phrase in (
     "docs/releases/evidence/calibration-scope-decision-template.md",
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/target-security-review-template.md",
+    "docs/releases/evidence/visual-review-template.md",
     "docs/releases/evidence/production-promotion-template.md",
     "JSON handoff",
     "coverage evidence derived from `backend/coverage.json`",
@@ -232,6 +237,12 @@ require(
     "README, release process, and SECURITY.md must link the target security review template",
 )
 require(
+    "visual-review-template.md" in readme
+    and "visual-review-template.md" in release_process
+    and "visual-review-template.md" in audit_pack,
+    "README, release process, and audit pack must link the visual review template",
+)
+require(
     "calibration-scope-decision-template.md" in readme
     and "calibration-scope-decision-template.md" in operations
     and "calibration-scope-decision-template.md" in release_process
@@ -261,6 +272,7 @@ for gate in (
     "make target-security-review-check",
     "make calibration-scope-decision-check",
     "make visual-audit-check",
+    "make visual-review-check",
     "make promotion-template-check",
 ):
     require(
@@ -279,6 +291,8 @@ for phrase in (
     "Desktop visual audit PNG reviewed",
     "Mobile visual audit PNG reviewed",
     "`make visual-audit-check` output",
+    "Visual review template completed",
+    "Visual review evidence link",
     "Visual review decision",
     "UI issues accepted or filed",
 ):

@@ -37,6 +37,7 @@ Paste or link the output for each gate:
 - `make frontend-e2e`
 - `make frontend-visual-audit`
 - `make visual-audit-check`
+- `make visual-review-check`
 - `docker compose --env-file .env.example config`
 - `docker compose --dry-run build`
 - `make docker-smoke`
@@ -65,6 +66,8 @@ Paste or link the output for each gate:
 - Desktop visual audit PNG reviewed:
 - Mobile visual audit PNG reviewed:
 - `make visual-audit-check` output:
+- Visual review template completed:
+- Visual review evidence link:
 - Visual reviewer:
 - Visual review decision:
 - UI issues accepted or filed:

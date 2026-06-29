@@ -60,6 +60,7 @@ make production-preflight
 make dependency-audit
 make security-policy-check
 make target-security-review-check
+make visual-review-check
 make calibration-scope-decision-check
 make ignore-hygiene-check
 make operations-runbook-check
@@ -110,6 +111,7 @@ auditor a stable local entry point:
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
 | Visual audit evidence | `make visual-audit-check` | Offline check that the local visual-audit manifest, expected desktop/mobile screenshot records, PNG files, byte sizes, SHA-256 hashes, and viewport dimensions match. |
+| Visual review template | `make visual-review-check` | Human visual acceptance evidence fields are present for desktop/mobile screenshots, hashes, workflow coverage, overflow, tooltips, findings, and decision sign-off. |
 | Docker runtime | `make docker-smoke` | Built API/web images, Postgres, RabbitMQ, API, worker, migrate, web, HTTP smoke, worker-backed jobs, and one shared backend image ID. |
 | CI workflow contract | `make ci-workflow-check` | GitHub Actions CI jobs, local gates, root Python script checks, required artifacts, and audit handoff export steps are statically guarded. |
 | Static release guardrails | `make release-check` | Required docs, Docker topology, image metadata source, image size budgets, workflow contract, release notes, calibration evidence gates, audit pack, branding assets, safe defaults, and a dry-run of the published evidence verifier. |
@@ -172,6 +174,7 @@ These items must be closed before a final production release:
 - [ ] `make dependency-audit` reports no known Python runtime advisories and no high-severity Node advisories.
 - [ ] `make security-policy-check` passes.
 - [ ] `make target-security-review-check` passes.
+- [ ] `make visual-review-check` passes.
 - [ ] `make env-security-check` passes or records only the expected missing local `.env` warning.
 - [ ] `make ignore-hygiene-check` passes.
 - [ ] `make operations-runbook-check` passes.
@@ -190,6 +193,7 @@ These items must be closed before a final production release:
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
 - [ ] `make visual-audit-check` passes against the local visual-audit manifest.
 - [ ] Desktop and mobile visual audit PNGs were reviewed and accepted or tracked.
+- [ ] Visual review template is completed and linked in the promotion record.
 - [ ] `make docker-smoke` passes with API, worker, migrate, web, Postgres, RabbitMQ, and Ollama services.
 - [ ] `scripts/check_release_readiness.sh` passes.
 - [ ] `scripts/check_audit_pack.sh` passes.
@@ -219,6 +223,7 @@ These items must be closed before a final production release:
 | Environment security evidence | `scripts/check_env_security.py`, `make env-security-check` |
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |
 | Target security review template | `docs/releases/evidence/target-security-review-template.md`, `scripts/check_target_security_review.py`, `make target-security-review-check` |
+| Visual review template | `docs/releases/evidence/visual-review-template.md`, `scripts/check_visual_review.py`, `make visual-review-check` |
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
 | Operations runbook | `docs/operations.md`, `scripts/check_operations_runbook.sh`, `make operations-runbook-check` |
 | Backup/restore drill template | `docs/releases/evidence/backup-restore-drill-template.md`, `scripts/check_backup_restore_drill.py`, `make backup-restore-drill-check` |

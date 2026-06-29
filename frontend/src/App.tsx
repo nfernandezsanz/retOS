@@ -6292,6 +6292,7 @@ function App() {
                   </div>
                   <button
                     className="ghost-action compact-action"
+                    data-tooltip="Close this job detail and return to the job list"
                     type="button"
                     onClick={handleCloseJobDetail}
                   >

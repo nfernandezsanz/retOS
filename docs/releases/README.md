@@ -12,3 +12,5 @@ Before a release leaves candidate status:
   copied into the note.
 - `make release-evidence-check` must pass with the published backend and web digests.
 - Migration and rollback notes must be explicit.
+- The completed visual review evidence must be linked or copied into the promotion
+  record when screenshots are accepted.

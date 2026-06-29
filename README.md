@@ -147,6 +147,10 @@ For the human target-environment security review, validate the template with
 `docs/releases/evidence/target-security-review-template.md` and store the completed copy
 with the promotion record.
 
+For the human visual review, validate the template with `make visual-review-check`, then
+complete `docs/releases/evidence/visual-review-template.md` after reviewing the
+desktop/mobile visual audit PNGs and store the completed copy with the promotion record.
+
 For bounded public calibration slices, validate the decision template with
 `make calibration-scope-decision-check`, then complete
 `docs/releases/evidence/calibration-scope-decision-template.md` to record whether the
@@ -411,6 +415,7 @@ Every meaningful change should pass these gates:
 | Security policy | `make security-policy-check` | Validates security reporting, secure defaults, human production review guidance, and links from operational docs. |
 | Ignore hygiene | `make ignore-hygiene-check` | Validates `.gitignore` and `.dockerignore` keep secrets, generated files, local volumes, public datasets, reports, and backups out of Git and Docker contexts. |
 | Operations runbook | `make operations-runbook-check` | Validates backup, restore, rollback, health-check, audit-export, and promotion-evidence fields. |
+| Visual review template | `make visual-review-check` | Validates the human visual acceptance evidence template for screenshot hashes, desktop/mobile review, workflow coverage, overflow, tooltips, findings, and decision fields. |
 | Backup/restore drill template | `make backup-restore-drill-check` | Validates the detailed backup/restore rehearsal evidence template for backup artifacts, restore commands, health checks, audit-export verification, and promotion impact. |
 | Promotion template | `make promotion-template-check` | Validates the human promotion evidence template contract: required sections, local gates, release provenance, visual/security review, backup/restore rehearsal, rollback, and decision fields. |
 | Auditor evidence matrix | `make auditor-evidence-matrix-check` | Validates the objective-to-evidence matrix so requirements, local gates, and external promotion blockers stay traceable. |

@@ -19,6 +19,7 @@ required_files=(
   "docs/releases/evidence/backup-restore-drill-template.md"
   "docs/releases/evidence/production-promotion-template.md"
   "docs/releases/evidence/target-security-review-template.md"
+  "docs/releases/evidence/visual-review-template.md"
   ".env.example"
   "docker-compose.yml"
   ".gitignore"
@@ -26,6 +27,7 @@ required_files=(
   "docs/release-process.md"
   "docs/production-readiness.md"
   "scripts/check_readme_usability.py"
+  "scripts/check_visual_review.py"
   "scripts/check_ci_workflow.sh"
   "scripts/check_production_preflight.sh"
   "scripts/check_published_release_evidence.sh"
@@ -52,6 +54,7 @@ done
 
 scripts/check_ci_workflow.sh >/dev/null
 python3 scripts/check_readme_usability.py >/dev/null
+python3 scripts/check_visual_review.py >/dev/null
 scripts/check_docker_topology.sh >/dev/null
 scripts/check_image_metadata.sh >/dev/null
 scripts/check_image_size.sh >/dev/null
@@ -62,6 +65,7 @@ python3 scripts/check_env_security.py >/dev/null
 python3 scripts/check_backup_restore_drill.py >/dev/null
 python3 scripts/check_promotion_template.py >/dev/null
 python3 scripts/check_target_security_review.py >/dev/null
+python3 scripts/check_visual_review.py >/dev/null
 python3 scripts/check_calibration_scope_decision.py >/dev/null
 python3 scripts/check_eval_calibration_evidence.py >/dev/null
 python3 scripts/check_eval_calibration_trend.py >/dev/null

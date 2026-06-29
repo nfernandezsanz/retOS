@@ -93,6 +93,10 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
 - Evidence gate: run `make visual-audit-check` after `make frontend-visual-audit` to
   verify the manifest, expected desktop/mobile screenshot records, PNG existence,
   byte sizes, SHA-256 hashes, and viewport dimensions offline.
+- Human review evidence: run `make visual-review-check`, then complete
+  `docs/releases/evidence/visual-review-template.md` with desktop/mobile screenshots,
+  screenshot hashes, workflow coverage, tooltip/overflow findings, accepted risks, and
+  the final visual review decision.
 - CI evidence: the frontend workflow uploads those PNGs as a
   `retos-visual-audit-<commit>` artifact with the same manifest so remote reviewers can
   download the exact desktop and mobile screenshots produced by the run.

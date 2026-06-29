@@ -4,6 +4,7 @@ set -euo pipefail
 scripts/check_release_readiness.sh >/dev/null
 scripts/check_ci_workflow.sh >/dev/null
 python3 scripts/check_readme_usability.py >/dev/null
+python3 scripts/check_visual_review.py >/dev/null
 scripts/check_audit_pack.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
@@ -42,6 +43,7 @@ for command in (
     "make frontend-test",
     "make frontend-e2e",
     "make frontend-visual-audit",
+    "make visual-review-check",
     "docker compose --env-file .env.example config",
     "docker compose --dry-run build",
     "make docker-smoke",

@@ -27,9 +27,11 @@ STATIC_EVIDENCE_FILES = (
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/production-promotion-template.md",
     "docs/releases/evidence/target-security-review-template.md",
+    "docs/releases/evidence/visual-review-template.md",
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",
     "scripts/check_readme_usability.py",
+    "scripts/check_visual_review.py",
     "scripts/check_ci_workflow.sh",
 )
 
