@@ -18,6 +18,7 @@ but the repository must still explain what can be proven from a checkout.
 | Celery with RabbitMQ | Worker execution uses Celery and RabbitMQ; Docker smoke exercises worker-backed scan, upload ingestion, indexing, evals, and search. | `make docker-smoke` | Local evidence ready. |
 | 90% or better test coverage | Backend total coverage is 95.20%; branch coverage is ratcheted at 90.44%. Tests and eval smoke avoid paid providers. | `make check` | Local evidence ready; coverage numbers must be refreshed when the suite changes. |
 | Integration tests against real endpoints and UI | API smoke hits running HTTP endpoints; Playwright opens the React console; Docker smoke exercises the full Compose stack. | `make integration` and `make docker-smoke` | Local evidence ready; human promotion should rerun against the candidate environment. |
+| Single local pre-audit acceptance gate | `make local-acceptance` runs backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. | `make local-acceptance` | Local evidence ready; this gate is the preferred checkout-level command before human review. |
 | Evals and calibration | Deterministic eval smoke, agent multi-hop evals, dataset-backed adapters, and 200-record/40-case calibration evidence are documented. | `make eval-smoke` and `make eval-agent-multihop` | Pilot-ready evidence; broader public calibration remains a promotion decision. |
 | Branding, colors, and project image | RetOS ships a project card, favicon/mark, palette tokens, branding guide, visual audit screenshots, and README onboarding pills. | `make brand-check` and `make frontend-visual-audit` | Local evidence ready; human visual acceptance remains required. |
 | Open source hygiene | MIT license, contribution guide, code of conduct, security policy, changelog, ADRs, planning, `.gitignore`, and `.dockerignore` are present and guarded. | `make auditor-static-check` | Local evidence ready. |
@@ -28,8 +29,10 @@ but the repository must still explain what can be proven from a checkout.
 Treat a row as production-ready only when:
 
 1. The listed local gate passes on the exact commit under review.
-2. Any row-specific human or target-environment review has been recorded.
-3. The external promotion evidence in `docs/production-readiness.md` is complete.
+2. `make local-acceptance` passes on the same checkout when preparing a full local
+   handoff.
+3. Any row-specific human or target-environment review has been recorded.
+4. The external promotion evidence in `docs/production-readiness.md` is complete.
 
 The current repository state is suitable for a human production-readiness review, but
 RetOS is not production-promoted yet and does not claim final production promotion until

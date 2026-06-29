@@ -49,6 +49,7 @@ for requirement in (
     "Celery with RabbitMQ",
     "90% or better test coverage",
     "Integration tests against real endpoints and UI",
+    "Single local pre-audit acceptance gate",
     "Evals and calibration",
     "Branding, colors, and project image",
     "Open source hygiene",
@@ -58,6 +59,7 @@ for requirement in (
 
 for gate in (
     "make check",
+    "make local-acceptance",
     "make api-smoke",
     "make eval-agent-multihop",
     "make audit-manifest-check",
