@@ -49,6 +49,9 @@ tag in GitHub.
   segments directly from the document inventory.
 - Metric-gated real-dataset calibration manifests so release candidates can fail on
   explicit retrieval, citation, grounding, or budget thresholds.
+- Offline `make eval-calibration-gate` validation for versioned calibration evidence,
+  including required targets, sample sizes, metric gates, HTTPS provenance, and path
+  safety.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.

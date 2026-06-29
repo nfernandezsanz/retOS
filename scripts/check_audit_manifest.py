@@ -38,6 +38,7 @@ REQUIRED_CRITICAL_FILES = {
     "scripts/check_ci_status.sh",
     "scripts/check_auditor_evidence_matrix.sh",
     "scripts/check_audit_pack.sh",
+    "scripts/check_eval_calibration_evidence.py",
     "scripts/check_audit_handoff_report.py",
     "scripts/check_audit_bundle.py",
     "scripts/export_audit_manifest.py",
@@ -53,6 +54,7 @@ REQUIRED_LOCAL_GATES = {
     "make auditor-evidence-matrix-check",
     "make auditor-static-check",
     "make audit-manifest-check",
+    "make eval-calibration-gate",
     "make ci-status-check",
 }
 
@@ -152,11 +154,13 @@ def main() -> int:
             "coverage evidence must include branch coverage",
         )
         require(
-            coverage["last_recorded_total_percent"] >= coverage["total_minimum_percent"],
+            coverage["last_recorded_total_percent"]
+            >= coverage["total_minimum_percent"],
             "recorded total coverage must meet the total target",
         )
         require(
-            coverage["last_recorded_branch_percent"] >= coverage["branch_minimum_percent"],
+            coverage["last_recorded_branch_percent"]
+            >= coverage["branch_minimum_percent"],
             "recorded branch coverage must meet the branch target",
         )
         require(

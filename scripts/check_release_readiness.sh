@@ -24,6 +24,7 @@ required_files=(
   "docs/production-readiness.md"
   "scripts/check_production_preflight.sh"
   "scripts/check_published_release_evidence.sh"
+  "scripts/check_eval_calibration_evidence.py"
   "scripts/export_audit_manifest.py"
   "scripts/check_audit_manifest.py"
   "scripts/export_audit_bundle.py"
@@ -43,6 +44,7 @@ scripts/check_image_size.sh >/dev/null
 scripts/check_release_workflow.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
+python3 scripts/check_eval_calibration_evidence.py >/dev/null
 scripts/check_audit_pack.sh >/dev/null
 scripts/check_branding_assets.sh >/dev/null
 scripts/check_security_policy.sh >/dev/null

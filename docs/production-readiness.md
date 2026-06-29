@@ -143,7 +143,7 @@ These items must be closed before a final production release:
 | GHCR publish evidence missing | Run `.github/workflows/release.yml` for the immutable release tag and record backend/web image digests. |
 | SBOM/provenance evidence missing | Link or copy the attestation evidence from the release workflow into the versioned release note. |
 | Cosign signature/tag evidence missing | Run `make release-evidence-check` with the published digests and record successful keyless signature verification plus version tag-to-digest resolution for both images. |
-| Broader public calibration pending | Add trend evidence beyond the current 200-record/40-case public slices or document the pilot scope limit. |
+| Broader public calibration pending | Run `make eval-calibration-gate` against the versioned calibration evidence and add trend evidence beyond the current 200-record/40-case public slices or document the pilot scope limit. |
 | Human security review pending | Review auth, secrets, exposed ports, CORS, backup handling, and provider key handling for the target environment. |
 
 ## Production Pilot Acceptance Checklist
@@ -163,6 +163,7 @@ These items must be closed before a final production release:
 - [ ] `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` was exported for the promotion record.
 - [ ] `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` was exported for human review.
 - [ ] `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` was exported with its `.sha256` sidecar.
+- [ ] `make eval-calibration-gate` passes against the versioned calibration evidence.
 - [ ] `make audit-export-check EXPORT=retos-audit-export.json` passed for a fresh target-environment `/audit/export` download.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.

@@ -604,7 +604,20 @@ CER/WER and optional key-value recall.
   with explicit stems for named runs.
 - Any dataset cache directory must stay out of git.
 
-## Next Implementation Step
+## Release Calibration Gate
 
-Expand real-dataset eval trend calibration and connect persisted eval evidence to
-release promotion gates.
+For release-candidate evidence, run the opt-in calibration first and then export and
+validate the path-safe Markdown evidence:
+
+```bash
+make eval-calibration MAX_RECORDS=200 MAX_CASES=40 FORCE=1 \
+  METRIC_GATES='squad.retrieval_recall=0.0 hotpotqa.retrieval_recall=0.0 hotpotqa-agent.multi_hop_support=0.0 natural-questions.retrieval_recall=0.0'
+make eval-calibration-evidence \
+  MANIFEST=evals/reports/calibration/manifest.json \
+  OUTPUT=docs/releases/evidence/<release>-calibration.md
+make eval-calibration-gate EVIDENCE=docs/releases/evidence/<release>-calibration.md
+```
+
+`make eval-calibration-gate` is offline and release-review friendly. It validates PASS
+status, required target rows, minimum records/cases, required metric gates, HTTPS source
+URLs, and the absence of local dataset/report paths in the versioned evidence file.
