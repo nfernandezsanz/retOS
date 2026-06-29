@@ -75,7 +75,7 @@ def default_requester(
         with urlopen(  # noqa: S310 - local operator-requested smoke URLs.
             request, timeout=timeout
         ) as response:
-            body = response.read(65536).decode("utf-8", errors="replace")
+            body = response.read().decode("utf-8", errors="replace")
             return response.status, body
     except HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
@@ -123,6 +123,30 @@ def hashed_event_count(events: list[Any]) -> int:
         for event in events
         if isinstance(event, dict) and isinstance(event.get("event_hash"), str)
     )
+
+
+def validate_audit_export(export: dict[str, Any]) -> str | None:
+    integrity = export.get("integrity")
+    if not isinstance(integrity, dict):
+        return "missing integrity object"
+    event_count = integrity.get("event_count")
+    if not isinstance(event_count, int) or event_count <= 0:
+        return "missing audit export events"
+    if integrity.get("valid") is not True:
+        return "audit export integrity is not valid"
+    failures = integrity.get("failures")
+    if isinstance(failures, list) and failures:
+        return f"{len(failures)} audit hash failure(s)"
+    return None
+
+
+def audit_export_detail(export: dict[str, Any]) -> str:
+    integrity = export["integrity"]
+    event_count = integrity["event_count"]
+    continuity_gaps = integrity.get("continuity_gaps")
+    gap_count = len(continuity_gaps) if isinstance(continuity_gaps, list) else 0
+    suffix = f", {gap_count} limited-window gap(s)" if gap_count else ""
+    return f"{event_count} event(s), valid{suffix}"
 
 
 def run_local_smoke(
@@ -295,6 +319,31 @@ def run_local_smoke(
                 checks.append(ok(name, f"{hashed_count}/{len(events)} hashed event(s)"))
             else:
                 checks.append(fail(name, "no hash-chain events returned"))
+
+        try:
+            export_status, export_body = requester(
+                "GET",
+                urljoin(api_url, "/audit/export?limit=40"),
+                headers,
+                None,
+                timeout,
+            )
+        except RuntimeError as exc:
+            checks.append(fail("audit export", str(exc)))
+        else:
+            error = require_success("audit export", export_status, export_body)
+            if error:
+                checks.append(error)
+            else:
+                export, json_error = decode_json("audit export", export_body)
+                if json_error:
+                    checks.append(json_error)
+                else:
+                    export_error = validate_audit_export(export)
+                    if export_error:
+                        checks.append(fail("audit export", export_error))
+                    else:
+                        checks.append(ok("audit export", audit_export_detail(export)))
 
     return checks
 

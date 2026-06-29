@@ -48,6 +48,17 @@ def test_local_smoke_exercises_api_and_web_flow() -> None:
             return 200, json.dumps([{"event_hash": "journal-hash"}])
         if url == "http://api.local/audit/progress-events?limit=20":
             return 200, json.dumps([{"event_hash": "progress-hash"}])
+        if url == "http://api.local/audit/export?limit=40":
+            return 200, json.dumps(
+                {
+                    "integrity": {
+                        "valid": True,
+                        "event_count": 2,
+                        "failures": [],
+                        "continuity_gaps": [],
+                    }
+                }
+            )
         return 404, "{}"
 
     checks = smoke.run_local_smoke(
@@ -69,10 +80,12 @@ def test_local_smoke_exercises_api_and_web_flow() -> None:
         "demo search": "OK",
         "audit journals": "OK",
         "audit progress": "OK",
+        "audit export": "OK",
     }
-    assert calls[-3][1].endswith("/domains/domain-demo/search?q=Apollo+guidance&limit=3")
-    assert calls[-2][1].endswith("/audit/journal-events?limit=20")
-    assert calls[-1][1].endswith("/audit/progress-events?limit=20")
+    assert calls[-4][1].endswith("/domains/domain-demo/search?q=Apollo+guidance&limit=3")
+    assert calls[-3][1].endswith("/audit/journal-events?limit=20")
+    assert calls[-2][1].endswith("/audit/progress-events?limit=20")
+    assert calls[-1][1].endswith("/audit/export?limit=40")
 
 
 def test_local_smoke_stops_mutating_calls_when_login_fails() -> None:
@@ -122,6 +135,17 @@ def test_local_smoke_fails_when_demo_search_has_no_hits() -> None:
             return 200, json.dumps({"domain_id": "domain-demo", "indexed_segments": 4})
         if "/search" in url:
             return 200, json.dumps({"hits": []})
+        if url.endswith("/audit/export?limit=40"):
+            return 200, json.dumps(
+                {
+                    "integrity": {
+                        "valid": True,
+                        "event_count": 2,
+                        "failures": [],
+                        "continuity_gaps": [],
+                    }
+                }
+            )
         if "/audit/" in url:
             return 200, json.dumps([{"event_hash": "audit-hash"}])
         if url.endswith("/readyz"):
@@ -160,6 +184,17 @@ def test_local_smoke_fails_when_audit_events_are_unhashed() -> None:
             return 200, json.dumps({"hits": [{"title": "Apollo Guidance Notes"}]})
         if url.endswith("/readyz"):
             return 200, json.dumps({"components": {"database": "ok"}})
+        if url.endswith("/audit/export?limit=40"):
+            return 200, json.dumps(
+                {
+                    "integrity": {
+                        "valid": True,
+                        "event_count": 2,
+                        "failures": [],
+                        "continuity_gaps": [],
+                    }
+                }
+            )
         if "/audit/" in url:
             return 200, json.dumps([{"event_type": "job.created"}])
         return 200, "{}"
@@ -177,3 +212,50 @@ def test_local_smoke_fails_when_audit_events_are_unhashed() -> None:
     failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
     assert failures["audit journals"] == "no hash-chain events returned"
     assert failures["audit progress"] == "no hash-chain events returned"
+
+
+def test_local_smoke_fails_when_audit_export_integrity_is_invalid() -> None:
+    smoke = load_local_smoke()
+
+    def requester(
+        _method: str,
+        url: str,
+        _headers: Mapping[str, str],
+        _payload: dict[str, Any] | None,
+        _timeout: float,
+    ) -> tuple[int, str]:
+        if url.endswith("/auth/login"):
+            return 200, json.dumps({"access_token": "local-token"})
+        if url.endswith("/demo/seed"):
+            return 200, json.dumps({"domain_id": "domain-demo", "indexed_segments": 4})
+        if "/search" in url:
+            return 200, json.dumps({"hits": [{"title": "Apollo Guidance Notes"}]})
+        if url.endswith("/readyz"):
+            return 200, json.dumps({"components": {"database": "ok"}})
+        if url.endswith("/audit/export?limit=40"):
+            return 200, json.dumps(
+                {
+                    "integrity": {
+                        "valid": False,
+                        "event_count": 2,
+                        "failures": [{"reason": "event_hash_mismatch"}],
+                        "continuity_gaps": [],
+                    }
+                }
+            )
+        if "/audit/" in url:
+            return 200, json.dumps([{"event_hash": "audit-hash"}])
+        return 200, "{}"
+
+    checks = smoke.run_local_smoke(
+        api_url="http://api.local",
+        web_url="http://web.local",
+        email="admin@retos.dev",
+        password="retos-dev-admin-change-me",  # noqa: S106 - local fixture password.
+        query="Apollo guidance",
+        timeout=1,
+        requester=requester,
+    )
+
+    failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
+    assert failures["audit export"] == "audit export integrity is not valid"
