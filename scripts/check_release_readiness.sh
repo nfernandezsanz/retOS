@@ -15,6 +15,7 @@ required_files=(
   "Makefile"
   "docs/releases/README.md"
   "docs/releases/2026.06.28-alpha.1.md"
+  "docs/releases/evidence/calibration-scope-decision-template.md"
   "docs/releases/evidence/backup-restore-drill-template.md"
   "docs/releases/evidence/production-promotion-template.md"
   "docs/releases/evidence/target-security-review-template.md"
@@ -30,6 +31,7 @@ required_files=(
   "scripts/check_backup_restore_drill.py"
   "scripts/check_promotion_template.py"
   "scripts/check_target_security_review.py"
+  "scripts/check_calibration_scope_decision.py"
   "scripts/check_eval_calibration_evidence.py"
   "scripts/check_eval_calibration_trend.py"
   "scripts/check_visual_audit.py"
@@ -56,6 +58,7 @@ python3 scripts/check_env_security.py >/dev/null
 python3 scripts/check_backup_restore_drill.py >/dev/null
 python3 scripts/check_promotion_template.py >/dev/null
 python3 scripts/check_target_security_review.py >/dev/null
+python3 scripts/check_calibration_scope_decision.py >/dev/null
 python3 scripts/check_eval_calibration_evidence.py >/dev/null
 python3 scripts/check_eval_calibration_trend.py >/dev/null
 python3 scripts/check_visual_audit.py >/dev/null
@@ -198,6 +201,11 @@ require(
     "make target-security-review-check" in readme
     and "make target-security-review-check" in audit_pack,
     "README and production readiness pack must expose target-security-review-check",
+)
+require(
+    "make calibration-scope-decision-check" in readme
+    and "make calibration-scope-decision-check" in audit_pack,
+    "README and production readiness pack must expose calibration-scope-decision-check",
 )
 require(
     "make backup-restore-drill-check" in readme

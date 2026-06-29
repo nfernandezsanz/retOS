@@ -62,7 +62,7 @@ def main() -> int:
         "Local visual audit manifest and desktop/mobile screenshots are present",
         "External GHCR digests, SBOM/provenance, and Cosign verification are recorded",
         "Target-environment human security review is complete",
-        "Promotion owner accepted the bounded calibration scope",
+        "Calibration scope decision template is completed",
         "make local-acceptance",
         "make auditor-static-check",
         "make ci-status-check",
@@ -77,6 +77,7 @@ def main() -> int:
         "scripts/check_audit_bundle.py",
         "scripts/export_audit_bundle.py",
         "retos-visual-audit-",
+        "calibration-scope-decision-template.md",
         "production-promotion-template.md",
     ):
         require(phrase in content, f"generated report missing phrase: {phrase}")

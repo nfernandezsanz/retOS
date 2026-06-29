@@ -45,6 +45,7 @@ make local-acceptance
 make auditor-handoff-check
 make audit-manifest-check
 make audit-bundle-check
+make calibration-scope-decision-check
 make target-security-review-check
 ```
 
@@ -125,8 +126,8 @@ That command runs the static auditor gates, writes an offline manifest to
 `evals/reports/audit-handoff.md`. It also writes
 `evals/reports/retos-audit-handoff.tar.gz` plus a `.sha256` checksum sidecar with the
 manifest, report, production readiness pack, release process, operations guide, branding
-guide, release note, calibration evidence, calibration trend evidence, promotion
-template, and CI/release workflows. The Markdown handoff includes a promotion decision
+guide, release note, calibration evidence, calibration trend evidence, calibration scope
+decision template, promotion template, and CI/release workflows. The Markdown handoff includes a promotion decision
 checklist that separates locally proven evidence from external release and
 target-environment decisions. These artifacts deliberately do not claim production
 promotion.
@@ -135,6 +136,11 @@ For the human target-environment security review, validate the template with
 `make target-security-review-check`, then complete
 `docs/releases/evidence/target-security-review-template.md` and store the completed copy
 with the promotion record.
+
+For bounded public calibration slices, validate the decision template with
+`make calibration-scope-decision-check`, then complete
+`docs/releases/evidence/calibration-scope-decision-template.md` to record whether the
+pilot scope is accepted or broader trend evidence is attached.
 
 Remote CI evidence is separate:
 
@@ -184,6 +190,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 | Run deterministic evals | `make eval-smoke` and `make eval-agent-multihop` |
 | Smoke the full stack | `make docker-smoke` |
 | Prepare human review | `make auditor-handoff-check` |
+| Prepare calibration decision | `make calibration-scope-decision-check` |
 | Prepare target security review | `make target-security-review-check` |
 
 ## What This Repository Contains
@@ -405,6 +412,7 @@ Every meaningful change should pass these gates:
 | Calibration evidence | `make eval-calibration-evidence OUTPUT=docs/releases/evidence/<release>-calibration.md` | Converts the ignored calibration manifest into path-safe Markdown evidence with metrics, gates, source URLs, records, and license notes. |
 | Calibration evidence gate | `make eval-calibration-gate` | Validates versioned calibration evidence offline: PASS status, required targets, minimum records/cases, required metric gates, HTTPS source URLs, and no local dataset/report path leakage. |
 | Calibration trend gate | `make eval-calibration-trend-gate` | Validates versioned trend evidence offline: PASS status, baseline/candidate sample growth, required targets, HTTPS source URLs, metric-level regression tolerance, and no local dataset/report path leakage. |
+| Calibration scope decision | `make calibration-scope-decision-check` | Validates the human decision template for accepting the bounded pilot scope or attaching broader public-slice trend evidence. |
 | OCR eval | `make eval-ocr` | Runs opt-in local OCR quality checks over generated image-only PDFs with CER/WER scoring. |
 | SQuAD eval | `make eval-squad SQUAD_PATH=...` | Runs opt-in SQuAD 2.0 local evals from a user-provided dataset file and can write JSON/Markdown reports. |
 | HotpotQA eval | `make eval-hotpotqa HOTPOTQA_PATH=...` | Runs opt-in HotpotQA multi-hop evals from a user-provided dataset file and can write JSON/Markdown reports. |

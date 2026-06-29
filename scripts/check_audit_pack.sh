@@ -19,6 +19,7 @@ paths = {
     "release_process": Path("docs/release-process.md"),
     "tracker": Path("planning/04-process-tracker.md"),
     "release_note": Path("docs/releases/2026.06.28-alpha.1.md"),
+    "calibration_scope_template": Path("docs/releases/evidence/calibration-scope-decision-template.md"),
     "backup_restore_drill_template": Path("docs/releases/evidence/backup-restore-drill-template.md"),
     "target_security_review_template": Path("docs/releases/evidence/target-security-review-template.md"),
     "promotion_template": Path("docs/releases/evidence/production-promotion-template.md"),
@@ -27,6 +28,7 @@ paths = {
     "dependency_audit_script": Path("scripts/check_dependency_audit.sh"),
     "security_policy_script": Path("scripts/check_security_policy.sh"),
     "ignore_hygiene_script": Path("scripts/check_ignore_hygiene.sh"),
+    "calibration_scope_script": Path("scripts/check_calibration_scope_decision.py"),
     "backup_restore_drill_script": Path("scripts/check_backup_restore_drill.py"),
     "target_security_review_script": Path("scripts/check_target_security_review.py"),
     "promotion_template_script": Path("scripts/check_promotion_template.py"),
@@ -72,6 +74,7 @@ for phrase in (
     "make dependency-audit",
     "make security-policy-check",
     "make target-security-review-check",
+    "make calibration-scope-decision-check",
     "make promotion-template-check",
     "make ignore-hygiene-check",
     "make operations-runbook-check",
@@ -93,6 +96,7 @@ for phrase in (
     "scripts/check_dependency_audit.sh",
     "scripts/check_security_policy.sh",
     "scripts/check_target_security_review.py",
+    "scripts/check_calibration_scope_decision.py",
     "scripts/check_ignore_hygiene.sh",
     "scripts/check_backup_restore_drill.py",
     "scripts/check_promotion_template.py",
@@ -115,6 +119,7 @@ for phrase in (
     "Branding assets",
     "SECURITY.md",
     ".dockerignore",
+    "docs/releases/evidence/calibration-scope-decision-template.md",
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/target-security-review-template.md",
     "docs/releases/evidence/production-promotion-template.md",
@@ -226,6 +231,13 @@ require(
     and "target-security-review-template.md" in paths["security_policy"].read_text(encoding="utf-8"),
     "README, release process, and SECURITY.md must link the target security review template",
 )
+require(
+    "calibration-scope-decision-template.md" in readme
+    and "calibration-scope-decision-template.md" in operations
+    and "calibration-scope-decision-template.md" in release_process
+    and "calibration-scope-decision-template.md" in audit_pack,
+    "README, operations, release process, and audit pack must link the calibration scope decision template",
+)
 for heading in (
     "## Machine Evidence",
     "## Release Provenance",
@@ -247,6 +259,7 @@ require(
 for gate in (
     "make env-security-check",
     "make target-security-review-check",
+    "make calibration-scope-decision-check",
     "make visual-audit-check",
     "make promotion-template-check",
 ):
@@ -276,6 +289,10 @@ for phrase in (
 require(
     "`make env-security-check` output" in promotion_template,
     "promotion evidence template must record env-security-check output",
+)
+require(
+    "Calibration scope decision template completed" in promotion_template,
+    "promotion evidence template must record calibration scope decision completion",
 )
 require(
     "make frontend-visual-audit" in tracker and "visual audit evidence" in tracker,

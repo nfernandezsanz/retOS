@@ -69,7 +69,7 @@ def build_decision_checklist(
         f"- [{checked(visual_files_present)}] Local visual audit manifest and desktop/mobile screenshots are present.",
         "- [ ] External GHCR digests, SBOM/provenance, and Cosign verification are recorded.",
         "- [ ] Target-environment human security review is complete.",
-        "- [ ] Promotion owner accepted the bounded calibration scope or attached broader trend evidence.",
+        "- [ ] Calibration scope decision template is completed for bounded pilot acceptance or broader trend evidence.",
     ]
 
 
@@ -164,6 +164,7 @@ def build_report(manifest: dict[str, Any], *, manifest_path: Path) -> str:
             "",
             "- Treat this report as local handoff evidence, not final production promotion.",
             "- Pair GitHub Actions generated manifests with `make ci-status-check` for the same commit.",
+            "- Complete `docs/releases/evidence/calibration-scope-decision-template.md` when relying on bounded public calibration slices.",
             "- Complete `docs/releases/evidence/production-promotion-template.md` for the target environment.",
         ]
     )

@@ -54,6 +54,7 @@ make audit-pack-check
 make production-preflight
 make backup-restore-drill-check
 make target-security-review-check
+make calibration-scope-decision-check
 make promotion-template-check
 make auditor-static-check
 make auditor-handoff-check
@@ -118,6 +119,7 @@ make release-evidence-check
 | Rollback notes | Yes |
 | Backup/restore drill template | Yes |
 | Target security review template | Yes |
+| Calibration scope decision template | Yes |
 | Production promotion template | Yes |
 
 Before production promotion, reconcile this release evidence with
@@ -127,6 +129,8 @@ Use [docs/releases/evidence/production-promotion-template.md](releases/evidence/
 for the final human promotion record.
 Use [docs/releases/evidence/target-security-review-template.md](releases/evidence/target-security-review-template.md)
 for the target-environment security review record.
+Use [docs/releases/evidence/calibration-scope-decision-template.md](releases/evidence/calibration-scope-decision-template.md)
+to record accepted bounded pilot scope or attached broader public-slice trend evidence.
 
 ## Release Notes Template
 
@@ -214,9 +218,9 @@ Images:
   from external release and target-environment decisions.
 - `make audit-bundle` packages the local JSON manifest, Markdown handoff report,
   production readiness pack, release process, operations guide, branding guide, release
-  note, backup/restore drill template, target security review template, promotion
-  template, and workflow contracts into a tarball with a `.sha256` sidecar for offline
-  auditor transfer.
+  note, calibration scope decision template, backup/restore drill template, target
+  security review template, promotion template, and workflow contracts into a tarball
+  with a `.sha256` sidecar for offline auditor transfer.
 - `make auditor-handoff-check` is the local auditor entry point for static guards,
   offline manifest export, and promotion preparation. It does not replace tag publishing,
   GHCR digests, SBOM/provenance, Cosign verification, or target-environment review.

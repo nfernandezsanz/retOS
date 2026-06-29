@@ -95,6 +95,9 @@ and rollback ownership for the target environment. Use
 [docs/releases/evidence/target-security-review-template.md](releases/evidence/target-security-review-template.md)
 for the detailed target security review; validate the template with
 `make target-security-review-check`. Use
+[docs/releases/evidence/calibration-scope-decision-template.md](releases/evidence/calibration-scope-decision-template.md)
+for accepted bounded pilot scope or broader public-slice trend evidence; validate the
+template with `make calibration-scope-decision-check`. Use
 [docs/releases/evidence/backup-restore-drill-template.md](releases/evidence/backup-restore-drill-template.md)
 for the detailed backup/restore rehearsal record; validate the template with
 `make backup-restore-drill-check`.

@@ -35,6 +35,7 @@ REQUIRED_CRITICAL_FILES = {
     "frontend/src/styles.css",
     "frontend/e2e/app.spec.ts",
     "docs/releases/2026.06.28-alpha.1.md",
+    "docs/releases/evidence/calibration-scope-decision-template.md",
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/target-security-review-template.md",
     "scripts/check_ci_status.sh",
@@ -44,6 +45,7 @@ REQUIRED_CRITICAL_FILES = {
     "scripts/check_env_security.py",
     "scripts/check_promotion_template.py",
     "scripts/check_target_security_review.py",
+    "scripts/check_calibration_scope_decision.py",
     "scripts/check_eval_calibration_evidence.py",
     "scripts/check_eval_calibration_trend.py",
     "scripts/check_visual_audit.py",
@@ -69,6 +71,7 @@ REQUIRED_LOCAL_GATES = {
     "make promotion-template-check",
     "make eval-calibration-gate",
     "make eval-calibration-trend-gate",
+    "make calibration-scope-decision-check",
     "make ci-status-check",
 }
 

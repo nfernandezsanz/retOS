@@ -23,6 +23,9 @@ drill_template = Path("docs/releases/evidence/backup-restore-drill-template.md")
 target_security_template = Path(
     "docs/releases/evidence/target-security-review-template.md"
 ).read_text(encoding="utf-8")
+calibration_scope_template = Path(
+    "docs/releases/evidence/calibration-scope-decision-template.md"
+).read_text(encoding="utf-8")
 gitignore = Path(".gitignore").read_text(encoding="utf-8")
 dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
 api_smoke = Path("backend/scripts/smoke_api.py").read_text(encoding="utf-8")
@@ -59,6 +62,8 @@ for phrase in (
     "backup-restore-drill-template.md",
     "target-security-review-template.md",
     "make target-security-review-check",
+    "calibration-scope-decision-template.md",
+    "make calibration-scope-decision-check",
 ):
     require(phrase in operations, f"docs/operations.md missing operational phrase: {phrase}")
 
@@ -136,6 +141,20 @@ for phrase in (
     require(
         phrase in target_security_template,
         f"target security review template missing evidence field: {phrase}",
+    )
+
+for phrase in (
+    "Calibration Scope Decision Evidence Template",
+    "Pilot scope accepted",
+    "Accepted scope limit",
+    "Broader trend evidence attached",
+    "Regression tolerance",
+    "Calibration decision",
+    "Promotion impact",
+):
+    require(
+        phrase in calibration_scope_template,
+        f"calibration scope decision template missing evidence field: {phrase}",
     )
 
 print("Operations runbook OK: backup, restore, rollback, audit export, and evidence fields are aligned.")

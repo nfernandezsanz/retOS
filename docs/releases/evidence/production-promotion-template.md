@@ -42,6 +42,7 @@ Paste or link the output for each gate:
 - `make docker-smoke`
 - `make release-check`
 - `make production-preflight`
+- `make calibration-scope-decision-check`
 - `make auditor-static-check`
 - `make audit-manifest-check`
 - `make audit-handoff-report`
@@ -94,6 +95,7 @@ Paste or link the output for each gate:
 - Provider keys stored in secret manager:
 - Paid-provider budget owner recorded:
 - `/audit/export` hash-chain snapshot reviewed:
+- Calibration scope decision template completed:
 
 ## Rollback
 

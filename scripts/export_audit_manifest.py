@@ -44,6 +44,7 @@ CRITICAL_FILES = (
     "frontend/src/styles.css",
     "frontend/e2e/app.spec.ts",
     "docs/releases/2026.06.28-alpha.1.md",
+    "docs/releases/evidence/calibration-scope-decision-template.md",
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/production-promotion-template.md",
     "docs/releases/evidence/target-security-review-template.md",
@@ -54,6 +55,7 @@ CRITICAL_FILES = (
     "scripts/check_env_security.py",
     "scripts/check_promotion_template.py",
     "scripts/check_target_security_review.py",
+    "scripts/check_calibration_scope_decision.py",
     "scripts/check_eval_calibration_evidence.py",
     "scripts/check_eval_calibration_trend.py",
     "scripts/check_production_preflight.sh",
@@ -96,6 +98,7 @@ LOCAL_GATES = (
     "make versioned-release-notes-check",
     "make eval-calibration-gate",
     "make eval-calibration-trend-gate",
+    "make calibration-scope-decision-check",
     "make ci-status-check",
 )
 
@@ -104,6 +107,7 @@ EXTERNAL_PROMOTION_EVIDENCE = (
     "SBOM/provenance attestations from GitHub Actions",
     "Cosign verification against published backend and web digests",
     "Accepted calibration scope or broader public-slice trend evidence",
+    "Completed calibration scope decision evidence template",
     "Human target-environment security review",
     "Completed target security review evidence template",
 )

@@ -34,9 +34,11 @@ production pilot.
 7. Review a fresh `/audit/export` snapshot and validate the hash-chain fields.
 8. Confirm no paid-provider calls are required for tests, eval smoke, browser smoke, API
    smoke, or Docker smoke.
-9. Complete `docs/releases/evidence/target-security-review-template.md` or a copy of it
+9. Complete `docs/releases/evidence/calibration-scope-decision-template.md` or a copy of
+   it when relying on bounded public calibration slices or broader public-slice trends.
+10. Complete `docs/releases/evidence/target-security-review-template.md` or a copy of it
    for the target environment.
-10. Complete `docs/releases/evidence/production-promotion-template.md` or a copy of it
+11. Complete `docs/releases/evidence/production-promotion-template.md` or a copy of it
     for the final promotion decision.
 
 ## Required Local Evidence
@@ -58,6 +60,7 @@ make production-preflight
 make dependency-audit
 make security-policy-check
 make target-security-review-check
+make calibration-scope-decision-check
 make ignore-hygiene-check
 make operations-runbook-check
 make backup-restore-drill-check
@@ -102,7 +105,7 @@ auditor a stable local entry point:
 | Environment security | `make env-security-check` | Active `.env` security posture is validated without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Local demo corpus | `make docker-seed-demo`, `make api-smoke`, and `make frontend-e2e` | The running Docker stack, real HTTP smoke, and React console can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 603 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 607 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
@@ -113,6 +116,7 @@ auditor a stable local entry point:
 | Dependency advisories | `make dependency-audit` | Python runtime and frontend lockfile dependency advisory checks pass without paid providers. |
 | Security policy | `make security-policy-check` | Security reporting, secure defaults, human review scope, and operational links are aligned. |
 | Target security review template | `make target-security-review-check` | Required auth, secrets, provider keys, CORS, exposed ports, data handling, release provenance, rollback, accepted-risk, and promotion-impact fields are present for the target environment. |
+| Calibration scope decision template | `make calibration-scope-decision-check` | Required versioned evidence, bounded pilot acceptance, broader trend evidence, risk, follow-up, and promotion-impact fields are present for release calibration scope decisions. |
 | Ignore hygiene | `make ignore-hygiene-check` | Git and Docker contexts exclude secrets, generated files, local volumes, public datasets, reports, and backups. |
 | Operations runbook | `make operations-runbook-check` | Backup, restore, rollback, health-check, audit-export, and promotion-evidence fields are aligned. |
 | Backup/restore drill template | `make backup-restore-drill-check` | Detailed rehearsal evidence fields are present for backup artifacts, restore commands, health checks, audit-export validation, and promotion impact. |
@@ -125,7 +129,7 @@ auditor a stable local entry point:
 | Audit handoff report | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Human-readable Markdown companion for the JSON manifest with candidate, verdict, coverage source, local gates, blockers, hashes, and visual evidence. CI also uploads `retos-audit-handoff-<commit>` from the same manifest snapshot for reviewers who want a readable artifact. |
 | Audit handoff report schema | `make audit-handoff-report-check` | Offline check that the generated Markdown summary preserves key manifest evidence. |
 | Promotion decision checklist | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Generated checklist showing clean worktree, CI success, critical file hashes, local visual evidence, and remaining external promotion decisions. |
-| Audit handoff bundle | `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` | Local tarball plus `.sha256` sidecar containing the JSON manifest, Markdown handoff, production readiness pack, release process, operations guide, branding guide, release note, calibration evidence, calibration trend evidence, promotion template, and CI/release workflows. |
+| Audit handoff bundle | `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` | Local tarball plus `.sha256` sidecar containing the JSON manifest, Markdown handoff, production readiness pack, release process, operations guide, branding guide, release note, calibration evidence, calibration trend evidence, calibration scope decision template, promotion template, and CI/release workflows. |
 | Audit handoff bundle schema | `make audit-bundle-check` | Offline check that the generated tarball has the required members and checksum. |
 | Audit export verifier | `make audit-export-check` or `make audit-export-check EXPORT=retos-audit-export.json` | Self-tests the offline `/audit/export` verifier or validates a downloaded export by recomputing payload hashes, event hashes, continuity, head hash, and failure reasons. |
 | Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, docker, final audit-evidence jobs, and required backend-coverage/visual-audit/audit-manifest/audit-handoff artifacts for the current commit. |
@@ -141,7 +145,7 @@ production promotion:
 | GHCR digests | `.github/workflows/release.yml` run for the immutable release tag after dependency audits, browser smoke, and visual audit screenshots pass. |
 | SBOM/provenance | GitHub Actions build attestations requested by the release workflow. |
 | Cosign signature and tag verification | `make release-evidence-check` / `scripts/check_published_release_evidence.sh` run with the workflow summary's backend and web digests, verifying signatures and immutable version tag-to-digest resolution. |
-| Broader calibration or accepted pilot scope | Additional public-slice trend evidence, or an explicit human acceptance of the bounded 200-record/40-case pilot scope. |
+| Broader calibration or accepted pilot scope | Additional public-slice trend evidence, or `docs/releases/evidence/calibration-scope-decision-template.md` completed with explicit human acceptance of the bounded 200-record/40-case pilot scope. |
 | Human security review | `SECURITY.md` plus `docs/releases/evidence/target-security-review-template.md` target-environment review of auth, secrets, CORS, exposed ports, backups, provider keys, release provenance, accepted risks, and rollback ownership. |
 
 ## Promotion Blockers
@@ -153,7 +157,7 @@ These items must be closed before a final production release:
 | GHCR publish evidence missing | Run `.github/workflows/release.yml` for the immutable release tag and record backend/web image digests. |
 | SBOM/provenance evidence missing | Link or copy the attestation evidence from the release workflow into the versioned release note. |
 | Cosign signature/tag evidence missing | Run `make release-evidence-check` with the published digests and record successful keyless signature verification plus version tag-to-digest resolution for both images. |
-| Broader public calibration pending | Run `make eval-calibration-gate` and `make eval-calibration-trend-gate` against the versioned calibration evidence, then add trend evidence beyond the current 200-record/40-case public slices or document the pilot scope limit. |
+| Broader public calibration pending | Run `make eval-calibration-gate`, `make eval-calibration-trend-gate`, and `make calibration-scope-decision-check`, then complete `docs/releases/evidence/calibration-scope-decision-template.md` with either broader trend evidence or accepted bounded pilot scope limits. |
 | Human security review pending | Complete `docs/releases/evidence/target-security-review-template.md` for auth, secrets, exposed ports, CORS, backup handling, provider key handling, release provenance, accepted risks, and rollback ownership in the target environment. |
 
 ## Production Pilot Acceptance Checklist
@@ -178,6 +182,7 @@ These items must be closed before a final production release:
 - [ ] `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` was exported with its `.sha256` sidecar.
 - [ ] `make eval-calibration-gate` passes against the versioned calibration evidence.
 - [ ] `make eval-calibration-trend-gate` passes against the versioned calibration trend evidence.
+- [ ] `make calibration-scope-decision-check` passes.
 - [ ] `make audit-export-check EXPORT=retos-audit-export.json` passed for a fresh target-environment `/audit/export` download.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
@@ -194,6 +199,7 @@ These items must be closed before a final production release:
 - [ ] `/audit/export` validates hash-chain fields for journal and progress events.
 - [ ] Operator has recorded rollback steps and previous image tag.
 - [ ] Target security review is completed and linked in the promotion record.
+- [ ] Calibration scope decision is completed and linked in the promotion record.
 - [ ] GHCR digests, SBOM/provenance, and Cosign signature evidence are recorded.
 
 ## Evidence Locations
@@ -214,6 +220,7 @@ These items must be closed before a final production release:
 | Backup/restore drill template | `docs/releases/evidence/backup-restore-drill-template.md`, `scripts/check_backup_restore_drill.py`, `make backup-restore-drill-check` |
 | Audit manifest schema | `scripts/check_audit_manifest.py`, `make audit-manifest-check` |
 | Calibration trend evidence | `scripts/check_eval_calibration_trend.py`, `make eval-calibration-trend-gate` |
+| Calibration scope decision template | `docs/releases/evidence/calibration-scope-decision-template.md`, `scripts/check_calibration_scope_decision.py`, `make calibration-scope-decision-check` |
 | Audit handoff report | `scripts/export_audit_handoff_report.py`, `scripts/check_audit_handoff_report.py`, `make audit-handoff-report` |
 | Audit handoff bundle | `scripts/export_audit_bundle.py`, `scripts/check_audit_bundle.py`, `make audit-bundle` |
 | Audit export verifier | `scripts/check_audit_export.py`, `make audit-export-check` |
