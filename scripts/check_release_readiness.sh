@@ -168,6 +168,14 @@ require(
     "README, Docker docs, and production readiness pack must expose the local doctor",
 )
 require(
+    "make docker-seed-demo" in readme and "make docker-seed-demo" in docker_docs,
+    "README and Docker docs must expose the local Docker demo seed",
+)
+require(
+    "seed-demo:" in makefile and "docker-seed-demo:" in makefile,
+    "Makefile must expose local and Docker demo seed targets",
+)
+require(
     "make local-acceptance" in contributing,
     "CONTRIBUTING.md must document the local acceptance gate",
 )

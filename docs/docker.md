@@ -142,6 +142,7 @@ make docker-runtime-image-check
 cp .env.example .env
 make doctor
 docker compose up --build
+make docker-seed-demo
 ```
 
 Open:
@@ -150,6 +151,21 @@ Open:
 - API: http://localhost:8000
 - API docs: http://localhost:8000/docs
 - RabbitMQ management: http://localhost:15672
+
+The seed command executes inside the running API container so it uses the same
+Postgres hostname, storage volume, and index volume as the Docker stack. It creates or
+reuses the `retos-demo` domain, ingests three local fixture documents through normal
+`ingest.source` jobs, writes journal/progress hash-chain events, rebuilds the Tantivy
+index, and prints the created domain/source/job identifiers. It is idempotent, so
+running it again skips existing document hashes and refreshes the index.
+
+For an isolated non-Docker SQLite smoke run, use:
+
+```bash
+RETOS_DATABASE_URL=sqlite+aiosqlite:///./retos-demo.db \
+RETOS_INDEX_ROOT=./retos_index \
+make seed-demo SEED_DEMO_ARGS=--create-schema
+```
 
 ## Pull The Local Model
 

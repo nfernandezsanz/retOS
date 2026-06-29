@@ -30,6 +30,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 cp .env.example .env
 make doctor
 docker compose up --build
+make docker-seed-demo
 ```
 
 Open http://localhost:8080 for the console or http://localhost:8000/docs for the API.
@@ -79,6 +80,7 @@ auditor-friendly evidence.
 cp .env.example .env
 make doctor
 docker compose up --build
+make docker-seed-demo
 ```
 
 Then open the console and API:
@@ -91,6 +93,11 @@ Then open the console and API:
 | Check API readiness | http://localhost:8000/readyz |
 | Check runtime metadata | http://localhost:8000/versionz |
 | Watch RabbitMQ | http://localhost:15672 |
+
+`make docker-seed-demo` runs inside the API container, creates or reuses a `retos-demo`
+domain, ingests three local text documents through normal auditable jobs, rebuilds the
+BM25 index, and leaves searchable data visible in the console. Try searching for
+`Apollo guidance`, `plankton salinity`, or `incident retention`.
 
 Pull the default local model when you want Ollama-backed runs:
 
@@ -358,6 +365,7 @@ Every meaningful change should pass these gates:
 | Gate | Command | Purpose |
 | --- | --- | --- |
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
+| Demo corpus seed | `make docker-seed-demo` or `make seed-demo SEED_DEMO_ARGS=--create-schema` | Seeds an idempotent, auditable demo domain with text-ingestion jobs, hash-chained journal/progress events, and a rebuilt local BM25 index for hands-on UI checks. |
 | Backend format | `make format-check` | Enforces Black formatting. |
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |

@@ -34,6 +34,7 @@ RUN python -m pip install --upgrade pip \
 COPY backend/alembic.ini /app/backend/alembic.ini
 COPY backend/alembic /app/backend/alembic
 COPY backend/src /app/backend/src
+COPY backend/scripts/seed_demo.py /app/backend/scripts/
 COPY infra/docker/backend-entrypoint.sh /usr/local/bin/retos-backend
 RUN chmod +x /usr/local/bin/retos-backend \
     && groupadd --gid "${APP_GID}" retos \

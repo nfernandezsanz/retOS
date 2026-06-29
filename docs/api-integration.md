@@ -473,6 +473,18 @@ mode, the scan is queued as an `ingest.source` job and processed by the worker.
 
 ## BM25 Search
 
+For a fast local demo corpus, seed the running Docker stack:
+
+```bash
+make docker-seed-demo
+```
+
+The command creates or reuses the `retos-demo` domain, queues normal text-ingestion
+jobs for three local fixture documents, runs the same ingestion service used by workers,
+records journal/progress hash-chain events, rebuilds the local BM25 projection, and can
+be repeated safely. Search examples that should return hits after seeding include
+`Apollo guidance`, `plankton salinity`, and `incident retention`.
+
 Rebuild the local Tantivy BM25 projection for a domain:
 
 ```bash
