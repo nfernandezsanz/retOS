@@ -77,6 +77,20 @@ require(
     "coverage evidence must match the current README/release note ratchet",
 )
 require(
+    "647 pytest cases" in audit_pack,
+    "production readiness pack must record the current backend pytest case count",
+)
+for unique_gate in (
+    "| Backend quality |",
+    "| Security policy |",
+    "| README usability |",
+    "| Auditor evidence matrix |",
+):
+    require(
+        audit_pack.count(unique_gate) == 1,
+        f"production readiness pack must contain exactly one row for {unique_gate}",
+    )
+require(
     "Latest Visual Audit" in branding and "Desktop 1440x900" in branding and "Mobile 390x844" in branding,
     "branding guide must keep current visual audit evidence",
 )
