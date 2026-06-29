@@ -4,6 +4,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from types import ModuleType
 
@@ -30,6 +31,7 @@ def test_local_status_accepts_compose_json_array() -> None:
     payload = json.dumps(
         [
             {"Service": "api", "State": "running", "Health": "healthy"},
+            {"Service": "migrate", "State": "exited", "Status": "Exited (0) 2 minutes ago"},
             {"Service": "worker", "State": "running"},
             {"Service": "web", "State": "running"},
             {"Service": "postgres", "State": "running", "Health": "healthy"},
@@ -41,6 +43,7 @@ def test_local_status_accepts_compose_json_array() -> None:
 
     assert {check.name: check.status for check in checks} == {
         "service:api": "OK",
+        "service:migrate": "OK",
         "service:postgres": "OK",
         "service:rabbitmq": "OK",
         "service:web": "OK",
@@ -52,12 +55,54 @@ def test_local_status_accepts_compose_json_lines() -> None:
     status = load_local_status()
     payload = "\n".join(
         json.dumps({"Service": service, "State": "running"})
-        for service in ("api", "worker", "web", "postgres", "rabbitmq")
+        for service in ("api", "migrate", "worker", "web", "postgres", "rabbitmq")
     )
 
     checks = status.collect_compose_checks(lambda _command: completed(payload))
 
     assert not [check for check in checks if check.status == "FAIL"]
+
+
+def test_local_status_uses_all_services_for_compose_status() -> None:
+    status = load_local_status()
+    commands: list[list[str]] = []
+    payload = json.dumps(
+        [
+            {"Service": "api", "State": "running"},
+            {"Service": "migrate", "State": "exited", "ExitCode": 0},
+            {"Service": "worker", "State": "running"},
+            {"Service": "web", "State": "running"},
+            {"Service": "postgres", "State": "running"},
+            {"Service": "rabbitmq", "State": "running"},
+        ]
+    )
+
+    def runner(command: Sequence[str]) -> subprocess.CompletedProcess[str]:
+        commands.append(list(command))
+        return completed(payload)
+
+    status.collect_compose_checks(runner)
+
+    assert commands == [["docker", "compose", "ps", "--all", "--format", "json"]]
+
+
+def test_local_status_fails_failed_migrations() -> None:
+    status = load_local_status()
+    payload = json.dumps(
+        [
+            {"Service": "api", "State": "running"},
+            {"Service": "migrate", "State": "exited", "ExitCode": 1, "Status": "Exited (1)"},
+            {"Service": "worker", "State": "running"},
+            {"Service": "web", "State": "running"},
+            {"Service": "postgres", "State": "running"},
+            {"Service": "rabbitmq", "State": "running"},
+        ]
+    )
+
+    checks = status.collect_compose_checks(lambda _command: completed(payload))
+
+    failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
+    assert failures["service:migrate"] == "Exited (1)"
 
 
 def test_local_status_fails_missing_required_services() -> None:

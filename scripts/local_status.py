@@ -87,8 +87,19 @@ def service_state(service: dict[str, Any]) -> str:
     return str(service.get("State") or service.get("Status") or "unknown")
 
 
+def service_succeeded(service: dict[str, Any]) -> bool:
+    state = service_state(service).lower()
+    status = str(service.get("Status") or "").lower()
+    exit_code = service.get("ExitCode")
+    if state == "running":
+        return True
+    if exit_code in (0, "0"):
+        return True
+    return "exited (0)" in status or "exit 0" in status or status == "completed"
+
+
 def collect_compose_checks(runner: CommandRunner = default_runner) -> list[StatusCheck]:
-    result = runner(["docker", "compose", "ps", "--format", "json"])
+    result = runner(["docker", "compose", "ps", "--all", "--format", "json"])
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "docker compose ps failed").strip()
         return [fail("docker compose", detail)]
@@ -112,6 +123,17 @@ def collect_compose_checks(runner: CommandRunner = default_runner) -> list[Statu
             checks.append(ok(f"service:{name}", f"{state}{suffix}"))
         else:
             checks.append(fail(f"service:{name}", state))
+    migrate = by_name.get("migrate")
+    if migrate is None:
+        checks.append(warn("service:migrate", "not present in docker compose ps --all"))
+    elif service_succeeded(migrate):
+        state = service_state(migrate)
+        status = str(migrate.get("Status") or "").strip()
+        detail = f"{state}, {status}" if status else state
+        checks.append(ok("service:migrate", detail))
+    else:
+        status = str(migrate.get("Status") or service_state(migrate)).strip()
+        checks.append(fail("service:migrate", status))
     return checks
 
 

@@ -1971,7 +1971,7 @@ test("keeps operational modules compact and segmented", async ({ page }) => {
       0,
     );
     expect(layout.activeHeight, `${section}/${module ?? "overview"} active height`).toBeLessThanOrEqual(
-      720,
+      650,
     );
     expect(layout.panelScroll, `${section}/${module ?? "overview"} panel scroll`).toBeLessThanOrEqual(
       section === "documents" && module === "documents-library" ? 140 : 20,

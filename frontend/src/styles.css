@@ -685,7 +685,7 @@ h2 {
 .section-content > .panel:not([hidden]) {
   display: grid;
   align-content: start;
-  max-height: calc(100vh - 150px);
+  max-height: calc(100vh - 176px);
   overflow: auto;
   scrollbar-gutter: stable;
 }
@@ -694,7 +694,7 @@ h2 {
   display: grid;
   align-content: start;
   gap: 10px;
-  max-height: calc(100vh - 218px);
+  max-height: calc(100vh - 256px);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -1152,13 +1152,13 @@ button:focus-visible {
 #documents:has(#documents-library:not([hidden])) > #documents-library {
   grid-column: 1;
   grid-template-columns: 1fr;
-  max-height: calc(100vh - 228px);
+  max-height: calc(100vh - 266px);
   gap: 10px;
 }
 
 #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]) {
   grid-column: 2;
-  max-height: calc(100vh - 228px);
+  max-height: calc(100vh - 266px);
   margin-top: 0;
 }
 
@@ -2248,7 +2248,7 @@ button:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
-  max-height: min(380px, calc(100vh - 240px));
+  max-height: min(320px, calc(100vh - 284px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2421,7 +2421,7 @@ button:focus-visible {
 .eval-result {
   display: grid;
   gap: 14px;
-  max-height: min(560px, calc(100vh - 236px));
+  max-height: min(460px, calc(100vh - 284px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2548,7 +2548,7 @@ button:focus-visible {
 .eval-history {
   display: grid;
   gap: 12px;
-  max-height: min(500px, calc(100vh - 238px));
+  max-height: min(430px, calc(100vh - 284px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2663,7 +2663,7 @@ button:focus-visible {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
   gap: 10px;
-  max-height: min(500px, calc(100vh - 238px));
+  max-height: min(430px, calc(100vh - 284px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2795,7 +2795,7 @@ button:focus-visible {
 .job-ledger {
   display: grid;
   gap: 10px;
-  max-height: min(520px, calc(100vh - 294px));
+  max-height: min(420px, calc(100vh - 332px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2984,7 +2984,7 @@ button:focus-visible {
 .job-progress-list {
   display: grid;
   gap: 10px;
-  max-height: min(430px, calc(100vh - 300px));
+  max-height: min(360px, calc(100vh - 332px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -3073,7 +3073,7 @@ button:focus-visible {
 .audit-event-list {
   display: grid;
   gap: 10px;
-  max-height: min(430px, calc(100vh - 300px));
+  max-height: min(360px, calc(100vh - 332px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -3248,7 +3248,7 @@ button:focus-visible {
 .provider-list {
   display: grid;
   gap: 10px;
-  max-height: min(260px, 32vh);
+  max-height: min(220px, 28vh);
   margin-top: 18px;
   overflow: auto;
   padding-right: 4px;

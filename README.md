@@ -109,7 +109,8 @@ optional Ollama image; use the model command below only when you want local LLM 
 Use `make docker-down` when you are done.
 
 Run `make local-status` any time after startup to print the useful URLs, inspect the
-Docker services, and verify the console/API endpoints from your machine.
+Docker services, confirm the one-shot migration container when Compose exposes it, and
+verify the console/API endpoints from your machine.
 
 For manual control, run `make bootstrap-env`, `make doctor`, `docker compose up --build`,
 then `make docker-seed-demo` in another shell.
@@ -137,7 +138,7 @@ and leaves an existing local `.env` untouched.
 
 | Symptom | Local check | What to do |
 | --- | --- | --- |
-| The console does not load | `make local-status` | Confirm `web`, `api`, Postgres, RabbitMQ, and host endpoints are reachable; rerun `make local-demo` if a required service is missing. |
+| The console does not load | `make local-status` | Confirm `web`, `api`, Postgres, RabbitMQ, migrations, and host endpoints are reachable; rerun `make local-demo` if a required service is missing. |
 | API readiness is failing | `curl --fail http://localhost:8000/readyz` | Run `make local-logs` and rerun `make doctor` before changing code or secrets. |
 | Demo data is missing | `make docker-seed-demo` | Re-seed the idempotent demo corpus, then refresh Documents or run `make local-status` to confirm the stack stayed healthy. |
 | A command would use paid providers | `make env-security-check` | Keep `RETOS_ALLOW_PAID_LLM=false` for local tests; paid provider calls require explicit opt-in and complete provider configuration. |
@@ -426,7 +427,7 @@ Every meaningful change should pass these gates:
 | Gate | Command | Purpose |
 | --- | --- | --- |
 | Local demo | `make local-demo` | Boots the local Docker stack in the background, seeds auditable demo data, and prints the console/API/RabbitMQ URLs for hands-on review. |
-| Local status | `make local-status` | Prints useful local URLs, checks Docker service state, and verifies the console/API endpoints without starting or mutating the stack. |
+| Local status | `make local-status` | Prints useful local URLs, checks Docker service and migration state, and verifies the console/API endpoints without starting or mutating the stack. |
 | Local logs | `make local-logs` | Prints recent Compose logs for Postgres, RabbitMQ, migrations, API, worker, and web without following or mutating the stack. |
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Environment security | `make env-security-check` | Validates the active `.env` without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
@@ -468,7 +469,7 @@ Every meaningful change should pass these gates:
 | Natural Questions eval | `make eval-natural-questions NQ_PATH=...` | Runs opt-in Natural Questions real-query evals from a user-provided JSONL/JSON dataset file and can write JSON/Markdown reports. |
 | API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, demo corpus seed/search, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, agent multi-hop/SQuAD/HotpotQA/HotpotQA-agent/Natural Questions evals, eval rerun/comparison/trends, generic eval job retry, job lifecycle, audit export, and SSE over HTTP. OCR benchmark API smoke is opt-in for Docker where Tesseract is present. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
-| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies section navigation, tooltip contract, runtime build/readiness metadata, contextual module pills, current-context bands, visible UI state, admin user management, document edit/archive/restore/history, agent multi-hop and dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
+| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies section navigation, tooltip contract, compact module height limits, runtime build/readiness metadata, contextual module pills, current-context bands, visible UI state, admin user management, document edit/archive/restore/history, agent multi-hop and dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
 | Visual audit screenshots | `make frontend-visual-audit` | Generates ignored desktop/mobile PNG snapshots and `frontend/visual-audit/manifest.json` with viewport, size, SHA-256 metadata, section-navigation evidence, and responsive no-overflow coverage; CI uploads them as a `retos-visual-audit-<commit>` artifact. |
 | Visual audit evidence gate | `make visual-audit-check` | Validates the local visual-audit manifest offline, including expected desktop/mobile screenshot records, PNG existence, byte sizes, SHA-256 hashes, and viewport dimensions. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |

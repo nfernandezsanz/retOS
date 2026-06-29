@@ -150,8 +150,8 @@ the running API container. It does not pull the optional Ollama image; use the m
 profile only when you want local LLM calls.
 
 `make local-status` does not start or mutate services. It prints the local URLs, checks
-the API, worker, web, Postgres, and RabbitMQ service states from `docker compose ps`,
-and verifies the console/API endpoints from the host.
+the API, worker, web, Postgres, RabbitMQ, and one-shot migration service states from
+`docker compose ps --all`, and verifies the console/API endpoints from the host.
 
 Use `make local-logs` for a bounded, non-following log snapshot across Postgres,
 RabbitMQ, migrations, API, worker, and web when a local readiness check fails.
