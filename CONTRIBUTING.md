@@ -25,7 +25,7 @@ npm install
 
 ## Checks
 
-Run before opening a pull request:
+Use the fast loop while developing:
 
 ```bash
 make format
@@ -39,6 +39,16 @@ make frontend-e2e
 ```
 
 Use `make integration` when changing API routes, auth, SSE, frontend routing, job status, or anything users observe through the browser.
+
+Before asking for review on a release-facing or auditor-facing change, run the local
+acceptance gate:
+
+```bash
+make local-acceptance
+```
+
+That gate covers backend quality, API/browser integration, frontend build, visual audit,
+Docker config, auditor handoff, and Docker stack smoke without paid LLM providers.
 
 ## Security Rules
 

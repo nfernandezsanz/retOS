@@ -80,6 +80,7 @@ operations = Path("docs/operations.md").read_text(encoding="utf-8")
 docker_docs = Path("docs/docker.md").read_text(encoding="utf-8")
 readme = Path("README.md").read_text(encoding="utf-8")
 audit_pack = Path("docs/production-readiness.md").read_text(encoding="utf-8")
+contributing = Path("CONTRIBUTING.md").read_text(encoding="utf-8")
 
 require(env.get("RETOS_ALLOW_PAID_LLM") == "false", "paid LLMs must be disabled by default")
 require(env.get("RETOS_PROVIDER") == "local", "local provider must be the default")
@@ -158,6 +159,10 @@ require(
 require(
     "docs/production-readiness.md" in readme,
     "README must link the production readiness audit pack",
+)
+require(
+    "make local-acceptance" in contributing,
+    "CONTRIBUTING.md must document the local acceptance gate",
 )
 require(
     "RetOS is not production-promoted yet" in audit_pack,
