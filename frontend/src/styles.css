@@ -672,6 +672,35 @@ h2 {
   padding-right: 4px;
 }
 
+.live-progress-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.live-progress-summary div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.live-progress-summary span,
+.live-progress-summary small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.live-progress-summary strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
 .queued-jobs {
   display: flex;
   flex-wrap: wrap;
@@ -2530,6 +2559,7 @@ button:focus-visible {
   .trend-metric-row,
   .eval-toolbar,
   .eval-metrics,
+  .live-progress-summary,
   .job-row-grid,
   .job-detail-grid,
   .job-detail-columns,

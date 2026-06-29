@@ -1241,7 +1241,9 @@ The browser should reconnect with `Last-Event-ID` when a connection drops.
 Because the progress stream is authenticated, the React console consumes it with
 `fetch()` and a readable stream so it can send the bearer token. Browser `EventSource`
 does not support custom authorization headers. The UI keeps the latest progress events
-in a compact ledger and reserves space for empty, connected, and error states.
+in a compact ledger, deduplicates replayed events by stream id/event type, shows a live
+summary for last event, observed jobs, status counts, and resume cursor, and reserves
+space for empty, connected, and error states.
 
 SSE ids are stable cursors:
 

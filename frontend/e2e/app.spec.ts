@@ -1491,7 +1491,7 @@ async function mockProviderApi(page: Page) {
       body: [
         "id: progress:progress-seed-1",
         "event: job.queued",
-        'data: {"id":"progress:progress-seed-1","event":"job.queued","data":{"job_id":"job-seed-1","message":"Persisted progress replayed"}}',
+        'data: {"id":"progress:progress-seed-1","event":"job.queued","data":{"job_id":"job-seed-1","status":"queued","occurred_at":"2026-06-27T00:00:00Z","message":"Persisted progress replayed"}}',
         "",
         "id: live:2",
         "event: agent.started",
@@ -1730,6 +1730,7 @@ test("loads the operational console", async ({ page }) => {
     /SSE progress/,
   );
   await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
+  await expect(page.getByLabel("Live progress summary").getByText("Waiting")).toBeVisible();
   await page
     .getByRole("textbox", { name: "Question", exact: true })
     .fill("What evidence mentions search readiness?");
@@ -1752,6 +1753,13 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("page=1")).toBeVisible();
+
+  await page.getByRole("button", { name: "Connect live updates" }).click();
+  await expect(page.getByLabel("Live progress summary").getByText("agent.started")).toBeVisible();
+  await expect(page.getByLabel("Live progress summary").getByText("2 live events")).toBeVisible();
+  await expect(page.getByLabel("Live progress summary").getByText("1 queued")).toBeVisible();
+  await expect(page.getByLabel("Live progress events").getByText("Persisted progress replayed")).toBeVisible();
+  await expect(page.getByLabel("Live progress events").getByText("Agent query started")).toBeVisible();
 
   await page.getByRole("link", { name: "Documents" }).first().click();
   await page.getByLabel("Slug").fill("policy-research");
@@ -1977,7 +1985,9 @@ test("loads the operational console", async ({ page }) => {
 
   await page.getByRole("link", { name: "Queries" }).first().click();
   await page.getByRole("button", { name: "Connect live updates" }).click();
-  await expect(page.getByLabel("Live progress events").getByText("job.queued")).toBeVisible();
+  await expect(
+    page.getByLabel("Live progress events").locator(".event-row").filter({ hasText: "job.queued" }),
+  ).toHaveCount(1);
   await expect(page.getByText("Resume progress:progress")).toBeVisible();
   await expect(page.getByLabel("Live progress events").getByText("Agent query started")).toBeVisible();
 });

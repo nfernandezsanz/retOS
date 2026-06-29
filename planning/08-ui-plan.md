@@ -66,7 +66,8 @@ hiding existing controls behind modal flows.
   renders the grounded answer, job status, provider model, and citation cards without
   requiring users to paste domain UUIDs.
 - The processing panel connects to `/events/progress` with authenticated `fetch`
-  streaming, parses SSE frames, and renders a compact live progress ledger.
+  streaming, parses SSE frames, deduplicates replayed event ids, and renders a compact
+  live progress summary plus event ledger.
 - The processing panel tracks the latest persisted `progress:*` SSE cursor and sends it
   as `Last-Event-ID` on reconnect, allowing reloadable progress replay after API
   restarts.
@@ -128,9 +129,9 @@ Show:
   runs through the audit panel; eval reruns also remain explicit through the eval
   controls.
 - Normalized error detail with suggested action.
-- Snapshot recovery plus `Last-Event-ID` reconnect semantics. The live ledger,
-  persisted resume cursor, per-job progress grouping, and per-job detail drilldowns
-  are implemented.
+- Snapshot recovery plus `Last-Event-ID` reconnect semantics. The live summary, ledger,
+  persisted resume cursor, replay dedupe, per-job progress grouping, and per-job detail
+  drilldowns are implemented.
 
 ## Accessibility
 

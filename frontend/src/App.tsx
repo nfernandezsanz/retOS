@@ -639,6 +639,16 @@ type ProgressEvent = {
   data: Record<string, unknown>;
 };
 
+type LiveProgressSummary = {
+  totalEvents: number;
+  observedJobs: number;
+  queued: number;
+  running: number;
+  succeeded: number;
+  failed: number;
+  lastEvent: ProgressEvent | null;
+};
+
 type DocumentChangeRead = {
   field: string;
   before: unknown;
@@ -1487,6 +1497,69 @@ function summarizePayload(payload: Record<string, unknown>): string {
     .join(" | ");
 }
 
+function progressEventJobId(event: ProgressEvent): string | null {
+  const jobId = event.data.job_id;
+  return typeof jobId === "string" && jobId.trim() ? jobId : null;
+}
+
+function progressEventStatus(event: ProgressEvent): string | null {
+  const status = event.data.status;
+  return typeof status === "string" && status.trim() ? status : null;
+}
+
+function progressEventOccurredAt(event: ProgressEvent): string | null {
+  const occurredAt = event.data.occurred_at;
+  return typeof occurredAt === "string" && occurredAt.trim() ? occurredAt : null;
+}
+
+function progressEventMessage(event: ProgressEvent): string {
+  const message = event.data.message;
+  if (typeof message === "string" && message.trim()) {
+    return message;
+  }
+  return progressEventJobId(event) ?? "Progress update";
+}
+
+function mergeProgressEvents(current: ProgressEvent[], incoming: ProgressEvent[]): ProgressEvent[] {
+  const byKey = new Map(current.map((event) => [`${event.id}:${event.event}`, event]));
+  for (const event of incoming) {
+    byKey.set(`${event.id}:${event.event}`, event);
+  }
+  return [...byKey.values()].slice(-8);
+}
+
+function buildLiveProgressSummary(events: ProgressEvent[], jobs: JobRead[]): LiveProgressSummary {
+  const observedJobIds = new Set<string>();
+  const statusCounts = {
+    queued: 0,
+    running: 0,
+    succeeded: 0,
+    failed: 0,
+  };
+  for (const job of jobs) {
+    observedJobIds.add(job.id);
+    if (job.status in statusCounts) {
+      statusCounts[job.status as keyof typeof statusCounts] += 1;
+    }
+  }
+  for (const event of events) {
+    const jobId = progressEventJobId(event);
+    if (jobId) {
+      observedJobIds.add(jobId);
+    }
+    const status = progressEventStatus(event);
+    if (status && status in statusCounts) {
+      statusCounts[status as keyof typeof statusCounts] += 1;
+    }
+  }
+  return {
+    totalEvents: events.length,
+    observedJobs: observedJobIds.size,
+    ...statusCounts,
+    lastEvent: events.at(-1) ?? null,
+  };
+}
+
 function eventStatus(event: ProgressEventRead): string | null {
   const status = event.payload.status;
   return typeof status === "string" && status.trim() ? status : null;
@@ -1725,6 +1798,10 @@ function App() {
   const progressGroups = useMemo(
     () => groupProgressByJob(auditProgressEvents, queuedJobs),
     [auditProgressEvents, queuedJobs],
+  );
+  const liveProgressSummary = useMemo(
+    () => buildLiveProgressSummary(progressEvents, queuedJobs),
+    [progressEvents, queuedJobs],
   );
   const selectedJobProgressEvents = useMemo(
     () =>
@@ -2870,7 +2947,7 @@ function App() {
             lastPersistedEventIdRef.current = lastPersisted.id;
             setLastProgressCursor(lastPersisted.id);
           }
-          setProgressEvents((current) => [...current, ...nextEvents].slice(-8));
+          setProgressEvents((current) => mergeProgressEvents(current, nextEvents));
         }
       }
 
@@ -3847,6 +3924,32 @@ function App() {
               ))}
             </ol>
             <section className="event-ledger" aria-label="Live progress events" aria-live="polite">
+              <div className="live-progress-summary" aria-label="Live progress summary">
+                <div>
+                  <span>Last event</span>
+                  <strong>{liveProgressSummary.lastEvent?.event ?? "Waiting"}</strong>
+                  <small>
+                    {liveProgressSummary.lastEvent
+                      ? formatDateTime(progressEventOccurredAt(liveProgressSummary.lastEvent))
+                      : "Connect SSE"}
+                  </small>
+                </div>
+                <div>
+                  <span>Observed jobs</span>
+                  <strong>{liveProgressSummary.observedJobs}</strong>
+                  <small>{liveProgressSummary.totalEvents} live events</small>
+                </div>
+                <div>
+                  <span>Running</span>
+                  <strong>{liveProgressSummary.running}</strong>
+                  <small>{liveProgressSummary.queued} queued</small>
+                </div>
+                <div>
+                  <span>Finished</span>
+                  <strong>{liveProgressSummary.succeeded}</strong>
+                  <small>{liveProgressSummary.failed} failed</small>
+                </div>
+              </div>
               {queuedJobs.length > 0 ? (
                 <div className="queued-jobs" aria-label="Queued jobs">
                   {queuedJobs.map((job) => (
@@ -3861,7 +3964,10 @@ function App() {
                   <span className="event-id">#{event.id}</span>
                   <div>
                     <strong>{event.event}</strong>
-                    <span>{String(event.data.message ?? event.data.job_id ?? "Progress update")}</span>
+                    <span>{progressEventMessage(event)}</span>
+                    {progressEventOccurredAt(event) ? (
+                      <span>{formatDateTime(progressEventOccurredAt(event))}</span>
+                    ) : null}
                   </div>
                 </article>
               ))}
