@@ -155,6 +155,7 @@ visual-audit, audit-manifest, and audit-handoff artifacts.
 
 | Workflow | Local Action |
 | --- | --- |
+| Navigate the console | Use the compact Overview, then switch to Documents, Queries, Evals, Audit, or Admin |
 | Upload and manage documents | Use the React console at http://localhost:8080 |
 | Watch ingestion/indexing | Live job/progress views and SSE-backed updates in the UI |
 | Query with citations | Run grounded agent queries against indexed domains |
@@ -200,8 +201,10 @@ visual-audit, audit-manifest, and audit-handoff artifacts.
   per-metric deltas, suite trend direction, and auditable `rerun_from_job_id`
   traceability.
 - A React + TypeScript + Vite frontend scaffold focused on operational visibility for
-  document inventory, edit/archive/restore/history actions, jobs, OCR, indexing, agent
-  runs, local eval execution, and admin account management.
+  a compact Overview plus hash-addressable Documents, Queries, Evals, Audit, and Admin
+  sections. The UI includes hover/focus tooltips, document inventory,
+  edit/archive/restore/history actions, jobs, OCR, indexing, agent runs, local eval
+  execution, and admin account management.
 - Docker Compose for Postgres, RabbitMQ, Ollama, web, and one shared backend image reused by API, worker, and migrations through role-specific commands.
 - Planning, ADRs, and architecture assets for the open source implementation path.
 - Branding assets and visual guidance for a coherent audit-console identity.
@@ -378,8 +381,8 @@ Every meaningful change should pass these gates:
 | Natural Questions eval | `make eval-natural-questions NQ_PATH=...` | Runs opt-in Natural Questions real-query evals from a user-provided JSONL/JSON dataset file and can write JSON/Markdown reports. |
 | API smoke | `make api-smoke` | Starts Uvicorn and hits health, auth, admin user management, domain/source/document update/archive/restore/history/artifact/segment CRUD, mounted source scan, text/file upload ingestion queueing, BM25 rebuild/search, agent multi-hop/SQuAD/HotpotQA/HotpotQA-agent/Natural Questions evals, eval rerun/comparison/trends, generic eval job retry, job lifecycle, audit export, and SSE over HTTP. OCR benchmark API smoke is opt-in for Docker where Tesseract is present. |
 | Frontend build | `make frontend-test` | TypeScript build plus Vite production build. |
-| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies visible UI state, including admin user management, document edit/archive/restore/history, agent multi-hop and dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
-| Visual audit screenshots | `make frontend-visual-audit` | Generates ignored desktop/mobile PNG snapshots and `frontend/visual-audit/manifest.json` with viewport, size, and SHA-256 metadata; CI uploads them as a `retos-visual-audit-<commit>` artifact. |
+| Browser smoke | `make frontend-e2e` | Opens the React console with Playwright and verifies section navigation, tooltip contract, visible UI state, admin user management, document edit/archive/restore/history, agent multi-hop and dataset-backed evals, eval rerun, eval comparison, and eval trend flows. |
+| Visual audit screenshots | `make frontend-visual-audit` | Generates ignored desktop/mobile PNG snapshots and `frontend/visual-audit/manifest.json` with viewport, size, SHA-256 metadata, section-navigation evidence, and responsive no-overflow coverage; CI uploads them as a `retos-visual-audit-<commit>` artifact. |
 | Compose config | `docker compose --env-file .env.example config` | Validates the Docker stack definition. |
 | Image dry run | `docker compose --dry-run build` | Validates image build graph without requiring a running daemon. |
 | Release readiness | `make release-check` | Validates release docs, Docker image topology, safe defaults, operations runbook coverage, and a dry-run of the published evidence verifier. |

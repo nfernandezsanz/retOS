@@ -51,6 +51,8 @@ for phrase in (
     "I want to try it locally",
     "I want to audit it before trusting it",
     "I want to develop with agents",
+    "compact Overview plus hash-addressable Documents, Queries, Evals, Audit, and Admin",
+    "section navigation, tooltip contract",
     "Branding assets and visual guidance",
     "docs/production-readiness.md",
 ):
@@ -61,6 +63,8 @@ for phrase in (
     "flat SaaS operational-dashboard pattern",
     "minimal and direct operational console",
     "dense, scan-friendly layouts",
+    "compact Overview plus hash-addressable Documents",
+    "Tooltips: navigation links and high-impact actions",
     "flat colors",
     "trust blue primary",
     "verification orange action",
@@ -96,6 +100,7 @@ for phrase in (
     "keeps the RetOS brand system accessible and responsive",
     'emulateMedia({ reducedMotion: "reduce" })',
     "375, 768, 1024, 1440",
+    "data-tooltip",
     "retos-mark.svg",
     "Hash-chained journals",
 ):
@@ -120,6 +125,15 @@ require(
     and "make frontend-visual-audit" in branding
     and "frontend/visual-audit/manifest.json" in branding,
     "README and branding guide must document the visual audit command and manifest",
+)
+require(
+    "workspaceSections" in app
+    and "sectionFromHash" in app
+    and 'aria-current={activeSection === section.id ? "page" : undefined}' in app
+    and "section-switcher" in styles
+    and "overview-actions" in styles
+    and "[data-tooltip]::after" in styles,
+    "frontend must keep section navigation, Overview actions, and tooltip styling aligned",
 )
 require("frontend/visual-audit/" in gitignore, ".gitignore must exclude visual audit PNGs")
 require("frontend/visual-audit" in dockerignore, ".dockerignore must exclude visual audit PNGs")

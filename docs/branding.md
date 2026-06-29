@@ -51,6 +51,12 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
 - Primary product surface: React operational console, not a marketing landing page.
 - Pattern: dense, scan-friendly SaaS dashboard with flat color, crisp borders, and
   stable 8px-radius controls.
+- Information architecture: a compact Overview plus hash-addressable Documents,
+  Queries, Evals, Audit, and Admin sections. Avoid returning to a single long
+  all-in-one page unless a user explicitly asks for that workflow.
+- Tooltips: navigation links and high-impact actions use hover/focus tooltips for
+  short operational context. Tooltips must not create accessible-name noise, layout
+  shift, or document-level horizontal overflow.
 - Icons: Lucide SVG icons only; no emoji-as-icon UI.
 - Accessibility: visible focus rings, skip link, text labels beside color states,
   44px primary controls, and `prefers-reduced-motion` support.
@@ -60,14 +66,14 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
 ## Latest Visual Audit
 
 - Desktop 1440x900: sidebar brand, first-viewport heading, operating-posture band,
-  metrics, domain management, query workspace, and primary action render without
-  overlap or horizontal overflow.
+  metrics, section switcher, workflow cards, and primary action render without overlap
+  or horizontal overflow.
 - Mobile 390x844: navigation wraps into a two-row grid, the heading remains readable,
-  the primary action fills the content width, and the page reports no horizontal
-  overflow.
+  the primary action fills the content width, metrics compact to two columns, workflow
+  cards shorten, and the page reports no horizontal overflow.
 - Automated coverage: `frontend/e2e/app.spec.ts` verifies brand tokens, favicon,
   responsive breakpoints, skip-link focus, reduced motion, mobile provider controls,
-  and the full operational console flow.
+  section navigation, tooltip contract, and the full operational console flow.
 - Reproducible screenshots: run `make frontend-visual-audit` to write ignored local
   desktop and mobile PNGs plus `frontend/visual-audit/manifest.json` with viewport,
   size, and SHA-256 metadata for human design review.

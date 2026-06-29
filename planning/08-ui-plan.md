@@ -17,12 +17,19 @@ The UI is a working console, not a landing page. It must make background process
 
 | View | Purpose |
 | --- | --- |
-| Domains | Manage corpora and sources. |
-| Documents | Uploads, mounts, scans, jobs, errors, previews. |
-| Queries | Ask questions, select provider/budget, stream runs. |
-| Evidence | Review citations, claims, segments, pages, artifacts. |
-| Evals | Run and inspect local evals. |
-| Settings/Admin | Admin account, providers, Ollama, budgets, audit export. |
+| Overview | Short operating snapshot with posture, metrics, and workflow entry cards. |
+| Documents | Manage domains, sources, uploads, mounted scans, indexing, archive/history, and document evidence. |
+| Queries | Ask grounded questions, inspect citations, budgets, query plans, evidence routes, and live SSE progress. |
+| Evals | Run and inspect local evals, report paths, history, trends, comparisons, reruns, and regression gates. |
+| Audit | Review jobs, retries, journal events, persisted progress, per-job detail, and exportable evidence. |
+| Admin | Load provider readiness and manage admin/viewer accounts plus per-domain grants. |
+
+The console uses hash-addressable sections (`#overview`, `#documents`, `#queries`,
+`#evals`, `#audit`, and `#admin`) rather than one long page. The sidebar and
+workspace section switcher keep the same destinations, expose `aria-current`, and use
+hover/focus tooltips on navigation and primary actions so operators can understand each
+workflow without extra instructional copy. Only the active section renders visibly; this
+keeps local browser sessions short, scan-friendly, and easy to validate with Playwright.
 
 ## Implemented Frontend Contracts
 
@@ -87,6 +94,10 @@ The UI is a working console, not a landing page. It must make background process
 - The shell includes a keyboard-visible skip link to the workspace, keeps sidebar focus
   rings visible, and verifies mobile provider/eval/audit surfaces do not create
   document-level horizontal overflow.
+- The shell renders a compact Overview first, then separates Documents, Queries, Evals,
+  Audit, and Admin into focused hash-addressable sections with matching sidebar and
+  workspace controls. Hover/focus tooltips describe navigation targets and high-impact
+  actions without adding permanent explanatory text.
 - Browser smoke tests mock the API contract and verify provider, admin user roles,
   per-domain viewer grants, domain
   creation, document/source inventory, document evidence inspection,
