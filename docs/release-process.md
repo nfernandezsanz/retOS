@@ -43,6 +43,12 @@ scripts/check_versioned_release_notes.sh
 4. Run the complete local gate:
 
 ```bash
+make local-acceptance
+```
+
+For targeted reruns, the local gate expands to:
+
+```bash
 make release-check
 make audit-pack-check
 make production-preflight

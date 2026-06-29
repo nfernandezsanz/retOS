@@ -53,6 +53,7 @@ for phrase in (
     "RETOS_REVISION",
     "scripts/check_image_metadata.sh",
     "make release-evidence-check",
+    "make local-acceptance",
     "make docker-smoke",
     "make auditor-static-check",
     "make frontend-visual-audit",

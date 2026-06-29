@@ -50,6 +50,7 @@ CRITICAL_FILES = (
 )
 
 LOCAL_GATES = (
+    "make local-acceptance",
     "make check",
     "make integration",
     "make frontend-test",

@@ -54,6 +54,7 @@ for heading in (
 
 for phrase in (
     "RetOS is not production-promoted yet",
+    "make local-acceptance",
     "make check",
     "make integration",
     "make frontend-test",
@@ -154,6 +155,12 @@ require(
 require(
     "make auditor-handoff-check" in release_process and "make auditor-handoff-check" in readme,
     "release process and README must document the auditor handoff command",
+)
+require(
+    "make local-acceptance" in readme
+    and "make local-acceptance" in release_process
+    and "make local-acceptance" in audit_pack,
+    "README, release process, and production readiness pack must document the local acceptance gate",
 )
 require(
     "promotion decision checklist" in readme

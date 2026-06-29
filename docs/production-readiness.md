@@ -42,6 +42,7 @@ production pilot.
 Run these commands from the repository root before asking for production promotion:
 
 ```bash
+make local-acceptance
 make check
 make integration
 make frontend-test
@@ -90,6 +91,7 @@ auditor a stable local entry point:
 
 | Area | Gate | Proves |
 | --- | --- | --- |
+| Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
 | Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 527 pytest cases, eval smoke, agent multi-hop eval, 95.20% total coverage, and 90.44% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
@@ -144,6 +146,7 @@ These items must be closed before a final production release:
 - [ ] Release note references the exact commit SHA under review.
 - [ ] Latest GitHub Actions run is green for that SHA, including the final `audit-evidence` artifact job.
 - [ ] `make ci-status-check` passes for the current `HEAD`.
+- [ ] `make local-acceptance` passes against the candidate checkout.
 - [ ] `make check` passes with no paid providers.
 - [ ] `make dependency-audit` reports no known Python runtime advisories and no high-severity Node advisories.
 - [ ] `make security-policy-check` passes.

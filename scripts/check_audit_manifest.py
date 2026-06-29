@@ -45,6 +45,7 @@ REQUIRED_CRITICAL_FILES = {
     "scripts/export_audit_bundle.py",
 }
 REQUIRED_LOCAL_GATES = {
+    "make local-acceptance",
     "make check",
     "make integration",
     "make frontend-visual-audit",

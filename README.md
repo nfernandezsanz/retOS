@@ -39,6 +39,7 @@ Open http://localhost:8080 for the console or http://localhost:8000/docs for the
 <summary><strong>I want to audit it before trusting it</strong></summary>
 
 ```bash
+make local-acceptance
 make auditor-handoff-check
 make audit-manifest-check
 make audit-bundle-check
@@ -315,6 +316,12 @@ npm run e2e
 Run the full local validation loop:
 
 ```bash
+make local-acceptance
+```
+
+The expanded command sequence behind that gate is:
+
+```bash
 make check
 make integration
 make frontend-test
@@ -360,6 +367,7 @@ Every meaningful change should pass these gates:
 | Audit handoff bundle schema | `make audit-bundle-check` | Validates the generated tarball members and checksum offline. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | Agent multi-hop eval | `make eval-agent-multihop` | Runs deterministic query-plan, multi-hop audit, evidence-route, citation, grounding, and budget scorers without network or paid providers. |
+| Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance gate across backend, API, frontend, visual audit, Docker config, auditor handoff, and Docker smoke. |
 | Dataset fetch | `make eval-fetch-dataset PROFILE=squad-dev-v2` | Opt-in download or local sampling of bounded public dataset samples under `evals/datasets`; records the effective `source_url`, supports retryable mirrors, and never runs in CI by default. |
 | Real-dataset calibration | `make eval-calibration MAX_RECORDS=200 MAX_CASES=40 METRIC_GATES="retrieval_recall=0.80 citation_validity=1.0"` | Opt-in multi-suite public dataset calibration for SQuAD, HotpotQA, HotpotQA-agent, and NQ-Open adapter samples; writes JSON/Markdown reports plus a metric-gated manifest under `evals/reports/calibration`. |
 | Calibration evidence | `make eval-calibration-evidence OUTPUT=docs/releases/evidence/<release>-calibration.md` | Converts the ignored calibration manifest into path-safe Markdown evidence with metrics, gates, source URLs, records, and license notes. |
