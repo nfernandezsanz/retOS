@@ -14,6 +14,9 @@ tag in GitHub.
 - `make local-demo` now gives first-time users the shortest local path: bootstrap safe
   environment defaults, run the doctor, start the Docker API/worker/web stack without
   pulling optional Ollama, seed the demo corpus, and print the useful URLs.
+- `make local-status` now gives operators a read-only local stack status check with
+  Docker service state, console/API endpoint probes, and the useful local URLs after the
+  demo stack is running.
 - File upload ingestion now rejects declared MIME/extension mismatches for `.txt`,
   `.md`, and `.pdf` uploads before writing bytes, and preserves declared
   `content_type` in job/document audit metadata.

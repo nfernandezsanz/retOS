@@ -140,6 +140,7 @@ make docker-runtime-image-check
 
 ```bash
 make local-demo
+make local-status
 ```
 
 `make local-demo` creates `.env` from `.env.example` when missing, leaves existing local
@@ -147,6 +148,10 @@ secrets untouched, runs the local doctor, starts the API, worker, web, Postgres,
 RabbitMQ, and migration services in the background, and seeds the demo corpus through
 the running API container. It does not pull the optional Ollama image; use the model
 profile only when you want local LLM calls.
+
+`make local-status` does not start or mutate services. It prints the local URLs, checks
+the API, worker, web, Postgres, and RabbitMQ service states from `docker compose ps`,
+and verifies the console/API endpoints from the host.
 
 For manual control, run `make bootstrap-env`, `make doctor`, `docker compose up --build`,
 then `make docker-seed-demo` in another shell. `make doctor` validates prerequisites,

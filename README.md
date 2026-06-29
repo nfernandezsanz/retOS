@@ -38,6 +38,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 
 ```bash
 make local-demo
+make local-status
 ```
 
 Open http://localhost:8080 for the console or http://localhost:8000/docs for the API.
@@ -87,6 +88,7 @@ auditor-friendly evidence.
 
 ```bash
 make local-demo
+make local-status
 ```
 
 Then open the console and API:
@@ -105,6 +107,9 @@ starts the API, worker, web, Postgres, RabbitMQ, and migration services in the
 background, seeds the demo corpus, and prints the useful URLs. It does not pull the
 optional Ollama image; use the model command below only when you want local LLM calls.
 Use `make docker-down` when you are done.
+
+Run `make local-status` any time after startup to print the useful URLs, inspect the
+Docker services, and verify the console/API endpoints from your machine.
 
 For manual control, run `make bootstrap-env`, `make doctor`, `docker compose up --build`,
 then `make docker-seed-demo` in another shell.
@@ -410,6 +415,7 @@ Every meaningful change should pass these gates:
 | Gate | Command | Purpose |
 | --- | --- | --- |
 | Local demo | `make local-demo` | Boots the local Docker stack in the background, seeds auditable demo data, and prints the console/API/RabbitMQ URLs for hands-on review. |
+| Local status | `make local-status` | Prints useful local URLs, checks Docker service state, and verifies the console/API endpoints without starting or mutating the stack. |
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Environment security | `make env-security-check` | Validates the active `.env` without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Demo corpus seed | `make docker-seed-demo` or `make seed-demo SEED_DEMO_ARGS=--create-schema` | Seeds an idempotent, auditable demo domain with text-ingestion jobs, hash-chained journal/progress events, and a rebuilt local BM25 index for hands-on UI checks. |
