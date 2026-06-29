@@ -79,6 +79,32 @@ REQUIRED_LOCAL_GATES = {
     "make calibration-scope-decision-check",
     "make ci-status-check",
 }
+EXPECTED_VISUAL_SECTIONS = [
+    "Overview",
+    "Documents",
+    "Queries",
+    "Evals",
+    "Audit",
+    "Admin",
+]
+EXPECTED_VISUAL_MODULES = [
+    "documents-library",
+    "documents-sources",
+    "documents-upload",
+    "documents-text",
+    "queries-runner",
+    "queries-live",
+    "evals-runner",
+    "evals-results",
+    "evals-history",
+    "audit-jobs",
+    "audit-progress",
+    "audit-events",
+    "admin-providers",
+    "admin-users",
+]
+EXPECTED_VISUAL_RESPONSIVE_WIDTHS = [375, 768, 1024, 1440]
+MIN_VISUAL_TOOLTIP_TARGETS = 10
 
 
 def require(condition: bool, message: str) -> None:
@@ -110,6 +136,59 @@ def load_manifest() -> dict[str, Any]:
             check=True,
         )
         return json.loads(output.read_text(encoding="utf-8"))
+
+
+def validate_visual_manifest_json(manifest_json: dict[str, Any]) -> None:
+    coverage = manifest_json.get("coverage")
+    require(isinstance(coverage, dict), "visual audit manifest must include coverage")
+    require(
+        coverage.get("sections") == EXPECTED_VISUAL_SECTIONS,
+        "visual audit coverage must record expected workspace sections",
+    )
+    require(
+        coverage.get("visible_sections") == EXPECTED_VISUAL_SECTIONS,
+        "visual audit coverage must record visible workspace sections",
+    )
+    require(
+        coverage.get("modules") == EXPECTED_VISUAL_MODULES,
+        "visual audit coverage must record expected workspace modules",
+    )
+    tooltip_targets = coverage.get("tooltip_targets")
+    require(
+        isinstance(tooltip_targets, int)
+        and tooltip_targets >= MIN_VISUAL_TOOLTIP_TARGETS,
+        "visual audit coverage must record tooltip targets",
+    )
+    require(
+        coverage.get("no_horizontal_overflow") is True,
+        "visual audit coverage must record no horizontal overflow",
+    )
+    responsive_checks = coverage.get("responsive_checks")
+    require(
+        isinstance(responsive_checks, list),
+        "visual audit coverage must record responsive checks",
+    )
+    by_width = {
+        record.get("width"): record
+        for record in responsive_checks
+        if isinstance(record, dict) and record.get("width")
+    }
+    missing_widths = sorted(set(EXPECTED_VISUAL_RESPONSIVE_WIDTHS) - set(by_width))
+    require(
+        not missing_widths,
+        "visual audit coverage missing responsive width(s): "
+        + ", ".join(str(width) for width in missing_widths),
+    )
+    for width in EXPECTED_VISUAL_RESPONSIVE_WIDTHS:
+        record = by_width[width]
+        require(
+            record.get("height") == 900,
+            f"visual audit responsive width {width} must use height 900",
+        )
+        require(
+            record.get("no_horizontal_overflow") is True,
+            f"visual audit responsive width {width} must record no overflow",
+        )
 
 
 def main() -> int:
@@ -234,6 +313,7 @@ def main() -> int:
             "json" in local_manifest and "json_error" not in local_manifest,
             "visual audit manifest must be valid JSON when present",
         )
+        validate_visual_manifest_json(local_manifest["json"])
         screenshots = local_manifest["json"].get("screenshots", [])
         by_name = {record.get("name"): record for record in screenshots}
         require(
@@ -272,7 +352,7 @@ def main() -> int:
         require(phrase in external, f"external promotion evidence missing {phrase}")
 
     print(
-        "Audit manifest OK: schema, gates, hashes, visual artifacts, and blockers are aligned."
+        "Audit manifest OK: schema, gates, hashes, visual coverage, artifacts, and blockers are aligned."
     )
     return 0
 
