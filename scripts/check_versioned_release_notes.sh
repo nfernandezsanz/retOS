@@ -16,18 +16,27 @@ def require(condition: bool, message: str) -> None:
 release_dir = Path("docs/releases")
 index_path = release_dir / "README.md"
 project_readme_path = Path("README.md")
+production_readiness_path = Path("docs/production-readiness.md")
 release_files = sorted(release_dir.glob("*.md"))
 versioned_files = [path for path in release_files if path.name != "README.md"]
 
 require(index_path.is_file() and index_path.stat().st_size > 0, "docs/releases/README.md is required")
 require(project_readme_path.is_file(), "README.md is required")
+require(production_readiness_path.is_file(), "docs/production-readiness.md is required")
 require(versioned_files, "at least one versioned release note is required")
 
 index = index_path.read_text(encoding="utf-8")
 project_readme = project_readme_path.read_text(encoding="utf-8")
+production_readiness = production_readiness_path.read_text(encoding="utf-8")
 coverage_match = re.search(r"Backend coverage \| ([0-9]+\.[0-9]+%)", project_readme)
 require(coverage_match is not None, "README.md must record backend coverage evidence")
 current_backend_coverage = coverage_match.group(1)
+test_count_match = re.search(r"mypy, ([0-9]+) pytest cases,", production_readiness)
+require(
+    test_count_match is not None,
+    "docs/production-readiness.md must record backend pytest case count",
+)
+current_pytest_count = test_count_match.group(1)
 for phrase in (
     "versioned release notes",
     "CHANGELOG.md",
@@ -89,6 +98,10 @@ for path in versioned_files:
     require(
         current_backend_coverage in content,
         f"{path} must record current backend coverage evidence",
+    )
+    require(
+        f"make check` passed with {current_pytest_count} tests" in content,
+        f"{path} must record current backend pytest case count",
     )
     evidence_match = re.search(
         r"Current draft evidence commit: `([0-9a-f]{7,40})`",
