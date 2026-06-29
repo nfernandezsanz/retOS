@@ -287,17 +287,19 @@ def materialize_dataset(
     metadata_path = dataset_metadata_path(output_path)
     if output_path.exists() and not force:
         metadata = read_dataset_metadata(metadata_path)
-        return {
-            "profile": profile.name,
-            "suite": profile.suite,
-            "path": str(output_path),
-            "records": metadata.get("records"),
-            "source": profile.source_homepage,
-            "source_url": metadata.get("source_url"),
-            "source_path": metadata.get("source_path"),
-            "license_note": profile.license_note,
-            "reused": True,
-        }
+        records = metadata.get("records")
+        if type(records) is int and records >= max_records:
+            return {
+                "profile": profile.name,
+                "suite": profile.suite,
+                "path": str(output_path),
+                "records": records,
+                "source": profile.source_homepage,
+                "source_url": metadata.get("source_url"),
+                "source_path": metadata.get("source_path"),
+                "license_note": profile.license_note,
+                "reused": True,
+            }
     result = fetch_profile(
         profile=profile,
         output_dir=output_dir,

@@ -121,6 +121,110 @@ def test_eval_calibration_reuses_shared_dataset_and_writes_manifest(
     assert (tmp_path / "reports" / "real-hotpotqa-agent-dev-distractor.md").exists()
 
 
+def test_eval_calibration_reuses_existing_dataset_when_large_enough(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    cli = load_calibration_cli()
+    profile = cli.DATASET_PROFILES["squad-dev-v2"]
+    dataset_dir = tmp_path / "datasets"
+    dataset_dir.mkdir()
+    dataset_path = dataset_dir / profile.output_name
+    dataset_path.write_text("[]\n", encoding="utf-8")
+    metadata_path = cli.dataset_metadata_path(dataset_path)
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "profile": profile.name,
+                "suite": profile.suite,
+                "records": 10,
+                "source_url": profile.url,
+                "source_path": None,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fail_fetch_profile(**_: object) -> dict[str, object]:
+        raise AssertionError("Expected existing calibration sample to be reused")
+
+    monkeypatch.setattr(cli, "fetch_profile", fail_fetch_profile)
+
+    result = cli.materialize_dataset(
+        profile=profile,
+        output_dir=dataset_dir,
+        max_records=5,
+        force=False,
+        download_timeout=1,
+        download_retries=1,
+    )
+
+    assert result["reused"] is True
+    assert result["records"] == 10
+
+
+def test_eval_calibration_refetches_existing_dataset_when_too_small(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    cli = load_calibration_cli()
+    profile = cli.DATASET_PROFILES["squad-dev-v2"]
+    dataset_dir = tmp_path / "datasets"
+    dataset_dir.mkdir()
+    dataset_path = dataset_dir / profile.output_name
+    dataset_path.write_text("[]\n", encoding="utf-8")
+    metadata_path = cli.dataset_metadata_path(dataset_path)
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "profile": profile.name,
+                "suite": profile.suite,
+                "records": 4,
+                "source_url": profile.url,
+                "source_path": None,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    fetch_calls: list[int] = []
+
+    def fake_fetch_profile(**kwargs: object) -> dict[str, object]:
+        fetch_calls.append(int(kwargs["max_records"]))
+        output_dir = kwargs["output_dir"]
+        assert isinstance(output_dir, Path)
+        output_path = output_dir / profile.output_name
+        output_path.write_text("[]\n", encoding="utf-8")
+        return {
+            "profile": profile.name,
+            "suite": profile.suite,
+            "path": str(output_path),
+            "records": kwargs["max_records"],
+            "source": profile.source_homepage,
+            "source_url": profile.url,
+            "source_path": None,
+            "license_note": profile.license_note,
+        }
+
+    monkeypatch.setattr(cli, "fetch_profile", fake_fetch_profile)
+
+    result = cli.materialize_dataset(
+        profile=profile,
+        output_dir=dataset_dir,
+        max_records=8,
+        force=False,
+        download_timeout=1,
+        download_retries=1,
+    )
+
+    assert fetch_calls == [8]
+    assert result["reused"] is False
+    assert result["records"] == 8
+    persisted_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert persisted_metadata["records"] == 8
+
+
 def test_eval_calibration_rejects_invalid_limits(tmp_path: Path) -> None:
     cli = load_calibration_cli()
 
