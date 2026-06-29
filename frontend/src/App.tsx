@@ -5417,6 +5417,20 @@ function App() {
               aria-label="Eval smoke results"
               aria-live="polite"
             >
+              <div className="eval-scope-note eval-context" aria-label="Eval results context">
+                <div data-tooltip="Most recent local eval suite rendered in the result panel">
+                  <span>Result suite</span>
+                  <strong>{evalReport?.suite_name ?? "Run an eval"}</strong>
+                </div>
+                <div data-tooltip="Metric cards are computed locally from deterministic reports">
+                  <span>Metrics</span>
+                  <strong>{evalReport ? Object.keys(evalReport.metrics).length : 0}</strong>
+                </div>
+                <div data-tooltip="Case rows expose pass/fail evidence without paid provider calls">
+                  <span>Cases</span>
+                  <strong>{evalReport?.case_count ?? evalReport?.cases.length ?? 0}</strong>
+                </div>
+              </div>
               {evalReport ? (
                 <>
                   <div className="eval-metrics" aria-label="Eval metrics">
@@ -5490,6 +5504,20 @@ function App() {
               tabIndex={-1}
               aria-label="Eval run history"
             >
+              <div className="eval-scope-note eval-context" aria-label="Eval history context">
+                <div data-tooltip="History and trend rows are filtered by the active eval scope">
+                  <span>Review scope</span>
+                  <strong>{evalScopeLabel}</strong>
+                </div>
+                <div data-tooltip="Comparable runs can be diffed or checked by the regression gate">
+                  <span>Comparable runs</span>
+                  <strong>{comparableEvalRuns.length}</strong>
+                </div>
+                <div data-tooltip="Trend cards summarize persisted suite history over time">
+                  <span>Trend suites</span>
+                  <strong>{evalTrends.length}</strong>
+                </div>
+              </div>
               <div className="section-heading">
                 <h3>Run history</h3>
                 <div className="section-actions">

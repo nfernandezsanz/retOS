@@ -2338,11 +2338,23 @@ test("loads the operational console", async ({ page }) => {
     }),
   ).toHaveAttribute("data-tooltip", /mocked providers/);
   await page.getByRole("button", { name: "Run eval smoke" }).click();
+  await expect(page.getByLabel("Eval results context").getByText("retos-smoke")).toBeVisible();
+  await expect(
+    page.getByLabel("Eval results context").locator("[data-tooltip]").filter({
+      hasText: "Cases",
+    }),
+  ).toHaveAttribute("data-tooltip", /pass\/fail evidence/);
   await expect(page.getByLabel("Eval metrics").getByText("retrieval recall")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("built-in")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("retos-smoke-fixtures")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("apollo-guidance")).toBeVisible();
   await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
+  await expect(page.getByLabel("Eval history context").getByText("Comparable runs")).toBeVisible();
+  await expect(
+    page.getByLabel("Eval history context").locator("[data-tooltip]").filter({
+      hasText: "Trend suites",
+    }),
+  ).toHaveAttribute("data-tooltip", /persisted suite history/);
   await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("3 cases")).toBeVisible();
   await expect(page.getByLabel("Eval trends").getByText("retos-smoke")).toBeVisible();
@@ -2378,7 +2390,11 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval report paths").getByText("ui-squad.md")).toBeVisible();
   await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
   await expect(page.getByLabel("Eval run history").getByText("squad-v2")).toBeVisible();
-  await expect(page.getByLabel("Eval run history").getByText("Smoke Research")).toBeVisible();
+  const squadEvalRunRow = page
+    .getByLabel("Eval run history")
+    .locator("article")
+    .filter({ hasText: "squad-v2" });
+  await expect(squadEvalRunRow.getByText("Smoke Research")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toHaveCount(0);
   await expect(page.getByLabel("Eval run history").getByText("2 cases")).toBeVisible();
 
