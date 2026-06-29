@@ -2092,6 +2092,12 @@ test("loads the operational console", async ({ page }) => {
   ).toBeVisible();
   await page.getByLabel("Documents modules").getByRole("link", { name: "Upload" }).click();
   await expect(page.getByLabel("File upload")).toBeVisible();
+  await expect(page.getByLabel("Upload ingestion context").getByText("Smoke Research")).toBeVisible();
+  await expect(
+    page.getByLabel("Upload ingestion context").locator("[data-tooltip]").filter({
+      hasText: "TXT, Markdown, PDF",
+    }),
+  ).toHaveAttribute("data-tooltip", /validated locally/);
 
   await page.getByRole("link", { name: "Queries" }).first().click();
   await expect(page.getByLabel("Queries modules").getByRole("link", { name: "Live" })).toHaveAttribute(
@@ -2224,6 +2230,12 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
 
   await page.getByLabel("Documents modules").getByRole("link", { name: "Text" }).click();
+  await expect(page.getByLabel("Pasted text context").getByText("Policy Review")).toBeVisible();
+  await expect(
+    page.getByLabel("Pasted text context").locator("[data-tooltip]").filter({
+      hasText: "Queued ingestion",
+    }),
+  ).toHaveAttribute("data-tooltip", /journal/);
   await page.getByPlaceholder("Research note", { exact: true }).fill("Policy Note");
   await page
     .getByPlaceholder("Paste local fixture text, notes, transcripts, or extracted content.")

@@ -4529,6 +4529,20 @@ function App() {
               <div className="section-heading">
                 <h3>File upload</h3>
               </div>
+              <div className="ingestion-context" aria-label="Upload ingestion context">
+                <div data-tooltip="Uploaded documents are stored under the active domain">
+                  <span>Target domain</span>
+                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                </div>
+                <div data-tooltip="Uploads are validated locally before they are queued">
+                  <span>Allowed files</span>
+                  <strong>TXT, Markdown, PDF</strong>
+                </div>
+                <div data-tooltip="Optional source links keep uploads traceable to a corpus input">
+                  <span>Sources</span>
+                  <strong>{sources.length} available</strong>
+                </div>
+              </div>
               <form className="file-upload-form" onSubmit={handleUploadFile}>
                 <label data-tooltip="Supported local fixtures: TXT, Markdown, and PDF">
                   <span>File</span>
@@ -4582,6 +4596,20 @@ function App() {
             >
               <div className="section-heading">
                 <h3>Text ingestion</h3>
+              </div>
+              <div className="ingestion-context" aria-label="Pasted text context">
+                <div data-tooltip="Pasted text is queued as a document in the active domain">
+                  <span>Target domain</span>
+                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                </div>
+                <div data-tooltip="Inline text creates normal ingestion, indexing, journal, and progress records">
+                  <span>Processing</span>
+                  <strong>Queued ingestion</strong>
+                </div>
+                <div data-tooltip="Optional source links keep pasted text traceable to a corpus input">
+                  <span>Sources</span>
+                  <strong>{sources.length} available</strong>
+                </div>
               </div>
               <form className="text-ingestion-form" onSubmit={handleIngestText}>
                 <label data-tooltip="Document title stored in the library and citations">

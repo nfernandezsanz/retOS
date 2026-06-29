@@ -1430,6 +1430,34 @@ button:focus-visible {
   gap: 14px;
 }
 
+.ingestion-context {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ingestion-context div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.ingestion-context span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ingestion-context strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
 .section-heading {
   display: flex;
   align-items: center;
@@ -3288,6 +3316,7 @@ button:focus-visible {
   .eval-toolbar,
   .eval-runner-forms,
   .eval-metrics,
+  .ingestion-context,
   .runtime-plan-form,
   .live-progress-summary,
   .job-row-grid,
