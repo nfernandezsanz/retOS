@@ -4675,6 +4675,20 @@ function App() {
                 <span>Active domain</span>
                 <strong>{selectedDomain ? selectedDomain.name : "Select a domain first"}</strong>
               </div>
+              <div className="query-context" aria-label="Query run context">
+                <div data-tooltip="Queries run against the active domain and its indexed documents">
+                  <span>Target corpus</span>
+                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                </div>
+                <div data-tooltip="Local runs default to the Deep Agents harness and mocked providers in tests">
+                  <span>Runtime</span>
+                  <strong>Local Deep Agents</strong>
+                </div>
+                <div data-tooltip="Answers expose citations, budget usage, query plans, and audit checks">
+                  <span>Evidence audit</span>
+                  <strong>Citations and budget</strong>
+                </div>
+              </div>
               <label className="query-box">
                 <span>Question</span>
                 <textarea

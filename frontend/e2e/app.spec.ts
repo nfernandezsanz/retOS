@@ -2121,6 +2121,13 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
   await expect(page.getByLabel("Live progress summary").getByText("Waiting")).toBeVisible();
   await page.getByLabel("Queries modules").getByRole("link", { name: "Ask" }).click();
+  await expect(page.getByLabel("Query run context").getByText("Smoke Research")).toBeVisible();
+  await expect(page.getByLabel("Query run context").getByText("Local Deep Agents")).toBeVisible();
+  await expect(
+    page.getByLabel("Query run context").locator("[data-tooltip]").filter({
+      hasText: "Citations and budget",
+    }),
+  ).toHaveAttribute("data-tooltip", /query plans/);
   await page
     .getByRole("textbox", { name: "Question", exact: true })
     .fill("What evidence mentions search readiness?");
