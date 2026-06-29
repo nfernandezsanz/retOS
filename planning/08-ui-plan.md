@@ -89,7 +89,9 @@ follow the active module so provider and user management do not feel like the sa
   live SSE stream.
 - The audit panel downloads `/audit/export?limit=200` through an authenticated `fetch`
   call so the bearer token stays in headers and the exported JSON can be retained for
-  review.
+  review. After export, it renders a compact integrity summary with schema, generated
+  time, event count, head hash, algorithm, failure count, continuity-gap count, and the
+  offline `make audit-export-check` verifier command.
 - The admin panel reads `/admin/users`, creates `admin` or `viewer` accounts, renders
   account roles, updates persisted roles, updates active state, submits password resets,
   and manages per-domain viewer grants without rendering hashes or secrets.
@@ -124,8 +126,8 @@ follow the active module so provider and user management do not feel like the sa
   creation, document/source inventory, document evidence inspection,
   document edit/archive/restore/history, file
   upload, text ingestion, scan/index queueing, job/audit filtering, persisted audit
-  events, audit export, eval smoke execution, eval run history, query, and live
-  progress flows.
+  events, audit export integrity summary, eval smoke execution, eval run history, query,
+  and live progress flows.
 
 ## Processing UI
 

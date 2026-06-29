@@ -788,6 +788,11 @@ type AuditExportRead = {
   };
 };
 
+type AuditExportSummary = {
+  filename: string;
+  snapshot: AuditExportRead;
+};
+
 type LiveStatus = "disconnected" | "connecting" | "connected";
 
 const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
@@ -1707,6 +1712,10 @@ function formatDelta(value: number): string {
   return `${sign}${formatScore(value)}`;
 }
 
+function shortHash(value: string | null): string {
+  return value ? value.slice(0, 16) : "none";
+}
+
 function App() {
   const [email, setEmail] = useState("admin@retos.dev");
   const [password, setPassword] = useState("");
@@ -1840,6 +1849,7 @@ function App() {
   const [isExportingAudit, setIsExportingAudit] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [auditExportMessage, setAuditExportMessage] = useState<string | null>(null);
+  const [auditExportSummary, setAuditExportSummary] = useState<AuditExportSummary | null>(null);
   const liveAbortRef = useRef<AbortController | null>(null);
   const lastPersistedEventIdRef = useRef<string | null>(null);
   const [activeSection, setActiveSection] = useState<WorkspaceSection>(() =>
@@ -2133,6 +2143,7 @@ function App() {
     setIsExportingAudit(true);
     setAuditError(null);
     setAuditExportMessage(null);
+    setAuditExportSummary(null);
     try {
       const accessToken = await getAdminToken();
       const { filename, snapshot } = await exportAuditSnapshot(accessToken);
@@ -2143,6 +2154,7 @@ function App() {
       setAuditExportMessage(
         `${filename}: ${snapshot.journal_events.length} journal, ${snapshot.progress_events.length} progress${integrityLabel}`,
       );
+      setAuditExportSummary({ filename, snapshot });
     } catch (error) {
       setAuditError(error instanceof Error ? error.message : "Audit export failed");
     } finally {
@@ -5454,6 +5466,84 @@ function App() {
               <p className="inline-success" role="status">
                 {auditExportMessage}
               </p>
+            ) : null}
+            {auditExportSummary && activeModule === "audit-jobs" ? (
+              <section className="audit-export-summary" aria-label="Audit export integrity">
+                <div className="section-heading compact">
+                  <div>
+                    <h3>Export integrity</h3>
+                    <span>{auditExportSummary.filename}</span>
+                  </div>
+                  <span
+                    className={
+                      auditExportSummary.snapshot.integrity?.valid
+                        ? "badge success"
+                        : "badge warning"
+                    }
+                    data-tooltip="Recomputed hash-chain status for the downloaded export"
+                  >
+                    {auditExportSummary.snapshot.integrity?.valid ? "valid" : "review"}
+                  </span>
+                </div>
+                <div className="audit-export-grid">
+                  <div>
+                    <span>Schema</span>
+                    <strong>{auditExportSummary.snapshot.schema_version}</strong>
+                  </div>
+                  <div>
+                    <span>Generated</span>
+                    <strong>{formatDateTime(auditExportSummary.snapshot.generated_at)}</strong>
+                  </div>
+                  <div>
+                    <span>Events</span>
+                    <strong>
+                      {auditExportSummary.snapshot.integrity?.event_count ??
+                        auditExportSummary.snapshot.journal_events.length +
+                          auditExportSummary.snapshot.progress_events.length}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Head hash</span>
+                    <strong>{shortHash(auditExportSummary.snapshot.integrity?.head_hash ?? null)}</strong>
+                  </div>
+                  <div>
+                    <span>Algorithm</span>
+                    <strong>{auditExportSummary.snapshot.integrity?.algorithm ?? "unknown"}</strong>
+                  </div>
+                  <div>
+                    <span>Failures</span>
+                    <strong>{auditExportSummary.snapshot.integrity?.failures.length ?? 0}</strong>
+                  </div>
+                  <div>
+                    <span>Continuity gaps</span>
+                    <strong>{auditExportSummary.snapshot.integrity?.continuity_gaps.length ?? 0}</strong>
+                  </div>
+                  <div>
+                    <span>Offline check</span>
+                    <strong>make audit-export-check</strong>
+                  </div>
+                </div>
+                {auditExportSummary.snapshot.integrity &&
+                (auditExportSummary.snapshot.integrity.failures.length > 0 ||
+                  auditExportSummary.snapshot.integrity.continuity_gaps.length > 0) ? (
+                  <div className="audit-export-findings" aria-label="Audit export findings">
+                    {auditExportSummary.snapshot.integrity.failures
+                      .slice(0, 3)
+                      .map((failure) => (
+                        <span className="badge warning" key={`${failure.event_id}-${failure.reason}`}>
+                          {failure.reason}
+                        </span>
+                      ))}
+                    {auditExportSummary.snapshot.integrity.continuity_gaps
+                      .slice(0, 3)
+                      .map((gap) => (
+                        <span className="badge muted" key={`${gap.event_id}-${gap.reason}`}>
+                          {gap.reason}
+                        </span>
+                      ))}
+                  </div>
+                ) : null}
+              </section>
             ) : null}
             <div
               className="job-ledger"

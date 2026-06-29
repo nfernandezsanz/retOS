@@ -1649,6 +1649,64 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+.audit-export-summary {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  padding: 12px;
+}
+
+.audit-export-summary .section-heading > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.audit-export-summary .section-heading span:not(.badge) {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.audit-export-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.audit-export-grid div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.audit-export-grid span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.audit-export-grid strong {
+  color: #0f172a;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.audit-export-findings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .eval-toolbar {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -2880,6 +2938,7 @@ button:focus-visible {
   .eval-dataset-form,
   .audit-toolbar,
   .audit-event-grid,
+  .audit-export-grid,
   .comparison-summary,
   .gate-summary,
   .comparison-metric,

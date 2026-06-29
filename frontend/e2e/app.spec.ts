@@ -1059,6 +1059,8 @@ async function mockProviderApi(page: Page) {
           valid: true,
           event_count: journalEvents.length + progressEvents.length,
           head_hash: "hash-final",
+          failures: [],
+          continuity_gaps: [],
           chain: [
             {
               event_id: "journal-event-1",
@@ -1944,6 +1946,12 @@ test("loads the operational console", async ({ page }) => {
   await page.getByLabel("Audit modules").getByRole("link", { name: "Jobs" }).click();
   await page.getByRole("button", { name: "Export audit" }).click();
   await expect(page.getByText("retos-audit-export.json:")).toBeVisible();
+  await expect(page.getByLabel("Audit export integrity").getByText("Export integrity")).toBeVisible();
+  await expect(page.getByLabel("Audit export integrity").getByText("valid")).toBeVisible();
+  await expect(page.getByLabel("Audit export integrity").getByText("retos.audit-export.v2")).toBeVisible();
+  await expect(page.getByLabel("Audit export integrity").getByText("make audit-export-check")).toBeVisible();
+  await expect(page.getByLabel("Audit export integrity").getByText("Continuity gaps")).toBeVisible();
+  await expect(page.getByLabel("Audit export integrity").getByText("0").first()).toBeVisible();
 
   await page.getByRole("link", { name: "Evals" }).first().click();
   await expect(page.getByLabel("Evals modules").getByRole("link", { name: "History" })).toHaveAttribute(

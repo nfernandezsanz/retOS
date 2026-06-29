@@ -1328,7 +1328,10 @@ Audit export shape:
 
 The React audit panel uses these endpoints to show durable journal/progress evidence next
 to the job ledger and to download a JSON audit export without putting bearer tokens in
-URLs. SSE remains the live stream; `/audit/*` is the reloadable persisted record.
+URLs. After each export, the panel keeps a compact integrity summary visible with schema,
+generation time, event count, head hash, algorithm, failure count, continuity-gap count,
+and the `make audit-export-check` offline verifier command. SSE remains the live stream;
+`/audit/*` is the reloadable persisted record.
 
 ## Progress Events
 
