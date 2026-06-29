@@ -671,6 +671,8 @@ h2 {
 }
 
 .section-content > .panel:not([hidden]) {
+  display: grid;
+  align-content: start;
   max-height: calc(100vh - 178px);
   overflow: auto;
   scrollbar-gutter: stable;
@@ -702,6 +704,10 @@ h2 {
 
 [data-tooltip] {
   position: relative;
+}
+
+[data-tooltip]:not(button):not(a):not(input):not(select):not(textarea) {
+  cursor: help;
 }
 
 [data-tooltip]::after {
@@ -843,8 +849,8 @@ h2 {
 .event-ledger {
   display: grid;
   gap: 10px;
-  max-height: min(260px, 32vh);
-  margin-top: 16px;
+  max-height: min(430px, calc(100vh - 330px));
+  margin-top: 10px;
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -1054,6 +1060,7 @@ button:focus-visible {
 #queries:not([hidden]) {
   display: grid;
   grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -1205,6 +1212,7 @@ button:focus-visible {
   position: sticky;
   top: 0;
   z-index: 2;
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1269,6 +1277,7 @@ button:focus-visible {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  scroll-margin-top: 58px;
   gap: 12px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
@@ -1611,6 +1620,7 @@ button:focus-visible {
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
+  scroll-margin-top: 58px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #f8fafc;
@@ -1713,7 +1723,7 @@ button:focus-visible {
   display: grid;
   gap: 12px;
   align-content: start;
-  max-height: min(360px, calc(100vh - 300px));
+  max-height: min(420px, calc(100vh - 268px));
   margin-top: 0;
   overflow: auto;
   padding-right: 4px;
@@ -2031,9 +2041,9 @@ button:focus-visible {
 .audit-toolbar {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto auto;
-  gap: 12px;
+  gap: 10px;
   align-items: end;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .audit-toolbar .ghost-action {
@@ -2062,6 +2072,33 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+#audit:has(.job-ledger:not([hidden])) {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+#audit:has(.job-ledger:not([hidden])) > .panel-heading {
+  grid-column: 1 / -1;
+}
+
+#audit:has(.job-ledger:not([hidden])) > .audit-context,
+#audit:has(.job-ledger:not([hidden])) > .audit-toolbar,
+#audit:has(.job-ledger:not([hidden])) > .audit-export-summary {
+  grid-column: 1;
+}
+
+#audit:has(.job-ledger:not([hidden])) > .job-ledger,
+#audit:has(.job-ledger:not([hidden])) > .job-detail-panel {
+  grid-column: 2;
+}
+
+#audit:has(.job-ledger:not([hidden])) > .audit-context,
+#audit:has(.job-ledger:not([hidden])) > .audit-toolbar {
+  grid-template-columns: 1fr;
+}
+
 .audit-export-summary {
   display: grid;
   gap: 12px;
@@ -2070,6 +2107,7 @@ button:focus-visible {
   border-radius: 8px;
   background: #eff6ff;
   padding: 12px;
+  pointer-events: none;
 }
 
 .audit-export-summary .section-heading > div {
@@ -2173,11 +2211,31 @@ button:focus-visible {
   overflow-wrap: anywhere;
 }
 
+#evals:has(#evals-history:not([hidden])) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+  gap: 12px;
+  align-items: start;
+}
+
+#evals:has(#evals-history:not([hidden])) > .panel-heading {
+  grid-column: 1 / -1;
+}
+
+#evals:has(#evals-history:not([hidden])) > #evals-history {
+  grid-column: 1;
+}
+
+#evals:has(#evals-history:not([hidden])) > .eval-trends {
+  grid-column: 2;
+  grid-template-columns: 1fr;
+}
+
 .eval-runner-forms {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 12px;
-  max-height: min(300px, calc(100vh - 330px));
+  max-height: min(360px, calc(100vh - 318px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2376,7 +2434,7 @@ button:focus-visible {
 .eval-history {
   display: grid;
   gap: 12px;
-  max-height: min(300px, calc(100vh - 300px));
+  max-height: min(430px, calc(100vh - 268px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2489,7 +2547,12 @@ button:focus-visible {
 .eval-trends {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
   gap: 10px;
+  max-height: min(430px, calc(100vh - 268px));
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .eval-trend-card {
@@ -2591,6 +2654,7 @@ button:focus-visible {
   grid-template-columns: minmax(0, 1fr) minmax(180px, auto);
   gap: 12px;
   align-items: center;
+  scroll-margin-top: 76px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #f8fafc;
@@ -2616,8 +2680,8 @@ button:focus-visible {
 
 .job-ledger {
   display: grid;
-  gap: 12px;
-  max-height: min(250px, 30vh);
+  gap: 10px;
+  max-height: min(420px, calc(100vh - 338px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2626,6 +2690,7 @@ button:focus-visible {
 .job-row {
   display: grid;
   gap: 12px;
+  scroll-margin-top: 132px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #f8fafc;
@@ -2805,7 +2870,7 @@ button:focus-visible {
 .job-progress-list {
   display: grid;
   gap: 10px;
-  max-height: min(240px, 30vh);
+  max-height: min(430px, calc(100vh - 300px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2894,7 +2959,7 @@ button:focus-visible {
 .audit-event-list {
   display: grid;
   gap: 10px;
-  max-height: min(240px, 30vh);
+  max-height: min(430px, calc(100vh - 300px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -3511,6 +3576,8 @@ button:focus-visible {
   .overview-layout,
   .content-grid,
   #documents:has(#documents-library:not([hidden])),
+  #evals:has(#evals-history:not([hidden])),
+  #audit:has(.job-ledger:not([hidden])),
   #queries:not([hidden]),
   .query-context,
   .document-context,
@@ -3556,7 +3623,14 @@ button:focus-visible {
   }
 
   #documents:has(#documents-library:not([hidden])) > #documents-library,
-  #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]) {
+  #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]),
+  #evals:has(#evals-history:not([hidden])) > #evals-history,
+  #evals:has(#evals-history:not([hidden])) > .eval-trends,
+  #audit:has(.job-ledger:not([hidden])) > .audit-context,
+  #audit:has(.job-ledger:not([hidden])) > .audit-toolbar,
+  #audit:has(.job-ledger:not([hidden])) > .audit-export-summary,
+  #audit:has(.job-ledger:not([hidden])) > .job-ledger,
+  #audit:has(.job-ledger:not([hidden])) > .job-detail-panel {
     grid-column: 1;
     max-height: none;
   }
