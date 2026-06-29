@@ -149,11 +149,11 @@ def build_audit_integrity(
         occurred_at,
         event_type,
         payload,
-        stored_payload_hash,
+        _stored_payload_hash,
         stored_prev_hash,
         stored_event_hash,
     ) in chronological:
-        payload_hash = stored_payload_hash or audit_payload_hash(payload)
+        payload_hash = audit_payload_hash(payload)
         entry_prev_hash = stored_prev_hash if stored_event_hash else prev_hash
         event_hash = stored_event_hash or audit_event_hash(
             event_id=event_id,

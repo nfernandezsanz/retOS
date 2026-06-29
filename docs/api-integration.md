@@ -1241,10 +1241,12 @@ The export endpoint follows the same admin/viewer visibility rules, accepts `lim
 filename="retos-audit-export.json"`, and sets `Cache-Control: no-store`. Export payloads
 also include an offline integrity section. RetOS canonicalizes each event payload with
 sorted JSON keys, hashes it with SHA-256, and persists `payload_hash`, `prev_hash`, and
-`event_hash` on each journal/progress event at write time. The export reuses those
-persisted hashes when available and validates each included event before returning the
-download. This does not replace database backups, but it lets operators detect accidental
-or malicious edits to persisted audit rows or exported audit packages.
+`event_hash` on each journal/progress event at write time. The export recalculates the
+payload hash from the payload being returned, compares that material against the
+persisted event hash chain, and validates each included event before returning the
+download. This catches payload edits even when the stored hash columns were not updated.
+It does not replace database backups, but it lets operators detect accidental or
+malicious edits to persisted audit rows or exported audit packages.
 
 Journal event shape:
 

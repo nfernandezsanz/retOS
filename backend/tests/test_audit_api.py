@@ -1,3 +1,5 @@
+import json
+import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -250,6 +252,56 @@ def test_audit_hash_chain_validation_detects_tampering(
     ]
 
     assert validate_audit_chain(tampered) is False
+
+
+def test_audit_export_detects_persisted_payload_tampering(
+    settings: Settings,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "retos-audit-tamper.db"
+    local_settings = settings.model_copy(
+        update={
+            "database_url": f"sqlite+aiosqlite:///{database_path}",
+            "database_create_all": True,
+        }
+    )
+    with TestClient(create_app(local_settings)) as client:
+        response = client.post(
+            "/auth/login",
+            json={"email": "admin@retos.dev", "password": "test-admin-password"},
+        )
+        assert response.status_code == 200
+        headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+        domain_id = create_domain(client, headers, "audit-payload-tamper")
+        job_id = create_index_job(client, headers, domain_id)
+
+        with sqlite3.connect(database_path) as connection:
+            connection.execute(
+                "update journal_events set payload = ? where event_type = ? and entity_id = ?",
+                (
+                    json.dumps({"kind": "index.domain", "status": "tampered"}),
+                    "job.created",
+                    job_id,
+                ),
+            )
+            connection.commit()
+
+        export_response = client.get("/audit/export?limit=20", headers=headers)
+
+    assert export_response.status_code == 200
+    body = export_response.json()
+    assert body["integrity"]["valid"] is False
+    tampered_event = next(
+        event
+        for event in body["journal_events"]
+        if event["event_type"] == "job.created" and event["entity_id"] == job_id
+    )
+    tampered_entry = next(
+        entry for entry in body["integrity"]["chain"] if entry["event_id"] == tampered_event["id"]
+    )
+    assert tampered_event["payload"] == {"kind": "index.domain", "status": "tampered"}
+    assert tampered_event["payload_hash"] != tampered_entry["payload_hash"]
+    assert audit_payload_hash(tampered_event["payload"]) == tampered_entry["payload_hash"]
 
 
 def test_audit_hash_helpers_are_stable() -> None:

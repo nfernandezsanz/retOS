@@ -92,7 +92,7 @@ auditor a stable local entry point:
 | Area | Gate | Proves |
 | --- | --- | --- |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 555 pytest cases, eval smoke, agent multi-hop eval, 95.25% total coverage, and 90.53% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 556 pytest cases, eval smoke, agent multi-hop eval, 95.25% total coverage, and 90.53% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
