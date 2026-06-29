@@ -5,6 +5,7 @@ python3 - <<'PY'
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -57,7 +58,9 @@ required_sections = (
 
 required_phrases = (
     "Current draft evidence commit:",
+    "Current local development head:",
     "code revision covered by the recorded local gates, CI",
+    "Local-only implementation commits after the draft evidence commit",
     "Documentation-only commits may follow it",
     "make ci-status-check",
     "make local-acceptance",
@@ -118,6 +121,25 @@ for path in versioned_files:
     require(
         f"retos-audit-handoff-{evidence_match.group(1)}" in content,
         f"{path} must align the audit handoff artifact with the draft evidence commit",
+    )
+    local_head_match = re.search(
+        r"Current local development head: `([0-9a-f]{40})`",
+        content,
+    )
+    require(
+        local_head_match is not None,
+        f"{path} must record the current local development head SHA",
+    )
+    recorded_local_head = local_head_match.group(1)
+    recorded_commit_type = subprocess.run(
+        ["git", "cat-file", "-t", recorded_local_head],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    require(
+        recorded_commit_type.returncode == 0 and recorded_commit_type.stdout.strip() == "commit",
+        f"{path} local development head must be a commit in the local Git history",
     )
 
 print(f"Versioned release notes OK: {len(versioned_files)} release note(s) validated.")
