@@ -2258,6 +2258,12 @@ test("loads the operational console", async ({ page }) => {
     "href",
     "#audit-events",
   );
+  await expect(page.getByLabel("Audit jobs context").getByText("Visible jobs")).toBeVisible();
+  await expect(
+    page.getByLabel("Audit jobs context").locator("[data-tooltip]").filter({
+      hasText: "make audit-export-check",
+    }),
+  ).toHaveAttribute("data-tooltip", /without calling external services/);
   await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
   await expect(page.getByText("title: Policy Note")).toBeVisible();
   await page.getByRole("button", { name: "Refresh audit" }).click();

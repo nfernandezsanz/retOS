@@ -6163,6 +6163,24 @@ function App() {
               <span className="status-pill">{queuedJobs.length} recent jobs</span>
             </div>
             <div
+              className="audit-context"
+              hidden={activeModule !== "audit-jobs"}
+              aria-label="Audit jobs context"
+            >
+              <div data-tooltip="Jobs shown after applying the current status or kind filter">
+                <span>Visible jobs</span>
+                <strong>{filteredJobs.length}</strong>
+              </div>
+              <div data-tooltip="Audit exports include jobs, journals, progress events, and hash-chain integrity">
+                <span>Export scope</span>
+                <strong>Jobs and evidence</strong>
+              </div>
+              <div data-tooltip="Downloaded exports can be verified without calling external services">
+                <span>Offline verifier</span>
+                <strong>make audit-export-check</strong>
+              </div>
+            </div>
+            <div
               className="audit-toolbar"
               hidden={activeModule !== "audit-jobs"}
               id="audit-jobs"
