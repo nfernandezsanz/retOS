@@ -96,6 +96,13 @@ type WorkspaceModule = {
   tooltip: string;
 };
 
+type FloatingTooltip = {
+  text: string;
+  left: number;
+  top: number;
+  placement: "top" | "bottom";
+};
+
 const workspaceSections: Array<{
   id: WorkspaceSection;
   label: string;
@@ -1952,6 +1959,7 @@ function App() {
   const [activeModule, setActiveModule] = useState<string | null>(() =>
     moduleFromHash(window.location.hash, sectionFromHash(window.location.hash)),
   );
+  const [floatingTooltip, setFloatingTooltip] = useState<FloatingTooltip | null>(null);
 
   const activeProviderLabel = useMemo(() => {
     if (!catalog) {
@@ -2088,6 +2096,64 @@ function App() {
     syncSectionFromHash();
     window.addEventListener("hashchange", syncSectionFromHash);
     return () => window.removeEventListener("hashchange", syncSectionFromHash);
+  }, []);
+
+  useEffect(() => {
+    const showTooltip = (event: Event) => {
+      const eventTarget = event.target;
+      if (!(eventTarget instanceof Element)) {
+        return;
+      }
+      const tooltipTarget = eventTarget.closest<HTMLElement>("[data-tooltip]");
+      const text = tooltipTarget?.dataset.tooltip?.trim();
+      if (!tooltipTarget || !text) {
+        return;
+      }
+
+      const rect = tooltipTarget.getBoundingClientRect();
+      const tooltipWidth = Math.min(280, window.innerWidth - 24);
+      const left = Math.min(
+        Math.max(rect.left + rect.width / 2, tooltipWidth / 2 + 12),
+        window.innerWidth - tooltipWidth / 2 - 12,
+      );
+      const canFitAbove = rect.top > 74;
+      setFloatingTooltip({
+        text,
+        left,
+        top: canFitAbove ? rect.top - 10 : rect.bottom + 10,
+        placement: canFitAbove ? "top" : "bottom",
+      });
+    };
+
+    const hideTooltip = (event: Event) => {
+      if (event instanceof globalThis.MouseEvent) {
+        const eventTarget = event.target;
+        const relatedTarget = event.relatedTarget;
+        if (eventTarget instanceof Element && relatedTarget instanceof Element) {
+          const tooltipTarget = eventTarget.closest("[data-tooltip]");
+          if (tooltipTarget?.contains(relatedTarget)) {
+            return;
+          }
+        }
+      }
+      setFloatingTooltip(null);
+    };
+
+    document.addEventListener("pointerover", showTooltip, true);
+    document.addEventListener("focusin", showTooltip, true);
+    document.addEventListener("pointerout", hideTooltip, true);
+    document.addEventListener("focusout", hideTooltip, true);
+    document.addEventListener("keydown", hideTooltip, true);
+    document.addEventListener("scroll", hideTooltip, true);
+
+    return () => {
+      document.removeEventListener("pointerover", showTooltip, true);
+      document.removeEventListener("focusin", showTooltip, true);
+      document.removeEventListener("pointerout", hideTooltip, true);
+      document.removeEventListener("focusout", hideTooltip, true);
+      document.removeEventListener("keydown", hideTooltip, true);
+      document.removeEventListener("scroll", hideTooltip, true);
+    };
   }, []);
 
   useEffect(() => {
@@ -6769,6 +6835,15 @@ function App() {
           </article>
         </section>
       </main>
+      {floatingTooltip ? (
+        <div
+          className={`floating-tooltip ${floatingTooltip.placement}`}
+          role="tooltip"
+          style={{ left: floatingTooltip.left, top: floatingTooltip.top }}
+        >
+          {floatingTooltip.text}
+        </div>
+      ) : null}
     </div>
   );
 }
