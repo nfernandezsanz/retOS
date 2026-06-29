@@ -138,7 +138,7 @@ and leaves an existing local `.env` untouched.
 | Symptom | Local check | What to do |
 | --- | --- | --- |
 | The console does not load | `make local-status` | Confirm `web`, `api`, Postgres, RabbitMQ, and host endpoints are reachable; rerun `make local-demo` if a required service is missing. |
-| API readiness is failing | `curl --fail http://localhost:8000/readyz` | Inspect `docker compose logs api postgres` and rerun `make doctor` before changing code or secrets. |
+| API readiness is failing | `curl --fail http://localhost:8000/readyz` | Run `make local-logs` and rerun `make doctor` before changing code or secrets. |
 | Demo data is missing | `make docker-seed-demo` | Re-seed the idempotent demo corpus, then refresh Documents or run `make local-status` to confirm the stack stayed healthy. |
 | A command would use paid providers | `make env-security-check` | Keep `RETOS_ALLOW_PAID_LLM=false` for local tests; paid provider calls require explicit opt-in and complete provider configuration. |
 | The UI looks wrong after edits | `make frontend-e2e && make frontend-visual-audit && make visual-audit-check` | Rebuild browser evidence locally and inspect the generated visual-audit screenshots before touching CI. |
@@ -427,6 +427,7 @@ Every meaningful change should pass these gates:
 | --- | --- | --- |
 | Local demo | `make local-demo` | Boots the local Docker stack in the background, seeds auditable demo data, and prints the console/API/RabbitMQ URLs for hands-on review. |
 | Local status | `make local-status` | Prints useful local URLs, checks Docker service state, and verifies the console/API endpoints without starting or mutating the stack. |
+| Local logs | `make local-logs` | Prints recent Compose logs for Postgres, RabbitMQ, migrations, API, worker, and web without following or mutating the stack. |
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Environment security | `make env-security-check` | Validates the active `.env` without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Demo corpus seed | `make docker-seed-demo` or `make seed-demo SEED_DEMO_ARGS=--create-schema` | Seeds an idempotent, auditable demo domain with text-ingestion jobs, hash-chained journal/progress events, and a rebuilt local BM25 index for hands-on UI checks. |

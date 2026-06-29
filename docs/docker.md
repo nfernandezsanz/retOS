@@ -153,6 +153,9 @@ profile only when you want local LLM calls.
 the API, worker, web, Postgres, and RabbitMQ service states from `docker compose ps`,
 and verifies the console/API endpoints from the host.
 
+Use `make local-logs` for a bounded, non-following log snapshot across Postgres,
+RabbitMQ, migrations, API, worker, and web when a local readiness check fails.
+
 For manual control, run `make bootstrap-env`, `make doctor`, `docker compose up --build`,
 then `make docker-seed-demo` in another shell. `make doctor` validates prerequisites,
 `.env.example`, and the active `.env` when it exists. It fails on production

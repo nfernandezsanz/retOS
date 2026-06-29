@@ -8,13 +8,14 @@ AUDIT_BUNDLE_OUTPUT ?= evals/reports/retos-audit-handoff.tar.gz
 AUDIT_MANIFEST_SKIP_CI ?= false
 ROOT_PY_SCRIPTS := scripts
 
-.PHONY: help bootstrap-env local-demo local-status doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check target-security-review-check visual-review-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check readme-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-workflow-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help bootstrap-env local-demo local-status local-logs doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check target-security-review-check visual-review-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check readme-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-workflow-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
 	@printf "  make bootstrap-env    Create .env from .env.example without overwriting local secrets\n"
 	@printf "  make local-demo       Bootstrap env, start Docker in the background, seed demo data, and print URLs\n"
 	@printf "  make local-status     Show Docker services, local endpoints, and useful URLs\n"
+	@printf "  make local-logs       Show recent Docker logs for local troubleshooting\n"
 	@printf "  make doctor           Check local prerequisites, safe defaults, Compose config, and audit tooling\n"
 	@printf "  make env-security-check Validate active .env security posture without starting services\n"
 	@printf "  make seed-demo        Seed an auditable local demo corpus and rebuild search\n"
@@ -103,6 +104,9 @@ local-demo: bootstrap-env doctor
 
 local-status:
 	"$(BACKEND_PYTHON)" scripts/local_status.py
+
+local-logs:
+	docker compose logs --no-color --tail 160 postgres rabbitmq migrate api worker web
 
 doctor:
 	"$(BACKEND_PYTHON)" scripts/check_local_doctor.py

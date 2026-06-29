@@ -20,6 +20,8 @@ tag in GitHub.
 - README onboarding now includes a local troubleshooting table for console readiness,
   API readiness, demo data, paid-provider safety, visual checks, and stack shutdown,
   with the README usability gate protecting the section order.
+- `make local-logs` now prints recent local Compose logs for Postgres, RabbitMQ,
+  migrations, API, worker, and web without following or mutating the stack.
 - File upload ingestion now rejects declared MIME/extension mismatches for `.txt`,
   `.md`, and `.pdf` uploads before writing bytes, and preserves declared
   `content_type` in job/document audit metadata.
