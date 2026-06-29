@@ -74,14 +74,14 @@ def test_branch_coverage_gate_compares_displayed_rounded_percentage(
     gate = load_branch_coverage_gate()
     report_path = write_coverage_report(
         tmp_path / "coverage.json",
-        covered_branches=1241,
-        num_branches=1372,
+        covered_branches=1254,
+        num_branches=1386,
     )
 
-    exit_code = gate.run(coverage_json=report_path, fail_under=90.45)
+    exit_code = gate.run(coverage_json=report_path, fail_under=90.48)
 
     assert exit_code == 0
-    assert "Backend branch coverage: 90.45% (1241/1372 branches)" in capsys.readouterr().out
+    assert "Backend branch coverage: 90.48% (1254/1386 branches)" in capsys.readouterr().out
 
 
 def test_branch_coverage_gate_requires_branch_coverage_report(tmp_path: Path) -> None:

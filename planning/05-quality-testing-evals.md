@@ -4,7 +4,7 @@
 
 - Minimum 90% total coverage.
 - Target minimum 90% branch coverage.
-- Current branch-only ratchet: 90.45%, enforced by CI after focused branch tests
+- Current branch-only ratchet: 90.48%, enforced by CI after focused branch tests
   raised the ratchet above the 90% branch target without hiding gaps.
 - Recommended 95% for auth, journals, identities, permissions, provider routing, and citation validation.
 
@@ -17,7 +17,7 @@ make test
 `make test` runs pytest with branch instrumentation, writes `backend/coverage.json`,
 and then runs `backend/scripts/check_branch_coverage.py`. CI runs the same branch
 ratchet after pytest so total coverage and branch coverage cannot drift silently; pass
-`BRANCH_COVERAGE_MIN=90.45 make test` when auditing readiness against the current
+`BRANCH_COVERAGE_MIN=90.48 make test` when auditing readiness against the current
 branch coverage ratchet.
 
 Reality-check commands:
