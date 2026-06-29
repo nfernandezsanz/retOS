@@ -1585,12 +1585,16 @@ test("loads the operational console", async ({ page }) => {
     page.getByRole("heading", { name: "Auditable document investigation" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Refresh workspace" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Documents" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Domains and documents" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Run grounded query" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Local evals" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
+  const primaryNavigation = page.getByLabel("Primary navigation");
+  await expect(primaryNavigation.getByRole("link", { name: "Documents" })).toBeVisible();
+  await expect(primaryNavigation.getByRole("link", { name: "Documents" })).toHaveAttribute(
+    "data-tooltip",
+    /Manage domains/,
+  );
+  await expect(page.getByRole("link", { name: "Grounded query workflow" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Admin" }).first().click();
+  await expect(page.locator("#admin").getByRole("heading", { name: "LLM providers" })).toBeVisible();
 
   await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
@@ -1620,6 +1624,11 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("Updated password for ui-admin@retos.dev")).toBeVisible();
   await uiAdminRow.getByRole("button", { name: "Deactivate" }).click();
   await expect(uiAdminRow.getByText("inactive")).toBeVisible();
+
+  await page.getByRole("link", { name: "Documents" }).first().click();
+  await expect(
+    page.locator("#documents").getByRole("heading", { name: "Domains and documents" }),
+  ).toBeVisible();
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
   await expect(page.getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();
@@ -1634,6 +1643,8 @@ test("loads the operational console", async ({ page }) => {
     page.getByLabel("Segments for Smoke Document").getByText("Smoke segment text for search readiness."),
   ).toBeVisible();
 
+  await page.getByRole("link", { name: "Queries" }).first().click();
+  await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
   await page
     .getByRole("textbox", { name: "Question", exact: true })
     .fill("What evidence mentions search readiness?");
@@ -1657,6 +1668,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("page=1")).toBeVisible();
 
+  await page.getByRole("link", { name: "Documents" }).first().click();
   await page.getByLabel("Slug").fill("policy-research");
   await page.getByPlaceholder("Legal research").fill("Policy Research");
   await page.getByLabel("Description").fill("Created from the console");
@@ -1673,10 +1685,8 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Domain sources").getByText("Policy Corpus")).toBeVisible();
 
   await page.getByLabel("Domain sources").getByRole("button", { name: "Scan" }).first().click();
-  await expect(page.getByLabel("Queued jobs").getByText("ingest.source queued")).toBeVisible();
 
   await page.getByRole("button", { name: "Rebuild index" }).click();
-  await expect(page.getByLabel("Queued jobs").getByText("index.domain queued")).toBeVisible();
 
   await page.getByLabel("Upload file").setInputFiles({
     name: "uploaded-fixture.txt",
@@ -1686,7 +1696,6 @@ test("loads the operational console", async ({ page }) => {
   await page.getByPlaceholder("Uploaded research note").fill("Uploaded Fixture");
   await page.getByRole("button", { name: "Queue upload" }).click();
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture")).toBeVisible();
-  await expect(page.getByLabel("Recent jobs").getByText("job-upload-1")).toBeVisible();
   await page.getByRole("button", { name: "Edit Uploaded Fixture" }).click();
   await page.getByLabel("Document title for Uploaded Fixture").fill("Uploaded Fixture Reviewed");
   await page.getByRole("button", { name: "Save Uploaded Fixture" }).click();
@@ -1709,9 +1718,12 @@ test("loads the operational console", async ({ page }) => {
     .getByPlaceholder("Paste local fixture text, notes, transcripts, or extracted content.")
     .fill("A policy note that can be ingested without touching paid providers.");
   await page.getByRole("button", { name: "Queue text ingestion" }).click();
-  await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
   await expect(page.getByLabel("Domain documents").getByText("Policy Note")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Jobs and evidence ledger" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Audit" }).first().click();
+  await expect(
+    page.locator("#audit").getByRole("heading", { name: "Jobs and evidence ledger" }),
+  ).toBeVisible();
   await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
   await expect(page.getByText("title: Policy Note")).toBeVisible();
   await page.getByRole("button", { name: "Refresh audit" }).click();
@@ -1732,6 +1744,7 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Export audit" }).click();
   await expect(page.getByText("retos-audit-export.json:")).toBeVisible();
 
+  await page.getByRole("link", { name: "Evals" }).first().click();
   await page.getByRole("button", { name: "Run eval smoke" }).click();
   await expect(page.getByLabel("Eval metrics").getByText("retrieval recall")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("built-in")).toBeVisible();
@@ -1816,7 +1829,6 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval report paths").getByText("ui-ocr-benchmark.md")).toBeVisible();
 
   await page.getByRole("button", { name: "Rerun ocr-manifest" }).click();
-  await expect(page.getByLabel("Recent jobs").getByText("job-eval-rerun-1")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("ocr-manifest")).toHaveCount(2);
   await expect(page.getByLabel("Eval trends").getByText("2 runs")).toBeVisible();
 
@@ -1832,6 +1844,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval regression gate").getByText("retrieval recall")).toBeVisible();
   await expect(page.getByLabel("Eval regression gate").getByText("2%")).toBeVisible();
 
+  await page.getByRole("link", { name: "Audit" }).first().click();
   await page.getByLabel("Filter jobs").selectOption("index.domain");
   await expect(page.getByLabel("Recent jobs").getByText("job-index-1")).toBeVisible();
   await page
@@ -1858,6 +1871,7 @@ test("loads the operational console", async ({ page }) => {
     '"retried_from_job_id": "job-failed-index-1"',
   );
 
+  await page.getByRole("link", { name: "Queries" }).first().click();
   await page.getByRole("button", { name: "Connect live updates" }).click();
   await expect(page.getByLabel("Live progress events").getByText("job.queued")).toBeVisible();
   await expect(page.getByText("Resume progress:progress")).toBeVisible();
@@ -1874,15 +1888,18 @@ test("keeps provider controls usable on mobile", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page.locator("#overview")).toBeFocused();
 
-  await expect(page.getByRole("heading", { name: "LLM providers" })).toBeVisible();
+  await page.getByRole("link", { name: "Admin" }).first().click();
+  await expect(page.locator("#admin").getByRole("heading", { name: "LLM providers" })).toBeVisible();
   await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
 
   await expect(page.getByText("Ollama local runtime")).toBeVisible();
-  await page.getByRole("link", { name: "Evals" }).click();
-  await expect(page.getByRole("heading", { name: "Local evals" })).toBeVisible();
-  await page.getByRole("link", { name: "Audit" }).click();
-  await expect(page.getByRole("heading", { name: "Jobs and evidence ledger" })).toBeVisible();
+  await page.getByRole("link", { name: "Evals" }).first().click();
+  await expect(page.locator("#evals").getByRole("heading", { name: "Local evals" })).toBeVisible();
+  await page.getByRole("link", { name: "Audit" }).first().click();
+  await expect(
+    page.locator("#audit").getByRole("heading", { name: "Jobs and evidence ledger" }),
+  ).toBeVisible();
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );

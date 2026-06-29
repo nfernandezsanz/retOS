@@ -134,6 +134,7 @@ button:disabled {
 }
 
 .sidebar a {
+  position: relative;
   color: #cbd5e1;
   text-decoration: none;
   padding: 10px 12px;
@@ -146,6 +147,11 @@ button:disabled {
 .sidebar a:hover {
   color: var(--retos-surface);
   background: #1e293b;
+}
+
+.sidebar a[aria-current="page"] {
+  color: #ffffff;
+  background: #2563eb;
 }
 
 .sidebar a:focus-visible {
@@ -169,6 +175,110 @@ button:disabled {
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 16px;
+}
+
+.section-topbar {
+  margin-bottom: 14px;
+}
+
+.section-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.section-switcher a {
+  position: relative;
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--retos-border);
+  border-radius: 8px;
+  background: var(--retos-surface);
+  color: var(--retos-muted);
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.section-switcher a:hover,
+.section-switcher a:focus-visible {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: var(--retos-primary);
+}
+
+.section-switcher a:focus-visible {
+  outline: 3px solid var(--retos-primary-ring);
+  outline-offset: 2px;
+}
+
+.section-switcher a[aria-current="page"] {
+  border-color: var(--retos-primary);
+  background: var(--retos-primary);
+  color: #ffffff;
+}
+
+.overview-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.workflow-card {
+  position: relative;
+  display: grid;
+  min-height: 150px;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid var(--retos-border);
+  border-radius: 8px;
+  background: var(--retos-surface);
+  color: var(--retos-ink);
+  padding: 16px;
+  text-decoration: none;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.workflow-card:hover,
+.workflow-card:focus-visible {
+  border-color: #93c5fd;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.workflow-card:focus-visible {
+  outline: 3px solid var(--retos-primary-ring);
+  outline-offset: 2px;
+}
+
+.workflow-card span {
+  color: var(--retos-primary);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.workflow-card strong {
+  font-size: 17px;
+}
+
+.workflow-card small {
+  color: var(--retos-subtle);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .eyebrow {
@@ -348,12 +458,67 @@ h2 {
   gap: 18px;
 }
 
+.section-content {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .panel {
   padding: 20px;
 }
 
 .panel.wide {
   grid-column: 1 / -1;
+}
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  position: absolute;
+  z-index: 40;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: #0f172a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  color: #ffffff;
+  content: attr(data-tooltip);
+  display: none;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  white-space: normal;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  display: block;
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.sidebar [data-tooltip]::after {
+  top: 50%;
+  bottom: auto;
+  left: calc(100% + 10px);
+  transform: translate(4px, -50%);
+}
+
+.sidebar [data-tooltip]:hover::after,
+.sidebar [data-tooltip]:focus-visible::after {
+  transform: translate(0, -50%);
 }
 
 .panel-heading {
@@ -2250,6 +2415,7 @@ button:focus-visible {
 
   .metrics,
   .brand-brief,
+  .overview-actions,
   .content-grid,
   .domain-form,
   .domain-toolbar,
@@ -2342,6 +2508,30 @@ button:focus-visible {
 
   .hero-copy {
     font-size: 16px;
+  }
+}
+
+@media (max-width: 760px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-actions {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-card {
+    min-height: 94px;
+  }
+
+  .workflow-card small {
+    display: none;
+  }
+
+  [data-tooltip]::after {
+    display: none;
   }
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 import {
   Activity,
   Archive,
@@ -56,6 +57,75 @@ type ProviderCatalog = {
   active: ActiveProvider;
   providers: ProviderProfile[];
 };
+
+type WorkspaceSection = "overview" | "documents" | "queries" | "evals" | "audit" | "admin";
+
+const workspaceSections: Array<{
+  id: WorkspaceSection;
+  label: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  tooltip: string;
+}> = [
+  {
+    id: "overview",
+    label: "Overview",
+    eyebrow: "Console",
+    title: "Operating snapshot",
+    description: "See corpus health, provider status, active jobs, and the next best place to work.",
+    tooltip: "Return to the short system snapshot",
+  },
+  {
+    id: "documents",
+    label: "Documents",
+    eyebrow: "Knowledge base",
+    title: "Domains and documents",
+    description: "Create domains, attach sources, queue ingestion, and inspect document evidence.",
+    tooltip: "Manage domains, sources, uploads, and indexed documents",
+  },
+  {
+    id: "queries",
+    label: "Queries",
+    eyebrow: "Research",
+    title: "Grounded query workflow",
+    description: "Ask questions, inspect citations, and watch live processing events while work runs.",
+    tooltip: "Ask grounded questions and follow live processing",
+  },
+  {
+    id: "evals",
+    label: "Evals",
+    eyebrow: "Quality",
+    title: "Local evals",
+    description: "Run smoke, retrieval, multi-hop, dataset, OCR, and regression-gate checks locally.",
+    tooltip: "Run local eval suites and compare quality trends",
+  },
+  {
+    id: "audit",
+    label: "Audit",
+    eyebrow: "Evidence",
+    title: "Jobs and evidence ledger",
+    description: "Review jobs, retries, journal events, persisted progress, and exportable audit evidence.",
+    tooltip: "Inspect jobs, hashes, journals, and evidence exports",
+  },
+  {
+    id: "admin",
+    label: "Admin",
+    eyebrow: "Admin",
+    title: "LLM providers",
+    description: "Load provider configuration, verify local defaults, and manage admin users.",
+    tooltip: "Manage LLM providers and admin access",
+  },
+];
+
+const workspaceSectionIds = new Set<WorkspaceSection>(
+  workspaceSections.map((section) => section.id),
+);
+
+function sectionFromHash(hash: string): WorkspaceSection {
+  const candidate = hash.replace("#", "") as WorkspaceSection;
+  return workspaceSectionIds.has(candidate) ? candidate : "overview";
+}
 
 type AdminUserRead = {
   id: string;
@@ -1456,6 +1526,9 @@ function App() {
   const [auditExportMessage, setAuditExportMessage] = useState<string | null>(null);
   const liveAbortRef = useRef<AbortController | null>(null);
   const lastPersistedEventIdRef = useRef<string | null>(null);
+  const [activeSection, setActiveSection] = useState<WorkspaceSection>(() =>
+    sectionFromHash(window.location.hash),
+  );
 
   const activeProviderLabel = useMemo(() => {
     if (!catalog) {
@@ -1531,6 +1604,28 @@ function App() {
   );
   const evalScopeLabel = selectedEvalDomain ? selectedEvalDomain.name : "All evals";
   const evalDatasetScopeLabel = selectedEvalDomain ? selectedEvalDomain.name : "Global";
+  const activeSectionMeta =
+    workspaceSections.find((section) => section.id === activeSection) ?? workspaceSections[0];
+
+  useEffect(() => {
+    const syncSectionFromHash = () => {
+      setActiveSection(sectionFromHash(window.location.hash));
+    };
+
+    syncSectionFromHash();
+    window.addEventListener("hashchange", syncSectionFromHash);
+    return () => window.removeEventListener("hashchange", syncSectionFromHash);
+  }, []);
+
+  function handleSectionClick(
+    event: MouseEvent<HTMLAnchorElement>,
+    section: WorkspaceSection,
+  ) {
+    event.preventDefault();
+    setActiveSection(section);
+    window.history.replaceState(null, "", `#${section}`);
+    document.getElementById("overview")?.focus();
+  }
 
   useEffect(() => {
     return () => {
@@ -2686,29 +2781,42 @@ function App() {
           </div>
         </div>
         <nav>
-          <a href="#overview">Overview</a>
-          <a href="#documents">Documents</a>
-          <a href="#queries">Queries</a>
-          <a href="#evals">Evals</a>
-          <a href="#audit">Audit</a>
-          <a href="#admin">Admin</a>
+          {workspaceSections.map((section) => (
+            <a
+              aria-current={activeSection === section.id ? "page" : undefined}
+              data-tooltip={section.tooltip}
+              href={`#${section.id}`}
+              key={section.id}
+              onClick={(event) => handleSectionClick(event, section.id)}
+            >
+              {section.label}
+            </a>
+          ))}
         </nav>
       </aside>
 
       <main className="workspace" id="overview" tabIndex={-1}>
-        <header className="topbar">
+        <header className={activeSection === "overview" ? "topbar" : "topbar section-topbar"}>
           <div>
-            <p className="eyebrow">Local-first research console</p>
-            <h1>Auditable document investigation</h1>
+            <p className="eyebrow">
+              {activeSection === "overview" ? "Local-first research console" : activeSectionMeta.eyebrow}
+            </p>
+            <h1>
+              {activeSection === "overview"
+                ? "Auditable document investigation"
+                : activeSectionMeta.title}
+            </h1>
             <p className="hero-copy">
-              Manage corpus state, trace every processing step, and keep local eval evidence
-              visible before a human auditor signs off.
+              {activeSection === "overview"
+                ? "Manage corpus state, trace every processing step, and keep local eval evidence visible before a human auditor signs off."
+                : activeSectionMeta.description}
             </p>
           </div>
           <button
             type="button"
             className="primary-action"
             disabled={isLoadingWorkspace}
+            data-tooltip="Reload domains, sources, documents, jobs, eval history, and audit evidence"
             onClick={() => void refreshWorkspace()}
           >
             <RefreshCw aria-hidden="true" />
@@ -2716,38 +2824,74 @@ function App() {
           </button>
         </header>
 
-        <section className="brand-brief" aria-label="RetOS operating posture">
-          <div>
-            <ServerCog aria-hidden="true" />
-            <span>Docker-first runtime</span>
-          </div>
-          <div>
-            <ShieldAlert aria-hidden="true" />
-            <span>Hash-chained journals</span>
-          </div>
-          <div>
-            <CheckCircle2 aria-hidden="true" />
-            <span>No paid calls in tests</span>
-          </div>
+        <section className="section-switcher" aria-label="Workspace sections">
+          {workspaceSections.map((section) => (
+            <a
+              aria-current={activeSection === section.id ? "page" : undefined}
+              data-tooltip={section.tooltip}
+              href={`#${section.id}`}
+              key={section.id}
+              onClick={(event) => handleSectionClick(event, section.id)}
+            >
+              {section.label}
+            </a>
+          ))}
         </section>
 
-        <section className="metrics" aria-label="System metrics">
-          {metrics.map((metric) => {
-            const Icon = metric.icon;
-            return (
-              <article className="metric" key={metric.label}>
-                <Icon aria-hidden="true" />
-                <div>
-                  <span>{metric.label}</span>
-                  <strong>{metric.value}</strong>
-                </div>
-              </article>
-            );
-          })}
-        </section>
+        {activeSection === "overview" ? (
+          <>
+            <section className="brand-brief" aria-label="RetOS operating posture">
+              <div>
+                <ServerCog aria-hidden="true" />
+                <span>Docker-first runtime</span>
+              </div>
+              <div>
+                <ShieldAlert aria-hidden="true" />
+                <span>Hash-chained journals</span>
+              </div>
+              <div>
+                <CheckCircle2 aria-hidden="true" />
+                <span>No paid calls in tests</span>
+              </div>
+            </section>
 
-        <section className="content-grid">
-          <article className="panel" id="documents">
+            <section className="metrics" aria-label="System metrics">
+              {metrics.map((metric) => {
+                const Icon = metric.icon;
+                return (
+                  <article className="metric" key={metric.label}>
+                    <Icon aria-hidden="true" />
+                    <div>
+                      <span>{metric.label}</span>
+                      <strong>{metric.value}</strong>
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+
+            <section className="overview-actions" aria-label="Primary workflows">
+              {workspaceSections
+                .filter((section) => section.id !== "overview")
+                .map((section) => (
+                  <a
+                    className="workflow-card"
+                    data-tooltip={section.tooltip}
+                    href={`#${section.id}`}
+                    key={section.id}
+                    onClick={(event) => handleSectionClick(event, section.id)}
+                  >
+                    <span>{section.eyebrow}</span>
+                    <strong>{section.title}</strong>
+                    <small>{section.description}</small>
+                  </a>
+                ))}
+            </section>
+          </>
+        ) : null}
+
+        <section className="content-grid section-content">
+          <article className="panel" hidden={activeSection !== "documents"} id="documents">
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Knowledge base</p>
@@ -2780,7 +2924,12 @@ function App() {
                   onChange={(event) => setDomainDescription(event.target.value)}
                 />
               </label>
-              <button className="secondary-action" disabled={isCreatingDomain} type="submit">
+              <button
+                className="secondary-action"
+                data-tooltip="Create an isolated research domain for documents and queries"
+                disabled={isCreatingDomain}
+                type="submit"
+              >
                 <FolderPlus aria-hidden="true" />
                 {isCreatingDomain ? "Creating domain" : "Create domain"}
               </button>
@@ -3070,6 +3219,7 @@ function App() {
                 <h3>Sources</h3>
                 <button
                   className="ghost-action"
+                  data-tooltip="Queue a local index rebuild for the active domain"
                   disabled={!selectedDomainId || isQueueingIndex}
                   type="button"
                   onClick={() => void handleRebuildIndex()}
@@ -3108,6 +3258,7 @@ function App() {
                 </label>
                 <button
                   className="secondary-action"
+                  data-tooltip="Register a reusable corpus source for this domain"
                   disabled={!selectedDomainId || isCreatingSource}
                   type="submit"
                 >
@@ -3181,6 +3332,7 @@ function App() {
                 </label>
                 <button
                   className="secondary-action"
+                  data-tooltip="Upload a file and queue it for local processing"
                   disabled={!selectedDomainId || isUploadingFile}
                   type="submit"
                 >
@@ -3226,6 +3378,7 @@ function App() {
                 </label>
                 <button
                   className="secondary-action"
+                  data-tooltip="Paste text and queue it as a traceable document"
                   disabled={!selectedDomainId || isIngestingText}
                   type="submit"
                 >
@@ -3236,7 +3389,7 @@ function App() {
             </section>
           </article>
 
-          <article className="panel" id="queries">
+          <article className="panel" hidden={activeSection !== "queries"} id="queries">
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Research</p>
@@ -3257,7 +3410,12 @@ function App() {
                   onChange={(event) => setQuestion(event.target.value)}
                 />
               </label>
-              <button className="secondary-action" disabled={isRunningQuery} type="submit">
+              <button
+                className="secondary-action"
+                data-tooltip="Run a grounded query against the selected domain"
+                disabled={isRunningQuery}
+                type="submit"
+              >
                 <Send aria-hidden="true" />
                 {isRunningQuery ? "Running query" : "Run grounded query"}
               </button>
@@ -3453,7 +3611,7 @@ function App() {
             </section>
           </article>
 
-          <article className="panel wide">
+          <article className="panel wide" hidden={activeSection !== "queries"}>
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Pipeline</p>
@@ -3466,6 +3624,7 @@ function App() {
             <div className="live-toolbar">
               <button
                 className={liveStatus === "connected" ? "ghost-action" : "secondary-action"}
+                data-tooltip="Open an SSE stream to watch processing updates"
                 type="button"
                 onClick={() => void handleConnectLiveUpdates()}
               >
@@ -3525,7 +3684,7 @@ function App() {
             </section>
           </article>
 
-          <article className="panel wide" id="evals">
+          <article className="panel wide" hidden={activeSection !== "evals"} id="evals">
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Quality</p>
@@ -3538,6 +3697,7 @@ function App() {
             <div className="eval-toolbar">
               <button
                 className="secondary-action"
+                data-tooltip="Run the local smoke eval suite without paid providers"
                 disabled={isAnyEvalRunning}
                 type="button"
                 onClick={() => void handleRunSmokeEval()}
@@ -4106,7 +4266,7 @@ function App() {
             ) : null}
           </article>
 
-          <article className="panel wide" id="admin">
+          <article className="panel wide" hidden={activeSection !== "admin"} id="admin">
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Admin</p>
@@ -4139,7 +4299,12 @@ function App() {
                   />
                 </label>
                 <div className="button-row">
-                  <button className="secondary-action" disabled={isLoadingProvider} type="submit">
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Authenticate locally and load provider configuration"
+                    disabled={isLoadingProvider}
+                    type="submit"
+                  >
                     <KeyRound aria-hidden="true" />
                     {isLoadingProvider ? "Loading providers" : "Load providers"}
                   </button>
@@ -4383,7 +4548,7 @@ function App() {
             </section>
           </article>
 
-          <article className="panel wide" id="audit">
+          <article className="panel wide" hidden={activeSection !== "audit"} id="audit">
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Audit</p>
@@ -4408,6 +4573,7 @@ function App() {
               </label>
               <button
                 className="ghost-action"
+                data-tooltip="Reload persisted jobs, journals, and progress events"
                 disabled={isLoadingAudit}
                 type="button"
                 onClick={() => void refreshAudit()}
@@ -4417,6 +4583,7 @@ function App() {
               </button>
               <button
                 className="ghost-action"
+                data-tooltip="Download the current audit bundle as JSON"
                 disabled={isExportingAudit}
                 type="button"
                 onClick={() => void handleExportAudit()}
