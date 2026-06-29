@@ -21,6 +21,8 @@ STATIC_EVIDENCE_FILES = (
     "docs/production-readiness.md",
     "docs/release-process.md",
     "docs/releases/2026.06.28-alpha.1.md",
+    "docs/releases/evidence/2026.06.28-alpha.1-calibration.md",
+    "docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md",
     "docs/releases/evidence/production-promotion-template.md",
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",

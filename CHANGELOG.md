@@ -27,6 +27,8 @@ tag in GitHub.
   HEAD CI status checker requires it alongside the JSON manifest and visual audit.
 - Local auditor handoff bundles now package the JSON manifest, Markdown report,
   production/release docs, workflows, and checksum sidecar for offline review.
+- Local auditor handoff bundles now include versioned calibration and calibration trend
+  evidence so reviewers can inspect the dataset gate inputs offline.
 - Auditor evidence matrix mapping the project objective to current evidence, local gates,
   and remaining external promotion blockers.
 - Production readiness audit pack with explicit promotion blockers, human review order,

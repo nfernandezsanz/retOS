@@ -22,6 +22,8 @@ REQUIRED_MEMBERS = {
     f"{BUNDLE_ROOT}/docs/production-readiness.md",
     f"{BUNDLE_ROOT}/docs/release-process.md",
     f"{BUNDLE_ROOT}/docs/releases/2026.06.28-alpha.1.md",
+    f"{BUNDLE_ROOT}/docs/releases/evidence/2026.06.28-alpha.1-calibration.md",
+    f"{BUNDLE_ROOT}/docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md",
     f"{BUNDLE_ROOT}/docs/releases/evidence/production-promotion-template.md",
     f"{BUNDLE_ROOT}/.github/workflows/ci.yml",
     f"{BUNDLE_ROOT}/.github/workflows/release.yml",
@@ -90,6 +92,14 @@ def main() -> int:
                 tar,
                 f"{BUNDLE_ROOT}/docs/releases/evidence/production-promotion-template.md",
             )
+            calibration = read_member_text(
+                tar,
+                f"{BUNDLE_ROOT}/docs/releases/evidence/2026.06.28-alpha.1-calibration.md",
+            )
+            calibration_trend = read_member_text(
+                tar,
+                f"{BUNDLE_ROOT}/docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md",
+            )
 
     missing = sorted(REQUIRED_MEMBERS - members)
     require(not missing, f"bundle missing required member(s): {', '.join(missing)}")
@@ -107,6 +117,14 @@ def main() -> int:
             "make local-acceptance" in content,
             f"bundled {name} must mention make local-acceptance",
         )
+    require(
+        "Status: PASS" in calibration and "Max records | 200" in calibration,
+        "bundled calibration evidence must include passing 200-record evidence",
+    )
+    require(
+        "Status: PASS" in calibration_trend and "Allowed regression tolerance: 0" in calibration_trend,
+        "bundled calibration trend must include passing zero-regression evidence",
+    )
     require(
         "Promotion Decision Checklist" in handoff,
         "bundled handoff report must include the promotion decision checklist",
