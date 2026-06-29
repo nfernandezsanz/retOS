@@ -50,6 +50,7 @@ make auditor-static-check
 make auditor-handoff-check
 make audit-manifest-check
 make audit-manifest OUTPUT=evals/reports/audit-manifest.json
+make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true
 docker compose --env-file .env.example config
 docker compose --dry-run build
 make dependency-audit
@@ -102,6 +103,7 @@ make release-evidence-check
 | `make release-evidence-check` output | Yes |
 | `make audit-manifest-check` output | Yes |
 | `make audit-manifest` JSON | Yes |
+| `make audit-bundle` tarball and `.sha256` | Yes |
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
@@ -191,6 +193,10 @@ Images:
   later `make ci-status-check` success for the same commit.
 - CI also exports `retos-audit-handoff-<commit>`, a Markdown companion generated from
   the same manifest snapshot for reviewers who prefer a readable handoff artifact.
+- `make audit-bundle` packages the local JSON manifest, Markdown handoff report,
+  production readiness pack, release process, operations guide, branding guide, release
+  note, promotion template, and workflow contracts into a tarball with a `.sha256`
+  sidecar for offline auditor transfer.
 - `make auditor-handoff-check` is the local auditor entry point for static guards,
   offline manifest export, and promotion preparation. It does not replace tag publishing,
   GHCR digests, SBOM/provenance, Cosign verification, or target-environment review.

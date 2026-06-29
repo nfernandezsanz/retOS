@@ -4,9 +4,10 @@ BACKEND_PYTHON ?= $(if $(wildcard $(ROOT_DIR)/.venv/bin/python),$(ROOT_DIR)/.ven
 BRANCH_COVERAGE_MIN ?= 90.44
 AUDIT_MANIFEST_OUTPUT ?= evals/reports/audit-manifest.json
 AUDIT_HANDOFF_REPORT_OUTPUT ?= evals/reports/audit-handoff.md
+AUDIT_BUNDLE_OUTPUT ?= evals/reports/retos-audit-handoff.tar.gz
 AUDIT_MANIFEST_SKIP_CI ?= false
 
-.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-evidence-matrix-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help install format format-check test lint typecheck dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-evidence-matrix-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -27,6 +28,8 @@ help:
 	@printf "  make audit-manifest-check Validate audit manifest schema offline\n"
 	@printf "  make audit-handoff-report Export a human-readable Markdown audit handoff\n"
 	@printf "  make audit-handoff-report-check Validate the generated handoff report shape\n"
+	@printf "  make audit-bundle    Export a tar.gz auditor handoff bundle with checksum\n"
+	@printf "  make audit-bundle-check Validate the generated auditor bundle shape\n"
 	@printf "  make db-upgrade       Apply Alembic migrations\n"
 	@printf "  make db-downgrade     Roll back the latest Alembic migration\n"
 	@printf "  make api-smoke        Start the API and hit real HTTP endpoints\n"
@@ -99,12 +102,13 @@ operations-runbook-check:
 auditor-evidence-matrix-check:
 	scripts/check_auditor_evidence_matrix.sh
 
-auditor-static-check: dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-evidence-matrix-check brand-check release-workflow-check release-notes-check versioned-release-notes-check release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check
+auditor-static-check: dependency-audit security-policy-check ignore-hygiene-check operations-runbook-check auditor-evidence-matrix-check brand-check release-workflow-check release-notes-check versioned-release-notes-check release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
 
 auditor-handoff-check: auditor-static-check
 	$(MAKE) audit-manifest OUTPUT="$(AUDIT_MANIFEST_OUTPUT)" AUDIT_MANIFEST_SKIP_CI=true
 	$(MAKE) audit-handoff-report MANIFEST="$(AUDIT_MANIFEST_OUTPUT)" OUTPUT="$(AUDIT_HANDOFF_REPORT_OUTPUT)"
-	@printf "Auditor handoff OK: local static gates, offline audit manifest, and Markdown report are ready at %s and %s\n" "$(AUDIT_MANIFEST_OUTPUT)" "$(AUDIT_HANDOFF_REPORT_OUTPUT)"
+	$(MAKE) audit-bundle OUTPUT="$(AUDIT_BUNDLE_OUTPUT)" AUDIT_MANIFEST_SKIP_CI=true
+	@printf "Auditor handoff OK: local static gates, offline audit manifest, Markdown report, and bundle are ready at %s, %s, and %s\n" "$(AUDIT_MANIFEST_OUTPUT)" "$(AUDIT_HANDOFF_REPORT_OUTPUT)" "$(AUDIT_BUNDLE_OUTPUT)"
 
 audit-manifest:
 	$(PYTHON) scripts/export_audit_manifest.py $(if $(filter true,$(AUDIT_MANIFEST_SKIP_CI)),--skip-ci-lookup,) $(if $(OUTPUT),--output "$(abspath $(OUTPUT))",)
@@ -117,6 +121,12 @@ audit-handoff-report:
 
 audit-handoff-report-check:
 	$(PYTHON) scripts/check_audit_handoff_report.py
+
+audit-bundle:
+	$(PYTHON) scripts/export_audit_bundle.py $(if $(filter true,$(AUDIT_MANIFEST_SKIP_CI)),--skip-ci-lookup,) $(if $(OUTPUT),--output "$(abspath $(OUTPUT))",)
+
+audit-bundle-check:
+	$(PYTHON) scripts/check_audit_bundle.py
 
 db-upgrade:
 	cd backend && "$(BACKEND_PYTHON)" -m alembic upgrade head

@@ -63,6 +63,8 @@ def main() -> int:
         "frontend/public/retos-mark.svg",
         "scripts/check_audit_handoff_report.py",
         "scripts/export_audit_handoff_report.py",
+        "scripts/check_audit_bundle.py",
+        "scripts/export_audit_bundle.py",
         "retos-visual-audit-",
         "production-promotion-template.md",
     ):

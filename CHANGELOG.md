@@ -17,6 +17,8 @@ tag in GitHub.
   report path is covered by the same critical-file evidence as the JSON manifest.
 - CI now publishes a `retos-audit-handoff-<commit>` Markdown artifact and the current
   HEAD CI status checker requires it alongside the JSON manifest and visual audit.
+- Local auditor handoff bundles now package the JSON manifest, Markdown report,
+  production/release docs, workflows, and checksum sidecar for offline review.
 - Auditor evidence matrix mapping the project objective to current evidence, local gates,
   and remaining external promotion blockers.
 - Production readiness audit pack with explicit promotion blockers, human review order,

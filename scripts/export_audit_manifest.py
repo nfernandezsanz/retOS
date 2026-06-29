@@ -45,6 +45,8 @@ CRITICAL_FILES = (
     "scripts/export_audit_manifest.py",
     "scripts/check_audit_handoff_report.py",
     "scripts/export_audit_handoff_report.py",
+    "scripts/check_audit_bundle.py",
+    "scripts/export_audit_bundle.py",
 )
 
 LOCAL_GATES = (

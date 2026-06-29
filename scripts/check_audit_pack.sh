@@ -71,6 +71,8 @@ for phrase in (
     "make auditor-handoff-check",
     "make audit-manifest-check",
     "make audit-manifest",
+    "make audit-bundle",
+    "make audit-bundle-check",
     "make ci-status-check",
     "make production-preflight",
     "make release-evidence-check",
@@ -167,6 +169,12 @@ require(
 require(
     "make audit-manifest-check" in release_process and "scripts/check_audit_manifest.py" in audit_pack,
     "release process and audit pack must document the audit manifest schema checker",
+)
+require(
+    "make audit-bundle" in release_process
+    and "scripts/export_audit_bundle.py" in audit_pack
+    and "scripts/check_audit_bundle.py" in audit_pack,
+    "release process and audit pack must document the audit bundle exporter and checker",
 )
 for phrase in (
     "generation_context",

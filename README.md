@@ -41,12 +41,14 @@ Open http://localhost:8080 for the console or http://localhost:8000/docs for the
 ```bash
 make auditor-handoff-check
 make audit-manifest-check
+make audit-bundle-check
 ```
 
 The offline manifest lands at `evals/reports/audit-manifest.json`, and the human-readable
-summary lands at `evals/reports/audit-handoff.md`. Together they record the current
-commit, dirty state, local gates, critical file hashes, visual artifacts, and remaining
-production-promotion evidence.
+summary lands at `evals/reports/audit-handoff.md`. The local auditor bundle lands at
+`evals/reports/retos-audit-handoff.tar.gz` with a `.sha256` sidecar. Together they record
+the current commit, dirty state, local gates, critical file hashes, visual artifacts, and
+remaining production-promotion evidence.
 
 </details>
 
@@ -104,9 +106,11 @@ make auditor-handoff-check
 
 That command runs the static auditor gates, writes an offline manifest to
 `evals/reports/audit-manifest.json`, and writes a human-readable summary to
-`evals/reports/audit-handoff.md`. The manifest and report record the current commit,
-dirty state, required gates, critical file hashes, visual artifact names, and remaining
-external promotion evidence. They deliberately do not claim production promotion.
+`evals/reports/audit-handoff.md`. It also writes
+`evals/reports/retos-audit-handoff.tar.gz` plus a `.sha256` checksum sidecar with the
+manifest, report, production readiness pack, release process, operations guide, branding
+guide, release note, and CI/release workflows. These artifacts deliberately do not claim
+production promotion.
 
 Remote CI evidence is separate:
 
@@ -350,6 +354,8 @@ Every meaningful change should pass these gates:
 | Audit manifest schema | `make audit-manifest-check` | Validates the audit manifest schema, required gates, critical file hashes, visual artifact names, and external blockers offline. |
 | Audit handoff report | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Exports a human-readable Markdown companion with candidate, verdict, local gates, blockers, hashes, and visual evidence. |
 | Audit handoff report schema | `make audit-handoff-report-check` | Validates that the generated Markdown report preserves the key manifest evidence. |
+| Audit handoff bundle | `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` | Exports a tarball plus `.sha256` checksum with the JSON manifest, Markdown handoff, production readiness docs, release docs, operations docs, branding contract, and workflows. |
+| Audit handoff bundle schema | `make audit-bundle-check` | Validates the generated tarball members and checksum offline. |
 | Eval smoke | `make eval-smoke` | Runs deterministic local retrieval, citation, grounding, abstention, and budget scorers without network or paid providers. |
 | Agent multi-hop eval | `make eval-agent-multihop` | Runs deterministic query-plan, multi-hop audit, evidence-route, citation, grounding, and budget scorers without network or paid providers. |
 | Dataset fetch | `make eval-fetch-dataset PROFILE=squad-dev-v2` | Opt-in download or local sampling of bounded public dataset samples under `evals/datasets`; records the effective `source_url`, supports retryable mirrors, and never runs in CI by default. |
