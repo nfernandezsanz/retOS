@@ -24,10 +24,11 @@ def evidence_markdown(
     cases: int = 40,
     gate_status: str = "PASS",
     include_local_path: bool = False,
+    dataset: str = "squad-dev-v2",
 ) -> str:
     local_path_note = "\n- Raw path: ../evals/datasets/sample.json\n" if include_local_path else ""
     target_row = (
-        f"| squad | squad-v2 | {status} | {cases} | squad-dev-v2 | {records} | "
+        f"| squad | squad-v2 | {status} | {cases} | {dataset} | {records} | "
         "https://example.test/squad.json |"
     )
     return f"""# Calibration Evidence
@@ -133,3 +134,23 @@ def test_calibration_evidence_gate_rejects_local_paths(tmp_path: Path) -> None:
         assert "evidence must omit local path pattern" in str(exc)
     else:
         raise AssertionError("Expected local path leakage to fail")
+
+
+def test_calibration_evidence_gate_rejects_missing_dataset_profile(
+    tmp_path: Path,
+) -> None:
+    cli = load_gate_cli()
+    evidence_path = write_evidence(tmp_path, evidence_markdown(dataset="-"))
+
+    try:
+        cli.validate_evidence(
+            evidence_path=evidence_path,
+            required_targets=("squad",),
+            required_gates=("squad.retrieval_recall",),
+            min_records=200,
+            min_cases=40,
+        )
+    except cli.EvalCalibrationEvidenceError as exc:
+        assert "dataset profile is missing" in str(exc)
+    else:
+        raise AssertionError("Expected missing dataset profile to fail")

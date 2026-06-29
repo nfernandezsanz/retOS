@@ -126,10 +126,25 @@ def summarize_target(raw_target: Any) -> dict[str, Any]:
         raise CalibrationEvidenceError("Every manifest target must include metrics")
     if not isinstance(gates, list):
         raise CalibrationEvidenceError("Target gates must be a list when present")
+    key = string_value(raw_target.get("key"))
+    suite = string_value(raw_target.get("suite"))
+    dataset_profile = string_value(dataset.get("profile"))
+    dataset_suite = string_value(dataset.get("suite"))
+    dataset_records = int_or_none(dataset.get("records"))
+    dataset_source = string_value(dataset.get("source"))
+    dataset_source_url = string_value(dataset.get("source_url"))
+    require_nonempty(key, "Every manifest target must include a key")
+    require_nonempty(suite, f"Target {key} must include a suite")
+    require_nonempty(dataset_profile, f"Target {key} must include a dataset profile")
+    require_nonempty(dataset_suite, f"Target {key} must include a dataset suite")
+    if dataset_records is None:
+        raise CalibrationEvidenceError(f"Target {key} must include dataset records")
+    if not dataset_source and not dataset_source_url:
+        raise CalibrationEvidenceError(f"Target {key} must include dataset source provenance")
 
     return {
-        "key": string_value(raw_target.get("key")),
-        "suite": string_value(raw_target.get("suite")),
+        "key": key,
+        "suite": suite,
         "description": string_value(raw_target.get("description")),
         "passed": raw_target.get("passed") is True,
         "report_passed": raw_target.get("report_passed") is True,
@@ -138,12 +153,12 @@ def summarize_target(raw_target: Any) -> dict[str, Any]:
         "metrics": numeric_items(metrics),
         "gates": [summarize_gate(gate) for gate in gates],
         "dataset": {
-            "profile": string_value(dataset.get("profile")),
-            "suite": string_value(dataset.get("suite")),
-            "records": int_or_none(dataset.get("records")),
+            "profile": dataset_profile,
+            "suite": dataset_suite,
+            "records": dataset_records,
             "reused": dataset.get("reused") is True,
-            "source": string_value(dataset.get("source")),
-            "source_url": string_value(dataset.get("source_url")),
+            "source": dataset_source,
+            "source_url": dataset_source_url,
             "license_note": string_value(dataset.get("license_note")),
         },
     }
@@ -301,6 +316,11 @@ def numeric_items(metrics: dict[str, Any]) -> list[tuple[str, float]]:
 
 def string_value(value: Any) -> str:
     return value if isinstance(value, str) else ""
+
+
+def require_nonempty(value: str, message: str) -> None:
+    if not value.strip():
+        raise CalibrationEvidenceError(message)
 
 
 def int_or_none(value: Any) -> int | None:

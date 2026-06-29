@@ -152,3 +152,21 @@ def test_build_evidence_requires_targets() -> None:
         assert "at least one target" in str(exc)
     else:
         raise AssertionError("Expected empty target manifest to fail")
+
+
+def test_build_evidence_rejects_missing_dataset_profile() -> None:
+    cli = load_evidence_cli()
+    manifest = manifest_payload()
+    manifest["targets"][0]["dataset"]["profile"] = ""
+
+    try:
+        cli.build_evidence(
+            manifest=manifest,
+            title="Missing Profile",
+            commands=(),
+            require_passed=True,
+        )
+    except cli.CalibrationEvidenceError as exc:
+        assert "dataset profile" in str(exc)
+    else:
+        raise AssertionError("Expected missing dataset profile to fail")

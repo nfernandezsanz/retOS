@@ -144,6 +144,10 @@ def validate_evidence(
             target.source_url.startswith("https://"),
             f"{target_key} source URL must be https",
         )
+        require(
+            bool(target.dataset.strip()) and target.dataset != "-",
+            f"{target_key} dataset profile is missing",
+        )
 
     gates = parse_gates(content)
     for raw_gate in required_gates:
