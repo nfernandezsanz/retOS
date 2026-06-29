@@ -247,7 +247,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 - Planning, ADRs, and architecture assets for the open source implementation path.
 - Branding assets and visual guidance for a coherent audit-console identity.
 - Test and coverage defaults that avoid paid LLM calls.
-- CI jobs that validate backend format, PEP 8, types, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke.
+- CI jobs that validate backend and root Python script format/PEP 8, types, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke.
 - Release workflow for GHCR image publishing with SBOM/provenance attestations, Cosign
   signing, and signature verification for `retos-backend` and `retos-web`.
 
@@ -263,7 +263,7 @@ RetOS is designed to be developed primarily with autonomous coding agents such a
 - `planning/` defines the roadmap, phase gates, testing policy, UI plan, auditability model, and implementation decisions.
 - `docs/adr/` records architectural decisions before they sprawl through the codebase.
 - `README.md`, `docs/docker.md`, and `CONTRIBUTING.md` describe how to build, test, run, and validate the system.
-- CI is expected to catch formatting, PEP 8, type, coverage, API, frontend, and browser regressions.
+- CI is expected to catch formatting, PEP 8, type, coverage, API, frontend, and browser regressions, including root Python audit/release scripts.
 - Agents should update plans, tests, docs, and ADRs in the same change when behavior or architecture changes.
 
 The intended loop is:
@@ -393,8 +393,8 @@ Every meaningful change should pass these gates:
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Environment security | `make env-security-check` | Validates the active `.env` without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Demo corpus seed | `make docker-seed-demo` or `make seed-demo SEED_DEMO_ARGS=--create-schema` | Seeds an idempotent, auditable demo domain with text-ingestion jobs, hash-chained journal/progress events, and a rebuilt local BM25 index for hands-on UI checks. |
-| Backend format | `make format-check` | Enforces Black formatting. |
-| Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
+| Python format | `make format-check` | Enforces Black formatting for backend code and root Python audit/release scripts. |
+| Python PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns across backend code and root Python scripts. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.65%). |
 | Dependency audit | `make dependency-audit` | Runs `pip-audit` against backend runtime requirements and `npm audit --audit-level=high` against the frontend lockfile. |

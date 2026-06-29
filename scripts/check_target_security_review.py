@@ -130,7 +130,10 @@ def validate_target_security_review(
             "missing review field(s): " + ", ".join(missing_fields)
         )
 
-    if "completed copy" not in content or "production promotion evidence" not in content:
+    if (
+        "completed copy" not in content
+        or "production promotion evidence" not in content
+    ):
         raise TargetSecurityReviewError(
             "template must tell reviewers where the completed copy is stored"
         )

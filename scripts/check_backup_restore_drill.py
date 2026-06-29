@@ -91,7 +91,9 @@ def validate_backup_restore_drill(
     template_path: Path = DEFAULT_TEMPLATE,
 ) -> BackupRestoreDrillResult:
     if not template_path.is_file():
-        raise BackupRestoreDrillError(f"backup/restore drill template not found: {template_path}")
+        raise BackupRestoreDrillError(
+            f"backup/restore drill template not found: {template_path}"
+        )
     content = template_path.read_text(encoding="utf-8")
     if not content.strip():
         raise BackupRestoreDrillError("backup/restore drill template is empty")

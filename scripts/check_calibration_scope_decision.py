@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_TEMPLATE = ROOT / "docs/releases/evidence/calibration-scope-decision-template.md"
+DEFAULT_TEMPLATE = (
+    ROOT / "docs/releases/evidence/calibration-scope-decision-template.md"
+)
 
 REQUIRED_HEADINGS = (
     "# Calibration Scope Decision Evidence Template",
@@ -84,7 +86,9 @@ def validate_calibration_scope_decision(
         )
     content = template_path.read_text(encoding="utf-8")
     if not content.strip():
-        raise CalibrationScopeDecisionError("calibration scope decision template is empty")
+        raise CalibrationScopeDecisionError(
+            "calibration scope decision template is empty"
+        )
 
     missing_headings = _missing(REQUIRED_HEADINGS, content)
     if missing_headings:
@@ -98,7 +102,10 @@ def validate_calibration_scope_decision(
             "missing decision field(s): " + ", ".join(missing_fields)
         )
 
-    if "completed copy" not in content or "production promotion evidence" not in content:
+    if (
+        "completed copy" not in content
+        or "production promotion evidence" not in content
+    ):
         raise CalibrationScopeDecisionError(
             "template must tell reviewers where the completed copy is stored"
         )

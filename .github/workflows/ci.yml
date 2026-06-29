@@ -20,9 +20,13 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r backend/requirements-dev.txt
       - name: Format
-        run: cd backend && black --check --diff src tests scripts
+        run: |
+          cd backend && black --check --diff src tests scripts
+          cd .. && black --check --diff scripts
       - name: PEP 8
-        run: cd backend && ruff check src tests scripts
+        run: |
+          cd backend && ruff check src tests scripts
+          cd .. && ruff check scripts
       - name: Typecheck
         run: cd backend && mypy src
       - name: Python dependency audit

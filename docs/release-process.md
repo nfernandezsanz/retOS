@@ -164,7 +164,7 @@ Images:
 
 ## Validation
 
-- Backend format/lint/typecheck/tests:
+- Python format/lint, backend typecheck/tests, and root script checks:
 - Backend coverage:
 - API smoke:
 - Frontend build:

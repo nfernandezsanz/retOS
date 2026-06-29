@@ -128,7 +128,9 @@ def validate_export(export: dict[str, Any]) -> list[str]:
     chain = integrity.get("chain")
     if not isinstance(chain, list):
         return [*errors, "integrity.chain must be a list"]
-    expected_count = len(export.get("journal_events", [])) + len(export.get("progress_events", []))
+    expected_count = len(export.get("journal_events", [])) + len(
+        export.get("progress_events", [])
+    )
     if integrity.get("event_count") != expected_count:
         errors.append(
             "integrity.event_count "
@@ -142,7 +144,8 @@ def validate_export(export: dict[str, Any]) -> list[str]:
     if bool(failures) == bool(integrity.get("valid")):
         errors.append("integrity.valid does not match recalculated failures")
     reported_reasons = {
-        (failure.get("event_id"), failure.get("reason")) for failure in reported_failures
+        (failure.get("event_id"), failure.get("reason"))
+        for failure in reported_failures
     }
     recalculated_reasons = {
         (failure.get("event_id"), failure.get("reason")) for failure in failures
@@ -150,13 +153,16 @@ def validate_export(export: dict[str, Any]) -> list[str]:
     if reported_reasons != recalculated_reasons:
         errors.append("integrity.failures does not match recalculated failure reasons")
     reported_gap_reasons = {
-        (gap.get("event_id"), gap.get("reason")) for gap in integrity.get("continuity_gaps", [])
+        (gap.get("event_id"), gap.get("reason"))
+        for gap in integrity.get("continuity_gaps", [])
     }
     recalculated_gap_reasons = {
         (gap.get("event_id"), gap.get("reason")) for gap in continuity_gaps(export)
     }
     if reported_gap_reasons != recalculated_gap_reasons:
-        errors.append("integrity.continuity_gaps does not match recalculated gap reasons")
+        errors.append(
+            "integrity.continuity_gaps does not match recalculated gap reasons"
+        )
     return errors
 
 
@@ -231,7 +237,9 @@ def run(export_path: Path | None, *, self_test: bool) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate a RetOS /audit/export JSON file.")
+    parser = argparse.ArgumentParser(
+        description="Validate a RetOS /audit/export JSON file."
+    )
     parser.add_argument("--export", type=Path, help="Path to retos-audit-export.json")
     parser.add_argument(
         "--self-test",
