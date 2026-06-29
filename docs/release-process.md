@@ -196,7 +196,9 @@ Images:
   inside GitHub Actions, the manifest is an in-run snapshot and must be paired with a
   later `make ci-status-check` success for the same commit.
 - CI also exports `retos-audit-handoff-<commit>`, a Markdown companion generated from
-  the same manifest snapshot for reviewers who prefer a readable handoff artifact.
+  the same manifest snapshot for reviewers who prefer a readable handoff artifact. The
+  report includes a promotion decision checklist that separates locally proven evidence
+  from external release and target-environment decisions.
 - `make audit-bundle` packages the local JSON manifest, Markdown handoff report,
   production readiness pack, release process, operations guide, branding guide, release
   note, promotion template, and workflow contracts into a tarball with a `.sha256`

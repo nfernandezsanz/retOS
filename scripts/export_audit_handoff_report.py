@@ -37,6 +37,42 @@ def markdown_list(items: list[str]) -> list[str]:
     return [f"- `{item}`" for item in items]
 
 
+def checked(value: bool) -> str:
+    return "x" if value else " "
+
+
+def build_decision_checklist(
+    manifest: dict[str, Any],
+    *,
+    missing_critical: list[str],
+) -> list[str]:
+    repository = manifest["repository"]
+    ci = manifest["ci"]
+    visual = manifest["visual_audit"]
+    local_manifest = visual["local_manifest"]
+    local_screenshots = visual["local_screenshots"]
+    critical_files_present = not missing_critical
+    visual_files_present = bool(local_manifest.get("exists")) and all(
+        screenshot.get("exists") for screenshot in local_screenshots
+    )
+    ci_ready = (
+        ci.get("available") is True
+        and ci.get("status") == "completed"
+        and ci.get("conclusion") == "success"
+    )
+    clean_worktree = repository["dirty"] is False
+
+    return [
+        f"- [{checked(clean_worktree)}] Candidate worktree is clean for `{repository['commit_sha']}`.",
+        f"- [{checked(ci_ready)}] GitHub Actions CI is completed successfully for the candidate commit.",
+        f"- [{checked(critical_files_present)}] All critical evidence files exist and have SHA-256 hashes.",
+        f"- [{checked(visual_files_present)}] Local visual audit manifest and desktop/mobile screenshots are present.",
+        "- [ ] External GHCR digests, SBOM/provenance, and Cosign verification are recorded.",
+        "- [ ] Target-environment human security review is complete.",
+        "- [ ] Promotion owner accepted the bounded calibration scope or attached broader trend evidence.",
+    ]
+
+
 def build_report(manifest: dict[str, Any], *, manifest_path: Path) -> str:
     repository = manifest["repository"]
     coverage = manifest["coverage_targets"]
@@ -86,6 +122,10 @@ def build_report(manifest: dict[str, Any], *, manifest_path: Path) -> str:
         "## Remaining External Promotion Evidence",
         "",
         *[f"- {item}" for item in manifest["external_promotion_evidence_required"]],
+        "",
+        "## Promotion Decision Checklist",
+        "",
+        *build_decision_checklist(manifest, missing_critical=missing_critical),
         "",
         "## Critical Evidence Hashes",
         "",
