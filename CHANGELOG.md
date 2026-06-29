@@ -63,6 +63,8 @@ tag in GitHub.
   starting Docker, Node, or service probes.
 - Standalone `make visual-audit-check` gate for local desktop/mobile visual-audit
   manifest, screenshot existence, byte-size, SHA-256, and viewport verification.
+- Production promotion evidence template now requires `make env-security-check` and
+  `make visual-audit-check` output alongside the human security and visual reviews.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.

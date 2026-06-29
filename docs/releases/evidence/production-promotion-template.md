@@ -27,11 +27,13 @@ Paste or link the output for each gate:
 - `make check`
 - `make dependency-audit`
 - `make security-policy-check`
+- `make env-security-check`
 - `make ignore-hygiene-check`
 - `make integration`
 - `make frontend-test`
 - `make frontend-e2e`
 - `make frontend-visual-audit`
+- `make visual-audit-check`
 - `docker compose --env-file .env.example config`
 - `docker compose --dry-run build`
 - `make docker-smoke`
@@ -53,6 +55,7 @@ Paste or link the output for each gate:
 
 - Desktop visual audit PNG reviewed:
 - Mobile visual audit PNG reviewed:
+- `make visual-audit-check` output:
 - Visual reviewer:
 - Visual review decision:
 - UI issues accepted or filed:
@@ -74,6 +77,7 @@ Paste or link the output for each gate:
 ## Security Review
 
 - Development secrets replaced:
+- `make env-security-check` output:
 - `RETOS_JWT_SECRET` rotated and stored securely:
 - Bootstrap admin replaced or disabled:
 - CORS origins reviewed:

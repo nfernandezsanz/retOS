@@ -157,6 +157,7 @@ These items must be closed before a final production release:
 - [ ] `make check` passes with no paid providers.
 - [ ] `make dependency-audit` reports no known Python runtime advisories and no high-severity Node advisories.
 - [ ] `make security-policy-check` passes.
+- [ ] `make env-security-check` passes or records only the expected missing local `.env` warning.
 - [ ] `make ignore-hygiene-check` passes.
 - [ ] `make operations-runbook-check` passes.
 - [ ] `make auditor-static-check` passes.
@@ -170,6 +171,7 @@ These items must be closed before a final production release:
 - [ ] `make audit-export-check EXPORT=retos-audit-export.json` passed for a fresh target-environment `/audit/export` download.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
+- [ ] `make visual-audit-check` passes against the local visual-audit manifest.
 - [ ] Desktop and mobile visual audit PNGs were reviewed and accepted or tracked.
 - [ ] `make docker-smoke` passes with API, worker, migrate, web, Postgres, RabbitMQ, and Ollama services.
 - [ ] `scripts/check_release_readiness.sh` passes.

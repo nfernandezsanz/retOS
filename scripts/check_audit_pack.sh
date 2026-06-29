@@ -225,6 +225,14 @@ require(
     "make local-acceptance" in promotion_template,
     "promotion evidence template must require the local acceptance gate",
 )
+for gate in (
+    "make env-security-check",
+    "make visual-audit-check",
+):
+    require(
+        gate in promotion_template,
+        f"promotion evidence template must require {gate}",
+    )
 require(
     "Final release promotion still requires" in tracker,
     "process tracker must keep final release blockers visible",
@@ -236,6 +244,7 @@ require(
 for phrase in (
     "Desktop visual audit PNG reviewed",
     "Mobile visual audit PNG reviewed",
+    "`make visual-audit-check` output",
     "Visual review decision",
     "UI issues accepted or filed",
 ):
@@ -243,6 +252,10 @@ for phrase in (
         phrase in promotion_template,
         f"promotion evidence template missing visual review field: {phrase}",
     )
+require(
+    "`make env-security-check` output" in promotion_template,
+    "promotion evidence template must record env-security-check output",
+)
 require(
     "make frontend-visual-audit" in tracker and "visual audit evidence" in tracker,
     "process tracker must keep visual audit promotion evidence visible",
