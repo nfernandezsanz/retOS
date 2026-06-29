@@ -91,6 +91,19 @@ if migrate_service.get("environment") != api_service.get("environment"):
         f"api={api_service.get('environment')!r}, migrate={migrate_service.get('environment')!r}"
     )
 
+required_runtime_metadata = {
+    "RETOS_VERSION": "local",
+    "RETOS_REVISION": "unknown",
+    "RETOS_CREATED": "unknown",
+}
+environment = api_service.get("environment") or {}
+for key, expected_default in required_runtime_metadata.items():
+    if environment.get(key) != expected_default:
+        raise SystemExit(
+            f"{key} must be present in the shared backend runtime environment with "
+            f"default {expected_default!r}, got {environment.get(key)!r}"
+        )
+
 expected_backend_volume_targets = {
     "/var/lib/retos/storage",
     "/var/lib/retos/index",
@@ -111,6 +124,7 @@ print(
     "Docker topology OK: api, worker, and migrate share "
     f"{images['api']}; api builds backend/Dockerfile target backend-runtime, "
     "worker and migrate reuse that image with role-specific commands; "
-    "api and worker also share environment and persistent state volumes."
+    "api, worker, and migrate share runtime metadata; api and worker also share "
+    "environment and persistent state volumes."
 )
 PY

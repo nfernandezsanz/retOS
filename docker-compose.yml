@@ -12,6 +12,9 @@ x-backend-build: &backend-build
     RETOS_CREATED: ${RETOS_CREATED:-unknown}
 
 x-app-env: &app-env
+  RETOS_VERSION: ${RETOS_VERSION:-local}
+  RETOS_REVISION: ${RETOS_REVISION:-unknown}
+  RETOS_CREATED: ${RETOS_CREATED:-unknown}
   RETOS_DATABASE_URL: postgresql+asyncpg://retos:${RETOS_POSTGRES_PASSWORD:-retos}@postgres:5432/retos
   RETOS_CELERY_BROKER_URL: amqp://retos:${RETOS_RABBITMQ_PASSWORD:-retos}@rabbitmq:5672//
   RETOS_PROVIDER: ${RETOS_PROVIDER:-local}

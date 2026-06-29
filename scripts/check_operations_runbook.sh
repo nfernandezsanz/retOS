@@ -42,6 +42,10 @@ for phrase in (
     "make local-acceptance",
     "make docker-smoke",
     "make api-smoke",
+    "curl --fail http://localhost:8000/versionz",
+    "RETOS_VERSION",
+    "RETOS_REVISION",
+    "RETOS_CREATED",
     "export RETOS_IMAGE_TAG=<previous-tag>",
     "restore the backup captured",
 ):

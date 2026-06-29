@@ -2,7 +2,7 @@ from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from retos.api.dependencies import SessionFactoryDep
+from retos.api.dependencies import SessionFactoryDep, SettingsDep
 
 router = APIRouter(tags=["health"])
 
@@ -16,6 +16,13 @@ class ReadinessResponse(BaseModel):
     status: str
     service: str
     components: dict[str, str]
+
+
+class VersionResponse(BaseModel):
+    service: str
+    version: str
+    revision: str
+    created: str
 
 
 @router.get("/healthz", response_model=HealthResponse)
@@ -43,4 +50,14 @@ async def readyz(session_factory: SessionFactoryDep, response: Response) -> Read
         status="ok",
         service="retos-api",
         components={"database": "ok"},
+    )
+
+
+@router.get("/versionz", response_model=VersionResponse)
+async def versionz(settings: SettingsDep) -> VersionResponse:
+    return VersionResponse(
+        service="retos-api",
+        version=settings.version,
+        revision=settings.revision,
+        created=settings.created,
     )

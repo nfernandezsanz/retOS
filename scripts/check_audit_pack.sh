@@ -93,7 +93,7 @@ for phrase in (
     "Cosign",
     "tag-to-digest resolution",
     "Branch coverage",
-    "95.21% total",
+    "95.22% total",
     "90.45% branch-only",
     "RETOS_ALLOW_PAID_LLM=false",
     "RETOS_OLLAMA_MODEL=gemma4",

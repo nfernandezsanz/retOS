@@ -12,7 +12,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 [![CI](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml?query=branch%3Amain)
 [![Release Images](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml/badge.svg)](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-95.21%25%20total%20%7C%2090.45%25%20branch-166534?style=flat-square)](#current-status)
+[![Coverage](https://img.shields.io/badge/coverage-95.22%25%20total%20%7C%2090.45%25%20branch-166534?style=flat-square)](#current-status)
 [![Stability](https://img.shields.io/badge/stability-pre--alpha-f97316?style=flat-square)](#current-status)
 
 **Action pills**
@@ -87,6 +87,7 @@ Then open the console and API:
 | Inspect the API | http://localhost:8000/docs |
 | Check API health | http://localhost:8000/healthz |
 | Check API readiness | http://localhost:8000/readyz |
+| Check runtime metadata | http://localhost:8000/versionz |
 | Watch RabbitMQ | http://localhost:15672 |
 
 Pull the default local model when you want Ollama-backed runs:
@@ -147,7 +148,7 @@ visual-audit, audit-manifest, and audit-handoff artifacts.
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation; core product slices are being built phase by phase. |
-| Backend coverage | 95.21% total coverage; 90.45% branch-only coverage is ratcheted above the 90% target. |
+| Backend coverage | 95.22% total coverage; 90.45% branch-only coverage is ratcheted above the 90% target. |
 | Local runtime | Docker-first stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
 | Cost posture | Zero paid LLM calls by default; paid providers require explicit opt-in. |
 | Production status | Not production-promoted; final release still needs GHCR digests, SBOM/provenance, Cosign evidence, and human target-environment review. |

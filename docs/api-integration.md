@@ -24,6 +24,21 @@ If the database cannot be reached, `/readyz` returns `503` with
 `components.database="unavailable"`. Neither endpoint requires authentication and neither
 returns secrets.
 
+`GET /versionz` exposes the runtime build metadata operators need to match a running
+container with its image labels and release evidence:
+
+```json
+{
+  "service": "retos-api",
+  "version": "local",
+  "revision": "unknown",
+  "created": "unknown"
+}
+```
+
+The values come from `RETOS_VERSION`, `RETOS_REVISION`, and `RETOS_CREATED`.
+The endpoint is intentionally unauthenticated and must never include secrets.
+
 ## Authentication And Authorization
 
 Operational endpoints require a bearer token from a persisted local account. The default

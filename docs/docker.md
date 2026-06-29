@@ -65,6 +65,10 @@ The API container healthcheck calls `/readyz`, not just `/healthz`, so Compose r
 requires the FastAPI process and a lightweight database round trip. `/healthz` remains
 available as the cheap liveness endpoint.
 
+`/versionz` reports the runtime `RETOS_VERSION`, `RETOS_REVISION`, and `RETOS_CREATED`
+values. Use it after deploys and restores to confirm the running API process matches the
+image tag and recorded release evidence.
+
 CI also runs `scripts/check_image_metadata.sh` so release images cannot lose their
 OCI labels. Docker smoke inspects the built `retos-backend` and `retos-web` images.
 

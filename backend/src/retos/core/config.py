@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     )
 
     env: Environment = "development"
+    version: str = "local"
+    revision: str = "unknown"
+    created: str = "unknown"
     api_host: str = "0.0.0.0"
     api_port: int = Field(default=8000, ge=1, le=65535)
     database_url: str = "postgresql+asyncpg://retos:retos@localhost:5432/retos"

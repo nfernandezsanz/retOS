@@ -10,7 +10,7 @@ production pilot.
 | --- | --- | --- |
 | Product maturity | Pre-alpha candidate | `planning/04-process-tracker.md` keeps phases 0-6 in progress. |
 | CI health | Must be checked against current `HEAD` | `make ci-status-check` queries GitHub Actions for the current commit; `docs/releases/2026.06.28-alpha.1.md` records release-candidate evidence. |
-| Backend coverage | Passing total and branch coverage | `README.md` records 95.21% total and 90.45% branch-only coverage. |
+| Backend coverage | Passing total and branch coverage | `README.md` records 95.22% total and 90.45% branch-only coverage. |
 | Runtime topology | Guarded | `scripts/check_docker_topology.sh` and `scripts/check_backend_runtime_image.sh` protect the shared API/worker/migrate backend image model. |
 | Dependency advisories | Guarded | `make dependency-audit` runs `pip-audit` and `npm audit --audit-level=high`; CI runs both checks. |
 | Branding assets and UI contract | Guarded | `make brand-check` runs `scripts/check_branding_assets.sh` to validate project identity assets, palette tokens, README visibility, and Playwright brand smoke coverage. |
@@ -92,7 +92,7 @@ auditor a stable local entry point:
 | Area | Gate | Proves |
 | --- | --- | --- |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 530 pytest cases, eval smoke, agent multi-hop eval, 95.21% total coverage, and 90.45% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 531 pytest cases, eval smoke, agent multi-hop eval, 95.22% total coverage, and 90.45% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |

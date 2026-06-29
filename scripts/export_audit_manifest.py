@@ -214,7 +214,7 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
         "coverage_targets": {
             "branch_minimum_percent": 90.45,
             "last_recorded_branch_percent": 90.45,
-            "last_recorded_total_percent": 95.21,
+            "last_recorded_total_percent": 95.22,
             "total_minimum_percent": 90.0,
         },
         "critical_file_hashes": [file_record(path) for path in CRITICAL_FILES],

@@ -234,6 +234,22 @@ def main() -> None:
                 },
                 "invalid readyz body",
             )
+            version = client.get("/versionz")
+            require(
+                version.status_code == 200,
+                f"versionz failed: {version.status_code} {version.text}",
+            )
+            version_body = version.json()
+            require(
+                version_body.get("service") == "retos-api"
+                and isinstance(version_body.get("version"), str)
+                and bool(version_body["version"])
+                and isinstance(version_body.get("revision"), str)
+                and bool(version_body["revision"])
+                and isinstance(version_body.get("created"), str)
+                and bool(version_body["created"]),
+                "invalid versionz body",
+            )
 
             unauthorized_stream = client.get("/events/progress")
             require(
