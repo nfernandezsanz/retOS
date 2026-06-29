@@ -37,8 +37,11 @@ progress, eval runner/results/history, audit jobs/progress/events, and admin pro
 Each non-overview section also renders a compact current-context band with the active
 section, active module, helper text, and module position so users can confirm where they
 are before acting.
-Repeated long lists are bounded inside their modules so the page remains organized without
-hiding existing controls behind modal flows.
+Repeated long lists, dense query results, eval dataset controls, and admin tables are
+bounded inside their modules so the page remains organized without hiding existing
+controls behind modal flows. The eval runner uses compact two-column dataset sections on
+desktop and collapses to one column on smaller screens; Admin headings and status pills
+follow the active module so provider and user management do not feel like the same page.
 
 ## Implemented Frontend Contracts
 

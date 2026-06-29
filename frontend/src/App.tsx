@@ -4195,6 +4195,7 @@ function App() {
               <button
                 className="secondary-action"
                 disabled={isAnyEvalRunning}
+                data-tooltip="Run the local Deep Agents multi-hop eval fixture"
                 type="button"
                 onClick={() => void handleRunAgentMultihopEval()}
               >
@@ -4237,249 +4238,252 @@ function App() {
               <span>and history, trends, comparison, and regression gate show</span>
               <strong>{evalScopeLabel}</strong>
             </div>
-            <form
-              className="eval-dataset-form"
-              hidden={activeModule !== "evals-runner"}
-              onSubmit={(event) => void handleRunSquadEval(event)}
-            >
-              <label className="span-two">
-                SQuAD dataset path
-                <input
-                  aria-label="SQuAD dataset path"
-                  value={squadDatasetPath}
-                  onChange={(event) => setSquadDatasetPath(event.target.value)}
-                  placeholder="dev-v2.0.json"
-                />
-              </label>
-              <label>
-                Max cases
-                <input
-                  aria-label="SQuAD max cases"
-                  inputMode="numeric"
-                  min="1"
-                  max="1000"
-                  type="number"
-                  value={squadMaxCases}
-                  onChange={(event) => setSquadMaxCases(event.target.value)}
-                />
-              </label>
-              <label>
-                Report stem
-                <input
-                  aria-label="SQuAD report stem"
-                  disabled={!squadWriteReport}
-                  value={squadReportStem}
-                  onChange={(event) => setSquadReportStem(event.target.value)}
-                  placeholder="squad-v2-dev-50"
-                />
-              </label>
-              <label className="checkbox-field">
-                <input
-                  aria-label="Write SQuAD reports"
-                  checked={squadWriteReport}
-                  type="checkbox"
-                  onChange={(event) => setSquadWriteReport(event.target.checked)}
-                />
-                <span>Write reports</span>
-              </label>
-              <button
-                className="secondary-action"
-                disabled={isAnyEvalRunning}
-                type="submit"
+            <div className="eval-runner-forms" hidden={activeModule !== "evals-runner"}>
+              <form
+                className="eval-dataset-form"
+                onSubmit={(event) => void handleRunSquadEval(event)}
               >
-                <FileSearch aria-hidden="true" />
-                {isRunningSquadEval ? "Running SQuAD eval" : "Run SQuAD eval"}
-              </button>
-            </form>
-            <form
-              className="eval-dataset-form"
-              hidden={activeModule !== "evals-runner"}
-              onSubmit={(event) => void handleRunHotpotQAEval(event)}
-            >
-              <label className="span-two">
-                HotpotQA dataset path
-                <input
-                  aria-label="HotpotQA dataset path"
-                  value={hotpotqaDatasetPath}
-                  onChange={(event) => setHotpotqaDatasetPath(event.target.value)}
-                  placeholder="hotpot_dev_distractor_v1.json"
-                />
-              </label>
-              <label>
-                Max cases
-                <input
-                  aria-label="HotpotQA max cases"
-                  inputMode="numeric"
-                  min="1"
-                  max="1000"
-                  type="number"
-                  value={hotpotqaMaxCases}
-                  onChange={(event) => setHotpotqaMaxCases(event.target.value)}
-                />
-              </label>
-              <label>
-                Report stem
-                <input
-                  aria-label="HotpotQA report stem"
-                  disabled={!hotpotqaWriteReport}
-                  value={hotpotqaReportStem}
-                  onChange={(event) => setHotpotqaReportStem(event.target.value)}
-                  placeholder="hotpotqa-dev-50"
-                />
-              </label>
-              <label className="checkbox-field">
-                <input
-                  aria-label="Write HotpotQA reports"
-                  checked={hotpotqaWriteReport}
-                  type="checkbox"
-                  onChange={(event) => setHotpotqaWriteReport(event.target.checked)}
-                />
-                <span>Write reports</span>
-              </label>
-              <button
-                className="secondary-action"
-                disabled={isAnyEvalRunning}
-                type="submit"
-              >
-                <FileSearch aria-hidden="true" />
-                {isRunningHotpotQAEval ? "Running HotpotQA eval" : "Run HotpotQA eval"}
-              </button>
-              <button
-                className="secondary-action"
-                disabled={isAnyEvalRunning}
-                type="button"
-                onClick={() => void handleRunHotpotQAAgentEval()}
-              >
-                <GitCompare aria-hidden="true" />
-                {isRunningHotpotQAAgentEval
-                  ? "Running HotpotQA agent"
-                  : "Run HotpotQA agent"}
-              </button>
-            </form>
-            <form
-              className="eval-dataset-form"
-              hidden={activeModule !== "evals-runner"}
-              onSubmit={(event) => void handleRunNaturalQuestionsEval(event)}
-            >
-              <label className="span-two">
-                Natural Questions dataset path
-                <input
-                  aria-label="Natural Questions dataset path"
-                  value={naturalQuestionsDatasetPath}
-                  onChange={(event) => setNaturalQuestionsDatasetPath(event.target.value)}
-                  placeholder="nq-dev-sample.jsonl"
-                />
-              </label>
-              <label>
-                Max cases
-                <input
-                  aria-label="Natural Questions max cases"
-                  inputMode="numeric"
-                  min="1"
-                  max="1000"
-                  type="number"
-                  value={naturalQuestionsMaxCases}
-                  onChange={(event) => setNaturalQuestionsMaxCases(event.target.value)}
-                />
-              </label>
-              <label>
-                Report stem
-                <input
-                  aria-label="Natural Questions report stem"
-                  disabled={!naturalQuestionsWriteReport}
-                  value={naturalQuestionsReportStem}
-                  onChange={(event) => setNaturalQuestionsReportStem(event.target.value)}
-                  placeholder="natural-questions-dev-50"
-                />
-              </label>
-              <label className="checkbox-field">
-                <input
-                  aria-label="Write Natural Questions reports"
-                  checked={naturalQuestionsWriteReport}
-                  type="checkbox"
-                  onChange={(event) => setNaturalQuestionsWriteReport(event.target.checked)}
-                />
-                <span>Write reports</span>
-              </label>
-              <button
-                className="secondary-action"
-                disabled={isAnyEvalRunning}
-                type="submit"
-              >
-                <FileSearch aria-hidden="true" />
-                {isRunningNaturalQuestionsEval
-                  ? "Running Natural Questions eval"
-                  : "Run Natural Questions eval"}
-              </button>
-            </form>
-            <form
-              className="eval-dataset-form"
-              hidden={activeModule !== "evals-runner"}
-              onSubmit={(event) => void handleRunOcrBenchmarkEval(event)}
-            >
-              <label className="span-two">
-                OCR benchmark path
-                <input
-                  aria-label="OCR benchmark path"
-                  value={ocrBenchmarkDatasetPath}
-                  onChange={(event) => setOcrBenchmarkDatasetPath(event.target.value)}
-                  placeholder="ocr-benchmark/manifest.json"
-                />
-              </label>
-              <label>
-                Format
-                <select
-                  aria-label="OCR benchmark format"
-                  value={ocrBenchmarkFormat}
-                  onChange={(event) => setOcrBenchmarkFormat(event.target.value)}
+                <label className="span-two">
+                  SQuAD dataset path
+                  <input
+                    aria-label="SQuAD dataset path"
+                    value={squadDatasetPath}
+                    onChange={(event) => setSquadDatasetPath(event.target.value)}
+                    placeholder="dev-v2.0.json"
+                  />
+                </label>
+                <label>
+                  Max cases
+                  <input
+                    aria-label="SQuAD max cases"
+                    inputMode="numeric"
+                    min="1"
+                    max="1000"
+                    type="number"
+                    value={squadMaxCases}
+                    onChange={(event) => setSquadMaxCases(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Report stem
+                  <input
+                    aria-label="SQuAD report stem"
+                    disabled={!squadWriteReport}
+                    value={squadReportStem}
+                    onChange={(event) => setSquadReportStem(event.target.value)}
+                    placeholder="squad-v2-dev-50"
+                  />
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    aria-label="Write SQuAD reports"
+                    checked={squadWriteReport}
+                    type="checkbox"
+                    onChange={(event) => setSquadWriteReport(event.target.checked)}
+                  />
+                  <span>Write reports</span>
+                </label>
+                <button
+                  className="secondary-action"
+                  data-tooltip="Run a local SQuAD-style retrieval eval"
+                  disabled={isAnyEvalRunning}
+                  type="submit"
                 >
-                  <option value="manifest">Manifest</option>
-                  <option value="funsd">FUNSD</option>
-                  <option value="sroie">SROIE</option>
-                </select>
-              </label>
-              <label>
-                Max cases
-                <input
-                  aria-label="OCR benchmark max cases"
-                  inputMode="numeric"
-                  min="1"
-                  max="1000"
-                  type="number"
-                  value={ocrBenchmarkMaxCases}
-                  onChange={(event) => setOcrBenchmarkMaxCases(event.target.value)}
-                />
-              </label>
-              <label>
-                Report stem
-                <input
-                  aria-label="OCR benchmark report stem"
-                  disabled={!ocrBenchmarkWriteReport}
-                  value={ocrBenchmarkReportStem}
-                  onChange={(event) => setOcrBenchmarkReportStem(event.target.value)}
-                  placeholder="ocr-benchmark-25"
-                />
-              </label>
-              <label className="checkbox-field">
-                <input
-                  aria-label="Write OCR benchmark reports"
-                  checked={ocrBenchmarkWriteReport}
-                  type="checkbox"
-                  onChange={(event) => setOcrBenchmarkWriteReport(event.target.checked)}
-                />
-                <span>Write reports</span>
-              </label>
-              <button
-                className="secondary-action"
-                disabled={isAnyEvalRunning}
-                type="submit"
+                  <FileSearch aria-hidden="true" />
+                  {isRunningSquadEval ? "Running SQuAD eval" : "Run SQuAD eval"}
+                </button>
+              </form>
+              <form
+                className="eval-dataset-form"
+                onSubmit={(event) => void handleRunHotpotQAEval(event)}
               >
-                <FileSearch aria-hidden="true" />
-                {isRunningOcrBenchmarkEval
-                  ? "Running OCR benchmark"
-                  : "Run OCR benchmark"}
-              </button>
-            </form>
+                <label className="span-two">
+                  HotpotQA dataset path
+                  <input
+                    aria-label="HotpotQA dataset path"
+                    value={hotpotqaDatasetPath}
+                    onChange={(event) => setHotpotqaDatasetPath(event.target.value)}
+                    placeholder="hotpot_dev_distractor_v1.json"
+                  />
+                </label>
+                <label>
+                  Max cases
+                  <input
+                    aria-label="HotpotQA max cases"
+                    inputMode="numeric"
+                    min="1"
+                    max="1000"
+                    type="number"
+                    value={hotpotqaMaxCases}
+                    onChange={(event) => setHotpotqaMaxCases(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Report stem
+                  <input
+                    aria-label="HotpotQA report stem"
+                    disabled={!hotpotqaWriteReport}
+                    value={hotpotqaReportStem}
+                    onChange={(event) => setHotpotqaReportStem(event.target.value)}
+                    placeholder="hotpotqa-dev-50"
+                  />
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    aria-label="Write HotpotQA reports"
+                    checked={hotpotqaWriteReport}
+                    type="checkbox"
+                    onChange={(event) => setHotpotqaWriteReport(event.target.checked)}
+                  />
+                  <span>Write reports</span>
+                </label>
+                <button
+                  className="secondary-action"
+                  data-tooltip="Run a local HotpotQA multi-hop retrieval eval"
+                  disabled={isAnyEvalRunning}
+                  type="submit"
+                >
+                  <FileSearch aria-hidden="true" />
+                  {isRunningHotpotQAEval ? "Running HotpotQA eval" : "Run HotpotQA eval"}
+                </button>
+                <button
+                  className="secondary-action"
+                  data-tooltip="Run HotpotQA through the Deep Agents harness"
+                  disabled={isAnyEvalRunning}
+                  type="button"
+                  onClick={() => void handleRunHotpotQAAgentEval()}
+                >
+                  <GitCompare aria-hidden="true" />
+                  {isRunningHotpotQAAgentEval
+                    ? "Running HotpotQA agent"
+                    : "Run HotpotQA agent"}
+                </button>
+              </form>
+              <form
+                className="eval-dataset-form"
+                onSubmit={(event) => void handleRunNaturalQuestionsEval(event)}
+              >
+                <label className="span-two">
+                  Natural Questions dataset path
+                  <input
+                    aria-label="Natural Questions dataset path"
+                    value={naturalQuestionsDatasetPath}
+                    onChange={(event) => setNaturalQuestionsDatasetPath(event.target.value)}
+                    placeholder="nq-dev-sample.jsonl"
+                  />
+                </label>
+                <label>
+                  Max cases
+                  <input
+                    aria-label="Natural Questions max cases"
+                    inputMode="numeric"
+                    min="1"
+                    max="1000"
+                    type="number"
+                    value={naturalQuestionsMaxCases}
+                    onChange={(event) => setNaturalQuestionsMaxCases(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Report stem
+                  <input
+                    aria-label="Natural Questions report stem"
+                    disabled={!naturalQuestionsWriteReport}
+                    value={naturalQuestionsReportStem}
+                    onChange={(event) => setNaturalQuestionsReportStem(event.target.value)}
+                    placeholder="natural-questions-dev-50"
+                  />
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    aria-label="Write Natural Questions reports"
+                    checked={naturalQuestionsWriteReport}
+                    type="checkbox"
+                    onChange={(event) => setNaturalQuestionsWriteReport(event.target.checked)}
+                  />
+                  <span>Write reports</span>
+                </label>
+                <button
+                  className="secondary-action"
+                  data-tooltip="Run a local Natural Questions eval"
+                  disabled={isAnyEvalRunning}
+                  type="submit"
+                >
+                  <FileSearch aria-hidden="true" />
+                  {isRunningNaturalQuestionsEval
+                    ? "Running Natural Questions eval"
+                    : "Run Natural Questions eval"}
+                </button>
+              </form>
+              <form
+                className="eval-dataset-form"
+                onSubmit={(event) => void handleRunOcrBenchmarkEval(event)}
+              >
+                <label className="span-two">
+                  OCR benchmark path
+                  <input
+                    aria-label="OCR benchmark path"
+                    value={ocrBenchmarkDatasetPath}
+                    onChange={(event) => setOcrBenchmarkDatasetPath(event.target.value)}
+                    placeholder="ocr-benchmark/manifest.json"
+                  />
+                </label>
+                <label>
+                  Format
+                  <select
+                    aria-label="OCR benchmark format"
+                    value={ocrBenchmarkFormat}
+                    onChange={(event) => setOcrBenchmarkFormat(event.target.value)}
+                  >
+                    <option value="manifest">Manifest</option>
+                    <option value="funsd">FUNSD</option>
+                    <option value="sroie">SROIE</option>
+                  </select>
+                </label>
+                <label>
+                  Max cases
+                  <input
+                    aria-label="OCR benchmark max cases"
+                    inputMode="numeric"
+                    min="1"
+                    max="1000"
+                    type="number"
+                    value={ocrBenchmarkMaxCases}
+                    onChange={(event) => setOcrBenchmarkMaxCases(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Report stem
+                  <input
+                    aria-label="OCR benchmark report stem"
+                    disabled={!ocrBenchmarkWriteReport}
+                    value={ocrBenchmarkReportStem}
+                    onChange={(event) => setOcrBenchmarkReportStem(event.target.value)}
+                    placeholder="ocr-benchmark-25"
+                  />
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    aria-label="Write OCR benchmark reports"
+                    checked={ocrBenchmarkWriteReport}
+                    type="checkbox"
+                    onChange={(event) => setOcrBenchmarkWriteReport(event.target.checked)}
+                  />
+                  <span>Write reports</span>
+                </label>
+                <button
+                  className="secondary-action"
+                  data-tooltip="Run a local OCR benchmark without paid providers"
+                  disabled={isAnyEvalRunning}
+                  type="submit"
+                >
+                  <FileSearch aria-hidden="true" />
+                  {isRunningOcrBenchmarkEval
+                    ? "Running OCR benchmark"
+                    : "Run OCR benchmark"}
+                </button>
+              </form>
+            </div>
             {evalError ? (
               <p className="inline-error" role="alert">
                 {evalError}
@@ -4601,6 +4605,7 @@ function App() {
                     className="icon-button"
                     type="button"
                     aria-label="Refresh eval history"
+                    data-tooltip="Reload eval history and trend data"
                     onClick={() => void refreshEvalRuns()}
                   >
                     <RefreshCw aria-hidden="true" />
@@ -4781,10 +4786,10 @@ function App() {
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Admin</p>
-                <h2>LLM providers</h2>
+                <h2>{activeModule === "admin-users" ? "Admin users" : "LLM providers"}</h2>
               </div>
               <span className={catalog?.active.can_call ? "status-pill local" : "status-pill"}>
-                {providerStatus}
+                {activeModule === "admin-users" ? `${adminUsers.length} users` : providerStatus}
               </span>
             </div>
 
@@ -4923,6 +4928,7 @@ function App() {
                   className="icon-button"
                   type="button"
                   aria-label="Refresh admin users"
+                  data-tooltip="Reload admin users and domain grants"
                   onClick={() => void refreshAdminUsers()}
                 >
                   <RefreshCw aria-hidden="true" />
@@ -5038,6 +5044,7 @@ function App() {
                         </label>
                         <button
                           className="ghost-action"
+                          data-tooltip="Grant this user access to the selected domain"
                           disabled={savingAdminUserId === user.id || domains.length === 0}
                           type="submit"
                         >
@@ -5072,6 +5079,7 @@ function App() {
                         </label>
                         <button
                           className="ghost-action"
+                          data-tooltip="Persist this user's role change"
                           disabled={savingAdminUserId === user.id}
                           type="submit"
                         >
@@ -5081,6 +5089,7 @@ function App() {
                       </form>
                       <button
                         className="ghost-action"
+                        data-tooltip="Toggle whether this local admin user can sign in"
                         disabled={savingAdminUserId === user.id || user.email === email.trim().toLowerCase()}
                         type="button"
                         onClick={() => void handleUpdateAdminUserStatus(user)}
@@ -5104,6 +5113,7 @@ function App() {
                         />
                         <button
                           className="ghost-action"
+                          data-tooltip="Set a new password for this local user"
                           disabled={savingAdminUserId === user.id}
                           type="submit"
                         >

@@ -637,6 +637,11 @@ h2 {
   white-space: normal;
 }
 
+.module-nav [data-tooltip]::after,
+.section-switcher [data-tooltip]::after {
+  max-width: 260px;
+}
+
 [data-tooltip]:hover::after,
 [data-tooltip]:focus-visible::after {
   display: block;
@@ -1291,7 +1296,10 @@ button:focus-visible {
 .query-result {
   display: grid;
   gap: 12px;
+  max-height: min(660px, 56vh);
   margin-top: 16px;
+  overflow: auto;
+  padding-right: 4px;
   border-top: 1px solid #dbe3ef;
   padding-top: 16px;
 }
@@ -1543,6 +1551,10 @@ button:focus-visible {
   margin-bottom: 14px;
 }
 
+.audit-toolbar .ghost-action {
+  margin-top: 0;
+}
+
 .audit-toolbar label {
   display: grid;
   gap: 8px;
@@ -1607,10 +1619,22 @@ button:focus-visible {
   color: #0f172a;
 }
 
+.eval-runner-forms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-height: min(540px, 48vh);
+  overflow: auto;
+  padding-right: 4px;
+}
+
 .eval-dataset-form {
-  margin-bottom: 14px;
-  border-top: 1px solid #dbe3ef;
-  padding-top: 14px;
+  align-content: start;
+  margin-bottom: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
 }
 
 .eval-dataset-form input:disabled,
@@ -1763,6 +1787,9 @@ button:focus-visible {
 .eval-history {
   display: grid;
   gap: 12px;
+  max-height: min(720px, 62vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .eval-comparison {
@@ -2335,7 +2362,7 @@ button:focus-visible {
 .provider-list {
   display: grid;
   gap: 10px;
-  max-height: min(420px, 42vh);
+  max-height: min(520px, 48vh);
   margin-top: 18px;
   overflow: auto;
   padding-right: 4px;
@@ -2619,6 +2646,7 @@ button:focus-visible {
   .eval-trends,
   .trend-metric-row,
   .eval-toolbar,
+  .eval-runner-forms,
   .eval-metrics,
   .live-progress-summary,
   .job-row-grid,
