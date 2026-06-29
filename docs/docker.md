@@ -98,6 +98,12 @@ the core quality gates pass.
 
 ## Smoke Test
 
+Run the full local pre-audit acceptance gate when validating a checkout:
+
+```bash
+make local-acceptance
+```
+
 Run the same Docker smoke used by CI:
 
 ```bash

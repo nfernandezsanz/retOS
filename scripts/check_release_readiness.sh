@@ -119,6 +119,7 @@ for phrase in (
     "docs/release-process.md",
     "docker compose --env-file .env.example config",
     "make docker-runtime-image-check",
+    "make local-acceptance",
     "make docker-smoke",
     "make release-evidence-check",
     "tag-to-digest resolution",
