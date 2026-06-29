@@ -63,15 +63,18 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
   decoration, and they must keep hover/focus tooltip behavior.
 - Current-context band: non-overview sections show the active section, active
   module, helper text, and module position so operators stay oriented without
-  scrolling back to the top of a long workflow.
+  scrolling back to the top of a long workflow. On narrow mobile/tablet viewports,
+  this context can collapse when the module tabs already provide the same orientation.
 - Tooltips: navigation links and high-impact actions use hover/focus tooltips for
   short operational context. Tooltips must not create accessible-name noise, layout
   shift, or document-level horizontal overflow.
 - Icons: Lucide SVG icons only; no emoji-as-icon UI.
 - Accessibility: visible focus rings, skip link, text labels beside color states,
   44px primary controls, and `prefers-reduced-motion` support.
-- Responsive behavior: single-column workspace below 900px with no horizontal page
-  overflow at 375px, 768px, 1024px, or 1440px.
+- Responsive behavior: compact sections below 900px with no horizontal page overflow
+  at 375px, 768px, 1024px, or 1440px. Tablet-width Library views may keep Create and
+  Active domain panels side by side when there is enough room, with internal controls
+  stacked for readability.
 
 ## Latest Visual Audit
 

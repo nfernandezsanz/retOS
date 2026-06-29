@@ -241,7 +241,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
   a compact Overview plus hash-addressable Documents, Queries, Evals, Audit, and Admin
   sections, runtime build metadata from `/versionz`, readiness from `/readyz`, plus contextual module pills and current-context bands that shorten
   Documents, Queries, Evals, Audit, and Admin into scan-friendly task areas. The UI includes hover/focus tooltips,
-  bounded long lists, compact module scroll regions, domain detail editing/archive/restore, source detail editing/removal, document inventory, edit/archive/restore/history actions, jobs,
+  compact responsive panels, sticky module headers, bounded long lists, compact module scroll regions, domain detail editing/archive/restore, source detail editing/removal, document inventory, edit/archive/restore/history actions, jobs,
   OCR, indexing, agent runs, local eval execution, and admin account management.
 - Docker Compose for Postgres, RabbitMQ, Ollama, web, and one shared backend image reused by API, worker, and migrations through role-specific commands.
 - Planning, ADRs, and architecture assets for the open source implementation path.

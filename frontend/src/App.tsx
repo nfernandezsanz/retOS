@@ -4323,7 +4323,7 @@ function App() {
                 </button>
               </div>
               <form className="source-form" onSubmit={handleCreateSource}>
-                <label>
+                <label data-tooltip="Choose how RetOS should treat this source">
                   <span>Kind</span>
                   <select
                     value={sourceKind}
@@ -4334,7 +4334,7 @@ function App() {
                     <option value="url">URL</option>
                   </select>
                 </label>
-                <label>
+                <label data-tooltip="Short name shown in source lists and job payloads">
                   <span>Name</span>
                   <input
                     placeholder="Research corpus"
@@ -4342,7 +4342,10 @@ function App() {
                     onChange={(event) => setSourceName(event.target.value)}
                   />
                 </label>
-                <label className="span-two">
+                <label
+                  className="span-two"
+                  data-tooltip="Use a mounted file URI for local scans, or a traceable URI for uploads and URLs"
+                >
                   <span>URI</span>
                   <input
                     placeholder="file:///corpus/research"
@@ -4503,7 +4506,7 @@ function App() {
                 <h3>File upload</h3>
               </div>
               <form className="file-upload-form" onSubmit={handleUploadFile}>
-                <label>
+                <label data-tooltip="Supported local fixtures: TXT, Markdown, and PDF">
                   <span>File</span>
                   <input
                     aria-label="Upload file"
@@ -4513,7 +4516,7 @@ function App() {
                     onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
                   />
                 </label>
-                <label>
+                <label data-tooltip="Document title stored in the library and citations">
                   <span>Title</span>
                   <input
                     placeholder="Uploaded research note"
@@ -4521,7 +4524,7 @@ function App() {
                     onChange={(event) => setUploadTitle(event.target.value)}
                   />
                 </label>
-                <label className="span-two">
+                <label className="span-two" data-tooltip="Optional source to link this upload to">
                   <span>Source</span>
                   <select
                     value={uploadSourceId}
@@ -4557,7 +4560,7 @@ function App() {
                 <h3>Text ingestion</h3>
               </div>
               <form className="text-ingestion-form" onSubmit={handleIngestText}>
-                <label>
+                <label data-tooltip="Document title stored in the library and citations">
                   <span>Title</span>
                   <input
                     placeholder="Research note"
@@ -4565,7 +4568,7 @@ function App() {
                     onChange={(event) => setTextTitle(event.target.value)}
                   />
                 </label>
-                <label>
+                <label data-tooltip="Optional source to link this pasted text to">
                   <span>Source</span>
                   <select
                     value={textSourceId}
@@ -4579,7 +4582,10 @@ function App() {
                     ))}
                   </select>
                 </label>
-                <label className="span-two">
+                <label
+                  className="span-two"
+                  data-tooltip="Paste fixture text, notes, transcripts, or extracted content for local ingestion"
+                >
                   <span>Text</span>
                   <textarea
                     placeholder="Paste local fixture text, notes, transcripts, or extracted content."

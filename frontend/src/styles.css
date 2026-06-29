@@ -685,6 +685,15 @@ h2 {
   scrollbar-gutter: stable;
 }
 
+.section-content > .panel > .panel-heading {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid #e2e8f0;
+  background: var(--retos-surface);
+  padding-bottom: 12px;
+}
+
 .panel.wide {
   grid-column: 1 / -1;
 }
@@ -1102,7 +1111,7 @@ button:focus-visible {
 .document-list {
   display: grid;
   gap: 10px;
-  max-height: min(300px, 38vh);
+  max-height: min(260px, 34vh);
   margin-top: 14px;
   overflow: auto;
   padding-right: 4px;
@@ -1327,6 +1336,12 @@ button:focus-visible {
   width: 18px;
   height: 18px;
   accent-color: #2563eb;
+}
+
+.domain-toolbar .toggle-control {
+  display: inline-flex;
+  gap: 8px;
+  white-space: normal;
 }
 
 .icon-button.danger {
@@ -3098,6 +3113,10 @@ button:focus-visible {
     margin-bottom: 8px;
   }
 
+  .section-topbar .eyebrow {
+    margin-bottom: 2px;
+  }
+
   .section-switcher,
   .module-nav {
     flex-wrap: nowrap;
@@ -3127,7 +3146,16 @@ button:focus-visible {
   }
 
   .section-content > .panel:not([hidden]) {
-    max-height: calc(100vh - 206px);
+    max-height: calc(100vh - 188px);
+  }
+
+  .section-content > .panel > [id]:not([hidden]) {
+    max-height: calc(100vh - 248px);
+  }
+
+  .section-content > .panel > .panel-heading {
+    margin: -4px 0 10px;
+    padding-bottom: 10px;
   }
 
   .overview-actions {
@@ -3293,8 +3321,7 @@ button:focus-visible {
   }
 
   .workspace-context {
-    align-items: center;
-    flex-direction: row;
+    display: none;
   }
 
   .domain-form,
@@ -3312,7 +3339,47 @@ button:focus-visible {
   }
 
   .panel {
-    padding: 14px;
+    padding: 12px;
+  }
+
+  .section-content > .panel:not([hidden]) {
+    max-height: calc(100vh - 136px);
+  }
+
+  .section-content > .panel > [id]:not([hidden]) {
+    max-height: calc(100vh - 206px);
+  }
+
+  .section-content > .panel > .panel-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .section-content > .panel > .panel-heading > div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .section-content > .panel > .panel-heading .eyebrow {
+    display: none;
+  }
+
+  .section-content > .panel > .panel-heading h2 {
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .section-content > .panel > .panel-heading .section-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .section-content > .panel > .panel-heading .section-actions .status-pill {
+    justify-content: center;
+    width: 100%;
   }
 
   .metrics {
@@ -3364,7 +3431,7 @@ button:focus-visible {
   }
 
   h1 {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .hero-copy {
@@ -3404,6 +3471,27 @@ button:focus-visible {
   .domain-block .secondary-action {
     min-height: 40px;
     margin-top: 4px;
+  }
+}
+
+@media (min-width: 560px) and (max-width: 760px) {
+  .domain-management {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  }
+
+  .domain-form,
+  .domain-edit-form,
+  .domain-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .domain-form .span-two {
+    grid-column: auto;
+  }
+
+  .domain-block .section-heading {
+    align-items: center;
+    flex-direction: row;
   }
 }
 
