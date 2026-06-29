@@ -80,3 +80,14 @@ def test_coverage_targets_report_unparseable_coverage_json(
     assert targets["branch_minimum_percent"] == 90.53
     assert targets["source_available"] is False
     assert targets["source_reason"].startswith("coverage report could not be parsed:")
+
+
+def test_manifest_exporter_hashes_release_evidence_files() -> None:
+    exporter = load_audit_manifest_exporter()
+
+    for path in (
+        "docs/releases/evidence/2026.06.28-alpha.1-calibration.md",
+        "docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md",
+        "docs/releases/evidence/production-promotion-template.md",
+    ):
+        assert path in exporter.CRITICAL_FILES

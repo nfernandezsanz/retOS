@@ -44,6 +44,8 @@ CRITICAL_FILES = (
     "frontend/src/styles.css",
     "frontend/e2e/app.spec.ts",
     "docs/releases/2026.06.28-alpha.1.md",
+    "docs/releases/evidence/2026.06.28-alpha.1-calibration.md",
+    "docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md",
     "docs/releases/evidence/calibration-scope-decision-template.md",
     "docs/releases/evidence/backup-restore-drill-template.md",
     "docs/releases/evidence/production-promotion-template.md",

@@ -83,3 +83,14 @@ def test_audit_manifest_gate_rejects_missing_visual_breakpoint() -> None:
         assert "visual audit coverage missing responsive width" in str(exc)
     else:
         raise AssertionError("Expected missing visual breakpoint to fail")
+
+
+def test_audit_manifest_gate_requires_release_evidence_hashes() -> None:
+    gate = load_audit_manifest_gate()
+
+    for path in (
+        "docs/releases/evidence/2026.06.28-alpha.1-calibration.md",
+        "docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md",
+        "docs/releases/evidence/production-promotion-template.md",
+    ):
+        assert path in gate.REQUIRED_CRITICAL_FILES
