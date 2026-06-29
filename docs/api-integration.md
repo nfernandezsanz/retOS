@@ -782,11 +782,11 @@ When `RETOS_AGENT_RUNTIME=deepagents`, the harness registers named
 controlled corpus tools as the main agent, and the post-answer deterministic audits
 still run before results are persisted.
 
-`RETOS_AGENT_RUNTIME=deterministic` is the default for CI, Docker smoke, and local
-development without downloaded model weights. It performs the controlled corpus search
-and produces a deterministic grounded answer. `RETOS_AGENT_RUNTIME=deepagents` enables
-`deepagents.create_deep_agent` synthesis with the same controlled corpus tools. For the
-default local profile, pull the model first:
+`RETOS_AGENT_RUNTIME=deepagents` is the default for local Docker and the release
+contract. It enables `deepagents.create_deep_agent` synthesis with the same controlled
+corpus tools while preserving deterministic post-answer audits. Use
+`RETOS_AGENT_RUNTIME=deterministic` only for explicit offline test/eval fallback. For
+the default local profile, pull the model first:
 
 ```bash
 docker compose --profile models run --rm ollama-pull

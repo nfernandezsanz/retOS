@@ -113,7 +113,7 @@ makefile = Path("Makefile").read_text(encoding="utf-8")
 
 require(env.get("RETOS_ALLOW_PAID_LLM") == "false", "paid LLMs must be disabled by default")
 require(env.get("RETOS_PROVIDER") == "local", "local provider must be the default")
-require(env.get("RETOS_AGENT_RUNTIME") == "deterministic", "deterministic agent runtime must be the default")
+require(env.get("RETOS_AGENT_RUNTIME") == "deepagents", "Deep Agents runtime must be the default")
 require(env.get("RETOS_OLLAMA_MODEL") == "gemma4", "Gemma 4 must be the default Ollama model")
 require(
     env.get("RETOS_JWT_SECRET") == "change-this-development-secret-at-least-32-chars",

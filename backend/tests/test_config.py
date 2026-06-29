@@ -200,6 +200,20 @@ def test_runtime_security_allows_wildcard_cors_in_development() -> None:
     settings.validate_runtime_security()
 
 
+def test_default_allowed_origins_include_local_frontend_hosts() -> None:
+    settings = Settings(
+        env="development",
+        jwt_secret=SecretStr("development-secret-value-that-is-long-enough"),
+    )
+
+    assert "http://localhost:5173" in settings.allowed_origins
+    assert "http://127.0.0.1:5173" in settings.allowed_origins
+    assert "http://localhost:4174" in settings.allowed_origins
+    assert "http://127.0.0.1:4174" in settings.allowed_origins
+    assert "http://localhost:8080" in settings.allowed_origins
+    assert "http://127.0.0.1:8080" in settings.allowed_origins
+
+
 def test_allowed_origins_accepts_csv_env_string() -> None:
     settings = Settings(
         env="development",
@@ -256,6 +270,15 @@ def test_agent_runtime_must_be_known() -> None:
             agent_runtime="classic-langgraph",  # type: ignore[arg-type]
             jwt_secret=SecretStr("test-secret-value-that-is-long-enough"),
         )
+
+
+def test_default_agent_runtime_uses_deepagents_harness() -> None:
+    settings = Settings(
+        env="development",
+        jwt_secret=SecretStr("development-secret-value-that-is-long-enough"),
+    )
+
+    assert settings.agent_runtime == "deepagents"
 
 
 def test_eval_roots_have_docker_defaults() -> None:

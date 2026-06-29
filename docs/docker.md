@@ -228,7 +228,7 @@ The default Docker profile is local-first:
 
 - `RETOS_PROVIDER=local`
 - `RETOS_MODEL=ollama:gemma4`
-- `RETOS_AGENT_RUNTIME=deterministic`
+- `RETOS_AGENT_RUNTIME=deepagents`
 - `RETOS_OLLAMA_MODEL=gemma4`
 - `RETOS_ALLOW_PAID_LLM=false`
 

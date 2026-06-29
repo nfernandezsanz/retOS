@@ -39,7 +39,7 @@ def write_minimal_repo(root: Path, *, allow_paid_llm: str = "false") -> None:
             [
                 f"RETOS_ALLOW_PAID_LLM={allow_paid_llm}",
                 "RETOS_PROVIDER=local",
-                "RETOS_AGENT_RUNTIME=deterministic",
+                "RETOS_AGENT_RUNTIME=deepagents",
                 "RETOS_OLLAMA_MODEL=gemma4",
                 "RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me",
                 "RETOS_JWT_SECRET=change-this-development-secret-at-least-32-chars",

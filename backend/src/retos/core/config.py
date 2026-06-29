@@ -61,7 +61,11 @@ class Settings(BaseSettings):
     allowed_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: [
             "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:4174",
+            "http://127.0.0.1:4174",
             "http://localhost:8080",
+            "http://127.0.0.1:8080",
         ]
     )
     storage_root: str = "/var/lib/retos/storage"
@@ -84,7 +88,7 @@ class Settings(BaseSettings):
     azure_openai_endpoint: str | None = None
     azure_openai_deployment: str | None = None
     allow_paid_llm: bool = False
-    agent_runtime: AgentRuntimeMode = "deterministic"
+    agent_runtime: AgentRuntimeMode = "deepagents"
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
