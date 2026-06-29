@@ -39,6 +39,7 @@ REQUIRED_CRITICAL_FILES = {
     "scripts/check_auditor_evidence_matrix.sh",
     "scripts/check_audit_pack.sh",
     "scripts/check_eval_calibration_evidence.py",
+    "scripts/check_eval_calibration_trend.py",
     "scripts/check_audit_handoff_report.py",
     "scripts/check_audit_bundle.py",
     "scripts/export_audit_manifest.py",
@@ -55,6 +56,7 @@ REQUIRED_LOCAL_GATES = {
     "make auditor-static-check",
     "make audit-manifest-check",
     "make eval-calibration-gate",
+    "make eval-calibration-trend-gate",
     "make ci-status-check",
 }
 

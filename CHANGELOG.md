@@ -54,6 +54,9 @@ tag in GitHub.
 - Offline `make eval-calibration-gate` validation for versioned calibration evidence,
   including required targets, sample sizes, metric gates, HTTPS provenance, and path
   safety.
+- Offline `make eval-calibration-trend-gate` validation for versioned calibration trend
+  evidence, including sample growth, required targets, metric regression tolerance,
+  HTTPS provenance, and path safety.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.

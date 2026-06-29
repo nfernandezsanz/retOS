@@ -63,6 +63,7 @@ for gate in (
     "make api-smoke",
     "make eval-agent-multihop",
     "make eval-calibration-gate",
+    "make eval-calibration-trend-gate",
     "make audit-manifest-check",
     "make audit-export-check",
     "make frontend-e2e",

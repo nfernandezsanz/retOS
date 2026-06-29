@@ -96,12 +96,12 @@ auditor a stable local entry point:
 | Local prerequisites | `make doctor` | Python, Node, npm, Docker Compose, safe local defaults, Compose config, Docker topology guard, and audit-export verifier are available before heavier validation. |
 | Local demo corpus | `make docker-seed-demo`, `make api-smoke`, and `make frontend-e2e` | The running Docker stack, real HTTP smoke, and React console can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 570 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 578 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
 | Docker runtime | `make docker-smoke` | Built API/web images, Postgres, RabbitMQ, API, worker, migrate, web, HTTP smoke, worker-backed jobs, and one shared backend image ID. |
-| Static release guardrails | `make release-check` | Required docs, Docker topology, image metadata source, image size budgets, workflow contract, release notes, audit pack, branding assets, safe defaults, and a dry-run of the published evidence verifier. |
+| Static release guardrails | `make release-check` | Required docs, Docker topology, image metadata source, image size budgets, workflow contract, release notes, calibration evidence gates, audit pack, branding assets, safe defaults, and a dry-run of the published evidence verifier. |
 | Production preflight | `make production-preflight` | Local evidence, branding, release docs, and external promotion blockers are aligned. |
 | Dependency advisories | `make dependency-audit` | Python runtime and frontend lockfile dependency advisory checks pass without paid providers. |
 | Security policy | `make security-policy-check` | Security reporting, secure defaults, human review scope, and operational links are aligned. |
@@ -143,7 +143,7 @@ These items must be closed before a final production release:
 | GHCR publish evidence missing | Run `.github/workflows/release.yml` for the immutable release tag and record backend/web image digests. |
 | SBOM/provenance evidence missing | Link or copy the attestation evidence from the release workflow into the versioned release note. |
 | Cosign signature/tag evidence missing | Run `make release-evidence-check` with the published digests and record successful keyless signature verification plus version tag-to-digest resolution for both images. |
-| Broader public calibration pending | Run `make eval-calibration-gate` against the versioned calibration evidence and add trend evidence beyond the current 200-record/40-case public slices or document the pilot scope limit. |
+| Broader public calibration pending | Run `make eval-calibration-gate` and `make eval-calibration-trend-gate` against the versioned calibration evidence, then add trend evidence beyond the current 200-record/40-case public slices or document the pilot scope limit. |
 | Human security review pending | Review auth, secrets, exposed ports, CORS, backup handling, and provider key handling for the target environment. |
 
 ## Production Pilot Acceptance Checklist
@@ -164,6 +164,7 @@ These items must be closed before a final production release:
 - [ ] `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` was exported for human review.
 - [ ] `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` was exported with its `.sha256` sidecar.
 - [ ] `make eval-calibration-gate` passes against the versioned calibration evidence.
+- [ ] `make eval-calibration-trend-gate` passes against the versioned calibration trend evidence.
 - [ ] `make audit-export-check EXPORT=retos-audit-export.json` passed for a fresh target-environment `/audit/export` download.
 - [ ] `make integration` passes against real local endpoints.
 - [ ] `make frontend-test`, `make frontend-e2e`, and `make frontend-visual-audit` pass.
@@ -193,6 +194,7 @@ These items must be closed before a final production release:
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
 | Operations runbook | `docs/operations.md`, `scripts/check_operations_runbook.sh`, `make operations-runbook-check` |
 | Audit manifest schema | `scripts/check_audit_manifest.py`, `make audit-manifest-check` |
+| Calibration trend evidence | `scripts/check_eval_calibration_trend.py`, `make eval-calibration-trend-gate` |
 | Audit handoff report | `scripts/export_audit_handoff_report.py`, `scripts/check_audit_handoff_report.py`, `make audit-handoff-report` |
 | Audit handoff bundle | `scripts/export_audit_bundle.py`, `scripts/check_audit_bundle.py`, `make audit-bundle` |
 | Audit export verifier | `scripts/check_audit_export.py`, `make audit-export-check` |

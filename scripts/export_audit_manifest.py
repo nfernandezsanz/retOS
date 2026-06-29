@@ -49,6 +49,7 @@ CRITICAL_FILES = (
     "scripts/check_auditor_evidence_matrix.sh",
     "scripts/check_audit_pack.sh",
     "scripts/check_eval_calibration_evidence.py",
+    "scripts/check_eval_calibration_trend.py",
     "scripts/check_production_preflight.sh",
     "scripts/check_release_workflow.sh",
     "scripts/check_published_release_evidence.sh",
@@ -82,6 +83,7 @@ LOCAL_GATES = (
     "make release-notes-check",
     "make versioned-release-notes-check",
     "make eval-calibration-gate",
+    "make eval-calibration-trend-gate",
     "make ci-status-check",
 )
 

@@ -374,6 +374,8 @@ make eval-calibration-compare \
   OUTPUT=docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md \
   TITLE="RetOS 2026.06.28-alpha.1 Calibration Trend Evidence" \
   MAX_REGRESSION=0
+make eval-calibration-trend-gate \
+  EVIDENCE=docs/releases/evidence/2026.06.28-alpha.1-calibration-trend.md
 ```
 
 The calibration command fetches or reuses bounded samples for SQuAD, HotpotQA,
@@ -402,6 +404,11 @@ least the baseline record/case counts, and avoid metric regression beyond
 `MAX_REGRESSION`. Its Markdown output is also path-safe, so release notes can preserve
 source URLs, license notes, metric deltas, and record/case growth without committing raw
 dataset or report paths.
+
+`make eval-calibration-trend-gate` validates that versioned trend Markdown offline. It
+requires PASS status, the expected baseline/candidate sample growth, required target
+rows, HTTPS source URLs, metric-level regression tolerance, and no local dataset/report
+path leakage.
 
 The fetcher writes bounded samples under `evals/datasets/`, refuses to overwrite files
 unless `FORCE=1` is provided, and is never part of the default CI path. Networked
@@ -616,8 +623,12 @@ make eval-calibration-evidence \
   MANIFEST=evals/reports/calibration/manifest.json \
   OUTPUT=docs/releases/evidence/<release>-calibration.md
 make eval-calibration-gate EVIDENCE=docs/releases/evidence/<release>-calibration.md
+make eval-calibration-trend-gate \
+  EVIDENCE=docs/releases/evidence/<release>-calibration-trend.md
 ```
 
 `make eval-calibration-gate` is offline and release-review friendly. It validates PASS
 status, required target rows, minimum records/cases, required metric gates, HTTPS source
 URLs, and the absence of local dataset/report paths in the versioned evidence file.
+`make eval-calibration-trend-gate` applies the same offline posture to the trend file
+and additionally checks candidate growth plus per-metric regression tolerance.
