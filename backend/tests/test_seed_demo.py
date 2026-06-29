@@ -1,27 +1,14 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 
 from retos.core.config import Settings
+from retos.demo.seed import run_seed
 from retos.persistence.database import create_engine, create_session_factory, dispose_engine
 from retos.persistence.unit_of_work import SQLAlchemyUnitOfWork
 from retos.search.index import TantivySearchIndex
-
-
-def load_seed_demo() -> ModuleType:
-    script_path = Path(__file__).resolve().parents[1] / "scripts" / "seed_demo.py"
-    spec = importlib.util.spec_from_file_location("seed_demo", script_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Could not load seed demo script from {script_path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.mark.asyncio
@@ -29,7 +16,6 @@ async def test_seed_demo_creates_auditable_searchable_fixture(
     tmp_path: Path,
     settings: Settings,
 ) -> None:
-    seed_demo = load_seed_demo()
     local_settings = settings.model_copy(
         update={
             "database_url": f"sqlite+aiosqlite:///{tmp_path / 'seed-demo.db'}",
@@ -37,7 +23,7 @@ async def test_seed_demo_creates_auditable_searchable_fixture(
         }
     )
 
-    result = await seed_demo.run_seed(settings=local_settings, create_tables=True)
+    result = await run_seed(settings=local_settings, create_tables=True)
 
     assert result.created_documents == 3
     assert result.skipped_documents == 0
@@ -75,7 +61,6 @@ async def test_seed_demo_is_idempotent(
     tmp_path: Path,
     settings: Settings,
 ) -> None:
-    seed_demo = load_seed_demo()
     local_settings = settings.model_copy(
         update={
             "database_url": f"sqlite+aiosqlite:///{tmp_path / 'seed-demo-idempotent.db'}",
@@ -83,8 +68,8 @@ async def test_seed_demo_is_idempotent(
         }
     )
 
-    first = await seed_demo.run_seed(settings=local_settings, create_tables=True)
-    second = await seed_demo.run_seed(settings=local_settings, create_tables=True)
+    first = await run_seed(settings=local_settings, create_tables=True)
+    second = await run_seed(settings=local_settings, create_tables=True)
 
     assert first.created_documents == 3
     assert second.domain_id == first.domain_id
@@ -92,3 +77,35 @@ async def test_seed_demo_is_idempotent(
     assert second.created_documents == 0
     assert second.skipped_documents == 3
     assert second.indexed_segments == first.indexed_segments
+
+
+@pytest.mark.asyncio
+async def test_seed_demo_can_skip_index_rebuild_after_schema_exists(
+    tmp_path: Path,
+    settings: Settings,
+) -> None:
+    local_settings = settings.model_copy(
+        update={
+            "database_url": f"sqlite+aiosqlite:///{tmp_path / 'seed-demo-no-index.db'}",
+            "index_root": str(tmp_path / "index"),
+        }
+    )
+
+    first = await run_seed(
+        settings=local_settings,
+        create_tables=True,
+        rebuild_index=False,
+    )
+    second = await run_seed(
+        settings=local_settings,
+        create_tables=False,
+        rebuild_index=False,
+    )
+
+    assert first.created_documents == 3
+    assert first.index_job_id is None
+    assert first.indexed_segments == 0
+    assert second.domain_id == first.domain_id
+    assert second.created_documents == 0
+    assert second.skipped_documents == 3
+    assert second.index_job_id is None

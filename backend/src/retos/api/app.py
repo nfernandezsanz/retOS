@@ -9,6 +9,7 @@ from retos.api.routes import (
     agent,
     audit,
     auth,
+    demo,
     documents,
     domains,
     evals,
@@ -67,6 +68,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(demo.router)
     app.include_router(admin_users.router)
     app.include_router(domains.router)
     app.include_router(documents.router)

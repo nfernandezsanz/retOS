@@ -159,6 +159,11 @@ reuses the `retos-demo` domain, ingests three local fixture documents through no
 index, and prints the created domain/source/job identifiers. It is idempotent, so
 running it again skips existing document hashes and refreshes the index.
 
+The same flow is available in the React console through **Seed local corpus** on
+Overview or **Seed demo** in Documents. The UI calls the admin-only `/demo/seed`
+endpoint, selects the seeded domain after completion, and keeps the endpoint disabled
+when the API runs in production mode.
+
 For an isolated non-Docker SQLite smoke run, use:
 
 ```bash

@@ -69,7 +69,7 @@ require(
     "branch coverage blocker must stay removed after 90% branch ratchet",
 )
 require(
-    "90.56% branch" in audit_pack and "95.26% total" in audit_pack,
+    "90.65% branch" in audit_pack and "95.35% total" in audit_pack,
     "coverage evidence must match the current README/release note ratchet",
 )
 require(

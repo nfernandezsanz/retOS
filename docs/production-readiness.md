@@ -10,14 +10,14 @@ production pilot.
 | --- | --- | --- |
 | Product maturity | Pre-alpha candidate | `planning/04-process-tracker.md` keeps phases 0-6 in progress. |
 | CI health | Must be checked against current `HEAD` | `make ci-status-check` queries GitHub Actions for the current commit; `docs/releases/2026.06.28-alpha.1.md` records release-candidate evidence. |
-| Backend coverage | Passing total and branch coverage | `README.md` records 95.26% total and 90.56% branch-only coverage. |
+| Backend coverage | Passing total and branch coverage | `README.md` records 95.35% total and 90.65% branch-only coverage. |
 | Runtime topology | Guarded | `scripts/check_docker_topology.sh` and `scripts/check_backend_runtime_image.sh` protect the shared API/worker/migrate backend image model. |
 | Dependency advisories | Guarded | `make dependency-audit` runs `pip-audit` and `npm audit --audit-level=high`; CI runs both checks. |
 | Branding assets and UI contract | Guarded | `make brand-check` runs `scripts/check_branding_assets.sh` to validate project identity assets, palette tokens, README visibility, and Playwright brand smoke coverage. |
 | Local cost safety | Guarded | `.env.example` keeps `RETOS_ALLOW_PAID_LLM=false`, `RETOS_PROVIDER=local`, and `RETOS_OLLAMA_MODEL=gemma4`. |
 | Audit ledger | Implemented foundation | `docs/database.md` and `planning/06-auditability-journals.md` describe persisted journal/progress hash chains and export validation. |
 | Release publishing | Not complete | GHCR digest, SBOM/provenance, and Cosign evidence are pending until the release workflow runs for a tag. |
-| Final branch target | Complete | Branch coverage is ratcheted at 90.56%, above the 90% target. |
+| Final branch target | Complete | Branch coverage is ratcheted at 90.65%, above the 90% target. |
 
 ## Auditor Review Order
 
@@ -96,7 +96,7 @@ auditor a stable local entry point:
 | Local prerequisites | `make doctor` | Python, Node, npm, Docker Compose, safe local defaults, Compose config, Docker topology guard, and audit-export verifier are available before heavier validation. |
 | Local demo corpus | `make docker-seed-demo` | The running Docker stack can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 566 pytest cases, eval smoke, agent multi-hop eval, 95.26% total coverage, and 90.56% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 570 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |

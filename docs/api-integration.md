@@ -74,6 +74,23 @@ require an `admin` token. Viewer-safe endpoints use the same `Authorization` hea
 accept either an `admin` or `viewer` token. Domain-scoped viewer access is granted per
 domain by an admin; without a grant, viewers receive `403 Domain access required`.
 
+## Local Demo Corpus
+
+Seed the bundled local corpus from the UI or API:
+
+```bash
+curl --request POST http://localhost:8000/demo/seed \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"rebuild_index":true}'
+```
+
+The endpoint requires an `admin` token and returns the created or reused domain/source
+identifiers plus created/skipped document counts and indexed segment count. It runs the
+same auditable text-ingestion and BM25 rebuild services as normal document workflows,
+so journal and progress hash-chain events are preserved. RetOS rejects this endpoint in
+production mode.
+
 ## Admin Users
 
 List local admin accounts:

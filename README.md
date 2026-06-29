@@ -12,7 +12,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 [![CI](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml?query=branch%3Amain)
 [![Release Images](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml/badge.svg)](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-95.26%25%20total%20%7C%2090.56%25%20branch-166534?style=flat-square)](#current-status)
+[![Coverage](https://img.shields.io/badge/coverage-95.35%25%20total%20%7C%2090.65%25%20branch-166534?style=flat-square)](#current-status)
 [![Stability](https://img.shields.io/badge/stability-pre--alpha-f97316?style=flat-square)](#current-status)
 
 **Action pills**
@@ -97,7 +97,10 @@ Then open the console and API:
 `make docker-seed-demo` runs inside the API container, creates or reuses a `retos-demo`
 domain, ingests three local text documents through normal auditable jobs, rebuilds the
 BM25 index, and leaves searchable data visible in the console. Try searching for
-`Apollo guidance`, `plankton salinity`, or `incident retention`.
+`Apollo guidance`, `plankton salinity`, or `incident retention`. You can do the same from
+the React console with the **Seed local corpus** action on Overview or the **Seed demo**
+button in Documents; both call the admin-only `/demo/seed` endpoint and are disabled in
+production mode.
 
 Pull the default local model when you want Ollama-backed runs:
 
@@ -157,7 +160,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation; core product slices are being built phase by phase. |
-| Backend coverage | 95.26% total coverage; 90.56% branch-only coverage is ratcheted above the 90% target. |
+| Backend coverage | 95.35% total coverage; 90.65% branch-only coverage is ratcheted above the 90% target. |
 | Local runtime | Docker-first stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
 | Cost posture | Zero paid LLM calls by default; paid providers require explicit opt-in. |
 | Production status | Not production-promoted; final release still needs GHCR digests, SBOM/provenance, Cosign evidence, and human target-environment review. |
@@ -166,7 +169,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 
 | Workflow | Local Action |
 | --- | --- |
-| Navigate the console | Use the compact Overview with runtime build/readiness metadata, then switch to Documents, Queries, Evals, Audit, or Admin; each long screen has module pills and a current-context band for its main task areas |
+| Navigate the console | Use the compact Overview with runtime build/readiness metadata, seed the bundled demo corpus when needed, then switch to Documents, Queries, Evals, Audit, or Admin; each long screen has module pills and a current-context band for its main task areas |
 | Upload and manage documents | Use the React console at http://localhost:8080 |
 | Watch ingestion/indexing | Live job/progress views and SSE-backed updates in the UI |
 | Query with citations | Run grounded agent queries against indexed domains |
@@ -369,7 +372,7 @@ Every meaningful change should pass these gates:
 | Backend format | `make format-check` | Enforces Black formatting. |
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
-| Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.56%). |
+| Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.65%). |
 | Dependency audit | `make dependency-audit` | Runs `pip-audit` against backend runtime requirements and `npm audit --audit-level=high` against the frontend lockfile. |
 | Security policy | `make security-policy-check` | Validates security reporting, secure defaults, human production review guidance, and links from operational docs. |
 | Ignore hygiene | `make ignore-hygiene-check` | Validates `.gitignore` and `.dockerignore` keep secrets, generated files, local volumes, public datasets, reports, and backups out of Git and Docker contexts. |

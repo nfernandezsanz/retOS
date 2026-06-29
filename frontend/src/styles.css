@@ -377,7 +377,7 @@ button:disabled {
 
 .overview-actions {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -394,10 +394,22 @@ button:disabled {
   color: var(--retos-ink);
   padding: 16px;
   text-decoration: none;
+  text-align: left;
   transition:
     border-color 180ms ease,
     box-shadow 180ms ease,
     transform 180ms ease;
+}
+
+.workflow-button {
+  border: 1px solid var(--retos-border);
+  cursor: pointer;
+  font: inherit;
+}
+
+.workflow-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .workflow-card:hover,
@@ -428,6 +440,10 @@ button:disabled {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.45;
+}
+
+.overview-feedback {
+  margin-bottom: 18px;
 }
 
 .eyebrow {
@@ -1265,6 +1281,10 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.compact-actions {
+  justify-content: flex-end;
 }
 
 .compact-action {

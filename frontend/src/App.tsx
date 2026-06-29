@@ -315,6 +315,15 @@ type DomainRead = {
   updated_at: string;
 };
 
+type DemoSeedResponse = {
+  domain_id: string;
+  source_id: string;
+  created_documents: number;
+  skipped_documents: number;
+  index_job_id: string | null;
+  indexed_segments: number;
+};
+
 type DocumentRead = {
   id: string;
   domain_id: string;
@@ -1024,6 +1033,16 @@ async function createDomain(
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(payload),
+  });
+}
+
+async function seedDemoCorpus(token: string): Promise<DemoSeedResponse> {
+  return requestJson<DemoSeedResponse>("/demo/seed", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ rebuild_index: true }),
   });
 }
 
@@ -1753,6 +1772,9 @@ function App() {
   const [sources, setSources] = useState<SourceRead[]>([]);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
+  const [demoSeedResult, setDemoSeedResult] = useState<DemoSeedResponse | null>(null);
+  const [demoSeedError, setDemoSeedError] = useState<string | null>(null);
+  const [isSeedingDemo, setIsSeedingDemo] = useState(false);
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
   const [documentEditTitle, setDocumentEditTitle] = useState("");
   const [isUpdatingDocument, setIsUpdatingDocument] = useState(false);
@@ -1987,6 +2009,10 @@ function App() {
   }
 
   function activateModule(moduleId: string) {
+    const nextSection = workspaceModuleSection.get(moduleId);
+    if (nextSection) {
+      setActiveSection(nextSection);
+    }
     setActiveModule(moduleId);
     window.history.replaceState(null, "", `#${moduleId}`);
     window.requestAnimationFrame(() => document.getElementById(moduleId)?.focus());
@@ -2066,6 +2092,24 @@ function App() {
       setWorkspaceError(error instanceof Error ? error.message : "Workspace refresh failed");
     } finally {
       setIsLoadingWorkspace(false);
+    }
+  }
+
+  async function handleSeedDemoCorpus() {
+    setDemoSeedError(null);
+    setWorkspaceError(null);
+    setIsSeedingDemo(true);
+    try {
+      const accessToken = await getAdminToken();
+      const result = await seedDemoCorpus(accessToken);
+      setDemoSeedResult(result);
+      await refreshWorkspace(accessToken, result.domain_id);
+      activateModule("documents-library");
+    } catch (error) {
+      setDemoSeedResult(null);
+      setDemoSeedError(readableError(error, "Demo seed failed"));
+    } finally {
+      setIsSeedingDemo(false);
     }
   }
 
@@ -3380,6 +3424,17 @@ function App() {
             </section>
 
             <section className="overview-actions" aria-label="Primary workflows">
+              <button
+                className="workflow-card workflow-button"
+                data-tooltip="Load a small auditable local corpus and rebuild the BM25 index"
+                disabled={isSeedingDemo}
+                type="button"
+                onClick={() => void handleSeedDemoCorpus()}
+              >
+                <span>Demo</span>
+                <strong>{isSeedingDemo ? "Seeding corpus" : "Seed local corpus"}</strong>
+                <small>Apollo, incident, and field-note fixtures for trying documents and queries.</small>
+              </button>
               {workspaceSections
                 .filter((section) => section.id !== "overview")
                 .map((section) => (
@@ -3396,6 +3451,17 @@ function App() {
                   </a>
                 ))}
             </section>
+            {demoSeedError ? (
+              <p className="inline-error overview-feedback" role="alert">
+                {demoSeedError}
+              </p>
+            ) : null}
+            {demoSeedResult ? (
+              <p className="inline-success overview-feedback" role="status">
+                Demo corpus ready: {demoSeedResult.created_documents} created,{" "}
+                {demoSeedResult.skipped_documents} skipped, {demoSeedResult.indexed_segments} indexed segments.
+              </p>
+            ) : null}
           </>
         ) : null}
 
@@ -3406,7 +3472,19 @@ function App() {
                 <p className="eyebrow">Knowledge base</p>
                 <h2>Domains and documents</h2>
               </div>
-              <span className="status-pill">{selectedDomain ? selectedDomain.slug : "No domain"}</span>
+              <div className="section-actions compact-actions">
+                <button
+                  className="ghost-action compact-action"
+                  data-tooltip="Load the bundled demo corpus for local exploration"
+                  disabled={isSeedingDemo}
+                  type="button"
+                  onClick={() => void handleSeedDemoCorpus()}
+                >
+                  <Database aria-hidden="true" />
+                  {isSeedingDemo ? "Seeding" : "Seed demo"}
+                </button>
+                <span className="status-pill">{selectedDomain ? selectedDomain.slug : "No domain"}</span>
+              </div>
             </div>
             <form
               className="domain-form"
@@ -3492,6 +3570,17 @@ function App() {
             {workspaceError ? (
               <p className="inline-error" role="alert">
                 {workspaceError}
+              </p>
+            ) : null}
+            {demoSeedError ? (
+              <p className="inline-error" role="alert">
+                {demoSeedError}
+              </p>
+            ) : null}
+            {demoSeedResult ? (
+              <p className="inline-success compact-success" role="status">
+                Demo corpus ready: {demoSeedResult.created_documents} created,{" "}
+                {demoSeedResult.skipped_documents} skipped.
               </p>
             ) : null}
             <div
