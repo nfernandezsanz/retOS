@@ -22,6 +22,10 @@ __pycache__
 coverage.json
 coverage.xml
 htmlcov
+backend/coverage.json
+backend/.pytest_cache
+backend/.mypy_cache
+backend/.ruff_cache
 retos_storage
 retos_index
 retos_uploads

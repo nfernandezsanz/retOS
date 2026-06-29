@@ -75,6 +75,30 @@ def test_ignore_hygiene_check_fails_when_dockerignore_loses_docs_exclusion(
     assert ".dockerignore missing: docs" in result.stderr
 
 
+def test_ignore_hygiene_check_fails_when_gitignore_loses_backend_coverage_rule(
+    tmp_path: Path,
+) -> None:
+    repo = copy_minimal_repo(tmp_path)
+    remove_line(repo / ".gitignore", "backend/coverage.json")
+
+    result = run_checker(repo)
+
+    assert result.returncode != 0
+    assert ".gitignore missing: backend/coverage.json" in result.stderr
+
+
+def test_ignore_hygiene_check_fails_when_dockerignore_loses_backend_cache_rule(
+    tmp_path: Path,
+) -> None:
+    repo = copy_minimal_repo(tmp_path)
+    remove_line(repo / ".dockerignore", "backend/.pytest_cache")
+
+    result = run_checker(repo)
+
+    assert result.returncode != 0
+    assert ".dockerignore missing: backend/.pytest_cache" in result.stderr
+
+
 def test_ignore_hygiene_check_fails_without_documented_backup_directory(
     tmp_path: Path,
 ) -> None:

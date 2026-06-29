@@ -41,6 +41,10 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+backend/coverage.json
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
 .pyre/
 .pytype/
 .tox/

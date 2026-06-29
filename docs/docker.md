@@ -257,9 +257,9 @@ See [database.md](database.md) for schema and migration details.
 
 - Application containers run as non-root users.
 - The backend image installs local OCR support for English and Spanish.
-- `.dockerignore` excludes secrets, local volumes, virtualenvs, caches, tests, planning
-  docs, public dataset samples, generated reports, local backups, and generated frontend
-  assets.
+- `.dockerignore` excludes secrets, local volumes, virtualenvs, caches, coverage reports,
+  tests, planning docs, public dataset samples, generated reports, local backups, and
+  generated frontend assets.
 - RabbitMQ carries lightweight job messages only. Celery task results are ignored by default, and worker remote-control gossip/mingle is disabled for RabbitMQ 4 compatibility; durable job status, documents, and artifacts belong in Postgres-backed metadata and storage volumes.
 - Development passwords in `.env.example` must be changed for anything beyond local use.
 - `postgres:18-bookworm` stores data under a major-version-aware directory, so the volume is mounted at `/var/lib/postgresql`, not `/var/lib/postgresql/data`.
