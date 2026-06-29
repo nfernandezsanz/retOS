@@ -23,6 +23,7 @@ versioned release note or the release record for the target environment.
 Paste or link the output for each gate:
 
 - `make ci-status-check`
+- `make local-acceptance`
 - `make check`
 - `make dependency-audit`
 - `make security-policy-check`

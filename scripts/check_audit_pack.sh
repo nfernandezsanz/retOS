@@ -217,6 +217,10 @@ require(
     "promotion evidence template must record the immutable release tag",
 )
 require(
+    "make local-acceptance" in promotion_template,
+    "promotion evidence template must require the local acceptance gate",
+)
+require(
     "Final release promotion still requires" in tracker,
     "process tracker must keep final release blockers visible",
 )
