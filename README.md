@@ -12,7 +12,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 [![CI](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml?query=branch%3Amain)
 [![Release Images](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml/badge.svg)](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-95.37%25%20total%20%7C%2090.68%25%20branch-166534?style=flat-square)](#current-status)
+[![Coverage](https://img.shields.io/badge/coverage-95.39%25%20total%20%7C%2090.73%25%20branch-166534?style=flat-square)](#current-status)
 [![Stability](https://img.shields.io/badge/stability-pre--alpha-f97316?style=flat-square)](#current-status)
 
 **Action pills**
@@ -173,7 +173,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation; core product slices are being built phase by phase. |
-| Backend coverage | 95.37% total coverage; 90.68% branch-only coverage is enforced by the 90.65% ratchet above the 90% target. |
+| Backend coverage | 95.39% total coverage; 90.73% branch-only coverage is enforced by the 90.65% ratchet above the 90% target. |
 | Local runtime | Docker-first stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
 | Cost posture | Zero paid LLM calls by default; paid providers require explicit opt-in. |
 | Production status | Not production-promoted; final release still needs GHCR digests, SBOM/provenance, Cosign evidence, and human target-environment review. |
@@ -203,6 +203,8 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 - Domain management API and UI for creating research domains, selecting the active
   workspace, and updating domain name/description with auditable `domain.updated`
   journal events.
+- Source management API and UI for creating sources and updating source kind/name/URI
+  with auditable `source.updated` journal events.
 - Alembic migrations for domains, sources, documents, versions, artifacts, segments, jobs, progress events, and audit journals.
 - Persisted admin users with idempotent bootstrap at startup, active-account and
   persisted-role token checks, audited account creation/status/role updates,
@@ -236,7 +238,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
   a compact Overview plus hash-addressable Documents, Queries, Evals, Audit, and Admin
   sections, runtime build metadata from `/versionz`, readiness from `/readyz`, plus contextual module pills and current-context bands that shorten
   Documents, Queries, Evals, Audit, and Admin into scan-friendly task areas. The UI includes hover/focus tooltips,
-  bounded long lists, domain detail editing, document inventory, edit/archive/restore/history actions, jobs,
+  bounded long lists, domain detail editing, source detail editing, document inventory, edit/archive/restore/history actions, jobs,
   OCR, indexing, agent runs, local eval execution, and admin account management.
 - Docker Compose for Postgres, RabbitMQ, Ollama, web, and one shared backend image reused by API, worker, and migrations through role-specific commands.
 - Planning, ADRs, and architecture assets for the open source implementation path.

@@ -157,6 +157,75 @@ async def test_domain_repository_update_details_returns_none_for_missing_domain(
         await dispose_engine(engine)
 
 
+@pytest.mark.asyncio
+async def test_source_repository_updates_details_through_unit_of_work(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'source-update.db'}")
+    await create_schema(engine)
+    session_factory = create_session_factory(engine)
+
+    try:
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            domain = await uow.domains.add(
+                slug="source-domain",
+                name="Source Domain",
+                description=None,
+            )
+            source = await uow.sources.add(
+                domain_id=domain.id,
+                kind="upload",
+                name="Upload Source",
+                uri="upload://source",
+            )
+            await uow.commit()
+
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            updated = await uow.sources.update_details(
+                source_id=source.id,
+                kind="mount",
+                name="Mounted Source",
+                uri="file:///source",
+            )
+            await uow.commit()
+
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            fetched = await uow.sources.get(source.id)
+
+        assert updated is not None
+        assert updated.kind == "mount"
+        assert updated.name == "Mounted Source"
+        assert updated.uri == "file:///source"
+        assert fetched is not None
+        assert fetched.kind == "mount"
+        assert fetched.name == "Mounted Source"
+        assert fetched.uri == "file:///source"
+    finally:
+        await dispose_engine(engine)
+
+
+@pytest.mark.asyncio
+async def test_source_repository_update_details_returns_none_for_missing_source(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'missing-source-update.db'}")
+    await create_schema(engine)
+    session_factory = create_session_factory(engine)
+
+    try:
+        async with SQLAlchemyUnitOfWork(session_factory) as uow:
+            result = await uow.sources.update_details(
+                source_id="missing-source",
+                kind="upload",
+                name="Missing",
+                uri="upload://missing",
+            )
+
+        assert result is None
+    finally:
+        await dispose_engine(engine)
+
+
 class FakeAdminRepository:
     def __init__(self, *, existing: object | None, fail_add: bool = False) -> None:
         self.existing = existing

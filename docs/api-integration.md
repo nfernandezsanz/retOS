@@ -223,6 +223,17 @@ curl --header "Authorization: Bearer <token>" \
   http://localhost:8000/domains/<domain_id>/sources
 ```
 
+Update a source's operator-facing details. The source remains attached to the same
+domain; kind, name, and URI changes write a `source.updated` journal event with
+field-level before/after values:
+
+```bash
+curl --request PATCH http://localhost:8000/domains/<domain_id>/sources/<source_id> \
+  --header "Authorization: Bearer <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"kind":"mount","name":"Reviewed corpus","uri":"file:///corpus/reviewed"}'
+```
+
 ## Documents
 
 Create a document with its immutable initial version:
@@ -1182,6 +1193,7 @@ Current console calls:
 - `GET /documents/{document_id}/history`
 - `GET /domains/{domain_id}/sources`
 - `POST /domains/{domain_id}/sources`
+- `PATCH /domains/{domain_id}/sources/{source_id}`
 - `POST /domains/{domain_id}/ingestions/text`
 - `POST /domains/{domain_id}/ingestions/upload`
 - `POST /sources/{source_id}/scan`
@@ -1221,7 +1233,7 @@ audited local accounts:
   account metadata, roles, and active/inactive state.
 
 The workspace can create domains, select an active domain, render its document and source
-inventory, inspect latest-version artifact and segment evidence, create mounted sources,
+inventory, inspect latest-version artifact and segment evidence, create and edit sources,
 queue text and file upload ingestions, queue source
 scans, rebuild the BM25 index, run local smoke/agent multi-hop/SQuAD/HotpotQA/HotpotQA
 agent/Natural Questions/OCR benchmark evals, choose an eval domain scope for

@@ -1257,6 +1257,21 @@ async function createSource(
   });
 }
 
+async function updateSource(
+  token: string,
+  domainId: string,
+  sourceId: string,
+  payload: { kind: SourceKind; name: string; uri: string },
+): Promise<SourceRead> {
+  return requestJson<SourceRead>(`/domains/${domainId}/sources/${sourceId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 async function ingestText(
   token: string,
   domainId: string,
@@ -1807,6 +1822,11 @@ function App() {
   const [sourceName, setSourceName] = useState("");
   const [sourceUri, setSourceUri] = useState("");
   const [sourceKind, setSourceKind] = useState<SourceKind>("mount");
+  const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
+  const [sourceEditKind, setSourceEditKind] = useState<SourceKind>("mount");
+  const [sourceEditName, setSourceEditName] = useState("");
+  const [sourceEditUri, setSourceEditUri] = useState("");
+  const [isUpdatingSource, setIsUpdatingSource] = useState(false);
   const [isQueueingScan, setIsQueueingScan] = useState(false);
   const [isQueueingIndex, setIsQueueingIndex] = useState(false);
   const [queuedJobs, setQueuedJobs] = useState<JobRead[]>([]);
@@ -2621,6 +2641,52 @@ function App() {
       setWorkspaceError(sessionErrorMessage(error, "Source creation failed"));
     } finally {
       setIsCreatingSource(false);
+    }
+  }
+
+  function handleStartSourceEdit(source: SourceRead) {
+    setEditingSourceId(source.id);
+    setSourceEditKind(source.kind);
+    setSourceEditName(source.name);
+    setSourceEditUri(source.uri);
+    setWorkspaceError(null);
+  }
+
+  function handleCancelSourceEdit() {
+    setEditingSourceId(null);
+    setSourceEditKind("mount");
+    setSourceEditName("");
+    setSourceEditUri("");
+  }
+
+  async function handleUpdateSource(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWorkspaceError(null);
+    setIsUpdatingSource(true);
+    try {
+      if (!selectedDomainId || !editingSourceId) {
+        throw new Error("Choose a source before updating it");
+      }
+      const name = sourceEditName.trim();
+      const uri = sourceEditUri.trim();
+      if (!name || !uri) {
+        throw new Error("Source name and URI are required");
+      }
+      const accessToken = await getAdminToken();
+      const updated = await updateSource(accessToken, selectedDomainId, editingSourceId, {
+        kind: sourceEditKind,
+        name,
+        uri,
+      });
+      setSources((current) =>
+        current.map((source) => (source.id === updated.id ? updated : source)),
+      );
+      handleCancelSourceEdit();
+      await refreshAudit(accessToken);
+    } catch (error) {
+      setWorkspaceError(sessionErrorMessage(error, "Source update failed"));
+    } finally {
+      setIsUpdatingSource(false);
     }
   }
 
@@ -4046,29 +4112,107 @@ function App() {
                 </button>
               </form>
               <div className="source-list">
-                {sources.map((source) => (
-                  <article className="source-row" key={source.id}>
-                    <div>
-                      <strong>{source.name}</strong>
-                      <span>{source.uri}</span>
-                    </div>
-                    <span className="badge muted">{source.kind}</span>
-                    <button
-                      className="ghost-action"
-                      disabled={source.kind !== "mount" || isQueueingScan}
-                      data-tooltip={
-                        source.kind === "mount"
-                          ? "Queue a scan for this mounted source"
-                          : "Only mounted sources can be scanned locally"
-                      }
-                      type="button"
-                      onClick={() => void handleScanSource(source.id)}
-                    >
-                      <Play aria-hidden="true" />
-                      {isQueueingScan ? "Queueing" : "Scan"}
-                    </button>
-                  </article>
-                ))}
+                {sources.map((source) => {
+                  const isEditing = editingSourceId === source.id;
+                  return (
+                    <article className={`source-row${isEditing ? " editing" : ""}`} key={source.id}>
+                      {isEditing ? (
+                        <form className="source-edit-form" onSubmit={handleUpdateSource}>
+                          <label>
+                            <span>Kind</span>
+                            <select
+                              aria-label={`Source kind for ${source.name}`}
+                              value={sourceEditKind}
+                              disabled={isUpdatingSource}
+                              onChange={(event) =>
+                                setSourceEditKind(event.target.value as SourceKind)
+                              }
+                            >
+                              <option value="mount">Mount</option>
+                              <option value="upload">Upload</option>
+                              <option value="url">URL</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span>Source name</span>
+                            <input
+                              aria-label={`Source name for ${source.name}`}
+                              value={sourceEditName}
+                              disabled={isUpdatingSource}
+                              onChange={(event) => setSourceEditName(event.target.value)}
+                            />
+                          </label>
+                          <label className="span-two">
+                            <span>URI</span>
+                            <input
+                              aria-label={`Source URI for ${source.name}`}
+                              value={sourceEditUri}
+                              disabled={isUpdatingSource}
+                              onChange={(event) => setSourceEditUri(event.target.value)}
+                            />
+                          </label>
+                          <div className="source-edit-actions">
+                            <button
+                              className="icon-button"
+                              data-tooltip="Save source kind, name, and URI"
+                              disabled={isUpdatingSource}
+                              title="Save source"
+                              type="submit"
+                              aria-label={`Save ${source.name}`}
+                            >
+                              <Check aria-hidden="true" />
+                            </button>
+                            <button
+                              className="icon-button"
+                              data-tooltip="Discard source edits"
+                              disabled={isUpdatingSource}
+                              title="Cancel source edit"
+                              type="button"
+                              aria-label={`Cancel editing ${source.name}`}
+                              onClick={handleCancelSourceEdit}
+                            >
+                              <X aria-hidden="true" />
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <div>
+                            <strong>{source.name}</strong>
+                            <span>{source.uri}</span>
+                          </div>
+                          <span className="badge muted">{source.kind}</span>
+                          <div className="source-actions">
+                            <button
+                              className="icon-button"
+                              data-tooltip="Edit source kind, name, and URI"
+                              title="Edit source"
+                              type="button"
+                              aria-label={`Edit ${source.name}`}
+                              onClick={() => handleStartSourceEdit(source)}
+                            >
+                              <Pencil aria-hidden="true" />
+                            </button>
+                            <button
+                              className="ghost-action"
+                              disabled={source.kind !== "mount" || isQueueingScan}
+                              data-tooltip={
+                                source.kind === "mount"
+                                  ? "Queue a scan for this mounted source"
+                                  : "Only mounted sources can be scanned locally"
+                              }
+                              type="button"
+                              onClick={() => void handleScanSource(source.id)}
+                            >
+                              <Play aria-hidden="true" />
+                              {isQueueingScan ? "Queueing" : "Scan"}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </article>
+                  );
+                })}
                 {selectedDomain && sources.length === 0 ? (
                   <div className="empty-state compact">
                     <Database aria-hidden="true" />

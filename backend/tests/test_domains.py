@@ -12,10 +12,12 @@ from retos.api.routes.domains import (
     DomainCreate,
     DomainUpdate,
     SourceCreate,
+    SourceUpdate,
     create_domain,
     create_source,
     list_domains,
     update_domain,
+    update_source,
 )
 from retos.core.config import Settings
 from retos.domain.admin import AdminUser
@@ -147,6 +149,30 @@ class FakeSources:
             name=name,
             uri=uri,
             created_at=NOW,
+            updated_at=NOW,
+        )
+        return self.source
+
+    async def get(self, source_id: str) -> Source | None:
+        return self.source if self.source is not None and self.source.id == source_id else None
+
+    async def update_details(
+        self,
+        *,
+        source_id: str,
+        kind: str,
+        name: str,
+        uri: str,
+    ) -> Source | None:
+        if self.source is None or self.source.id != source_id:
+            return None
+        self.source = Source(
+            id=self.source.id,
+            domain_id=self.source.domain_id,
+            kind=kind,  # type: ignore[arg-type]
+            name=name,
+            uri=uri,
+            created_at=self.source.created_at,
             updated_at=NOW,
         )
         return self.source
@@ -463,6 +489,237 @@ def test_create_and_list_domain_source(
     listed = domain_client.get(f"/domains/{domain_id}/sources", headers=admin_headers)
     assert listed.status_code == 200
     assert [item["uri"] for item in listed.json()] == ["file:///corpus/research"]
+
+
+def test_update_source_details_records_audit_event(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    domain_response = domain_client.post(
+        "/domains",
+        json={"slug": "source-edit", "name": "Source Edit"},
+        headers=admin_headers,
+    )
+    domain_id = domain_response.json()["id"]
+    source_response = domain_client.post(
+        f"/domains/{domain_id}/sources",
+        json={
+            "kind": "mount",
+            "name": "Raw corpus",
+            "uri": "file:///corpus/raw",
+        },
+        headers=admin_headers,
+    )
+    source_id = source_response.json()["id"]
+
+    updated = domain_client.patch(
+        f"/domains/{domain_id}/sources/{source_id}",
+        json={
+            "kind": "url",
+            "name": "Reviewed corpus",
+            "uri": "https://example.test/corpus",
+        },
+        headers=admin_headers,
+    )
+    listed = domain_client.get(f"/domains/{domain_id}/sources", headers=admin_headers)
+    audit_events = domain_client.get("/audit/journal-events", headers=admin_headers)
+
+    assert updated.status_code == 200
+    assert updated.json()["kind"] == "url"
+    assert updated.json()["name"] == "Reviewed corpus"
+    assert updated.json()["uri"] == "https://example.test/corpus"
+    assert [item["uri"] for item in listed.json()] == ["https://example.test/corpus"]
+    event = next(event for event in audit_events.json() if event["event_type"] == "source.updated")
+    assert event["entity_type"] == "source"
+    assert event["entity_id"] == source_id
+    assert event["payload"]["domain_id"] == domain_id
+    assert {
+        "field": "name",
+        "before": "Raw corpus",
+        "after": "Reviewed corpus",
+    } in event[
+        "payload"
+    ]["changes"]
+    assert {
+        "field": "uri",
+        "before": "file:///corpus/raw",
+        "after": "https://example.test/corpus",
+    } in event["payload"]["changes"]
+
+
+def test_update_source_requires_admin(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    domain_response = domain_client.post(
+        "/domains",
+        json={"slug": "source-viewer-edit", "name": "Source Viewer Edit"},
+        headers=admin_headers,
+    )
+    domain_id = domain_response.json()["id"]
+    source_response = domain_client.post(
+        f"/domains/{domain_id}/sources",
+        json={"kind": "upload", "name": "Viewer Upload", "uri": "upload://viewer"},
+        headers=admin_headers,
+    )
+    domain_client.post(
+        "/admin/users",
+        headers=admin_headers,
+        json={
+            "email": "source-editor-viewer@retos.dev",
+            "password": "source-editor-viewer-password",
+            "roles": ["viewer"],
+        },
+    )
+    login = domain_client.post(
+        "/auth/login",
+        json={
+            "email": "source-editor-viewer@retos.dev",
+            "password": "source-editor-viewer-password",
+        },
+    )
+    viewer_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = domain_client.patch(
+        f"/domains/{domain_id}/sources/{source_response.json()['id']}",
+        json={"kind": "upload", "name": "Nope", "uri": "upload://viewer-new"},
+        headers=viewer_headers,
+    )
+
+    assert response.status_code == 403
+
+
+def test_update_source_rejects_duplicate_uri(
+    domain_client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    domain_response = domain_client.post(
+        "/domains",
+        json={"slug": "source-dup-update", "name": "Source Dup Update"},
+        headers=admin_headers,
+    )
+    domain_id = domain_response.json()["id"]
+    first = domain_client.post(
+        f"/domains/{domain_id}/sources",
+        json={"kind": "upload", "name": "First", "uri": "upload://first"},
+        headers=admin_headers,
+    )
+    second = domain_client.post(
+        f"/domains/{domain_id}/sources",
+        json={"kind": "upload", "name": "Second", "uri": "upload://second"},
+        headers=admin_headers,
+    )
+
+    response = domain_client.patch(
+        f"/domains/{domain_id}/sources/{second.json()['id']}",
+        json={"kind": "upload", "name": "Second renamed", "uri": "upload://first"},
+        headers=admin_headers,
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Source URI already exists for domain"
+
+
+@pytest.mark.asyncio
+async def test_update_source_rejects_missing_source() -> None:
+    domain = domain_fixture()
+    uow = FakeDomainUnitOfWork(domain=domain)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await update_source(
+            SourceUpdate(kind="upload", name="Missing", uri="upload://missing"),
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id=domain.id,
+            source_id="missing-source",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Source not found"
+
+
+@pytest.mark.asyncio
+async def test_update_source_rejects_missing_domain() -> None:
+    uow = FakeDomainUnitOfWork()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await update_source(
+            SourceUpdate(kind="upload", name="Missing", uri="upload://missing"),
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id="missing-domain",
+            source_id="missing-source",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Domain not found"
+
+
+@pytest.mark.asyncio
+async def test_update_source_unit_records_changes() -> None:
+    domain = domain_fixture()
+    source = source_fixture(domain.id)
+    uow = FakeDomainUnitOfWork(domain=domain, source=source)
+
+    updated = await update_source(
+        SourceUpdate(kind="mount", name="Mounted Source", uri="file:///updated"),
+        actor="admin@retos.dev",
+        uow=uow,  # type: ignore[arg-type]
+        domain_id=domain.id,
+        source_id=source.id,
+    )
+
+    assert updated.name == "Mounted Source"
+    assert uow.journal_events.events == [
+        {
+            "actor": "admin@retos.dev",
+            "event_type": "source.updated",
+            "entity_type": "source",
+            "entity_id": source.id,
+            "payload": {
+                "domain_id": domain.id,
+                "source_id": source.id,
+                "changes": [
+                    {
+                        "field": "kind",
+                        "before": "upload",
+                        "after": "mount",
+                    },
+                    {
+                        "field": "name",
+                        "before": "Source One",
+                        "after": "Mounted Source",
+                    },
+                    {
+                        "field": "uri",
+                        "before": "upload://source-one",
+                        "after": "file:///updated",
+                    },
+                ],
+            },
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_update_source_rolls_integrity_race_into_conflict() -> None:
+    domain = domain_fixture()
+    source = source_fixture(domain.id)
+    uow = FakeDomainUnitOfWork(domain=domain, source=source, fail_commit=True)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await update_source(
+            SourceUpdate(kind="upload", name="Source Race", uri="upload://source-race"),
+            actor="admin@retos.dev",
+            uow=uow,  # type: ignore[arg-type]
+            domain_id=domain.id,
+            source_id=source.id,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail == "Source URI already exists for domain"
 
 
 def test_list_sources_rejects_missing_domain(

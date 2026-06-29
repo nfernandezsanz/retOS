@@ -909,6 +909,8 @@ h2 {
 .domain-toolbar select,
 .source-form input,
 .source-form select,
+.source-edit-form input,
+.source-edit-form select,
 .file-upload-form input,
 .file-upload-form select,
 .text-ingestion-form input,
@@ -942,6 +944,8 @@ h2 {
 .domain-toolbar select,
 .source-form input,
 .source-form select,
+.source-edit-form input,
+.source-edit-form select,
 .file-upload-form input,
 .file-upload-form select,
 .text-ingestion-form input,
@@ -969,6 +973,8 @@ h2 {
 .domain-toolbar select:focus-visible,
 .source-form input:focus-visible,
 .source-form select:focus-visible,
+.source-edit-form input:focus-visible,
+.source-edit-form select:focus-visible,
 .file-upload-form input:focus-visible,
 .file-upload-form select:focus-visible,
 .text-ingestion-form input:focus-visible,
@@ -992,6 +998,7 @@ button:focus-visible {
 .domain-form,
 .domain-edit-form,
 .source-form,
+.source-edit-form,
 .file-upload-form,
 .text-ingestion-form,
 .eval-dataset-form {
@@ -1004,6 +1011,7 @@ button:focus-visible {
 .domain-edit-form label,
 .domain-toolbar label,
 .source-form label,
+.source-edit-form label,
 .file-upload-form label,
 .text-ingestion-form label,
 .eval-dataset-form label {
@@ -1015,6 +1023,7 @@ button:focus-visible {
 
 .domain-form .span-two,
 .source-form .span-two,
+.source-edit-form .span-two,
 .file-upload-form .span-two,
 .text-ingestion-form .span-two,
 .eval-dataset-form .span-two {
@@ -1024,6 +1033,7 @@ button:focus-visible {
 .domain-form .secondary-action,
 .domain-edit-form .secondary-action,
 .source-form .secondary-action,
+.source-edit-form .secondary-action,
 .file-upload-form .secondary-action,
 .text-ingestion-form .secondary-action,
 .eval-dataset-form .secondary-action {
@@ -1389,6 +1399,11 @@ button:focus-visible {
   padding: 12px;
 }
 
+.source-row.editing {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+
 .source-row div {
   min-width: 0;
 }
@@ -1407,6 +1422,25 @@ button:focus-visible {
 
 .source-row .ghost-action {
   min-width: 96px;
+}
+
+.source-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.source-edit-form {
+  grid-template-columns: minmax(120px, 0.38fr) minmax(180px, 0.62fr);
+  align-items: end;
+}
+
+.source-edit-actions {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .selected-domain {
@@ -3090,6 +3124,7 @@ button:focus-visible {
   .domain-edit-form,
   .domain-toolbar,
   .source-form,
+  .source-edit-form,
   .file-upload-form,
   .text-ingestion-form,
   .admin-user-form,
@@ -3129,6 +3164,7 @@ button:focus-visible {
   .document-edit-form,
   .history-change,
   .source-row,
+  .source-edit-form,
   .eval-case-row,
   .eval-case-row > div:first-child,
   .eval-run-row,
@@ -3227,6 +3263,7 @@ button:focus-visible {
   .domain-edit-form,
   .domain-toolbar,
   .source-form,
+  .source-edit-form,
   .file-upload-form,
   .text-ingestion-form,
   .query-form,

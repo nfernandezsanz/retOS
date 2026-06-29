@@ -1186,7 +1186,40 @@ async function mockProviderApi(page: Page) {
     });
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/sources/, async (route) => {
-    const domainId = new URL(route.request().url()).pathname.split("/")[2];
+    const pathParts = new URL(route.request().url()).pathname.split("/");
+    const domainId = pathParts[2];
+    const sourceId = pathParts[4] ?? null;
+    if (route.request().method() === "PATCH" && sourceId) {
+      const payload = (await route.request().postDataJSON()) as {
+        kind: "mount" | "upload" | "url";
+        name: string;
+        uri: string;
+      };
+      const index = sources.findIndex(
+        (source) => source.domain_id === domainId && source.id === sourceId,
+      );
+      if (index === -1) {
+        await route.fulfill({
+          contentType: "application/json",
+          status: 404,
+          json: { detail: "Source not found" },
+        });
+        return;
+      }
+      const updated = {
+        ...sources[index],
+        kind: payload.kind,
+        name: payload.name,
+        uri: payload.uri,
+        updated_at: "2026-06-27T00:02:00Z",
+      };
+      sources[index] = updated;
+      await route.fulfill({
+        contentType: "application/json",
+        json: updated,
+      });
+      return;
+    }
     if (route.request().method() === "POST") {
       const created = {
         id: "source-456",
@@ -2014,6 +2047,12 @@ test("loads the operational console", async ({ page }) => {
   await page.getByLabel("URI").fill("file:///corpus/policy");
   await page.getByRole("button", { name: "Add source" }).click();
   await expect(page.getByLabel("Domain sources").getByText("Policy Corpus")).toBeVisible();
+  await page.getByRole("button", { name: "Edit Policy Corpus" }).click();
+  await page.getByLabel("Source name for Policy Corpus").fill("Policy Corpus Reviewed");
+  await page.getByLabel("Source URI for Policy Corpus").fill("file:///corpus/policy-reviewed");
+  await page.getByRole("button", { name: "Save Policy Corpus" }).click();
+  await expect(page.getByLabel("Domain sources").getByText("Policy Corpus Reviewed")).toBeVisible();
+  await expect(page.getByLabel("Domain sources").getByText("file:///corpus/policy-reviewed")).toBeVisible();
 
   await page.getByLabel("Domain sources").getByRole("button", { name: "Scan" }).first().click();
 

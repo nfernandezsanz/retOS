@@ -514,6 +514,23 @@ class SourceRepository:
             return None
         return source_from_record(record)
 
+    async def update_details(
+        self,
+        *,
+        source_id: str,
+        kind: SourceKind,
+        name: str,
+        uri: str,
+    ) -> Source | None:
+        record = await self._session.get(SourceRecord, source_id)
+        if record is None:
+            return None
+        record.kind = kind
+        record.name = name
+        record.uri = uri
+        await self._session.flush()
+        return source_from_record(record)
+
 
 class DocumentRepository:
     def __init__(self, session: AsyncSession) -> None:

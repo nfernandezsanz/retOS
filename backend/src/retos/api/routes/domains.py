@@ -56,6 +56,12 @@ class SourceCreate(BaseModel):
     uri: str = Field(min_length=1, max_length=4000)
 
 
+class SourceUpdate(BaseModel):
+    kind: SourceKind
+    name: Name
+    uri: str = Field(min_length=1, max_length=4000)
+
+
 class SourceRead(BaseModel):
     id: str
     domain_id: str
@@ -226,3 +232,68 @@ async def list_sources(
         await ensure_domain_access(actor=actor, domain_id=domain_id, uow=uow)
         sources = await uow.sources.list_for_domain(domain_id)
     return [SourceRead.from_source(source) for source in sources]
+
+
+@router.patch("/{domain_id}/sources/{source_id}", response_model=SourceRead)
+async def update_source(
+    payload: SourceUpdate,
+    actor: AdminSubjectDep,
+    uow: UnitOfWorkDep,
+    domain_id: Annotated[str, Path(min_length=1)],
+    source_id: Annotated[str, Path(min_length=1)],
+) -> SourceRead:
+    async with uow:
+        domain = await uow.domains.get(domain_id)
+        if domain is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
+        existing = await uow.sources.get(source_id)
+        if existing is None or existing.domain_id != domain_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+        duplicate = await uow.sources.get_by_domain_and_uri(domain_id, payload.uri)
+        if duplicate is not None and duplicate.id != source_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Source URI already exists for domain",
+            )
+        source = await uow.sources.update_details(
+            source_id=source_id,
+            kind=payload.kind,
+            name=payload.name,
+            uri=payload.uri,
+        )
+        assert source is not None
+        await uow.journal_events.add(
+            actor=actor,
+            event_type="source.updated",
+            entity_type="source",
+            entity_id=source.id,
+            payload={
+                "domain_id": domain_id,
+                "source_id": source.id,
+                "changes": [
+                    {
+                        "field": "kind",
+                        "before": existing.kind,
+                        "after": source.kind,
+                    },
+                    {
+                        "field": "name",
+                        "before": existing.name,
+                        "after": source.name,
+                    },
+                    {
+                        "field": "uri",
+                        "before": existing.uri,
+                        "after": source.uri,
+                    },
+                ],
+            },
+        )
+        try:
+            await uow.commit()
+        except IntegrityError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Source URI already exists for domain",
+            ) from exc
+    return SourceRead.from_source(source)
