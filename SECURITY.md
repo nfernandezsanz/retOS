@@ -52,6 +52,7 @@ Before production promotion, a human operator must record evidence for:
 Run these before asking a human to approve a production pilot:
 
 ```bash
+make local-acceptance
 make security-policy-check
 make dependency-audit
 make release-check

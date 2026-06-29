@@ -54,6 +54,7 @@ for phrase in (
     "SBOM/provenance",
     "Cosign signature verification",
     "shared API/worker/migrate image ID",
+    "make local-acceptance",
     "make dependency-audit",
     "make production-preflight",
     "make ci-status-check",
