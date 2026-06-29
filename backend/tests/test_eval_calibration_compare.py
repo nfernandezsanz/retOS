@@ -151,6 +151,44 @@ def test_compare_manifests_rejects_missing_candidate_metric() -> None:
         raise AssertionError("Expected missing metric to fail")
 
 
+def test_compare_manifests_rejects_dataset_profile_drift() -> None:
+    cli = load_compare_cli()
+    baseline = manifest_payload()
+    candidate = deepcopy(baseline)
+    candidate["targets"][0]["dataset"]["profile"] = "different-squad-profile"
+
+    try:
+        cli.compare_manifests(
+            baseline=baseline,
+            candidate=candidate,
+            max_regression=0.0,
+            title="Trend",
+        )
+    except cli.CalibrationComparisonError as exc:
+        assert "changed dataset profile" in str(exc)
+    else:
+        raise AssertionError("Expected dataset profile drift to fail")
+
+
+def test_compare_manifests_rejects_dataset_suite_drift() -> None:
+    cli = load_compare_cli()
+    baseline = manifest_payload()
+    candidate = deepcopy(baseline)
+    candidate["targets"][0]["dataset"]["suite"] = "natural-questions"
+
+    try:
+        cli.compare_manifests(
+            baseline=baseline,
+            candidate=candidate,
+            max_regression=0.0,
+            title="Trend",
+        )
+    except cli.CalibrationComparisonError as exc:
+        assert "changed dataset suite" in str(exc)
+    else:
+        raise AssertionError("Expected dataset suite drift to fail")
+
+
 def test_cli_writes_comparison_markdown(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     cli = load_compare_cli()
     baseline_path = tmp_path / "baseline.json"

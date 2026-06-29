@@ -132,10 +132,13 @@ require(
     "workspaceSections" in app
     and "sectionFromHash" in app
     and 'aria-current={activeSection === section.id ? "page" : undefined}' in app
+    and "FloatingTooltip" in app
+    and 'role="tooltip"' in app
     and "section-switcher" in styles
     and "overview-actions" in styles
-    and "[data-tooltip]::after" in styles,
-    "frontend must keep section navigation, Overview actions, and tooltip styling aligned",
+    and ".floating-tooltip" in styles
+    and 'getByRole("tooltip")' in e2e,
+    "frontend must keep section navigation, Overview actions, and floating tooltip behavior aligned",
 )
 require("frontend/visual-audit/" in gitignore, ".gitignore must exclude visual audit PNGs")
 require("frontend/visual-audit" in dockerignore, ".dockerignore must exclude visual audit PNGs")

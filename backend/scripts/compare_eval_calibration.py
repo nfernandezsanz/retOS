@@ -148,6 +148,7 @@ def compare_target(
     candidate: dict[str, Any],
     max_regression: float,
 ) -> dict[str, Any]:
+    candidate_dataset = dataset_metadata(key, baseline=baseline, candidate=candidate)
     baseline_records = dataset_records(baseline)
     candidate_records = dataset_records(candidate)
     baseline_cases = int_value(baseline.get("case_count"))
@@ -180,9 +181,10 @@ def compare_target(
         },
         "metrics": metrics,
         "dataset": {
-            "profile": string_value(candidate.get("dataset", {}).get("profile")),
-            "source_url": string_value(candidate.get("dataset", {}).get("source_url")),
-            "license_note": string_value(candidate.get("dataset", {}).get("license_note")),
+            "profile": candidate_dataset["profile"],
+            "suite": candidate_dataset["suite"],
+            "source_url": candidate_dataset["source_url"],
+            "license_note": candidate_dataset["license_note"],
         },
     }
 
@@ -241,11 +243,43 @@ def manifest_summary(manifest: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def dataset_records(target: dict[str, Any]) -> int:
+def dataset_metadata(
+    key: str,
+    *,
+    baseline: dict[str, Any],
+    candidate: dict[str, Any],
+) -> dict[str, str]:
+    baseline_dataset = dataset_payload(baseline)
+    candidate_dataset = dataset_payload(candidate)
+    for field in ("profile", "suite"):
+        baseline_value = string_value(baseline_dataset.get(field))
+        candidate_value = string_value(candidate_dataset.get(field))
+        if not baseline_value:
+            raise CalibrationComparisonError(f"Baseline target {key} is missing dataset {field}")
+        if not candidate_value:
+            raise CalibrationComparisonError(f"Candidate target {key} is missing dataset {field}")
+        if candidate_value != baseline_value:
+            raise CalibrationComparisonError(
+                f"Candidate target {key} changed dataset {field} "
+                f"from {baseline_value} to {candidate_value}"
+            )
+    return {
+        "profile": string_value(candidate_dataset.get("profile")),
+        "suite": string_value(candidate_dataset.get("suite")),
+        "source_url": string_value(candidate_dataset.get("source_url")),
+        "license_note": string_value(candidate_dataset.get("license_note")),
+    }
+
+
+def dataset_payload(target: dict[str, Any]) -> dict[str, Any]:
     dataset = target.get("dataset")
     if not isinstance(dataset, dict):
         raise CalibrationComparisonError(f"Target {target.get('key')} is missing dataset metadata")
-    return int_value(dataset.get("records"))
+    return dataset
+
+
+def dataset_records(target: dict[str, Any]) -> int:
+    return int_value(dataset_payload(target).get("records"))
 
 
 def metrics_payload(target: dict[str, Any]) -> dict[str, float]:
@@ -341,6 +375,7 @@ def render_markdown(comparison: dict[str, Any]) -> str:
                 "| Provenance | Value |",
                 "| --- | --- |",
                 f"| Dataset profile | {target['dataset']['profile']} |",
+                f"| Dataset suite | {target['dataset']['suite']} |",
                 f"| Source URL | {markdown_value(target['dataset']['source_url'])} |",
                 f"| License note | {markdown_value(target['dataset']['license_note'])} |",
                 "",
