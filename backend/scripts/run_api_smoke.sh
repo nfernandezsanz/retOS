@@ -40,5 +40,5 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"${python_bin}" scripts/wait_http.py "${base_url}/healthz" 30
+"${python_bin}" scripts/wait_http.py "${base_url}/readyz" 30
 "${python_bin}" scripts/smoke_api.py "${base_url}"

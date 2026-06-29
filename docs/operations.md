@@ -231,10 +231,15 @@ Use these checks after deploys, restores, and upgrades:
 
 ```bash
 curl --fail http://localhost:8000/healthz
+curl --fail http://localhost:8000/readyz
 curl --fail http://localhost:8080/
 docker compose ps
 docker compose logs --tail 100 api worker migrate
 ```
+
+Use `/healthz` for process liveness and `/readyz` for dependency readiness. The API
+container healthcheck uses `/readyz`, so an unhealthy API container means either the
+process is unreachable or the database readiness check failed.
 
 For a full disposable-stack validation:
 

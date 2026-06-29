@@ -1675,6 +1675,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(openAiProviderRow.getByText("Missing config")).toBeVisible();
   await expect(openAiProviderRow.getByText("Blocked")).toBeVisible();
   await expect(openAiProviderRow.getByText("Missing RETOS_OPENAI_API_KEY")).toBeVisible();
+  await page.getByLabel("Admin modules").getByRole("link", { name: "Users" }).click();
   await expect(page.getByLabel("Admin users").getByText("admin@retos.dev")).toBeVisible();
   await page.getByLabel("New admin email").fill("ui-admin@retos.dev");
   await page.getByLabel("New admin password").fill("ui-admin-password");
@@ -1708,11 +1709,11 @@ test("loads the operational console", async ({ page }) => {
     "href",
     "#documents-library",
   );
-  await page.getByLabel("Documents modules").getByRole("link", { name: "Upload" }).click();
-  await expect(page.getByLabel("File upload")).toBeVisible();
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
   await expect(page.getByText("Smoke Document")).toBeVisible();
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Sources" }).click();
   await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Library" }).click();
   await page.getByRole("button", { name: "Evidence Smoke Document" }).click();
   await expect(page.getByLabel("Evidence for Smoke Document").getByText("v1")).toBeVisible();
   await expect(page.getByLabel("Artifacts for Smoke Document").getByText("raw_text")).toBeVisible();
@@ -1723,14 +1724,18 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.getByLabel("Segments for Smoke Document").getByText("Smoke segment text for search readiness."),
   ).toBeVisible();
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Upload" }).click();
+  await expect(page.getByLabel("File upload")).toBeVisible();
 
   await page.getByRole("link", { name: "Queries" }).first().click();
   await expect(page.getByLabel("Queries modules").getByRole("link", { name: "Live" })).toHaveAttribute(
     "data-tooltip",
     /SSE progress/,
   );
+  await page.getByLabel("Queries modules").getByRole("link", { name: "Live" }).click();
   await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
   await expect(page.getByLabel("Live progress summary").getByText("Waiting")).toBeVisible();
+  await page.getByLabel("Queries modules").getByRole("link", { name: "Ask" }).click();
   await page
     .getByRole("textbox", { name: "Question", exact: true })
     .fill("What evidence mentions search readiness?");
@@ -1754,6 +1759,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();
   await expect(page.getByLabel("Query citations").getByText("page=1")).toBeVisible();
 
+  await page.getByLabel("Queries modules").getByRole("link", { name: "Live" }).click();
   await page.getByRole("button", { name: "Connect live updates" }).click();
   await expect(page.getByLabel("Live progress summary").getByText("agent.started")).toBeVisible();
   await expect(page.getByLabel("Live progress summary").getByText("2 live events")).toBeVisible();
@@ -1772,6 +1778,7 @@ test("loads the operational console", async ({ page }) => {
     page.getByLabel("Active domain").getByRole("option", { name: "Policy Research" }),
   ).toBeAttached();
 
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Sources" }).click();
   await page.getByPlaceholder("Research corpus").fill("Policy Corpus");
   await page.getByLabel("URI").fill("file:///corpus/policy");
   await page.getByRole("button", { name: "Add source" }).click();
@@ -1781,6 +1788,7 @@ test("loads the operational console", async ({ page }) => {
 
   await page.getByRole("button", { name: "Rebuild index" }).click();
 
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Upload" }).click();
   await page.getByLabel("Upload file").setInputFiles({
     name: "rejected-fixture.txt",
     mimeType: "text/plain",
@@ -1817,6 +1825,7 @@ test("loads the operational console", async ({ page }) => {
   await page.getByLabel("Show archived").uncheck();
   await expect(page.getByLabel("Domain documents").getByText("Uploaded Fixture Reviewed")).toBeVisible();
 
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Text" }).click();
   await page.getByPlaceholder("Research note", { exact: true }).fill("Policy Note");
   await page
     .getByPlaceholder("Paste local fixture text, notes, transcripts, or extracted content.")
@@ -1835,6 +1844,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
   await expect(page.getByText("title: Policy Note")).toBeVisible();
   await page.getByRole("button", { name: "Refresh audit" }).click();
+  await page.getByLabel("Audit modules").getByRole("link", { name: "Events" }).click();
   await expect(page.getByLabel("Journal events").getByText("job.created").first()).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("Hash 2222222222222222")).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("document.archived")).toBeVisible();
@@ -1843,12 +1853,14 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),
   ).toBeVisible();
+  await page.getByLabel("Audit modules").getByRole("link", { name: "Progress" }).click();
   const scanProgressGroup = page
     .getByLabel("Progress grouped by job")
     .locator("article")
     .filter({ hasText: "job-scan-1" });
   await expect(scanProgressGroup.getByText("Completed ingest.source")).toBeVisible();
   await expect(scanProgressGroup.getByText("3")).toBeVisible();
+  await page.getByLabel("Audit modules").getByRole("link", { name: "Jobs" }).click();
   await page.getByRole("button", { name: "Export audit" }).click();
   await expect(page.getByText("retos-audit-export.json:")).toBeVisible();
 
@@ -1862,18 +1874,20 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval metadata").getByText("built-in")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("retos-smoke-fixtures")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("apollo-guidance")).toBeVisible();
-  await expect(page.locator("#evals").getByText("eval.run succeeded")).toBeVisible();
+  await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
   await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("3 cases")).toBeVisible();
   await expect(page.getByLabel("Eval trends").getByText("retos-smoke")).toBeVisible();
   await expect(page.getByLabel("Eval trends").getByText("retrieval recall")).toBeVisible();
 
+  await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
   await page.getByRole("button", { name: "Run agent multi-hop" }).click();
   await expect(page.getByLabel("Eval metrics").getByText("multi hop support")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("agent-multihop-fixtures")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("apollo-telemetry-bridge")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("invoice-retention-policy")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("incident-escalation-triage")).toBeVisible();
+  await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
   await expect(page.getByLabel("Eval run history").getByText("agent-multihop")).toBeVisible();
   await expect(page.getByLabel("Eval trends").getByText("agent-multihop")).toBeVisible();
   const agentEvalRunRow = page
@@ -1882,6 +1896,7 @@ test("loads the operational console", async ({ page }) => {
     .filter({ hasText: "agent-multihop" });
   await expect(agentEvalRunRow.getByText("3 cases")).toBeVisible();
 
+  await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
   await page.getByLabel("Eval domain scope").selectOption("domain-123");
   await expect(page.getByLabel("Active eval scope").getByText("Smoke Research")).toHaveCount(2);
   await page.getByLabel("SQuAD dataset path").fill("ui-squad.json");
@@ -1891,44 +1906,52 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Eval metadata").getByText("squad-v2")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("/evals/datasets/ui-squad.json")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("squad-mars-red-planet")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-squad.json")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-squad.md")).toBeVisible();
+  await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
   await expect(page.getByLabel("Eval run history").getByText("squad-v2")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("Smoke Research")).toBeVisible();
   await expect(page.getByLabel("Eval run history").getByText("retos-smoke")).toHaveCount(0);
   await expect(page.getByLabel("Eval run history").getByText("2 cases")).toBeVisible();
-  await expect(page.getByLabel("Eval report paths").getByText("ui-squad.json")).toBeVisible();
-  await expect(page.getByLabel("Eval report paths").getByText("ui-squad.md")).toBeVisible();
 
+  await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
   await page.getByLabel("HotpotQA dataset path").fill("ui-hotpotqa.json");
   await page.getByLabel("HotpotQA max cases").fill("1");
   await page.getByLabel("HotpotQA report stem").fill("ui-hotpotqa");
   await page.getByRole("button", { name: "Run HotpotQA eval" }).click();
   await expect(page.getByLabel("Eval cases").getByText("hotpotqa-vela-air-force")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.json")).toBeVisible();
+  await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.md")).toBeVisible();
+  await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
   await expect(page.getByLabel("Eval run history").getByText("hotpotqa")).toBeVisible();
   const hotpotqaEvalRunRow = page
     .getByLabel("Eval run history")
     .locator("article")
     .filter({ hasText: "hotpotqa" });
   await expect(hotpotqaEvalRunRow.getByText("1 cases")).toBeVisible();
-  await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.json")).toBeVisible();
-  await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa.md")).toBeVisible();
 
+  await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
   await page.getByLabel("HotpotQA report stem").fill("ui-hotpotqa-agent");
   await page.getByRole("button", { name: "Run HotpotQA agent" }).click();
   await expect(page.getByLabel("Eval cases").getByText("hotpotqa-agent-vela-air-force")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("hotpotqa-agent")).toBeVisible();
-  await expect(page.getByLabel("Eval run history").getByText("hotpotqa-agent")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa-agent.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-hotpotqa-agent.md")).toBeVisible();
+  await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
+  await expect(page.getByLabel("Eval run history").getByText("hotpotqa-agent")).toBeVisible();
 
+  await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
   await page.getByLabel("Natural Questions dataset path").fill("ui-nq.jsonl");
   await page.getByLabel("Natural Questions max cases").fill("1");
   await page.getByLabel("Natural Questions report stem").fill("ui-natural-questions");
   await page.getByRole("button", { name: "Run Natural Questions eval" }).click();
   await expect(page.getByLabel("Eval cases").getByText("natural-questions-123")).toBeVisible();
-  await expect(page.getByLabel("Eval run history").getByText("natural-questions")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-natural-questions.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-natural-questions.md")).toBeVisible();
+  await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
+  await expect(page.getByLabel("Eval run history").getByText("natural-questions")).toBeVisible();
 
+  await page.getByLabel("Evals modules").getByRole("link", { name: "Run", exact: true }).click();
   await page.getByLabel("OCR benchmark path").fill("ocr-benchmark/manifest.json");
   await page.getByLabel("OCR benchmark format").selectOption("manifest");
   await page.getByLabel("OCR benchmark max cases").fill("1");
@@ -1936,11 +1959,13 @@ test("loads the operational console", async ({ page }) => {
   await page.getByRole("button", { name: "Run OCR benchmark" }).click();
   await expect(page.getByLabel("Eval metrics").getByText("character error rate")).toBeVisible();
   await expect(page.getByLabel("Eval cases").getByText("receipt-001")).toBeVisible();
-  await expect(page.getByLabel("Eval run history").getByText("ocr-manifest")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-ocr-benchmark.json")).toBeVisible();
   await expect(page.getByLabel("Eval report paths").getByText("ui-ocr-benchmark.md")).toBeVisible();
+  await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
+  await expect(page.getByLabel("Eval run history").getByText("ocr-manifest")).toBeVisible();
 
   await page.getByRole("button", { name: "Rerun ocr-manifest" }).click();
+  await page.getByLabel("Evals modules").getByRole("link", { name: "History" }).click();
   await expect(page.getByLabel("Eval run history").getByText("ocr-manifest")).toHaveCount(2);
   await expect(page.getByLabel("Eval trends").getByText("2 runs")).toBeVisible();
 
@@ -1984,6 +2009,7 @@ test("loads the operational console", async ({ page }) => {
   );
 
   await page.getByRole("link", { name: "Queries" }).first().click();
+  await page.getByLabel("Queries modules").getByRole("link", { name: "Live" }).click();
   await page.getByRole("button", { name: "Connect live updates" }).click();
   await expect(
     page.getByLabel("Live progress events").locator(".event-row").filter({ hasText: "job.queued" }),

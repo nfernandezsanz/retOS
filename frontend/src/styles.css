@@ -30,6 +30,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -272,6 +276,12 @@ button:disabled {
 .module-nav a:focus-visible {
   outline: 3px solid var(--retos-primary-ring);
   outline-offset: 2px;
+}
+
+.module-nav a[aria-current="page"] {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: var(--retos-primary);
 }
 
 #documents-library,
@@ -1100,17 +1110,16 @@ button:focus-visible {
 .source-workspace {
   display: grid;
   gap: 14px;
-  margin-top: 18px;
-  border-top: 1px solid #dbe3ef;
-  padding-top: 18px;
+}
+
+.file-upload {
+  display: grid;
+  gap: 14px;
 }
 
 .text-ingestion {
   display: grid;
   gap: 14px;
-  margin-top: 18px;
-  border-top: 1px solid #dbe3ef;
-  padding-top: 18px;
 }
 
 .section-heading {
@@ -1694,9 +1703,6 @@ button:focus-visible {
 .eval-history {
   display: grid;
   gap: 12px;
-  margin-top: 18px;
-  border-top: 1px solid #dbe3ef;
-  padding-top: 18px;
 }
 
 .eval-comparison {
@@ -2115,7 +2121,6 @@ button:focus-visible {
 .job-progress-groups {
   display: grid;
   gap: 12px;
-  margin-top: 16px;
 }
 
 .job-progress-list {
@@ -2192,7 +2197,6 @@ button:focus-visible {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  margin-top: 16px;
 }
 
 .audit-event-panel {
@@ -2312,9 +2316,6 @@ button:focus-visible {
 .admin-users {
   display: grid;
   gap: 12px;
-  margin-top: 18px;
-  border-top: 1px solid #dbe3ef;
-  padding-top: 18px;
 }
 
 .admin-user-form {
@@ -2660,6 +2661,13 @@ button:focus-visible {
   }
 
   [data-tooltip]::after {
+    display: none;
+  }
+
+  [data-tooltip]:hover::after,
+  [data-tooltip]:focus-visible::after,
+  .sidebar [data-tooltip]:hover::after,
+  .sidebar [data-tooltip]:focus-visible::after {
     display: none;
   }
 }

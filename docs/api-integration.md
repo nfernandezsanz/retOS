@@ -2,6 +2,28 @@
 
 This guide documents the stable integration surface currently available to the React console, browser smoke tests, and external clients.
 
+## Health And Readiness
+
+`GET /healthz` is the cheap liveness check. It returns `{"status":"ok","service":"retos-api"}`
+without touching downstream dependencies.
+
+`GET /readyz` is the Docker/operator readiness check. It validates a lightweight database
+round trip and returns component status:
+
+```json
+{
+  "status": "ok",
+  "service": "retos-api",
+  "components": {
+    "database": "ok"
+  }
+}
+```
+
+If the database cannot be reached, `/readyz` returns `503` with
+`components.database="unavailable"`. Neither endpoint requires authentication and neither
+returns secrets.
+
 ## Authentication And Authorization
 
 Operational endpoints require a bearer token from a persisted local account. The default

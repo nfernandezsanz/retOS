@@ -9,6 +9,7 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     route_paths = set(app.openapi()["paths"])
 
     assert "/healthz" in route_paths
+    assert "/readyz" in route_paths
     assert "/auth/login" in route_paths
     assert "/admin/users" in route_paths
     assert "/admin/users/{admin_user_id}/status" in route_paths

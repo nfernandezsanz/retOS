@@ -220,6 +220,20 @@ def main() -> None:
                 health.json() == {"status": "ok", "service": "retos-api"},
                 "invalid healthz body",
             )
+            readiness = client.get("/readyz")
+            require(
+                readiness.status_code == 200,
+                f"readyz failed: {readiness.status_code} {readiness.text}",
+            )
+            require(
+                readiness.json()
+                == {
+                    "status": "ok",
+                    "service": "retos-api",
+                    "components": {"database": "ok"},
+                },
+                "invalid readyz body",
+            )
 
             unauthorized_stream = client.get("/events/progress")
             require(

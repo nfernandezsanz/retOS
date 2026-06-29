@@ -86,6 +86,7 @@ Then open the console and API:
 | Use the React console | http://localhost:8080 |
 | Inspect the API | http://localhost:8000/docs |
 | Check API health | http://localhost:8000/healthz |
+| Check API readiness | http://localhost:8000/readyz |
 | Watch RabbitMQ | http://localhost:15672 |
 
 Pull the default local model when you want Ollama-backed runs:

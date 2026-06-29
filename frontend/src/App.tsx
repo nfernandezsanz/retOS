@@ -226,6 +226,18 @@ function sectionFromHash(hash: string): WorkspaceSection {
   return workspaceModuleSection.get(candidate) ?? "overview";
 }
 
+function firstModuleForSection(section: WorkspaceSection): string | null {
+  return workspaceModules[section][0]?.id ?? null;
+}
+
+function moduleFromHash(hash: string, section: WorkspaceSection): string | null {
+  const candidate = hash.replace("#", "");
+  if (workspaceModules[section].some((module) => module.id === candidate)) {
+    return candidate;
+  }
+  return firstModuleForSection(section);
+}
+
 function moduleHref(moduleId: string): string {
   return `#${moduleId}`;
 }
@@ -1748,6 +1760,9 @@ function App() {
   const [activeSection, setActiveSection] = useState<WorkspaceSection>(() =>
     sectionFromHash(window.location.hash),
   );
+  const [activeModule, setActiveModule] = useState<string | null>(() =>
+    moduleFromHash(window.location.hash, sectionFromHash(window.location.hash)),
+  );
 
   const activeProviderLabel = useMemo(() => {
     if (!catalog) {
@@ -1833,7 +1848,9 @@ function App() {
 
   useEffect(() => {
     const syncSectionFromHash = () => {
-      setActiveSection(sectionFromHash(window.location.hash));
+      const nextSection = sectionFromHash(window.location.hash);
+      setActiveSection(nextSection);
+      setActiveModule(moduleFromHash(window.location.hash, nextSection));
     };
 
     syncSectionFromHash();
@@ -1847,8 +1864,21 @@ function App() {
   ) {
     event.preventDefault();
     setActiveSection(section);
-    window.history.replaceState(null, "", `#${section}`);
-    document.getElementById("overview")?.focus();
+    const nextModule = firstModuleForSection(section);
+    setActiveModule(nextModule);
+    window.history.replaceState(null, "", nextModule ? `#${nextModule}` : `#${section}`);
+    window.requestAnimationFrame(() => document.getElementById("overview")?.focus());
+  }
+
+  function handleModuleClick(event: MouseEvent<HTMLAnchorElement>, moduleId: string) {
+    event.preventDefault();
+    activateModule(moduleId);
+  }
+
+  function activateModule(moduleId: string) {
+    setActiveModule(moduleId);
+    window.history.replaceState(null, "", `#${moduleId}`);
+    window.requestAnimationFrame(() => document.getElementById(moduleId)?.focus());
   }
 
   useEffect(() => {
@@ -2274,6 +2304,7 @@ function App() {
       setDomainName("");
       setDomainDescription("");
       await refreshWorkspace(accessToken, domain.id);
+      activateModule("documents-library");
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Domain creation failed");
     } finally {
@@ -2506,6 +2537,7 @@ function App() {
       ]);
       setDocuments(nextDocuments);
       setQueuedJobs(nextJobs.length > 0 ? nextJobs : [job]);
+      activateModule("documents-library");
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Text ingestion failed");
     } finally {
@@ -2545,6 +2577,7 @@ function App() {
       ]);
       setDocuments(nextDocuments);
       setQueuedJobs(nextJobs.length > 0 ? nextJobs : [job]);
+      activateModule("documents-library");
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "File upload failed");
     } finally {
@@ -2611,6 +2644,7 @@ function App() {
         throw new Error("Query was queued; open Jobs to inspect worker progress");
       }
       setQueryResult(response.result);
+      activateModule("queries-runner");
     } catch (error) {
       setQueryError(error instanceof Error ? error.message : "Agent query failed");
     } finally {
@@ -2822,6 +2856,7 @@ function App() {
       );
       setEvalComparison(comparison);
       setEvalRegressionGate(null);
+      activateModule("evals-history");
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Eval comparison failed");
     } finally {
@@ -2846,6 +2881,7 @@ function App() {
       );
       setEvalRegressionGate(gate);
       setEvalComparison(null);
+      activateModule("evals-history");
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Regression gate failed");
     } finally {
@@ -2875,6 +2911,7 @@ function App() {
     setEvalReportPaths(response.report_paths ?? reportPathsFromPayload(response.job.payload));
     setEvalComparison(null);
     setEvalRegressionGate(null);
+    activateModule("evals-results");
     setEvalRuns((current) => {
       const matchesScope = !evalDomainId || response.job.domain_id === evalDomainId;
       const nextRuns = current.filter((run) => run.job.id !== response.job.id);
@@ -2899,6 +2936,7 @@ function App() {
       return;
     }
 
+    activateModule("queries-live");
     setLiveStatus("connecting");
     setLiveError(null);
     const controller = new AbortController();
@@ -3098,7 +3136,13 @@ function App() {
         {activeModules.length > 0 ? (
           <nav className="module-nav" aria-label={`${activeSectionMeta.label} modules`}>
             {activeModules.map((module) => (
-              <a data-tooltip={module.tooltip} href={moduleHref(module.id)} key={module.id}>
+              <a
+                aria-current={activeModule === module.id ? "page" : undefined}
+                data-tooltip={module.tooltip}
+                href={moduleHref(module.id)}
+                key={module.id}
+                onClick={(event) => handleModuleClick(event, module.id)}
+              >
                 {module.label}
               </a>
             ))}
@@ -3166,7 +3210,11 @@ function App() {
               </div>
               <span className="status-pill">{selectedDomain ? selectedDomain.slug : "No domain"}</span>
             </div>
-            <form className="domain-form" onSubmit={handleCreateDomain}>
+            <form
+              className="domain-form"
+              hidden={activeModule !== "documents-library"}
+              onSubmit={handleCreateDomain}
+            >
               <label>
                 <span>Slug</span>
                 <input
@@ -3201,7 +3249,12 @@ function App() {
                 {isCreatingDomain ? "Creating domain" : "Create domain"}
               </button>
             </form>
-            <div className="domain-toolbar" id="documents-library">
+            <div
+              className="domain-toolbar"
+              hidden={activeModule !== "documents-library"}
+              id="documents-library"
+              tabIndex={-1}
+            >
               <label>
                 <span>Active domain</span>
                 <select
@@ -3240,7 +3293,11 @@ function App() {
                 {workspaceError}
               </p>
             ) : null}
-            <div className="document-list" aria-label="Domain documents">
+            <div
+              className="document-list"
+              aria-label="Domain documents"
+              hidden={activeModule !== "documents-library"}
+            >
               {documents.map((document) => {
                 const isEditing = editingDocumentId === document.id;
                 const isArchived = document.archived_at !== null;
@@ -3481,7 +3538,13 @@ function App() {
                 </div>
               ) : null}
             </div>
-            <section className="source-workspace" id="documents-sources" aria-label="Domain sources">
+            <section
+              className="source-workspace"
+              hidden={activeModule !== "documents-sources"}
+              id="documents-sources"
+              tabIndex={-1}
+              aria-label="Domain sources"
+            >
               <div className="section-heading">
                 <h3>Sources</h3>
                 <button
@@ -3560,7 +3623,13 @@ function App() {
                 ) : null}
               </div>
             </section>
-            <section className="file-upload" id="documents-upload" aria-label="File upload">
+            <section
+              className="file-upload"
+              hidden={activeModule !== "documents-upload"}
+              id="documents-upload"
+              tabIndex={-1}
+              aria-label="File upload"
+            >
               <div className="section-heading">
                 <h3>File upload</h3>
               </div>
@@ -3608,7 +3677,13 @@ function App() {
                 </button>
               </form>
             </section>
-            <section className="text-ingestion" id="documents-text" aria-label="Text ingestion">
+            <section
+              className="text-ingestion"
+              hidden={activeModule !== "documents-text"}
+              id="documents-text"
+              tabIndex={-1}
+              aria-label="Text ingestion"
+            >
               <div className="section-heading">
                 <h3>Text ingestion</h3>
               </div>
@@ -3656,7 +3731,11 @@ function App() {
             </section>
           </article>
 
-          <article className="panel" hidden={activeSection !== "queries"} id="queries">
+          <article
+            className="panel"
+            hidden={activeSection !== "queries" || activeModule !== "queries-runner"}
+            id="queries"
+          >
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Research</p>
@@ -3664,7 +3743,7 @@ function App() {
               </div>
               <span className="status-pill local">Local model</span>
             </div>
-            <form className="query-form" id="queries-runner" onSubmit={handleQuerySubmit}>
+            <form className="query-form" id="queries-runner" tabIndex={-1} onSubmit={handleQuerySubmit}>
               <div className="selected-domain">
                 <span>Active domain</span>
                 <strong>{selectedDomain ? selectedDomain.name : "Select a domain first"}</strong>
@@ -3878,7 +3957,10 @@ function App() {
             </section>
           </article>
 
-          <article className="panel wide" hidden={activeSection !== "queries"}>
+          <article
+            className="panel wide"
+            hidden={activeSection !== "queries" || activeModule !== "queries-live"}
+          >
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Pipeline</p>
@@ -3888,7 +3970,7 @@ function App() {
                 {liveStatus === "connected" ? "Live" : "Offline"}
               </span>
             </div>
-            <div className="live-toolbar" id="queries-live">
+            <div className="live-toolbar" id="queries-live" tabIndex={-1}>
               <button
                 className={liveStatus === "connected" ? "ghost-action" : "secondary-action"}
                 data-tooltip="Open an SSE stream to watch processing updates"
@@ -3990,7 +4072,12 @@ function App() {
                 {evalReport ? (evalReport.passed ? "Passing" : "Failing") : "Not run"}
               </span>
             </div>
-            <div className="eval-toolbar" id="evals-runner">
+            <div
+              className="eval-toolbar"
+              hidden={activeModule !== "evals-runner"}
+              id="evals-runner"
+              tabIndex={-1}
+            >
               <button
                 className="secondary-action"
                 data-tooltip="Run the local smoke eval suite without paid providers"
@@ -4036,13 +4123,21 @@ function App() {
                 </select>
               </label>
             </div>
-            <div className="eval-scope-note" aria-label="Active eval scope">
+            <div
+              className="eval-scope-note"
+              hidden={activeModule !== "evals-runner"}
+              aria-label="Active eval scope"
+            >
               <span>Dataset evals save under</span>
               <strong>{evalDatasetScopeLabel}</strong>
               <span>and history, trends, comparison, and regression gate show</span>
               <strong>{evalScopeLabel}</strong>
             </div>
-            <form className="eval-dataset-form" onSubmit={(event) => void handleRunSquadEval(event)}>
+            <form
+              className="eval-dataset-form"
+              hidden={activeModule !== "evals-runner"}
+              onSubmit={(event) => void handleRunSquadEval(event)}
+            >
               <label className="span-two">
                 SQuAD dataset path
                 <input
@@ -4094,6 +4189,7 @@ function App() {
             </form>
             <form
               className="eval-dataset-form"
+              hidden={activeModule !== "evals-runner"}
               onSubmit={(event) => void handleRunHotpotQAEval(event)}
             >
               <label className="span-two">
@@ -4158,6 +4254,7 @@ function App() {
             </form>
             <form
               className="eval-dataset-form"
+              hidden={activeModule !== "evals-runner"}
               onSubmit={(event) => void handleRunNaturalQuestionsEval(event)}
             >
               <label className="span-two">
@@ -4213,6 +4310,7 @@ function App() {
             </form>
             <form
               className="eval-dataset-form"
+              hidden={activeModule !== "evals-runner"}
               onSubmit={(event) => void handleRunOcrBenchmarkEval(event)}
             >
               <label className="span-two">
@@ -4283,7 +4381,14 @@ function App() {
                 {evalError}
               </p>
             ) : null}
-            <section className="eval-result" id="evals-results" aria-label="Eval smoke results" aria-live="polite">
+            <section
+              className="eval-result"
+              hidden={activeModule !== "evals-results"}
+              id="evals-results"
+              tabIndex={-1}
+              aria-label="Eval smoke results"
+              aria-live="polite"
+            >
               {evalReport ? (
                 <>
                   <div className="eval-metrics" aria-label="Eval metrics">
@@ -4350,7 +4455,13 @@ function App() {
                 </div>
               )}
             </section>
-            <section className="eval-history" id="evals-history" aria-label="Eval run history">
+            <section
+              className="eval-history"
+              hidden={activeModule !== "evals-history"}
+              id="evals-history"
+              tabIndex={-1}
+              aria-label="Eval run history"
+            >
               <div className="section-heading">
                 <h3>Run history</h3>
                 <div className="section-actions">
@@ -4529,7 +4640,7 @@ function App() {
                 </div>
               )}
             </section>
-            {evalTrends.length > 0 ? (
+            {activeModule === "evals-history" && evalTrends.length > 0 ? (
               <section className="eval-trends" aria-label="Eval trends">
                 {evalTrends.map((trend) => (
                   <article className="eval-trend-card" key={trend.suite_name}>
@@ -4573,7 +4684,12 @@ function App() {
               </span>
             </div>
 
-            <div className="admin-grid" id="admin-providers">
+            <div
+              className="admin-grid"
+              hidden={activeModule !== "admin-providers"}
+              id="admin-providers"
+              tabIndex={-1}
+            >
               <form className="provider-login" onSubmit={handleProviderLogin}>
                 <label>
                   <span>Email</span>
@@ -4639,7 +4755,11 @@ function App() {
               </section>
             </div>
 
-            <div className="provider-list" aria-label="Available LLM providers">
+            <div
+              className="provider-list"
+              hidden={activeModule !== "admin-providers"}
+              aria-label="Available LLM providers"
+            >
               {(catalog?.providers ?? []).map((provider) => {
                 const isActiveProvider = catalog?.active.provider === provider.name;
                 return (
@@ -4686,7 +4806,13 @@ function App() {
               ) : null}
             </div>
 
-            <section className="admin-users" id="admin-users" aria-label="Admin users">
+            <section
+              className="admin-users"
+              hidden={activeModule !== "admin-users"}
+              id="admin-users"
+              tabIndex={-1}
+              aria-label="Admin users"
+            >
               <div className="section-heading">
                 <h3>Admin users</h3>
                 <button
@@ -4902,7 +5028,12 @@ function App() {
               </div>
               <span className="status-pill">{queuedJobs.length} recent jobs</span>
             </div>
-            <div className="audit-toolbar" id="audit-jobs">
+            <div
+              className="audit-toolbar"
+              hidden={activeModule !== "audit-jobs"}
+              id="audit-jobs"
+              tabIndex={-1}
+            >
               <label>
                 <span>Filter jobs</span>
                 <select value={jobFilter} onChange={(event) => setJobFilter(event.target.value)}>
@@ -4943,12 +5074,16 @@ function App() {
                 {auditError}
               </p>
             ) : null}
-            {auditExportMessage ? (
+            {auditExportMessage && activeModule === "audit-jobs" ? (
               <p className="inline-success" role="status">
                 {auditExportMessage}
               </p>
             ) : null}
-            <div className="job-ledger" aria-label="Recent jobs">
+            <div
+              className="job-ledger"
+              hidden={activeModule !== "audit-jobs"}
+              aria-label="Recent jobs"
+            >
               {filteredJobs.map((job) => (
                 <article className="job-row" key={job.id}>
                   <div className="job-row-main">
@@ -5013,7 +5148,7 @@ function App() {
                 </div>
               ) : null}
             </div>
-            {selectedJobId ? (
+            {selectedJobId && activeModule === "audit-jobs" ? (
               <section className="job-detail-panel" aria-label="Selected job detail">
                 <div className="section-heading compact">
                   <div>
@@ -5104,7 +5239,13 @@ function App() {
                 )}
               </section>
             ) : null}
-            <section className="job-progress-groups" id="audit-progress" aria-label="Progress grouped by job">
+            <section
+              className="job-progress-groups"
+              hidden={activeModule !== "audit-progress"}
+              id="audit-progress"
+              tabIndex={-1}
+              aria-label="Progress grouped by job"
+            >
               <div className="section-heading compact">
                 <h3>Progress by job</h3>
                 <span className="badge muted">{progressGroups.length}</span>
@@ -5148,7 +5289,12 @@ function App() {
                 ) : null}
               </div>
             </section>
-            <div className="audit-event-grid" id="audit-events">
+            <div
+              className="audit-event-grid"
+              hidden={activeModule !== "audit-events"}
+              id="audit-events"
+              tabIndex={-1}
+            >
               <section className="audit-event-panel" aria-label="Journal events">
                 <div className="section-heading compact">
                   <h3>Journal events</h3>

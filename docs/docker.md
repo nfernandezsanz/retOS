@@ -61,6 +61,10 @@ eval reports. Docker stack smoke also runs `scripts/check_backend_runtime_image.
 after startup so the running `api`, `worker`, and `migrate` containers must share
 the exact same Docker image ID, not just equivalent source files.
 
+The API container healthcheck calls `/readyz`, not just `/healthz`, so Compose readiness
+requires the FastAPI process and a lightweight database round trip. `/healthz` remains
+available as the cheap liveness endpoint.
+
 CI also runs `scripts/check_image_metadata.sh` so release images cannot lose their
 OCI labels. Docker smoke inspects the built `retos-backend` and `retos-web` images.
 
