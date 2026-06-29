@@ -6565,6 +6565,24 @@ function App() {
               </div>
             </section>
             <div
+              className="audit-context"
+              hidden={activeModule !== "audit-events"}
+              aria-label="Audit events context"
+            >
+              <div data-tooltip="Journal rows preserve domain, document, job, admin, and eval decisions">
+                <span>Journal rows</span>
+                <strong>{journalEvents.length}</strong>
+              </div>
+              <div data-tooltip="Progress rows mirror worker and query updates for replayable timelines">
+                <span>Progress rows</span>
+                <strong>{auditProgressEvents.length}</strong>
+              </div>
+              <div data-tooltip="Event hashes let local auditors verify the persisted journal chain">
+                <span>Integrity</span>
+                <strong>Hash-chain evidence</strong>
+              </div>
+            </div>
+            <div
               className="audit-event-grid"
               hidden={activeModule !== "audit-events"}
               id="audit-events"

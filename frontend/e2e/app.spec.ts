@@ -2287,6 +2287,13 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("title: Policy Note")).toBeVisible();
   await page.getByRole("button", { name: "Refresh audit" }).click();
   await page.getByLabel("Audit modules").getByRole("link", { name: "Events" }).click();
+  await expect(page.getByLabel("Audit events context").getByText("Journal rows")).toBeVisible();
+  await expect(page.getByLabel("Audit events context").getByText("Hash-chain evidence")).toBeVisible();
+  await expect(
+    page.getByLabel("Audit events context").locator("[data-tooltip]").filter({
+      hasText: "Hash-chain evidence",
+    }),
+  ).toHaveAttribute("data-tooltip", /persisted journal chain/);
   await expect(page.getByLabel("Journal events").getByText("job.created").first()).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("Hash 2222222222222222")).toBeVisible();
   await expect(page.getByLabel("Journal events").getByText("document.archived")).toBeVisible();
