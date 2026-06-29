@@ -153,7 +153,8 @@ profile only when you want local LLM calls.
 
 `make local-access` prints the local console/API/RabbitMQ URLs plus the bootstrap admin
 email. It prints the password only when it is still the development placeholder from
-`.env.example`; custom `.env` passwords remain local and are not echoed.
+`.env.example` and the environment is not production; custom `.env` passwords and
+production-mode placeholders remain local and are not echoed.
 
 `make local-status` does not start or mutate services. It prints the local URLs, checks
 the API, worker, web, Postgres, RabbitMQ, and one-shot migration service states from

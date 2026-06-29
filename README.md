@@ -45,8 +45,8 @@ make local-smoke
 
 Open http://localhost:8080 for the console or http://localhost:8000/docs for the API.
 `make local-access` prints the local URLs and the development bootstrap admin. It only
-prints the password when it is still the obvious local placeholder; custom `.env`
-passwords stay hidden.
+prints the password when it is still the obvious local placeholder outside production;
+custom `.env` passwords stay hidden.
 
 </details>
 
@@ -123,7 +123,7 @@ before deeper Docker smoke runs.
 
 Run `make local-access` when you need the local URLs and safe development login hints
 again. It reads `.env` when present, falls back to `.env.example`, and never echoes a
-custom bootstrap admin password.
+custom bootstrap admin password or a production-mode placeholder.
 
 Run `make local-smoke` when you want a fast end-to-end check against the already-running
 stack: it loads the web console, checks API readiness/version metadata, logs in with the
@@ -448,7 +448,7 @@ Every meaningful change should pass these gates:
 | Gate | Command | Purpose |
 | --- | --- | --- |
 | Local demo | `make local-demo` | Boots the local Docker stack in the background, seeds auditable demo data, and prints the console/API/RabbitMQ URLs for hands-on review. |
-| Local access | `make local-access` | Prints local URLs plus the bootstrap admin email and only the development placeholder password; custom `.env` passwords are acknowledged without being echoed. |
+| Local access | `make local-access` | Prints local URLs plus the bootstrap admin email and only the non-production development placeholder password; custom `.env` passwords and production-mode placeholders are acknowledged without being echoed. |
 | Local status | `make local-status` | Prints useful local URLs, checks Docker service and migration state, verifies API/worker/migrate share one backend image digest, and checks console/API endpoints without starting or mutating the stack. |
 | Local smoke | `make local-smoke` | Hits the already-running local web/API stack, authenticates with the bootstrap admin, re-seeds demo data idempotently, and verifies demo search plus journal/progress hash-chain, authenticated SSE replay/resume, and limited audit export evidence with offline verifier recomputation. |
 | Local logs | `make local-logs` | Prints recent Compose logs for Postgres, RabbitMQ, migrations, API, worker, and web without following or mutating the stack. |

@@ -10,10 +10,13 @@ SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from check_env_security import parse_env  # noqa: E402
+from check_env_security import (  # noqa: E402
+    EXPECTED_DEVELOPMENT_ADMIN_PASSWORD,
+    parse_env,
+)
 
 DEFAULT_ADMIN_EMAIL = "admin@retos.dev"
-DEFAULT_ADMIN_PASSWORD = "retos-dev-admin-change-me"
+DEFAULT_ADMIN_PASSWORD = EXPECTED_DEVELOPMENT_ADMIN_PASSWORD
 
 
 def env_value(env: dict[str, str], key: str, default: str) -> str:
@@ -22,12 +25,15 @@ def env_value(env: dict[str, str], key: str, default: str) -> str:
 
 
 def password_detail(env: dict[str, str]) -> str:
+    runtime_env = env_value(env, "RETOS_ENV", "development")
     password = env_value(
         env,
         "RETOS_BOOTSTRAP_ADMIN_PASSWORD",
         DEFAULT_ADMIN_PASSWORD,
     )
     if password == DEFAULT_ADMIN_PASSWORD:
+        if runtime_env == "production":
+            return "development placeholder configured for production; not printed"
         return password
     return "configured in .env; not printed"
 
@@ -49,7 +55,7 @@ def render_local_access(root: Path = ROOT) -> str:
         f"  Email:    {admin_email}",
         f"  Password: {password_detail(env)}",
         "Safety:",
-        "  This command only prints the development placeholder password.",
+        "  This command only prints the development placeholder password outside production.",
         "  Custom local passwords stay in .env and are not echoed.",
     ]
     return "\n".join(lines)

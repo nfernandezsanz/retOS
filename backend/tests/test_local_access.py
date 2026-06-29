@@ -63,6 +63,29 @@ def test_local_access_does_not_print_custom_local_password(tmp_path: Path) -> No
     assert "custom-secret-password" not in output
 
 
+def test_local_access_does_not_print_production_placeholder_password(
+    tmp_path: Path,
+) -> None:
+    access = load_local_access()
+    (tmp_path / ".env").write_text(
+        "\n".join(
+            (
+                "RETOS_ENV=production",
+                "RETOS_BOOTSTRAP_ADMIN_EMAIL=owner@example.test",
+                "RETOS_BOOTSTRAP_ADMIN_PASSWORD=retos-dev-admin-change-me",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    output = access.render_local_access(tmp_path)
+
+    assert "Email:    owner@example.test" in output
+    assert "Password: development placeholder configured for production; not printed" in output
+    assert "Password: retos-dev-admin-change-me" not in output
+
+
 def test_local_access_defaults_missing_admin_values(tmp_path: Path) -> None:
     access = load_local_access()
     (tmp_path / ".env.example").write_text("RETOS_PROVIDER=local\n", encoding="utf-8")
