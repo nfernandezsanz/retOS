@@ -1079,6 +1079,14 @@ async function mockProviderApi(page: Page) {
   });
   await page.route(/http:\/\/localhost:8000\/domains\/[^/]+\/ingestions\/upload/, async (route) => {
     const domainId = new URL(route.request().url()).pathname.split("/")[2];
+    if ((route.request().postData() ?? "").includes("Rejected Fixture")) {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 400,
+        json: { detail: "Only .txt, .md, and .pdf files can be uploaded" },
+      });
+      return;
+    }
     documents.push({
       id: "document-upload-1",
       domain_id: domainId,
@@ -1726,6 +1734,17 @@ test("loads the operational console", async ({ page }) => {
   await page.getByLabel("Domain sources").getByRole("button", { name: "Scan" }).first().click();
 
   await page.getByRole("button", { name: "Rebuild index" }).click();
+
+  await page.getByLabel("Upload file").setInputFiles({
+    name: "rejected-fixture.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Rejected fixture text for browser smoke."),
+  });
+  await page.getByPlaceholder("Uploaded research note").fill("Rejected Fixture");
+  await page.getByRole("button", { name: "Queue upload" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Only .txt, .md, and .pdf files can be uploaded",
+  );
 
   await page.getByLabel("Upload file").setInputFiles({
     name: "uploaded-fixture.txt",

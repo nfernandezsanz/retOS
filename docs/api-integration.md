@@ -1025,6 +1025,11 @@ console removes `retos.adminToken`, clears provider state, re-enables the passwo
 and shows an explicit reconnect message. This keeps expired or revoked sessions from
 staying sticky in local browser storage.
 
+Manual `fetch` paths such as upload, audit export, domain-grant deletion, and SSE
+connection setup use the same response parser as JSON API calls. When the backend
+returns a JSON `detail`, the console renders that operator-facing detail instead of a
+generic status code.
+
 Current console calls:
 
 - `POST /auth/login`

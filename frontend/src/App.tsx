@@ -646,6 +646,12 @@ async function responseErrorMessage(response: Response): Promise<string> {
   return `Request failed with ${response.status}`;
 }
 
+async function ensureOk(response: Response): Promise<void> {
+  if (!response.ok) {
+    throw new ApiRequestError(response.status, await responseErrorMessage(response));
+  }
+}
+
 function isUnauthorizedError(error: unknown): boolean {
   return error instanceof ApiRequestError && error.status === 401;
 }
@@ -672,9 +678,7 @@ async function requestJson<T>(
       ...options.headers,
     },
   });
-  if (!response.ok) {
-    throw new ApiRequestError(response.status, await responseErrorMessage(response));
-  }
+  await ensureOk(response);
   return (await response.json()) as T;
 }
 
@@ -752,9 +756,7 @@ async function deleteAdminUserDomainGrant(
       Authorization: `Bearer ${token}`,
     },
   });
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
+  await ensureOk(response);
 }
 
 async function updateAdminUserStatus(
@@ -971,9 +973,7 @@ async function exportAuditSnapshot(
       Authorization: `Bearer ${token}`,
     },
   });
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
+  await ensureOk(response);
   const snapshot = (await response.json()) as AuditExportRead;
   const filename = auditExportFilename(response.headers.get("content-disposition"));
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
@@ -1050,9 +1050,7 @@ async function uploadDocumentFile(
     },
     body: form,
   });
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
+  await ensureOk(response);
   return (await response.json()) as JobRead;
 }
 
@@ -2697,8 +2695,9 @@ function App() {
         headers: liveHeaders,
         signal: controller.signal,
       });
-      if (!response.ok || !response.body) {
-        throw new Error(`Live updates failed with ${response.status}`);
+      await ensureOk(response);
+      if (!response.body) {
+        throw new Error("Live updates failed without a response body");
       }
 
       setLiveStatus("connected");
