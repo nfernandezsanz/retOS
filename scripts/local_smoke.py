@@ -18,6 +18,10 @@ HttpRequester = Callable[
     [str, str, Mapping[str, str], dict[str, Any] | None, float],
     tuple[int, str],
 ]
+SseRequester = Callable[
+    [str, Mapping[str, str], str | None, float],
+    tuple[int, str, dict[str, str]],
+]
 
 
 @dataclass(frozen=True)
@@ -86,6 +90,58 @@ def default_requester(
         raise RuntimeError(str(exc)) from exc
 
 
+def default_sse_requester(
+    url: str,
+    headers: Mapping[str, str],
+    last_event_id: str | None,
+    timeout: float,
+) -> tuple[int, str, dict[str, str]]:
+    request_headers = {"Accept": "text/event-stream", **dict(headers)}
+    if last_event_id:
+        request_headers["Last-Event-ID"] = last_event_id
+    request = Request(url, headers=request_headers, method="GET")
+    try:
+        with urlopen(  # noqa: S310 - local operator-requested smoke URLs.
+            request, timeout=timeout
+        ) as response:
+            event = read_sse_event(response, timeout=timeout)
+            content_type = response.headers.get("content-type", "")
+            return response.status, content_type, event
+    except HTTPError as exc:
+        return exc.code, exc.headers.get("content-type", ""), {}
+    except URLError as exc:
+        raise RuntimeError(str(exc.reason)) from exc
+    except OSError as exc:
+        raise RuntimeError(str(exc)) from exc
+
+
+def read_sse_event(response: Any, *, timeout: float) -> dict[str, str]:
+    event: dict[str, str] = {}
+    max_lines = 80
+    for _ in range(max_lines):
+        line = response.readline()
+        if line == b"":
+            break
+        text = line.decode("utf-8", errors="replace").strip()
+        if text == "":
+            if event:
+                break
+            continue
+        if ":" not in text:
+            continue
+        field, value = text.split(":", 1)
+        value = value.lstrip()
+        if field == "data" and field in event:
+            event[field] = f"{event[field]}\n{value}"
+        elif field in {"id", "event", "data"}:
+            event[field] = value
+        if event.get("event") and event.get("data") and event.get("id"):
+            break
+    if not event:
+        raise RuntimeError(f"progress stream did not emit an event within {timeout:g}s")
+    return event
+
+
 def require_success(name: str, status: int, body: str) -> SmokeCheck | None:
     if 200 <= status < 300:
         return None
@@ -149,6 +205,28 @@ def audit_export_detail(export: dict[str, Any]) -> str:
     return f"{event_count} event(s), valid{suffix}"
 
 
+def validate_sse_event(event: dict[str, str]) -> str | None:
+    event_id = event.get("id", "")
+    if not event_id.startswith(("progress:", "live:")):
+        return f"unexpected event id: {event_id or 'missing'}"
+    if not event.get("event"):
+        return "missing event name"
+    data = event.get("data")
+    if not data:
+        return "missing event data"
+    try:
+        payload = json.loads(data)
+    except json.JSONDecodeError as exc:
+        return f"invalid event data JSON: {exc}"
+    if not isinstance(payload, dict):
+        return "event data is not a JSON object"
+    if payload.get("id") != event_id:
+        return "event data id does not match stream id"
+    if payload.get("event") != event.get("event"):
+        return "event data name does not match stream event"
+    return None
+
+
 def run_local_smoke(
     *,
     api_url: str,
@@ -158,6 +236,7 @@ def run_local_smoke(
     query: str,
     timeout: float,
     requester: HttpRequester = default_requester,
+    sse_requester: SseRequester = default_sse_requester,
 ) -> list[SmokeCheck]:
     checks: list[SmokeCheck] = []
 
@@ -344,6 +423,69 @@ def run_local_smoke(
                         checks.append(fail("audit export", export_error))
                     else:
                         checks.append(ok("audit export", audit_export_detail(export)))
+
+        try:
+            stream_status, content_type, event = sse_requester(
+                urljoin(api_url, "/events/progress"),
+                headers,
+                None,
+                timeout,
+            )
+        except RuntimeError as exc:
+            checks.append(fail("sse progress", str(exc)))
+        else:
+            if not 200 <= stream_status < 300:
+                checks.append(fail("sse progress", f"HTTP {stream_status}"))
+            elif not content_type.startswith("text/event-stream"):
+                checks.append(
+                    fail(
+                        "sse progress",
+                        f"unexpected content-type: {content_type or 'missing'}",
+                    )
+                )
+            else:
+                stream_error = validate_sse_event(event)
+                if stream_error:
+                    checks.append(fail("sse progress", stream_error))
+                else:
+                    replay_id = event["id"]
+                    try:
+                        resumed_status, resumed_content_type, resumed_event = (
+                            sse_requester(
+                                urljoin(api_url, "/events/progress"),
+                                headers,
+                                replay_id,
+                                timeout,
+                            )
+                        )
+                    except RuntimeError as exc:
+                        checks.append(fail("sse progress", f"resume failed: {exc}"))
+                    else:
+                        if not 200 <= resumed_status < 300:
+                            checks.append(
+                                fail("sse progress", f"resume HTTP {resumed_status}")
+                            )
+                        elif not resumed_content_type.startswith("text/event-stream"):
+                            checks.append(
+                                fail(
+                                    "sse progress",
+                                    "resume unexpected content-type: "
+                                    f"{resumed_content_type or 'missing'}",
+                                )
+                            )
+                        else:
+                            resumed_error = validate_sse_event(resumed_event)
+                            if resumed_error:
+                                checks.append(
+                                    fail("sse progress", f"resume {resumed_error}")
+                                )
+                            else:
+                                checks.append(
+                                    ok(
+                                        "sse progress",
+                                        f"{replay_id} -> {resumed_event['id']}",
+                                    )
+                                )
 
     return checks
 

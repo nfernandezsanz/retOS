@@ -20,9 +20,24 @@ def load_local_smoke() -> ModuleType:
     return module
 
 
+def sse_event(event_id: str = "progress:1", event_name: str = "job.progress") -> dict[str, str]:
+    return {
+        "id": event_id,
+        "event": event_name,
+        "data": json.dumps(
+            {
+                "id": event_id,
+                "event": event_name,
+                "data": {"message": "fixture progress"},
+            }
+        ),
+    }
+
+
 def test_local_smoke_exercises_api_and_web_flow() -> None:
     smoke = load_local_smoke()
     calls: list[tuple[str, str, dict[str, Any] | None]] = []
+    sse_calls: list[tuple[str, str | None]] = []
 
     def requester(
         method: str,
@@ -61,6 +76,17 @@ def test_local_smoke_exercises_api_and_web_flow() -> None:
             )
         return 404, "{}"
 
+    def sse_requester(
+        url: str,
+        _headers: Mapping[str, str],
+        last_event_id: str | None,
+        _timeout: float,
+    ) -> tuple[int, str, dict[str, str]]:
+        sse_calls.append((url, last_event_id))
+        if last_event_id:
+            return 200, "text/event-stream; charset=utf-8", sse_event("live:1", "system.ready")
+        return 200, "text/event-stream; charset=utf-8", sse_event("progress:1")
+
     checks = smoke.run_local_smoke(
         api_url="http://api.local",
         web_url="http://web.local",
@@ -69,6 +95,7 @@ def test_local_smoke_exercises_api_and_web_flow() -> None:
         query="Apollo guidance",
         timeout=1,
         requester=requester,
+        sse_requester=sse_requester,
     )
 
     assert {check.name: check.status for check in checks} == {
@@ -81,11 +108,16 @@ def test_local_smoke_exercises_api_and_web_flow() -> None:
         "audit journals": "OK",
         "audit progress": "OK",
         "audit export": "OK",
+        "sse progress": "OK",
     }
     assert calls[-4][1].endswith("/domains/domain-demo/search?q=Apollo+guidance&limit=3")
     assert calls[-3][1].endswith("/audit/journal-events?limit=20")
     assert calls[-2][1].endswith("/audit/progress-events?limit=20")
     assert calls[-1][1].endswith("/audit/export?limit=40")
+    assert sse_calls == [
+        ("http://api.local/events/progress", None),
+        ("http://api.local/events/progress", "progress:1"),
+    ]
 
 
 def test_local_smoke_stops_mutating_calls_when_login_fails() -> None:
@@ -160,6 +192,11 @@ def test_local_smoke_fails_when_demo_search_has_no_hits() -> None:
         query="Apollo guidance",
         timeout=1,
         requester=requester,
+        sse_requester=lambda *_args: (
+            200,
+            "text/event-stream",
+            sse_event(),
+        ),
     )
 
     failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
@@ -207,6 +244,11 @@ def test_local_smoke_fails_when_audit_events_are_unhashed() -> None:
         query="Apollo guidance",
         timeout=1,
         requester=requester,
+        sse_requester=lambda *_args: (
+            200,
+            "text/event-stream",
+            sse_event(),
+        ),
     )
 
     failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
@@ -255,7 +297,118 @@ def test_local_smoke_fails_when_audit_export_integrity_is_invalid() -> None:
         query="Apollo guidance",
         timeout=1,
         requester=requester,
+        sse_requester=lambda *_args: (
+            200,
+            "text/event-stream",
+            sse_event(),
+        ),
     )
 
     failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
     assert failures["audit export"] == "audit export integrity is not valid"
+
+
+def test_local_smoke_fails_when_sse_content_type_is_wrong() -> None:
+    smoke = load_local_smoke()
+
+    def requester(
+        _method: str,
+        url: str,
+        _headers: Mapping[str, str],
+        _payload: dict[str, Any] | None,
+        _timeout: float,
+    ) -> tuple[int, str]:
+        if url.endswith("/auth/login"):
+            return 200, json.dumps({"access_token": "local-token"})
+        if url.endswith("/demo/seed"):
+            return 200, json.dumps({"domain_id": "domain-demo", "indexed_segments": 4})
+        if "/search" in url:
+            return 200, json.dumps({"hits": [{"title": "Apollo Guidance Notes"}]})
+        if url.endswith("/audit/export?limit=40"):
+            return 200, json.dumps(
+                {
+                    "integrity": {
+                        "valid": True,
+                        "event_count": 2,
+                        "failures": [],
+                        "continuity_gaps": [],
+                    }
+                }
+            )
+        if "/audit/" in url:
+            return 200, json.dumps([{"event_hash": "audit-hash"}])
+        if url.endswith("/readyz"):
+            return 200, json.dumps({"components": {"database": "ok"}})
+        return 200, "{}"
+
+    checks = smoke.run_local_smoke(
+        api_url="http://api.local",
+        web_url="http://web.local",
+        email="admin@retos.dev",
+        password="retos-dev-admin-change-me",  # noqa: S106 - local fixture password.
+        query="Apollo guidance",
+        timeout=1,
+        requester=requester,
+        sse_requester=lambda *_args: (200, "application/json", sse_event()),
+    )
+
+    failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
+    assert failures["sse progress"] == "unexpected content-type: application/json"
+
+
+def test_local_smoke_fails_when_sse_resume_event_is_invalid() -> None:
+    smoke = load_local_smoke()
+
+    def requester(
+        _method: str,
+        url: str,
+        _headers: Mapping[str, str],
+        _payload: dict[str, Any] | None,
+        _timeout: float,
+    ) -> tuple[int, str]:
+        if url.endswith("/auth/login"):
+            return 200, json.dumps({"access_token": "local-token"})
+        if url.endswith("/demo/seed"):
+            return 200, json.dumps({"domain_id": "domain-demo", "indexed_segments": 4})
+        if "/search" in url:
+            return 200, json.dumps({"hits": [{"title": "Apollo Guidance Notes"}]})
+        if url.endswith("/audit/export?limit=40"):
+            return 200, json.dumps(
+                {
+                    "integrity": {
+                        "valid": True,
+                        "event_count": 2,
+                        "failures": [],
+                        "continuity_gaps": [],
+                    }
+                }
+            )
+        if "/audit/" in url:
+            return 200, json.dumps([{"event_hash": "audit-hash"}])
+        if url.endswith("/readyz"):
+            return 200, json.dumps({"components": {"database": "ok"}})
+        return 200, "{}"
+
+    def sse_requester(
+        _url: str,
+        _headers: Mapping[str, str],
+        last_event_id: str | None,
+        _timeout: float,
+    ) -> tuple[int, str, dict[str, str]]:
+        if last_event_id:
+            return 200, "text/event-stream", {"id": "bad:1", "event": "bad", "data": "{}"}
+        return 200, "text/event-stream", sse_event("progress:1")
+
+    checks = smoke.run_local_smoke(
+        api_url="http://api.local",
+        web_url="http://web.local",
+        email="admin@retos.dev",
+        password="retos-dev-admin-change-me",  # noqa: S106 - local fixture password.
+        query="Apollo guidance",
+        timeout=1,
+        requester=requester,
+        sse_requester=sse_requester,
+    )
+
+    failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
+    assert failures["sse progress"] == "resume unexpected event id: bad:1"
