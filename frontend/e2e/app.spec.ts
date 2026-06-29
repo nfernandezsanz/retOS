@@ -2037,6 +2037,12 @@ test("loads the operational console", async ({ page }) => {
   await expect(openAiProviderRow.getByText("Blocked")).toBeVisible();
   await expect(openAiProviderRow.getByText("Missing RETOS_OPENAI_API_KEY")).toBeVisible();
   await page.getByLabel("Admin modules").getByRole("link", { name: "Users" }).click();
+  await expect(page.getByLabel("Admin users context").getByText("Active users")).toBeVisible();
+  await expect(
+    page.getByLabel("Admin users context").locator("[data-tooltip]").filter({
+      hasText: "Per-domain viewers",
+    }),
+  ).toHaveAttribute("data-tooltip", /explicit domain grants/);
   await expect(page.getByLabel("Admin users").getByText("admin@retos.dev")).toBeVisible();
   await page.getByLabel("New admin email").fill("ui-admin@retos.dev");
   await page.getByLabel("New admin password").fill("ui-admin-password");

@@ -5953,6 +5953,20 @@ function App() {
                   <RefreshCw aria-hidden="true" />
                 </button>
               </div>
+              <div className="admin-user-context" aria-label="Admin users context">
+                <div data-tooltip="Active local accounts that can sign in right now">
+                  <span>Active users</span>
+                  <strong>{adminUsers.filter((user) => user.is_active).length}</strong>
+                </div>
+                <div data-tooltip="Viewer access is limited by explicit domain grants">
+                  <span>Grant model</span>
+                  <strong>Per-domain viewers</strong>
+                </div>
+                <div data-tooltip="Role, status, grant, and password changes write audit events">
+                  <span>Audit trail</span>
+                  <strong>Admin journals</strong>
+                </div>
+              </div>
               <form className="admin-user-form" onSubmit={(event) => void handleCreateAdminUser(event)}>
                 <label>
                   <span>Email</span>
