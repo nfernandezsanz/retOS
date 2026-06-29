@@ -24,6 +24,7 @@ required_files=(
   "docs/production-readiness.md"
   "scripts/check_production_preflight.sh"
   "scripts/check_published_release_evidence.sh"
+  "scripts/check_env_security.py"
   "scripts/check_eval_calibration_evidence.py"
   "scripts/check_eval_calibration_trend.py"
   "scripts/export_audit_manifest.py"
@@ -45,6 +46,7 @@ scripts/check_image_size.sh >/dev/null
 scripts/check_release_workflow.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
+python3 scripts/check_env_security.py >/dev/null
 python3 scripts/check_eval_calibration_evidence.py >/dev/null
 python3 scripts/check_eval_calibration_trend.py >/dev/null
 scripts/check_audit_pack.sh >/dev/null
@@ -172,6 +174,12 @@ require(
     "README, Docker docs, and production readiness pack must expose the local doctor",
 )
 require(
+    "make env-security-check" in readme
+    and "make env-security-check" in docker_docs
+    and "make env-security-check" in audit_pack,
+    "README, Docker docs, and production readiness pack must expose env-security-check",
+)
+require(
     "make docker-seed-demo" in readme and "make docker-seed-demo" in docker_docs,
     "README and Docker docs must expose the local Docker demo seed",
 )
@@ -205,6 +213,10 @@ for dependency in (
 require(
     "make local-acceptance Run the local pre-audit acceptance gate" in makefile,
     "Makefile help must expose local-acceptance",
+)
+require(
+    "make env-security-check Validate active .env security posture" in makefile,
+    "Makefile help must expose env-security-check",
 )
 require(
     "RetOS is not production-promoted yet" in audit_pack,

@@ -94,9 +94,10 @@ auditor a stable local entry point:
 | Area | Gate | Proves |
 | --- | --- | --- |
 | Local prerequisites | `make doctor` | Python, Node, npm, Docker Compose, safe `.env.example` defaults, active `.env` security checks, Compose config, Docker topology guard, and audit-export verifier are available before heavier validation. |
+| Environment security | `make env-security-check` | Active `.env` security posture is validated without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Local demo corpus | `make docker-seed-demo`, `make api-smoke`, and `make frontend-e2e` | The running Docker stack, real HTTP smoke, and React console can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 581 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 587 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
@@ -190,6 +191,7 @@ These items must be closed before a final production release:
 | Visual audit screenshots | `docs/branding.md`, `frontend/e2e/app.spec.ts`, `make frontend-visual-audit`, `frontend/visual-audit/manifest.json`, and the release workflow `retos-release-visual-audit-<commit>` artifact |
 | Human visual review | `docs/releases/evidence/production-promotion-template.md` |
 | Dependency advisory evidence | `scripts/check_dependency_audit.sh`, `make dependency-audit` |
+| Environment security evidence | `scripts/check_env_security.py`, `make env-security-check` |
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
 | Operations runbook | `docs/operations.md`, `scripts/check_operations_runbook.sh`, `make operations-runbook-check` |

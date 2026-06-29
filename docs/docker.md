@@ -148,6 +148,8 @@ make docker-seed-demo
 `make doctor` validates prerequisites, `.env.example`, and the active `.env` when it
 exists. It fails on production placeholders, wildcard CORS outside development, unknown
 provider profiles, and unsafe secret lengths before the stack starts.
+Run `make env-security-check` when you only want that `.env` security audit without
+probing Docker, Node, or the rest of the local toolchain.
 
 Open:
 

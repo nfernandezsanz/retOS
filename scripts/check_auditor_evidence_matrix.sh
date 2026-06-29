@@ -59,6 +59,7 @@ for requirement in (
 
 for gate in (
     "make check",
+    "make env-security-check",
     "make local-acceptance",
     "make api-smoke",
     "make eval-agent-multihop",

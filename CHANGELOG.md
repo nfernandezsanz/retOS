@@ -59,6 +59,8 @@ tag in GitHub.
   HTTPS provenance, and path safety.
 - Local doctor now checks the active `.env` when present, failing unsafe production
   placeholders, wildcard CORS outside development, invalid providers, and short secrets.
+- Standalone `make env-security-check` gate for active `.env` security validation without
+  starting Docker, Node, or service probes.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.
