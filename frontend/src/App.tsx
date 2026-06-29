@@ -807,6 +807,7 @@ type LiveStatus = "disconnected" | "connecting" | "connected";
 const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:8000";
 const TOKEN_STORAGE_KEY = "retos.adminToken";
 const JOB_LEDGER_LIMIT = 16;
+const SESSION_EXPIRED_MESSAGE = "Admin session expired. Enter the password and reconnect.";
 
 class ApiRequestError extends Error {
   constructor(
@@ -2089,7 +2090,7 @@ function App() {
         setQueuedJobs(await loadJobs(adminToken));
       }
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Workspace refresh failed");
+      setWorkspaceError(sessionErrorMessage(error, "Workspace refresh failed"));
     } finally {
       setIsLoadingWorkspace(false);
     }
@@ -2107,7 +2108,7 @@ function App() {
       activateModule("documents-library");
     } catch (error) {
       setDemoSeedResult(null);
-      setDemoSeedError(readableError(error, "Demo seed failed"));
+      setDemoSeedError(sessionErrorMessage(error, "Demo seed failed"));
     } finally {
       setIsSeedingDemo(false);
     }
@@ -2128,7 +2129,7 @@ function App() {
       setAuditProgressEvents(nextProgressEvents);
       setQueuedJobs(nextJobs);
     } catch (error) {
-      setAuditError(error instanceof Error ? error.message : "Audit refresh failed");
+      setAuditError(sessionErrorMessage(error, "Audit refresh failed"));
     } finally {
       setIsLoadingAudit(false);
     }
@@ -2149,7 +2150,7 @@ function App() {
         ),
       );
     } catch (error) {
-      setJobDetailError(error instanceof Error ? error.message : "Job detail failed to load");
+      setJobDetailError(sessionErrorMessage(error, "Job detail failed to load"));
     } finally {
       setIsLoadingJobDetail(false);
     }
@@ -2177,7 +2178,7 @@ function App() {
       setSelectedJob(retried);
       await refreshAudit(accessToken);
     } catch (error) {
-      setAuditError(error instanceof Error ? error.message : "Job retry failed");
+      setAuditError(sessionErrorMessage(error, "Job retry failed"));
     } finally {
       setRetryingJobId(null);
     }
@@ -2200,7 +2201,7 @@ function App() {
       );
       setAuditExportSummary({ filename, snapshot });
     } catch (error) {
-      setAuditError(error instanceof Error ? error.message : "Audit export failed");
+      setAuditError(sessionErrorMessage(error, "Audit export failed"));
     } finally {
       setIsExportingAudit(false);
     }
@@ -2225,7 +2226,7 @@ function App() {
       setEvalComparison(null);
       setEvalRegressionGate(null);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "Eval history refresh failed");
+      setEvalError(sessionErrorMessage(error, "Eval history refresh failed"));
     }
   }
 
@@ -2248,7 +2249,7 @@ function App() {
       );
       setAdminDomainGrants(Object.fromEntries(grantsByUser));
     } catch (error) {
-      setAdminUserError(error instanceof Error ? error.message : "Admin users refresh failed");
+      setAdminUserError(sessionErrorMessage(error, "Admin users refresh failed"));
     }
   }
 
@@ -2278,7 +2279,7 @@ function App() {
       setCatalog(null);
       setProviderError(
         isUnauthorizedError(error)
-          ? "Admin session expired. Enter the password and load providers again."
+          ? SESSION_EXPIRED_MESSAGE
           : readableError(error, "Provider catalog failed"),
       );
     } finally {
@@ -2316,7 +2317,7 @@ function App() {
       setAdminUserMessage(`Created ${created.email}`);
       await refreshAudit(accessToken);
     } catch (error) {
-      setAdminUserError(error instanceof Error ? error.message : "Admin user create failed");
+      setAdminUserError(sessionErrorMessage(error, "Admin user create failed"));
     } finally {
       setIsCreatingAdminUser(false);
     }
@@ -2336,7 +2337,7 @@ function App() {
       setRuntimePlan(plan);
     } catch (error) {
       setRuntimePlan(null);
-      setRuntimePlanError(readableError(error, "Runtime plan failed"));
+      setRuntimePlanError(sessionErrorMessage(error, "Runtime plan failed"));
     } finally {
       setIsPreviewingRuntimePlan(false);
     }
@@ -2355,7 +2356,7 @@ function App() {
       setAdminUserMessage(`${updated.email} is now ${updated.is_active ? "active" : "inactive"}`);
       await refreshAudit(accessToken);
     } catch (error) {
-      setAdminUserError(error instanceof Error ? error.message : "Admin status update failed");
+      setAdminUserError(sessionErrorMessage(error, "Admin status update failed"));
     } finally {
       setSavingAdminUserId(null);
     }
@@ -2375,7 +2376,7 @@ function App() {
       setAdminRoleEdits((current) => ({ ...current, [updated.id]: role }));
       setAdminUserMessage(`Updated role for ${updated.email}`);
     } catch (error) {
-      setAdminUserError(error instanceof Error ? error.message : "Admin role update failed");
+      setAdminUserError(sessionErrorMessage(error, "Admin role update failed"));
     } finally {
       setSavingAdminUserId(null);
     }
@@ -2403,7 +2404,7 @@ function App() {
       setAdminUserMessage(`Updated password for ${updated.email}`);
       await refreshAudit(accessToken);
     } catch (error) {
-      setAdminUserError(error instanceof Error ? error.message : "Admin password reset failed");
+      setAdminUserError(sessionErrorMessage(error, "Admin password reset failed"));
     } finally {
       setSavingAdminUserId(null);
     }
@@ -2432,7 +2433,7 @@ function App() {
       setAdminUserMessage(`Granted ${user.email} access to ${domainById.get(domainId)?.slug ?? domainId}`);
       await refreshAudit(accessToken);
     } catch (error) {
-      setAdminUserError(error instanceof Error ? error.message : "Domain grant failed");
+      setAdminUserError(sessionErrorMessage(error, "Domain grant failed"));
     } finally {
       setSavingAdminUserId(null);
     }
@@ -2452,7 +2453,7 @@ function App() {
       setAdminUserMessage(`Revoked ${user.email} access to ${domainById.get(domainId)?.slug ?? domainId}`);
       await refreshAudit(accessToken);
     } catch (error) {
-      setAdminUserError(error instanceof Error ? error.message : "Domain revoke failed");
+      setAdminUserError(sessionErrorMessage(error, "Domain revoke failed"));
     } finally {
       setSavingAdminUserId(null);
     }
@@ -2484,7 +2485,7 @@ function App() {
       setSources(nextSources);
       setQueuedJobs(nextJobs);
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Document refresh failed");
+      setWorkspaceError(sessionErrorMessage(error, "Document refresh failed"));
     } finally {
       setIsLoadingWorkspace(false);
     }
@@ -2512,7 +2513,7 @@ function App() {
       await refreshWorkspace(accessToken, domain.id);
       activateModule("documents-library");
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Domain creation failed");
+      setWorkspaceError(sessionErrorMessage(error, "Domain creation failed"));
     } finally {
       setIsCreatingDomain(false);
     }
@@ -2541,7 +2542,7 @@ function App() {
       setSourceName("");
       setSourceUri("");
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Source creation failed");
+      setWorkspaceError(sessionErrorMessage(error, "Source creation failed"));
     } finally {
       setIsCreatingSource(false);
     }
@@ -2592,7 +2593,7 @@ function App() {
       }
       await refreshAudit(accessToken);
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Document update failed");
+      setWorkspaceError(sessionErrorMessage(error, "Document update failed"));
     } finally {
       setIsUpdatingDocument(false);
     }
@@ -2620,7 +2621,7 @@ function App() {
       }
       await refreshAudit(accessToken);
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Document archive failed");
+      setWorkspaceError(sessionErrorMessage(error, "Document archive failed"));
     } finally {
       setArchivingDocumentId(null);
     }
@@ -2640,7 +2641,7 @@ function App() {
       }
       await refreshAudit(accessToken);
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Document restore failed");
+      setWorkspaceError(sessionErrorMessage(error, "Document restore failed"));
     } finally {
       setRestoringDocumentId(null);
     }
@@ -2665,7 +2666,7 @@ function App() {
       setDocuments(nextDocuments);
       setQueuedJobs(nextJobs);
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Document refresh failed");
+      setWorkspaceError(sessionErrorMessage(error, "Document refresh failed"));
     } finally {
       setIsLoadingWorkspace(false);
     }
@@ -2685,7 +2686,7 @@ function App() {
       setDocumentHistory(await loadDocumentHistory(accessToken, documentId));
     } catch (error) {
       clearDocumentHistory();
-      setWorkspaceError(error instanceof Error ? error.message : "Document history failed");
+      setWorkspaceError(sessionErrorMessage(error, "Document history failed"));
     } finally {
       setIsLoadingDocumentHistory(false);
     }
@@ -2705,7 +2706,7 @@ function App() {
       setDocumentEvidence(await loadDocumentEvidence(accessToken, documentId));
     } catch (error) {
       clearDocumentEvidence();
-      setWorkspaceError(error instanceof Error ? error.message : "Document evidence failed");
+      setWorkspaceError(sessionErrorMessage(error, "Document evidence failed"));
     } finally {
       setIsLoadingDocumentEvidence(false);
     }
@@ -2745,7 +2746,7 @@ function App() {
       setQueuedJobs(nextJobs.length > 0 ? nextJobs : [job]);
       activateModule("documents-library");
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Text ingestion failed");
+      setWorkspaceError(sessionErrorMessage(error, "Text ingestion failed"));
     } finally {
       setIsIngestingText(false);
     }
@@ -2785,7 +2786,7 @@ function App() {
       setQueuedJobs(nextJobs.length > 0 ? nextJobs : [job]);
       activateModule("documents-library");
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "File upload failed");
+      setWorkspaceError(sessionErrorMessage(error, "File upload failed"));
     } finally {
       setIsUploadingFile(false);
     }
@@ -2799,7 +2800,7 @@ function App() {
       const job = await scanSource(accessToken, sourceId);
       setQueuedJobs((current) => [job, ...current].slice(0, 6));
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Source scan failed");
+      setWorkspaceError(sessionErrorMessage(error, "Source scan failed"));
     } finally {
       setIsQueueingScan(false);
     }
@@ -2816,7 +2817,7 @@ function App() {
       const job = await rebuildIndex(accessToken, selectedDomainId);
       setQueuedJobs((current) => [job, ...current].slice(0, 6));
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Index rebuild failed");
+      setWorkspaceError(sessionErrorMessage(error, "Index rebuild failed"));
     } finally {
       setIsQueueingIndex(false);
     }
@@ -2852,7 +2853,7 @@ function App() {
       setQueryResult(response.result);
       activateModule("queries-runner");
     } catch (error) {
-      setQueryError(error instanceof Error ? error.message : "Agent query failed");
+      setQueryError(sessionErrorMessage(error, "Agent query failed"));
     } finally {
       setIsRunningQuery(false);
     }
@@ -2868,7 +2869,7 @@ function App() {
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "Eval smoke failed");
+      setEvalError(sessionErrorMessage(error, "Eval smoke failed"));
     } finally {
       setIsRunningEval(false);
     }
@@ -2884,7 +2885,7 @@ function App() {
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "Agent multi-hop eval failed");
+      setEvalError(sessionErrorMessage(error, "Agent multi-hop eval failed"));
     } finally {
       setIsRunningAgentMultihopEval(false);
     }
@@ -2915,7 +2916,7 @@ function App() {
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "SQuAD eval failed");
+      setEvalError(sessionErrorMessage(error, "SQuAD eval failed"));
     } finally {
       setIsRunningSquadEval(false);
     }
@@ -2946,7 +2947,7 @@ function App() {
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "HotpotQA eval failed");
+      setEvalError(sessionErrorMessage(error, "HotpotQA eval failed"));
     } finally {
       setIsRunningHotpotQAEval(false);
     }
@@ -2976,7 +2977,7 @@ function App() {
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "HotpotQA agent eval failed");
+      setEvalError(sessionErrorMessage(error, "HotpotQA agent eval failed"));
     } finally {
       setIsRunningHotpotQAAgentEval(false);
     }
@@ -3007,7 +3008,7 @@ function App() {
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "Natural Questions eval failed");
+      setEvalError(sessionErrorMessage(error, "Natural Questions eval failed"));
     } finally {
       setIsRunningNaturalQuestionsEval(false);
     }
@@ -3039,7 +3040,7 @@ function App() {
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "OCR benchmark eval failed");
+      setEvalError(sessionErrorMessage(error, "OCR benchmark eval failed"));
     } finally {
       setIsRunningOcrBenchmarkEval(false);
     }
@@ -3064,7 +3065,7 @@ function App() {
       setEvalRegressionGate(null);
       activateModule("evals-history");
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "Eval comparison failed");
+      setEvalError(sessionErrorMessage(error, "Eval comparison failed"));
     } finally {
       setIsComparingEvals(false);
     }
@@ -3089,7 +3090,7 @@ function App() {
       setEvalComparison(null);
       activateModule("evals-history");
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "Regression gate failed");
+      setEvalError(sessionErrorMessage(error, "Regression gate failed"));
     } finally {
       setIsRunningRegressionGate(false);
     }
@@ -3105,7 +3106,7 @@ function App() {
       await refreshAudit(accessToken);
       await refreshEvalRuns(accessToken);
     } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "Eval rerun failed");
+      setEvalError(sessionErrorMessage(error, "Eval rerun failed"));
     } finally {
       setRerunningEvalJobId(null);
     }
@@ -3203,7 +3204,7 @@ function App() {
         return;
       }
       setLiveStatus("disconnected");
-      setLiveError(error instanceof Error ? error.message : "Live updates failed");
+      setLiveError(sessionErrorMessage(error, "Live updates failed"));
     } finally {
       if (liveAbortRef.current === controller) {
         liveAbortRef.current = null;
@@ -3272,6 +3273,14 @@ function App() {
     setUploadTitle("");
     setUploadSourceId("");
     setUploadFile(null);
+  }
+
+  function sessionErrorMessage(error: unknown, fallback: string): string {
+    if (isUnauthorizedError(error)) {
+      handleDisconnect();
+      return SESSION_EXPIRED_MESSAGE;
+    }
+    return readableError(error, fallback);
   }
 
   return (
@@ -3451,6 +3460,11 @@ function App() {
                   </a>
                 ))}
             </section>
+            {workspaceError ? (
+              <p className="inline-error overview-feedback" role="alert">
+                {workspaceError}
+              </p>
+            ) : null}
             {demoSeedError ? (
               <p className="inline-error overview-feedback" role="alert">
                 {demoSeedError}

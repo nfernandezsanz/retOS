@@ -1141,10 +1141,11 @@ The provider panel authenticates with `/auth/login`, stores the admin bearer tok
 browser local storage under `retos.adminToken`, and then calls `/llm/providers` and
 the workspace endpoints.
 
-If a stored token receives `401 Unauthorized` while loading the provider catalog, the
-console removes `retos.adminToken`, clears provider state, re-enables the password field,
-and shows an explicit reconnect message. This keeps expired or revoked sessions from
-staying sticky in local browser storage.
+If a stored token receives `401 Unauthorized` while loading protected console data, the
+console removes `retos.adminToken`, clears provider and workspace state, re-enables the
+password field, and shows an explicit reconnect message. This keeps expired or revoked
+sessions from staying sticky in local browser storage across provider, workspace, audit,
+eval, query, job, and SSE actions.
 
 Manual `fetch` paths such as upload, audit export, domain-grant deletion, and SSE
 connection setup use the same response parser as JSON API calls. When the backend
