@@ -60,6 +60,12 @@ type ProviderCatalog = {
 
 type WorkspaceSection = "overview" | "documents" | "queries" | "evals" | "audit" | "admin";
 
+type WorkspaceModule = {
+  id: string;
+  label: string;
+  tooltip: string;
+};
+
 const workspaceSections: Array<{
   id: WorkspaceSection;
   label: string;
@@ -118,13 +124,110 @@ const workspaceSections: Array<{
   },
 ];
 
+const workspaceModules: Record<WorkspaceSection, WorkspaceModule[]> = {
+  overview: [],
+  documents: [
+    {
+      id: "documents-library",
+      label: "Library",
+      tooltip: "Review active domain, documents, evidence, and history",
+    },
+    {
+      id: "documents-sources",
+      label: "Sources",
+      tooltip: "Register mounted sources and queue scans or index rebuilds",
+    },
+    {
+      id: "documents-upload",
+      label: "Upload",
+      tooltip: "Upload a local TXT, Markdown, or PDF fixture",
+    },
+    {
+      id: "documents-text",
+      label: "Text",
+      tooltip: "Paste fixture text into a traceable ingestion job",
+    },
+  ],
+  queries: [
+    {
+      id: "queries-runner",
+      label: "Ask",
+      tooltip: "Run a grounded question against the selected domain",
+    },
+    {
+      id: "queries-live",
+      label: "Live",
+      tooltip: "Watch queued jobs and SSE progress events",
+    },
+  ],
+  evals: [
+    {
+      id: "evals-runner",
+      label: "Run",
+      tooltip: "Launch smoke, agent, dataset, and OCR evals",
+    },
+    {
+      id: "evals-results",
+      label: "Results",
+      tooltip: "Inspect latest eval metrics, metadata, cases, and report paths",
+    },
+    {
+      id: "evals-history",
+      label: "History",
+      tooltip: "Compare runs, regression-gate candidates, rerun, and inspect trends",
+    },
+  ],
+  audit: [
+    {
+      id: "audit-jobs",
+      label: "Jobs",
+      tooltip: "Filter recent jobs, inspect details, retry failures, and export evidence",
+    },
+    {
+      id: "audit-progress",
+      label: "Progress",
+      tooltip: "Review persisted progress grouped by job",
+    },
+    {
+      id: "audit-events",
+      label: "Events",
+      tooltip: "Inspect journal and progress event hash evidence",
+    },
+  ],
+  admin: [
+    {
+      id: "admin-providers",
+      label: "Providers",
+      tooltip: "Load local and paid LLM provider readiness",
+    },
+    {
+      id: "admin-users",
+      label: "Users",
+      tooltip: "Create users, update roles, manage grants, and reset passwords",
+    },
+  ],
+};
+
 const workspaceSectionIds = new Set<WorkspaceSection>(
   workspaceSections.map((section) => section.id),
 );
 
+const workspaceModuleSection = new Map<string, WorkspaceSection>(
+  Object.entries(workspaceModules).flatMap(([section, modules]) =>
+    modules.map((module) => [module.id, section as WorkspaceSection]),
+  ),
+);
+
 function sectionFromHash(hash: string): WorkspaceSection {
-  const candidate = hash.replace("#", "") as WorkspaceSection;
-  return workspaceSectionIds.has(candidate) ? candidate : "overview";
+  const candidate = hash.replace("#", "").split("/")[0] as WorkspaceSection;
+  if (workspaceSectionIds.has(candidate)) {
+    return candidate;
+  }
+  return workspaceModuleSection.get(candidate) ?? "overview";
+}
+
+function moduleHref(moduleId: string): string {
+  return `#${moduleId}`;
 }
 
 type AdminUserRead = {
@@ -1649,6 +1752,7 @@ function App() {
   const evalDatasetScopeLabel = selectedEvalDomain ? selectedEvalDomain.name : "Global";
   const activeSectionMeta =
     workspaceSections.find((section) => section.id === activeSection) ?? workspaceSections[0];
+  const activeModules = workspaceModules[activeSection];
 
   useEffect(() => {
     const syncSectionFromHash = () => {
@@ -2914,6 +3018,16 @@ function App() {
           ))}
         </section>
 
+        {activeModules.length > 0 ? (
+          <nav className="module-nav" aria-label={`${activeSectionMeta.label} modules`}>
+            {activeModules.map((module) => (
+              <a data-tooltip={module.tooltip} href={moduleHref(module.id)} key={module.id}>
+                {module.label}
+              </a>
+            ))}
+          </nav>
+        ) : null}
+
         {activeSection === "overview" ? (
           <>
             <section className="brand-brief" aria-label="RetOS operating posture">
@@ -3010,7 +3124,7 @@ function App() {
                 {isCreatingDomain ? "Creating domain" : "Create domain"}
               </button>
             </form>
-            <div className="domain-toolbar">
+            <div className="domain-toolbar" id="documents-library">
               <label>
                 <span>Active domain</span>
                 <select
@@ -3290,7 +3404,7 @@ function App() {
                 </div>
               ) : null}
             </div>
-            <section className="source-workspace" aria-label="Domain sources">
+            <section className="source-workspace" id="documents-sources" aria-label="Domain sources">
               <div className="section-heading">
                 <h3>Sources</h3>
                 <button
@@ -3369,7 +3483,7 @@ function App() {
                 ) : null}
               </div>
             </section>
-            <section className="file-upload" aria-label="File upload">
+            <section className="file-upload" id="documents-upload" aria-label="File upload">
               <div className="section-heading">
                 <h3>File upload</h3>
               </div>
@@ -3417,7 +3531,7 @@ function App() {
                 </button>
               </form>
             </section>
-            <section className="text-ingestion" aria-label="Text ingestion">
+            <section className="text-ingestion" id="documents-text" aria-label="Text ingestion">
               <div className="section-heading">
                 <h3>Text ingestion</h3>
               </div>
@@ -3473,7 +3587,7 @@ function App() {
               </div>
               <span className="status-pill local">Local model</span>
             </div>
-            <form className="query-form" onSubmit={handleQuerySubmit}>
+            <form className="query-form" id="queries-runner" onSubmit={handleQuerySubmit}>
               <div className="selected-domain">
                 <span>Active domain</span>
                 <strong>{selectedDomain ? selectedDomain.name : "Select a domain first"}</strong>
@@ -3697,7 +3811,7 @@ function App() {
                 {liveStatus === "connected" ? "Live" : "Offline"}
               </span>
             </div>
-            <div className="live-toolbar">
+            <div className="live-toolbar" id="queries-live">
               <button
                 className={liveStatus === "connected" ? "ghost-action" : "secondary-action"}
                 data-tooltip="Open an SSE stream to watch processing updates"
@@ -3770,7 +3884,7 @@ function App() {
                 {evalReport ? (evalReport.passed ? "Passing" : "Failing") : "Not run"}
               </span>
             </div>
-            <div className="eval-toolbar">
+            <div className="eval-toolbar" id="evals-runner">
               <button
                 className="secondary-action"
                 data-tooltip="Run the local smoke eval suite without paid providers"
@@ -4063,7 +4177,7 @@ function App() {
                 {evalError}
               </p>
             ) : null}
-            <section className="eval-result" aria-label="Eval smoke results" aria-live="polite">
+            <section className="eval-result" id="evals-results" aria-label="Eval smoke results" aria-live="polite">
               {evalReport ? (
                 <>
                   <div className="eval-metrics" aria-label="Eval metrics">
@@ -4130,7 +4244,7 @@ function App() {
                 </div>
               )}
             </section>
-            <section className="eval-history" aria-label="Eval run history">
+            <section className="eval-history" id="evals-history" aria-label="Eval run history">
               <div className="section-heading">
                 <h3>Run history</h3>
                 <div className="section-actions">
@@ -4353,7 +4467,7 @@ function App() {
               </span>
             </div>
 
-            <div className="admin-grid">
+            <div className="admin-grid" id="admin-providers">
               <form className="provider-login" onSubmit={handleProviderLogin}>
                 <label>
                   <span>Email</span>
@@ -4466,7 +4580,7 @@ function App() {
               ) : null}
             </div>
 
-            <section className="admin-users" aria-label="Admin users">
+            <section className="admin-users" id="admin-users" aria-label="Admin users">
               <div className="section-heading">
                 <h3>Admin users</h3>
                 <button
@@ -4682,7 +4796,7 @@ function App() {
               </div>
               <span className="status-pill">{queuedJobs.length} recent jobs</span>
             </div>
-            <div className="audit-toolbar">
+            <div className="audit-toolbar" id="audit-jobs">
               <label>
                 <span>Filter jobs</span>
                 <select value={jobFilter} onChange={(event) => setJobFilter(event.target.value)}>
@@ -4884,7 +4998,7 @@ function App() {
                 )}
               </section>
             ) : null}
-            <section className="job-progress-groups" aria-label="Progress grouped by job">
+            <section className="job-progress-groups" id="audit-progress" aria-label="Progress grouped by job">
               <div className="section-heading compact">
                 <h3>Progress by job</h3>
                 <span className="badge muted">{progressGroups.length}</span>
@@ -4928,7 +5042,7 @@ function App() {
                 ) : null}
               </div>
             </section>
-            <div className="audit-event-grid">
+            <div className="audit-event-grid" id="audit-events">
               <section className="audit-event-panel" aria-label="Journal events">
                 <div className="section-heading compact">
                   <h3>Journal events</h3>

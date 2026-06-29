@@ -226,6 +226,71 @@ button:disabled {
   color: #ffffff;
 }
 
+.module-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: -4px 0 16px;
+  border: 1px solid var(--retos-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.module-nav a {
+  position: relative;
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--retos-muted);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.module-nav a:hover,
+.module-nav a:focus-visible {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: var(--retos-primary);
+}
+
+.module-nav a:focus-visible {
+  outline: 3px solid var(--retos-primary-ring);
+  outline-offset: 2px;
+}
+
+#documents-library,
+#documents-sources,
+#documents-upload,
+#documents-text,
+#queries-runner,
+#queries-live,
+#evals-runner,
+#evals-results,
+#evals-history,
+#admin-providers,
+#admin-users,
+#audit-jobs,
+#audit-progress,
+#audit-events {
+  scroll-margin-top: 88px;
+}
+
 .overview-actions {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -601,7 +666,10 @@ h2 {
 .event-ledger {
   display: grid;
   gap: 10px;
+  max-height: min(620px, 54vh);
   margin-top: 16px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .queued-jobs {
@@ -780,7 +848,10 @@ button:focus-visible {
 .document-list {
   display: grid;
   gap: 10px;
+  max-height: min(680px, 58vh);
   margin-top: 14px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .document-row {
@@ -1063,6 +1134,9 @@ button:focus-visible {
 .source-list {
   display: grid;
   gap: 10px;
+  max-height: min(420px, 42vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .source-row {
@@ -1532,6 +1606,9 @@ button:focus-visible {
 .eval-case-list {
   display: grid;
   gap: 10px;
+  max-height: min(460px, 46vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .eval-case-row {
@@ -1791,6 +1868,9 @@ button:focus-visible {
 .eval-run-list {
   display: grid;
   gap: 10px;
+  max-height: min(520px, 48vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .eval-run-row {
@@ -1824,6 +1904,9 @@ button:focus-visible {
 .job-ledger {
   display: grid;
   gap: 12px;
+  max-height: min(640px, 56vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .job-row {
@@ -2009,6 +2092,9 @@ button:focus-visible {
 .job-progress-list {
   display: grid;
   gap: 10px;
+  max-height: min(460px, 44vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .job-progress-row {
@@ -2095,6 +2181,9 @@ button:focus-visible {
 .audit-event-list {
   display: grid;
   gap: 10px;
+  max-height: min(560px, 52vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .audit-event-row {
@@ -2153,7 +2242,10 @@ button:focus-visible {
 .provider-list {
   display: grid;
   gap: 10px;
+  max-height: min(420px, 42vh);
   margin-top: 18px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .provider-row {
@@ -2229,6 +2321,9 @@ button:focus-visible {
 .admin-user-list {
   display: grid;
   gap: 10px;
+  max-height: min(620px, 54vh);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .admin-user-row {

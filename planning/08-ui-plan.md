@@ -30,6 +30,11 @@ workspace section switcher keep the same destinations, expose `aria-current`, an
 hover/focus tooltips on navigation and primary actions so operators can understand each
 workflow without extra instructional copy. Only the active section renders visibly; this
 keeps local browser sessions short, scan-friendly, and easy to validate with Playwright.
+Long operational sections also expose contextual module pills with stable hash anchors
+for their main task areas: document library/sources/upload/text ingestion, query/live
+progress, eval runner/results/history, audit jobs/progress/events, and admin providers/users.
+Repeated long lists are bounded inside their modules so the page remains organized without
+hiding existing controls behind modal flows.
 
 ## Implemented Frontend Contracts
 
@@ -100,11 +105,11 @@ keeps local browser sessions short, scan-friendly, and easy to validate with Pla
 - Manual fetch workflows parse backend JSON `detail` errors, so upload/export/SSE/grant
   failures show operator-facing backend reasons instead of generic status codes.
 - The shell renders a compact Overview first, then separates Documents, Queries, Evals,
-  Audit, and Admin into focused hash-addressable sections with matching sidebar and
-  workspace controls. Hover/focus tooltips describe navigation targets and high-impact
-  actions without adding permanent explanatory text.
+  Audit, and Admin into focused hash-addressable sections with matching sidebar,
+  workspace controls, and contextual module pills. Hover/focus tooltips describe
+  navigation targets and high-impact actions without adding permanent explanatory text.
 - Browser smoke tests mock the API contract and verify provider, admin user roles,
-  per-domain viewer grants, domain
+  contextual module navigation, per-domain viewer grants, domain
   creation, document/source inventory, document evidence inspection,
   document edit/archive/restore/history, file
   upload, text ingestion, scan/index queueing, job/audit filtering, persisted audit

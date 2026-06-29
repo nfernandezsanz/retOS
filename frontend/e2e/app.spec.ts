@@ -1645,6 +1645,14 @@ test("loads the operational console", async ({ page }) => {
 
   await page.getByRole("link", { name: "Admin" }).first().click();
   await expect(page.locator("#admin").getByRole("heading", { name: "LLM providers" })).toBeVisible();
+  await expect(page.getByLabel("Admin modules").getByRole("link", { name: "Providers" })).toHaveAttribute(
+    "data-tooltip",
+    /provider readiness/,
+  );
+  await expect(page.getByLabel("Admin modules").getByRole("link", { name: "Users" })).toHaveAttribute(
+    "href",
+    "#admin-users",
+  );
 
   await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
@@ -1696,6 +1704,12 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.locator("#documents").getByRole("heading", { name: "Domains and documents" }),
   ).toBeVisible();
+  await expect(page.getByLabel("Documents modules").getByRole("link", { name: "Library" })).toHaveAttribute(
+    "href",
+    "#documents-library",
+  );
+  await page.getByLabel("Documents modules").getByRole("link", { name: "Upload" }).click();
+  await expect(page.getByLabel("File upload")).toBeVisible();
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
   await expect(page.getByText("Smoke Document")).toBeVisible();
   await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();
@@ -1711,6 +1725,10 @@ test("loads the operational console", async ({ page }) => {
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Queries" }).first().click();
+  await expect(page.getByLabel("Queries modules").getByRole("link", { name: "Live" })).toHaveAttribute(
+    "data-tooltip",
+    /SSE progress/,
+  );
   await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
   await page
     .getByRole("textbox", { name: "Question", exact: true })
@@ -1802,6 +1820,10 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.locator("#audit").getByRole("heading", { name: "Jobs and evidence ledger" }),
   ).toBeVisible();
+  await expect(page.getByLabel("Audit modules").getByRole("link", { name: "Events" })).toHaveAttribute(
+    "href",
+    "#audit-events",
+  );
   await expect(page.getByLabel("Recent jobs").getByText("job-text-1")).toBeVisible();
   await expect(page.getByText("title: Policy Note")).toBeVisible();
   await page.getByRole("button", { name: "Refresh audit" }).click();
@@ -1823,6 +1845,10 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByText("retos-audit-export.json:")).toBeVisible();
 
   await page.getByRole("link", { name: "Evals" }).first().click();
+  await expect(page.getByLabel("Evals modules").getByRole("link", { name: "History" })).toHaveAttribute(
+    "data-tooltip",
+    /regression-gate/,
+  );
   await page.getByRole("button", { name: "Run eval smoke" }).click();
   await expect(page.getByLabel("Eval metrics").getByText("retrieval recall")).toBeVisible();
   await expect(page.getByLabel("Eval metadata").getByText("built-in")).toBeVisible();

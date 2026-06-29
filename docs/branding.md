@@ -54,6 +54,10 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
 - Information architecture: a compact Overview plus hash-addressable Documents,
   Queries, Evals, Audit, and Admin sections. Avoid returning to a single long
   all-in-one page unless a user explicitly asks for that workflow.
+- Module navigation: long operational sections use compact contextual pills for
+  task areas such as library, sources, upload, eval results, job progress, audit
+  events, providers, and users. These pills are navigational aids, not marketing
+  decoration, and they must keep hover/focus tooltip behavior.
 - Tooltips: navigation links and high-impact actions use hover/focus tooltips for
   short operational context. Tooltips must not create accessible-name noise, layout
   shift, or document-level horizontal overflow.
@@ -73,7 +77,7 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
   cards shorten, and the page reports no horizontal overflow.
 - Automated coverage: `frontend/e2e/app.spec.ts` verifies brand tokens, favicon,
   responsive breakpoints, skip-link focus, reduced motion, mobile provider controls,
-  section navigation, tooltip contract, and the full operational console flow.
+  section/module navigation, tooltip contract, and the full operational console flow.
 - Reproducible screenshots: run `make frontend-visual-audit` to write ignored local
   desktop and mobile PNGs plus `frontend/visual-audit/manifest.json` with viewport,
   size, and SHA-256 metadata for human design review.
