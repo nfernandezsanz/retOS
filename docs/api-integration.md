@@ -28,7 +28,8 @@ returns secrets.
 
 Operational endpoints require a bearer token from a persisted local account. The default
 local admin is persisted in `admin_users` during application startup when the bootstrap
-environment variables are configured.
+environment variables are configured. `RETOS_BOOTSTRAP_ADMIN_PASSWORD` follows the same
+minimum length policy as managed admin passwords and must contain at least 12 characters.
 
 ```bash
 curl --request POST http://localhost:8000/auth/login \

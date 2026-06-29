@@ -11,6 +11,7 @@ AgentRuntimeMode = Literal["deterministic", "deepagents"]
 
 DEVELOPMENT_JWT_SECRET = "change-this-development-secret-at-least-32-chars"
 DEVELOPMENT_ADMIN_PASSWORD = "retos-dev-admin-change-me"
+MIN_ADMIN_PASSWORD_LENGTH = 12
 KNOWN_PROVIDER_PROFILES: frozenset[str] = frozenset(
     {
         "fake",
@@ -159,6 +160,14 @@ class Settings(BaseSettings):
         ):
             raise ValueError(
                 "The development bootstrap admin password is not allowed in production"
+            )
+        if (
+            self.bootstrap_admin_password is not None
+            and len(self.bootstrap_admin_password.get_secret_value()) < MIN_ADMIN_PASSWORD_LENGTH
+        ):
+            raise ValueError(
+                "RETOS_BOOTSTRAP_ADMIN_PASSWORD must contain at least "
+                f"{MIN_ADMIN_PASSWORD_LENGTH} characters"
             )
         if self.is_production and any(str(origin) == "*" for origin in self.allowed_origins):
             raise ValueError("Wildcard CORS origins are not allowed in production")

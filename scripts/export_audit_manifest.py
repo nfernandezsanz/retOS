@@ -212,9 +212,9 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
             "post_run_ci_validation_command": "make ci-status-check",
         },
         "coverage_targets": {
-            "branch_minimum_percent": 90.44,
-            "last_recorded_branch_percent": 90.44,
-            "last_recorded_total_percent": 95.20,
+            "branch_minimum_percent": 90.45,
+            "last_recorded_branch_percent": 90.45,
+            "last_recorded_total_percent": 95.21,
             "total_minimum_percent": 90.0,
         },
         "critical_file_hashes": [file_record(path) for path in CRITICAL_FILES],

@@ -53,7 +53,7 @@ required_workflow_phrases = (
     "mypy src",
     "python -m pip_audit -r backend/requirements.txt",
     "pytest",
-    "python scripts/check_branch_coverage.py --fail-under 90.44",
+    "python scripts/check_branch_coverage.py --fail-under 90.45",
     "npm audit --audit-level=high",
     "npm run check",
     "npx playwright install --with-deps chromium",

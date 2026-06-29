@@ -12,7 +12,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 [![CI](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nfernandezsanz/retOS/actions/workflows/ci.yml?query=branch%3Amain)
 [![Release Images](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml/badge.svg)](https://github.com/nfernandezsanz/retOS/actions/workflows/release.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-95.20%25%20total%20%7C%2090.44%25%20branch-166534?style=flat-square)](#current-status)
+[![Coverage](https://img.shields.io/badge/coverage-95.21%25%20total%20%7C%2090.45%25%20branch-166534?style=flat-square)](#current-status)
 [![Stability](https://img.shields.io/badge/stability-pre--alpha-f97316?style=flat-square)](#current-status)
 
 **Action pills**
@@ -147,7 +147,7 @@ visual-audit, audit-manifest, and audit-handoff artifacts.
 | Signal | Status |
 | --- | --- |
 | Product maturity | Pre-alpha foundation; core product slices are being built phase by phase. |
-| Backend coverage | 95.20% total coverage; 90.44% branch-only coverage is ratcheted above the 90% target. |
+| Backend coverage | 95.21% total coverage; 90.45% branch-only coverage is ratcheted above the 90% target. |
 | Local runtime | Docker-first stack with Postgres, RabbitMQ, Ollama, API, worker, and web UI. |
 | Cost posture | Zero paid LLM calls by default; paid providers require explicit opt-in. |
 | Production status | Not production-promoted; final release still needs GHCR digests, SBOM/provenance, Cosign evidence, and human target-environment review. |
@@ -356,7 +356,7 @@ Every meaningful change should pass these gates:
 | Backend format | `make format-check` | Enforces Black formatting. |
 | Backend PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
-| Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.44%). |
+| Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.45%). |
 | Dependency audit | `make dependency-audit` | Runs `pip-audit` against backend runtime requirements and `npm audit --audit-level=high` against the frontend lockfile. |
 | Security policy | `make security-policy-check` | Validates security reporting, secure defaults, human production review guidance, and links from operational docs. |
 | Ignore hygiene | `make ignore-hygiene-check` | Validates `.gitignore` and `.dockerignore` keep secrets, generated files, local volumes, public datasets, reports, and backups out of Git and Docker contexts. |
@@ -403,7 +403,7 @@ Every meaningful change should pass these gates:
 
 - Paid providers are disabled by default with `RETOS_ALLOW_PAID_LLM=false`.
 - The production JWT secret must be at least 32 characters and must not use the development placeholder.
-- A default bootstrap admin password is allowed only in development and is materialized as a persisted admin user at startup.
+- A default bootstrap admin password is allowed only in development and is materialized as a persisted admin user at startup; custom bootstrap passwords must be at least 12 characters.
 - Passwords are hashed with Argon2 through `pwdlib`.
 - JWTs include issuer, audience, issue time, not-before time, and expiration.
 - CORS is explicit; wildcard origins are rejected outside development.

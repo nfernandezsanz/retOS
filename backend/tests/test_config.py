@@ -41,6 +41,17 @@ def test_short_jwt_secret_is_rejected() -> None:
         settings.validate_runtime_security()
 
 
+def test_short_bootstrap_admin_password_is_rejected() -> None:
+    settings = Settings(
+        env="development",
+        jwt_secret=SecretStr("development-secret-value-that-is-long-enough"),
+        bootstrap_admin_password=SecretStr("short"),
+    )
+
+    with pytest.raises(ValueError, match="BOOTSTRAP_ADMIN_PASSWORD"):
+        settings.validate_runtime_security()
+
+
 def test_bootstrap_admin_hashes_password() -> None:
     settings = Settings(
         env="test",
