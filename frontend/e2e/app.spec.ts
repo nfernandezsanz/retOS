@@ -2072,6 +2072,12 @@ test("loads the operational console", async ({ page }) => {
   );
   await expect(page.getByText("Smoke Document")).toBeVisible();
   await page.getByLabel("Documents modules").getByRole("link", { name: "Sources" }).click();
+  await expect(page.getByLabel("Domain sources").getByText("Corpus inputs")).toBeVisible();
+  await expect(page.getByLabel("Domain sources").getByText("Registered sources")).toBeVisible();
+  await expect(page.getByLabel("Domain sources").getByText("1 registered")).toHaveAttribute(
+    "data-tooltip",
+    /active domain/,
+  );
   await expect(page.getByLabel("Domain sources").getByText("Mounted Corpus")).toBeVisible();
   await page.getByLabel("Documents modules").getByRole("link", { name: "Library" }).click();
   await page.getByRole("button", { name: "Evidence Smoke Document" }).click();

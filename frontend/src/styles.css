@@ -1140,7 +1140,8 @@ button:focus-visible {
   scrollbar-gutter: stable;
 }
 
-.document-list-heading {
+.document-list-heading,
+.source-list-heading {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -1154,20 +1155,23 @@ button:focus-visible {
   padding: 9px 10px;
 }
 
-.document-list-heading div {
+.document-list-heading div,
+.source-list-heading div {
   display: grid;
   gap: 2px;
   min-width: 0;
 }
 
-.document-list-heading span:not(.badge) {
+.document-list-heading span:not(.badge),
+.source-list-heading span:not(.badge) {
   color: #64748b;
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.document-list-heading strong {
+.document-list-heading strong,
+.source-list-heading strong {
   color: #0f172a;
   font-size: 15px;
   overflow-wrap: anywhere;
@@ -1480,7 +1484,7 @@ button:focus-visible {
 .source-list {
   display: grid;
   gap: 10px;
-  max-height: min(230px, 28vh);
+  max-height: clamp(220px, calc(100vh - 500px), 320px);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -1494,7 +1498,7 @@ button:focus-visible {
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #f8fafc;
-  padding: 12px;
+  padding: 10px;
 }
 
 .source-row.editing {

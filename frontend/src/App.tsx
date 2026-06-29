@@ -4376,6 +4376,18 @@ function App() {
                 </button>
               </form>
               <div className="source-list">
+                <div className="source-list-heading">
+                  <div>
+                    <span>Corpus inputs</span>
+                    <strong>Registered sources</strong>
+                  </div>
+                  <span
+                    className="badge muted"
+                    data-tooltip="Sources registered for the active domain and available for scans or uploads"
+                  >
+                    {sources.length} registered
+                  </span>
+                </div>
                 {sources.map((source) => {
                   const isEditing = editingSourceId === source.id;
                   const isDeleting = deletingSourceId === source.id;
