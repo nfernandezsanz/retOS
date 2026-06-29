@@ -58,6 +58,9 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
   task areas such as library, sources, upload, eval results, job progress, audit
   events, providers, and users. These pills are navigational aids, not marketing
   decoration, and they must keep hover/focus tooltip behavior.
+- Current-context band: non-overview sections show the active section, active
+  module, helper text, and module position so operators stay oriented without
+  scrolling back to the top of a long workflow.
 - Tooltips: navigation links and high-impact actions use hover/focus tooltips for
   short operational context. Tooltips must not create accessible-name noise, layout
   shift, or document-level horizontal overflow.

@@ -1645,6 +1645,13 @@ test("loads the operational console", async ({ page }) => {
 
   await page.getByRole("link", { name: "Admin" }).first().click();
   await expect(page.locator("#admin").getByRole("heading", { name: "LLM providers" })).toBeVisible();
+  const workspaceContext = page.getByLabel("Current workspace context");
+  await expect(workspaceContext.getByText("Admin", { exact: true })).toBeVisible();
+  await expect(workspaceContext.getByText("Providers", { exact: true })).toBeVisible();
+  await expect(workspaceContext.getByText("1 of 2")).toHaveAttribute(
+    "data-tooltip",
+    /module position/,
+  );
   await expect(page.getByLabel("Admin modules").getByRole("link", { name: "Providers" })).toHaveAttribute(
     "data-tooltip",
     /provider readiness/,
@@ -1653,6 +1660,10 @@ test("loads the operational console", async ({ page }) => {
     "href",
     "#admin-users",
   );
+  await page.getByLabel("Admin modules").getByRole("link", { name: "Users" }).click();
+  await expect(workspaceContext.getByText("Users", { exact: true })).toBeVisible();
+  await expect(workspaceContext.getByText("2 of 2")).toBeVisible();
+  await page.getByLabel("Admin modules").getByRole("link", { name: "Providers" }).click();
 
   await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
@@ -1853,7 +1864,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(
     page.getByLabel("Persisted progress events").getByText("Queued ingest.source").first(),
   ).toBeVisible();
-  await page.getByLabel("Audit modules").getByRole("link", { name: "Progress" }).click();
+  await page.getByLabel("Audit modules").getByRole("link", { name: "Progress", exact: true }).click();
   const scanProgressGroup = page
     .getByLabel("Progress grouped by job")
     .locator("article")

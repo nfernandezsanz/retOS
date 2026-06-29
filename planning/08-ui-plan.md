@@ -33,6 +33,9 @@ keeps local browser sessions short, scan-friendly, and easy to validate with Pla
 Long operational sections also expose contextual module pills with stable hash anchors
 for their main task areas: document library/sources/upload/text ingestion, query/live
 progress, eval runner/results/history, audit jobs/progress/events, and admin providers/users.
+Each non-overview section also renders a compact current-context band with the active
+section, active module, helper text, and module position so users can confirm where they
+are before acting.
 Repeated long lists are bounded inside their modules so the page remains organized without
 hiding existing controls behind modal flows.
 

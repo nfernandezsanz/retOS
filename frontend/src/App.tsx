@@ -1845,6 +1845,11 @@ function App() {
   const activeSectionMeta =
     workspaceSections.find((section) => section.id === activeSection) ?? workspaceSections[0];
   const activeModules = workspaceModules[activeSection];
+  const activeModuleMeta =
+    activeModules.find((module) => module.id === activeModule) ?? activeModules[0] ?? null;
+  const activeModulePosition = activeModuleMeta
+    ? activeModules.findIndex((module) => module.id === activeModuleMeta.id) + 1
+    : 0;
 
   useEffect(() => {
     const syncSectionFromHash = () => {
@@ -3147,6 +3152,22 @@ function App() {
               </a>
             ))}
           </nav>
+        ) : null}
+
+        {activeSection !== "overview" && activeModuleMeta ? (
+          <section className="workspace-context" aria-label="Current workspace context">
+            <div>
+              <span>{activeSectionMeta.label}</span>
+              <strong>{activeModuleMeta.label}</strong>
+              <small>{activeModuleMeta.tooltip}</small>
+            </div>
+            <span
+              className="context-count"
+              data-tooltip="Current module position inside this section"
+            >
+              {activeModulePosition} of {activeModules.length}
+            </span>
+          </section>
         ) : null}
 
         {activeSection === "overview" ? (
