@@ -71,6 +71,8 @@ def main() -> int:
         "Candidate worktree is clean",
         "All critical evidence files exist",
         "Local visual audit manifest and desktop/mobile screenshots are present",
+        "Visual coverage: ready - 6 section(s), 14 module(s)",
+        "no-overflow widths: 375, 768, 1024, 1440",
         "External GHCR digests, SBOM/provenance, and Cosign verification are recorded",
         "Target-environment human security review is complete",
         "Calibration scope decision template is completed",

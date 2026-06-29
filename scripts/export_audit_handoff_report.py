@@ -145,12 +145,45 @@ def build_evidence_status_rows(
     ]
 
 
+def visual_coverage_summary(visual: dict[str, Any]) -> tuple[bool, str]:
+    manifest_json = visual.get("local_manifest", {}).get("json")
+    if not isinstance(manifest_json, dict):
+        return False, "Coverage metadata not available in local visual manifest"
+    coverage = manifest_json.get("coverage")
+    if not isinstance(coverage, dict):
+        return False, "Coverage metadata missing from local visual manifest"
+
+    sections = coverage.get("sections")
+    modules = coverage.get("modules")
+    responsive_checks = coverage.get("responsive_checks")
+    tooltip_targets = coverage.get("tooltip_targets")
+    no_overflow = coverage.get("no_horizontal_overflow") is True
+    if not isinstance(sections, list) or not isinstance(modules, list):
+        return False, "Section or module coverage metadata is incomplete"
+    if not isinstance(responsive_checks, list):
+        return False, "Responsive coverage metadata is incomplete"
+    widths = [
+        str(record.get("width"))
+        for record in responsive_checks
+        if isinstance(record, dict) and record.get("no_horizontal_overflow") is True
+    ]
+    if not widths or not no_overflow:
+        return False, "Responsive no-overflow coverage is incomplete"
+    tooltip_label = tooltip_targets if isinstance(tooltip_targets, int) else "unknown"
+    return (
+        True,
+        f"{len(sections)} section(s), {len(modules)} module(s), "
+        f"{tooltip_label} tooltip target(s), no-overflow widths: {', '.join(widths)}",
+    )
+
+
 def build_report(manifest: dict[str, Any], *, manifest_path: Path) -> str:
     repository = manifest["repository"]
     coverage = manifest["coverage_targets"]
     ci = manifest["ci"]
     generation = manifest["generation_context"]
     visual = manifest["visual_audit"]
+    visual_coverage_ready, visual_coverage = visual_coverage_summary(visual)
     critical_files = manifest["critical_file_hashes"]
     missing_critical = [
         record["path"] for record in critical_files if not record.get("exists")
@@ -237,6 +270,7 @@ def build_report(manifest: dict[str, Any], *, manifest_path: Path) -> str:
             f"- CI visual artifact: `{visual['ci_artifact']}`",
             f"- Release visual artifact: `{visual['release_artifact']}`",
             f"- Local visual manifest: `{visual['local_manifest']['path']}`",
+            f"- Visual coverage: {'ready' if visual_coverage_ready else 'review'} - {visual_coverage}",
         ]
     )
     for screenshot in visual["local_screenshots"]:

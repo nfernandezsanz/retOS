@@ -25,6 +25,49 @@ def manifest_fixture(
     missing_critical: bool = False,
     visual_present: bool = True,
 ) -> dict[str, Any]:
+    visual_manifest: dict[str, Any] = {
+        "path": "frontend/visual-audit/manifest.json",
+        "exists": visual_present,
+    }
+    if visual_present:
+        visual_manifest["json"] = {
+            "coverage": {
+                "sections": [
+                    "Overview",
+                    "Documents",
+                    "Queries",
+                    "Evals",
+                    "Audit",
+                    "Admin",
+                ],
+                "modules": [
+                    "documents-library",
+                    "documents-sources",
+                    "documents-upload",
+                    "documents-text",
+                    "queries-runner",
+                    "queries-live",
+                    "evals-runner",
+                    "evals-results",
+                    "evals-history",
+                    "audit-jobs",
+                    "audit-progress",
+                    "audit-events",
+                    "admin-providers",
+                    "admin-users",
+                ],
+                "tooltip_targets": 23,
+                "no_horizontal_overflow": True,
+                "responsive_checks": [
+                    {
+                        "width": width,
+                        "height": 900,
+                        "no_horizontal_overflow": True,
+                    }
+                    for width in (375, 768, 1024, 1440)
+                ],
+            }
+        }
     return {
         "repository": {
             "commit_sha": "abc123def456",
@@ -48,10 +91,7 @@ def manifest_fixture(
         "visual_audit": {
             "ci_artifact": "retos-visual-audit-abc123def456",
             "release_artifact": "retos-release-visual-audit",
-            "local_manifest": {
-                "path": "frontend/visual-audit/manifest.json",
-                "exists": visual_present,
-            },
+            "local_manifest": visual_manifest,
             "local_screenshots": [
                 {
                     "path": "frontend/visual-audit/retos-console-desktop.png",
@@ -114,6 +154,10 @@ def test_build_report_marks_complete_local_evidence_ready() -> None:
         "- [ ] External GHCR digests, SBOM/provenance, and Cosign verification are recorded."
         in report
     )
+    assert (
+        "- Visual coverage: ready - 6 section(s), 14 module(s), "
+        "23 tooltip target(s), no-overflow widths: 375, 768, 1024, 1440"
+    ) in report
     assert "- `make local-acceptance`" in report
     assert "- GHCR backend and web digests" in report
 
