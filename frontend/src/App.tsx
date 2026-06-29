@@ -4826,7 +4826,7 @@ function App() {
                     </div>
                   </details>
                   <p>{queryResult.answer}</p>
-                  <details className="insight-section" open>
+                  <details className="insight-section">
                     <summary data-tooltip="Review the exact cited snippets used by the answer">
                       Citations
                     </summary>

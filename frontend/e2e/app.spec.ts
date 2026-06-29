@@ -2202,6 +2202,7 @@ test("loads the operational console", async ({ page }) => {
   await expect(page.getByLabel("Multi-hop audit").getByText("supported multi document")).toBeVisible();
   await expect(page.getByLabel("Multi-hop audit").getByText("multi-hop question")).toBeVisible();
   await expect(page.getByLabel("Multi-hop audit").getByText("Bridge terms: search, readiness")).toBeVisible();
+  await page.getByText("Citations", { exact: true }).click();
   await expect(page.getByLabel("Query citations").getByText("Smoke Document")).toBeVisible();
   await page.getByText("Neighbor context", { exact: true }).click();
   await expect(page.getByLabel("Neighbor context").getByText("Adjacent context")).toBeVisible();

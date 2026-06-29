@@ -1,5 +1,6 @@
 import sqlite3
 from collections.abc import Iterator
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -67,16 +68,13 @@ def create_domain_and_source(
 
 
 def count_ingestion_side_effects(db_path: Path) -> tuple[int, int, int, int, int]:
-    connection = sqlite3.connect(db_path)
-    try:
+    with closing(sqlite3.connect(db_path)) as connection:
         documents = connection.execute("select count(*) from documents").fetchone()[0]
         artifacts = connection.execute("select count(*) from artifacts").fetchone()[0]
         segments = connection.execute("select count(*) from segments").fetchone()[0]
         journals = connection.execute("select count(*) from journal_events").fetchone()[0]
         progress = connection.execute("select count(*) from progress_events").fetchone()[0]
         return int(documents), int(artifacts), int(segments), int(journals), int(progress)
-    finally:
-        connection.close()
 
 
 async def add_text_job(

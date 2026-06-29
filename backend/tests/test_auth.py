@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -32,14 +33,11 @@ def test_bootstrap_admin_is_persisted(client: TestClient, settings: Settings) ->
     response = client.get("/healthz")
     assert response.status_code == 200
 
-    connection = sqlite3.connect(sqlite_path(settings))
-    try:
+    with closing(sqlite3.connect(sqlite_path(settings))) as connection:
         count = connection.execute(
             "select count(*) from admin_users where email = ?",
             ("admin@retos.dev",),
         ).fetchone()[0]
-    finally:
-        connection.close()
 
     assert count == 1
 

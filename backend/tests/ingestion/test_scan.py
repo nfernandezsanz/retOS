@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Iterator
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -105,16 +106,13 @@ def create_mount_source(
 
 
 def count_scan_side_effects(db_path: Path) -> tuple[int, int, int, int, int]:
-    connection = sqlite3.connect(db_path)
-    try:
+    with closing(sqlite3.connect(db_path)) as connection:
         documents = connection.execute("select count(*) from documents").fetchone()[0]
         versions = connection.execute("select count(*) from document_versions").fetchone()[0]
         artifacts = connection.execute("select count(*) from artifacts").fetchone()[0]
         segments = connection.execute("select count(*) from segments").fetchone()[0]
         jobs = connection.execute("select count(*) from jobs").fetchone()[0]
         return int(documents), int(versions), int(artifacts), int(segments), int(jobs)
-    finally:
-        connection.close()
 
 
 def scan_job(

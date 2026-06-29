@@ -318,6 +318,18 @@ button:disabled {
   padding: 7px 12px;
 }
 
+.workspace-context,
+.document-context,
+.query-context,
+.live-context,
+.eval-scope-note,
+.provider-context,
+.admin-user-context,
+.audit-context,
+.ingestion-context {
+  min-height: 0;
+}
+
 .workspace-context div {
   display: grid;
   gap: 2px;
@@ -673,7 +685,7 @@ h2 {
 .section-content > .panel:not([hidden]) {
   display: grid;
   align-content: start;
-  max-height: calc(100vh - 178px);
+  max-height: calc(100vh - 166px);
   overflow: auto;
   scrollbar-gutter: stable;
 }
@@ -682,7 +694,7 @@ h2 {
   display: grid;
   align-content: start;
   gap: 12px;
-  max-height: calc(100vh - 260px);
+  max-height: calc(100vh - 238px);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -849,7 +861,7 @@ h2 {
 .event-ledger {
   display: grid;
   gap: 10px;
-  max-height: min(430px, calc(100vh - 330px));
+  max-height: min(500px, calc(100vh - 292px));
   margin-top: 10px;
   overflow: auto;
   padding-right: 4px;
@@ -1020,11 +1032,12 @@ h2 {
 }
 
 .query-box textarea {
-  min-height: 82px;
+  min-height: 72px;
 }
 
 .text-ingestion-form textarea {
-  min-height: 96px;
+  min-height: 88px;
+  max-height: min(180px, 30vh);
 }
 
 .query-box textarea:focus-visible,
@@ -1200,7 +1213,7 @@ button:focus-visible {
 .document-list {
   display: grid;
   gap: 10px;
-  max-height: clamp(220px, calc(100vh - 520px), 300px);
+  max-height: clamp(240px, calc(100vh - 456px), 360px);
   margin-top: 4px;
   overflow: auto;
   padding-right: 4px;
@@ -1609,7 +1622,7 @@ button:focus-visible {
 .source-list {
   display: grid;
   gap: 10px;
-  max-height: clamp(220px, calc(100vh - 500px), 320px);
+  max-height: clamp(240px, calc(100vh - 430px), 380px);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -1723,7 +1736,7 @@ button:focus-visible {
   display: grid;
   gap: 12px;
   align-content: start;
-  max-height: min(420px, calc(100vh - 268px));
+  max-height: min(480px, calc(100vh - 236px));
   margin-top: 0;
   overflow: auto;
   padding-right: 4px;
@@ -2235,7 +2248,7 @@ button:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
-  max-height: min(390px, calc(100vh - 304px));
+  max-height: min(450px, calc(100vh - 262px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2354,7 +2367,7 @@ button:focus-visible {
 .eval-result {
   display: grid;
   gap: 14px;
-  max-height: min(520px, calc(100vh - 270px));
+  max-height: min(560px, calc(100vh - 236px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2481,7 +2494,7 @@ button:focus-visible {
 .eval-history {
   display: grid;
   gap: 12px;
-  max-height: min(430px, calc(100vh - 268px));
+  max-height: min(500px, calc(100vh - 238px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2596,7 +2609,7 @@ button:focus-visible {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
   gap: 10px;
-  max-height: min(430px, calc(100vh - 268px));
+  max-height: min(500px, calc(100vh - 238px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2728,7 +2741,7 @@ button:focus-visible {
 .job-ledger {
   display: grid;
   gap: 10px;
-  max-height: min(420px, calc(100vh - 338px));
+  max-height: min(520px, calc(100vh - 294px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -3669,6 +3682,42 @@ button:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .document-context,
+  .query-context,
+  .live-context,
+  .eval-scope-note,
+  .provider-context,
+  .admin-user-context,
+  .audit-context,
+  .ingestion-context {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+    scrollbar-gutter: stable;
+  }
+
+  .document-context div,
+  .query-context div,
+  .live-context div,
+  .eval-scope-note div,
+  .provider-context div,
+  .admin-user-context div,
+  .audit-context div,
+  .ingestion-context div {
+    min-height: 58px;
+    flex: 0 0 min(236px, 78vw);
+    scroll-snap-align: start;
+  }
+
+  .live-progress-summary,
+  .metrics,
+  .brand-brief {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   #documents:has(#documents-library:not([hidden])) > #documents-library,
   #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]),
   #evals:has(#evals-history:not([hidden])) > #evals-history,
@@ -3680,6 +3729,24 @@ button:focus-visible {
   #audit:has(.job-ledger:not([hidden])) > .job-detail-panel {
     grid-column: 1;
     max-height: none;
+  }
+
+  #documents:has(#documents-library:not([hidden])) > #documents-library {
+    max-height: min(360px, calc(100vh - 382px));
+    overflow: auto;
+    padding-right: 4px;
+    scrollbar-gutter: stable;
+  }
+
+  #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]) {
+    max-height: min(300px, 36vh);
+    overflow: auto;
+  }
+
+  #documents:has(#documents-library:not([hidden])) > #documents-library,
+  #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]) {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
   }
 
   .provider-row,

@@ -1,6 +1,7 @@
 import json
 import sqlite3
 from collections.abc import Iterator
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -312,7 +313,7 @@ def test_audit_export_detects_persisted_payload_tampering(
         domain_id = create_domain(client, headers, "audit-payload-tamper")
         job_id = create_index_job(client, headers, domain_id)
 
-        with sqlite3.connect(database_path) as connection:
+        with closing(sqlite3.connect(database_path)) as connection:
             connection.execute(
                 "update journal_events set payload = ? where event_type = ? and entity_id = ?",
                 (

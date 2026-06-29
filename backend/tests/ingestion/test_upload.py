@@ -1,5 +1,6 @@
 import sqlite3
 from collections.abc import Iterator
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -646,16 +647,13 @@ async def test_fail_file_upload_ingestion_job_marks_job_failed(
     assert failed_job.json()["status"] == "failed"
     assert failed_job.json()["error"] == "fixture failure"
 
-    connection = sqlite3.connect(tmp_path / "retos-upload.db")
-    try:
+    with closing(sqlite3.connect(tmp_path / "retos-upload.db")) as connection:
         journal_count = connection.execute(
             "select count(*) from journal_events where event_type = 'job.failed'",
         ).fetchone()[0]
         progress_count = connection.execute(
             "select count(*) from progress_events where event_type = 'upload.failed'",
         ).fetchone()[0]
-    finally:
-        connection.close()
     assert journal_count == 1
     assert progress_count == 1
 
@@ -671,11 +669,8 @@ async def test_fail_file_upload_ingestion_job_ignores_missing_job(
         error="fixture failure",
     )
 
-    connection = sqlite3.connect(tmp_path / "retos-upload.db")
-    try:
+    with closing(sqlite3.connect(tmp_path / "retos-upload.db")) as connection:
         journal_count = connection.execute("select count(*) from journal_events").fetchone()[0]
         progress_count = connection.execute("select count(*) from progress_events").fetchone()[0]
-    finally:
-        connection.close()
     assert journal_count == 0
     assert progress_count == 0

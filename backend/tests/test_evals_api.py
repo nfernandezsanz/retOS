@@ -1,6 +1,7 @@
 import json
 import sqlite3
 from collections.abc import Iterator
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -449,8 +450,7 @@ def test_smoke_eval_rerun_creates_new_job_with_origin(
     assert body["job"]["payload"]["rerun_from_job_id"] == original_job_id
     assert body["report"]["suite_name"] == "retos-smoke"
 
-    connection = sqlite3.connect(tmp_path / "retos-evals.db")
-    try:
+    with closing(sqlite3.connect(tmp_path / "retos-evals.db")) as connection:
         journal_payload = connection.execute(
             "select payload from journal_events where entity_id = ? and event_type = 'eval.queued'",
             (body["job"]["id"],),
@@ -459,8 +459,6 @@ def test_smoke_eval_rerun_creates_new_job_with_origin(
             "select payload from progress_events where job_id = ? and event_type = 'eval.started'",
             (body["job"]["id"],),
         ).fetchone()[0]
-    finally:
-        connection.close()
     assert json.loads(journal_payload)["rerun_from_job_id"] == original_job_id
     assert json.loads(progress_payload)["rerun_from_job_id"] == original_job_id
 

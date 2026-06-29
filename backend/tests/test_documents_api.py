@@ -1,5 +1,6 @@
 import sqlite3
 from collections.abc import Iterator
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -57,16 +58,13 @@ def create_domain_and_source(
 
 
 def count_document_side_effects(db_path: Path) -> tuple[int, int, int, int, int]:
-    connection = sqlite3.connect(db_path)
-    try:
+    with closing(sqlite3.connect(db_path)) as connection:
         versions = connection.execute("select count(*) from document_versions").fetchone()[0]
         artifacts = connection.execute("select count(*) from artifacts").fetchone()[0]
         segments = connection.execute("select count(*) from segments").fetchone()[0]
         journals = connection.execute("select count(*) from journal_events").fetchone()[0]
         progress = connection.execute("select count(*) from progress_events").fetchone()[0]
         return int(versions), int(artifacts), int(segments), int(journals), int(progress)
-    finally:
-        connection.close()
 
 
 def count_events(db_path: Path, table: str, event_type: str) -> int:
@@ -74,12 +72,9 @@ def count_events(db_path: Path, table: str, event_type: str) -> int:
         "journal_events": "select count(*) from journal_events where event_type = ?",
         "progress_events": "select count(*) from progress_events where event_type = ?",
     }
-    connection = sqlite3.connect(db_path)
-    try:
+    with closing(sqlite3.connect(db_path)) as connection:
         row = connection.execute(queries[table], (event_type,)).fetchone()
         return int(row[0])
-    finally:
-        connection.close()
 
 
 def create_document(

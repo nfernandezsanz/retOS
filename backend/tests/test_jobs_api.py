@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Iterator
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -72,13 +73,10 @@ def create_domain_and_source(
 
 
 def count_audit_rows(db_path: Path) -> tuple[int, int]:
-    connection = sqlite3.connect(db_path)
-    try:
+    with closing(sqlite3.connect(db_path)) as connection:
         journal_cursor = connection.execute("select count(*) from journal_events")
         progress_cursor = connection.execute("select count(*) from progress_events")
         return int(journal_cursor.fetchone()[0]), int(progress_cursor.fetchone()[0])
-    finally:
-        connection.close()
 
 
 def create_job(
@@ -394,16 +392,13 @@ def test_retry_failed_index_job_creates_audited_queued_job(
     assert listed.status_code == 200
     assert [item["id"] for item in listed.json()[:2]] == [retry_job["id"], original["id"]]
 
-    connection = sqlite3.connect(jobs_db_path)
-    try:
+    with closing(sqlite3.connect(jobs_db_path)) as connection:
         journal_count = connection.execute(
             "select count(*) from journal_events where event_type = 'job.retry_queued'"
         ).fetchone()[0]
         progress_count = connection.execute(
             "select count(*) from progress_events where event_type = 'job.retry_queued'"
         ).fetchone()[0]
-    finally:
-        connection.close()
     assert (journal_count, progress_count) == (1, 1)
 
 
