@@ -54,6 +54,8 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
 - Information architecture: a compact Overview plus hash-addressable Documents,
   Queries, Evals, Audit, and Admin sections. Avoid returning to a single long
   all-in-one page unless a user explicitly asks for that workflow.
+- Overview posture: the first screen shows Docker/local posture, runtime build
+  version/revision from `/versionz`, audit posture, and no-paid-call testing posture.
 - Module navigation: long operational sections use compact contextual pills for
   task areas such as library, sources, upload, eval results, job progress, audit
   events, providers, and users. These pills are navigational aids, not marketing

@@ -58,6 +58,13 @@ type ProviderCatalog = {
   providers: ProviderProfile[];
 };
 
+type RuntimeVersion = {
+  service: string;
+  version: string;
+  revision: string;
+  created: string;
+};
+
 type WorkspaceSection = "overview" | "documents" | "queries" | "evals" | "audit" | "admin";
 
 type WorkspaceModule = {
@@ -822,6 +829,10 @@ async function loadProviderCatalog(token: string): Promise<ProviderCatalog> {
       Authorization: `Bearer ${token}`,
     },
   });
+}
+
+async function loadRuntimeVersion(): Promise<RuntimeVersion> {
+  return requestJson<RuntimeVersion>("/versionz");
 }
 
 async function loadAdminUsers(token: string): Promise<AdminUserRead[]> {
@@ -1653,6 +1664,8 @@ function App() {
   const [adminUserMessage, setAdminUserMessage] = useState<string | null>(null);
   const [isLoadingProvider, setIsLoadingProvider] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
+  const [runtimeVersion, setRuntimeVersion] = useState<RuntimeVersion | null>(null);
+  const [runtimeVersionError, setRuntimeVersionError] = useState<string | null>(null);
   const [domains, setDomains] = useState<DomainRead[]>([]);
   const [selectedDomainId, setSelectedDomainId] = useState("");
   const [documents, setDocuments] = useState<DocumentRead[]>([]);
@@ -1801,6 +1814,7 @@ function App() {
     { label: "Documents", value: documents.length.toString(), icon: FileSearch },
     { label: "Active jobs", value: activeJobs.toString(), icon: Activity },
     { label: "Provider", value: activeProviderLabel, icon: Bot },
+    { label: "Build", value: runtimeVersion?.version ?? "Unknown", icon: ServerCog },
   ];
 
   const filteredJobs = useMemo(
@@ -1863,6 +1877,10 @@ function App() {
     return () => window.removeEventListener("hashchange", syncSectionFromHash);
   }, []);
 
+  useEffect(() => {
+    void refreshRuntimeVersion();
+  }, []);
+
   function handleSectionClick(
     event: MouseEvent<HTMLAnchorElement>,
     section: WorkspaceSection,
@@ -1892,10 +1910,21 @@ function App() {
     };
   }, []);
 
+  async function refreshRuntimeVersion() {
+    setRuntimeVersionError(null);
+    try {
+      setRuntimeVersion(await loadRuntimeVersion());
+    } catch (error) {
+      setRuntimeVersion(null);
+      setRuntimeVersionError(readableError(error, "Runtime metadata unavailable"));
+    }
+  }
+
   async function refreshWorkspace(accessToken?: string, preferredDomainId?: string) {
     setIsLoadingWorkspace(true);
     setWorkspaceError(null);
     try {
+      await refreshRuntimeVersion();
       const adminToken = accessToken ?? (await getAdminToken());
       const nextDomains = await loadDomains(adminToken);
       setDomains(nextDomains);
@@ -3176,6 +3205,16 @@ function App() {
               <div>
                 <ServerCog aria-hidden="true" />
                 <span>Docker-first runtime</span>
+              </div>
+              <div>
+                <GitCompare aria-hidden="true" />
+                <span>
+                  {runtimeVersion
+                    ? `Revision ${runtimeVersion.revision.slice(0, 12)}`
+                    : runtimeVersionError
+                      ? "Runtime metadata unavailable"
+                      : "Runtime metadata loading"}
+                </span>
               </div>
               <div>
                 <ShieldAlert aria-hidden="true" />

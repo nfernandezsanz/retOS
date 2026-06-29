@@ -550,6 +550,17 @@ async function mockProviderApi(page: Page) {
       json: { access_token: "test-token", token_type: "bearer" },
     });
   });
+  await page.route("http://localhost:8000/versionz", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        service: "retos-api",
+        version: "2026.06.29-local",
+        revision: "abcdef1234567890",
+        created: "2026-06-29T12:00:00Z",
+      },
+    });
+  });
   await page.route("http://localhost:8000/admin/users", async (route) => {
     if (route.request().method() === "POST") {
       const payload = route.request().postDataJSON() as {
@@ -1519,8 +1530,11 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
   await expect(page.locator(".brand")).toContainText("Audit console");
 
   await expect(page.locator(".brand-brief")).toContainText("Docker-first runtime");
+  await expect(page.locator(".brand-brief")).toContainText("Revision abcdef123456");
   await expect(page.locator(".brand-brief")).toContainText("Hash-chained journals");
   await expect(page.locator(".brand-brief")).toContainText("No paid calls in tests");
+  await expect(page.getByLabel("System metrics").getByText("Build")).toBeVisible();
+  await expect(page.getByLabel("System metrics").getByText("2026.06.29-local")).toBeVisible();
 
   const theme = await page.evaluate(() => {
     const root = getComputedStyle(document.documentElement);

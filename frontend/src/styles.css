@@ -508,14 +508,14 @@ h2 {
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
 
 .brand-brief {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -543,10 +543,14 @@ h2 {
 }
 
 .brand-brief div:nth-child(2) svg {
-  color: var(--retos-warning);
+  color: var(--retos-primary);
 }
 
 .brand-brief div:nth-child(3) svg {
+  color: var(--retos-warning);
+}
+
+.brand-brief div:nth-child(4) svg {
   color: var(--retos-success);
 }
 
