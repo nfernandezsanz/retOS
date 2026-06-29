@@ -7,8 +7,38 @@ import subprocess
 import tarfile
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from export_audit_bundle import BUNDLE_ROOT, ROOT
+
+EXPECTED_VISUAL_SECTIONS = [
+    "Overview",
+    "Documents",
+    "Queries",
+    "Evals",
+    "Audit",
+    "Admin",
+]
+EXPECTED_VISUAL_MODULES = [
+    "documents-library",
+    "documents-sources",
+    "documents-upload",
+    "documents-text",
+    "queries-runner",
+    "queries-live",
+    "evals-runner",
+    "evals-results",
+    "evals-history",
+    "audit-jobs",
+    "audit-progress",
+    "audit-events",
+    "admin-providers",
+    "admin-users",
+]
+EXPECTED_VISUAL_RESPONSIVE_WIDTHS = [375, 768, 1024, 1440]
+MIN_VISUAL_TOOLTIP_TARGETS = 10
+EXPECTED_VISUAL_HANDOFF_SUMMARY = "Visual coverage: ready - 6 section(s), 14 module(s)"
+EXPECTED_VISUAL_HANDOFF_WIDTHS = "no-overflow widths: 375, 768, 1024, 1440"
 
 REQUIRED_MEMBERS = {
     f"{BUNDLE_ROOT}/evals/reports/audit-manifest.json",
@@ -55,6 +85,65 @@ def read_member_text(tar: tarfile.TarFile, name: str) -> str:
     handle = tar.extractfile(member)
     require(handle is not None, f"bundle member cannot be read: {name}")
     return handle.read().decode("utf-8")
+
+
+def validate_visual_bundle_evidence(
+    manifest: dict[str, Any],
+    handoff: str,
+    *,
+    visual_manifest_bundled: bool,
+) -> None:
+    local_manifest = manifest["visual_audit"]["local_manifest"]
+    if not local_manifest.get("exists"):
+        return
+
+    require(
+        visual_manifest_bundled,
+        "bundle should include local visual audit manifest when present",
+    )
+    require(
+        EXPECTED_VISUAL_HANDOFF_SUMMARY in handoff
+        and EXPECTED_VISUAL_HANDOFF_WIDTHS in handoff,
+        "bundled handoff report must summarize visual audit coverage",
+    )
+    coverage = local_manifest.get("json", {}).get("coverage")
+    require(isinstance(coverage, dict), "bundled manifest must include visual coverage")
+    sections = coverage.get("sections", [])
+    visible_sections = coverage.get("visible_sections", sections)
+    for section in EXPECTED_VISUAL_SECTIONS:
+        require(
+            section in sections and section in visible_sections,
+            f"bundled visual coverage missing section: {section}",
+        )
+    modules = coverage.get("modules", [])
+    for module in EXPECTED_VISUAL_MODULES:
+        require(
+            module in modules,
+            f"bundled visual coverage missing module: {module}",
+        )
+    require(
+        int(coverage.get("tooltip_targets", 0)) >= MIN_VISUAL_TOOLTIP_TARGETS,
+        "bundled visual coverage must include tooltip targets",
+    )
+    require(
+        coverage.get("no_horizontal_overflow") is True,
+        "bundled visual coverage must record no horizontal overflow",
+    )
+    responsive_checks = coverage.get("responsive_checks", [])
+    require(
+        isinstance(responsive_checks, list),
+        "bundled visual coverage must include responsive checks",
+    )
+    responsive_widths = {
+        int(check.get("width", 0))
+        for check in responsive_checks
+        if isinstance(check, dict) and check.get("no_horizontal_overflow") is True
+    }
+    for width in EXPECTED_VISUAL_RESPONSIVE_WIDTHS:
+        require(
+            width in responsive_widths,
+            f"bundled visual coverage missing responsive width: {width}",
+        )
 
 
 def main() -> int:
@@ -141,15 +230,15 @@ def main() -> int:
         "Evidence Status" in handoff and "External release evidence" in handoff,
         "bundled handoff report must include the evidence status summary",
     )
-    if (ROOT / "frontend/visual-audit/manifest.json").is_file():
-        require(
-            any(
-                name.endswith("frontend/visual-audit/manifest.json") for name in members
-            ),
-            "bundle should include local visual audit manifest when present",
-        )
+    validate_visual_bundle_evidence(
+        manifest,
+        handoff,
+        visual_manifest_bundled=any(
+            name.endswith("frontend/visual-audit/manifest.json") for name in members
+        ),
+    )
     print(
-        "Audit bundle OK: archive, checksum, manifest, report, and evidence docs are aligned."
+        "Audit bundle OK: archive, checksum, manifest, report, visual coverage, and evidence docs are aligned."
     )
     return 0
 
