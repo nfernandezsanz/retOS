@@ -197,7 +197,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 | Workflow | Local Action |
 | --- | --- |
 | Navigate the console | Use the compact Overview with runtime build/readiness metadata, seed the bundled demo corpus when needed, then switch to Documents, Queries, Evals, Audit, or Admin; each long screen has module pills and a current-context band for its main task areas |
-| Manage domains and sources | Create domains, edit/archive/restore domain details, create/edit/remove sources, scan mounted sources, and rebuild indexes from the React console at http://localhost:8080 |
+| Manage domains and sources | Use compact context cards to confirm active domain, visible document/archive scope, registered source count, and local rebuild posture; create domains, edit/archive/restore domain details, create/edit/remove sources, scan mounted sources, and rebuild indexes from the React console at http://localhost:8080 |
 | Upload and manage documents | Upload files, paste text, inspect evidence, rename documents, archive/restore, and review document history in the React console |
 | Watch ingestion/indexing | Live job/progress views and SSE-backed updates in the UI |
 | Query with citations | Run grounded agent queries against indexed domains |

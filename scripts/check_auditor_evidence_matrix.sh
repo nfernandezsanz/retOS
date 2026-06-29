@@ -80,6 +80,10 @@ for gate in (
 
 for phrase in (
     "RetOS is not production-promoted yet",
+    "compact document context cards",
+    "visible document/archive scope",
+    "registered source count",
+    "local rebuild posture",
     "tag publish",
     "real digests",
     "SBOM/provenance",
@@ -99,6 +103,14 @@ for linked_doc, content in (
         "docs/auditor-evidence-matrix.md" in content or "auditor-evidence-matrix.md" in content,
         f"{linked_doc} must link the auditor evidence matrix",
     )
+
+for readme_phrase in (
+    "compact context cards",
+    "visible document/archive scope",
+    "registered source count",
+    "local rebuild posture",
+):
+    require(readme_phrase in readme, f"README missing document UI phrase: {readme_phrase}")
 
 require(
     "auditor-evidence-matrix-check" in makefile,
