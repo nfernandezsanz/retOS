@@ -109,7 +109,9 @@ That command runs the static auditor gates, writes an offline manifest to
 `evals/reports/audit-handoff.md`. It also writes
 `evals/reports/retos-audit-handoff.tar.gz` plus a `.sha256` checksum sidecar with the
 manifest, report, production readiness pack, release process, operations guide, branding
-guide, release note, and CI/release workflows. These artifacts deliberately do not claim
+guide, release note, and CI/release workflows. The Markdown handoff includes a
+promotion decision checklist that separates locally proven evidence from external
+release and target-environment decisions. These artifacts deliberately do not claim
 production promotion.
 
 Remote CI evidence is separate:
@@ -349,10 +351,10 @@ Every meaningful change should pass these gates:
 | Operations runbook | `make operations-runbook-check` | Validates backup, restore, rollback, health-check, audit-export, and promotion-evidence fields. |
 | Auditor evidence matrix | `make auditor-evidence-matrix-check` | Validates the objective-to-evidence matrix so requirements, local gates, and external promotion blockers stay traceable. |
 | Auditor static pack | `make auditor-static-check` | Runs the non-destructive auditor gates for dependency advisories, security policy, ignore hygiene, operations runbooks, branding, release workflow, release notes, production preflight, and audit-pack alignment. |
-| Auditor handoff | `make auditor-handoff-check` | Runs the local static auditor pack and exports an offline audit manifest to `evals/reports/audit-manifest.json`. |
+| Auditor handoff | `make auditor-handoff-check` | Runs the local static auditor pack and exports the offline manifest, Markdown handoff with promotion decision checklist, and checksummed bundle under `evals/reports/`. |
 | Audit handoff manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | Exports commit state, generation context, required gates, critical file hashes including the auditor evidence matrix and branding assets, visual audit screenshot records, and remaining external promotion evidence as JSON. |
 | Audit manifest schema | `make audit-manifest-check` | Validates the audit manifest schema, required gates, critical file hashes, visual artifact names, and external blockers offline. |
-| Audit handoff report | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Exports a human-readable Markdown companion with candidate, verdict, local gates, blockers, hashes, and visual evidence. |
+| Audit handoff report | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Exports a human-readable Markdown companion with candidate, verdict, local gates, blockers, promotion decision checklist, hashes, and visual evidence. |
 | Audit handoff report schema | `make audit-handoff-report-check` | Validates that the generated Markdown report preserves the key manifest evidence. |
 | Audit handoff bundle | `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` | Exports a tarball plus `.sha256` checksum with the JSON manifest, Markdown handoff, production readiness docs, release docs, operations docs, branding contract, and workflows. |
 | Audit handoff bundle schema | `make audit-bundle-check` | Validates the generated tarball members and checksum offline. |

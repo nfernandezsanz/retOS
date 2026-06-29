@@ -103,6 +103,7 @@ for phrase in (
     ".dockerignore",
     "docs/releases/evidence/production-promotion-template.md",
     "JSON handoff",
+    "Promotion decision checklist",
     "generation context",
     "in-run snapshot",
 ):
@@ -153,6 +154,12 @@ require(
 require(
     "make auditor-handoff-check" in release_process and "make auditor-handoff-check" in readme,
     "release process and README must document the auditor handoff command",
+)
+require(
+    "promotion decision checklist" in readme
+    and "promotion decision checklist" in release_process
+    and "Promotion decision checklist" in audit_pack,
+    "README, release process, and production readiness pack must document the generated promotion checklist",
 )
 require(
     "It does not replace tag publishing" in release_process,

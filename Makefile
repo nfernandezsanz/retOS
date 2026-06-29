@@ -23,7 +23,7 @@ help:
 	@printf "  make operations-runbook-check Validate backup, restore, rollback, and audit-export runbooks\n"
 	@printf "  make auditor-evidence-matrix-check Validate objective-to-evidence traceability\n"
 	@printf "  make auditor-static-check Run non-destructive auditor documentation/release/security gates\n"
-	@printf "  make auditor-handoff-check Run local static gates and export an offline audit manifest\n"
+	@printf "  make auditor-handoff-check Run static gates and export manifest, checklist report, and bundle\n"
 	@printf "  make audit-manifest   Export a JSON manifest for human production audit handoff\n"
 	@printf "  make audit-manifest-check Validate audit manifest schema offline\n"
 	@printf "  make audit-handoff-report Export a human-readable Markdown audit handoff\n"
