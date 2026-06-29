@@ -288,7 +288,12 @@ def materialize_dataset(
     if output_path.exists() and not force:
         metadata = read_dataset_metadata(metadata_path)
         records = metadata.get("records")
-        if type(records) is int and records >= max_records:
+        if (
+            type(records) is int
+            and records >= max_records
+            and metadata.get("profile") == profile.name
+            and metadata.get("suite") == profile.suite
+        ):
             return {
                 "profile": profile.name,
                 "suite": profile.suite,
