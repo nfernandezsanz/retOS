@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import subprocess
 import tarfile
 import tempfile
@@ -40,6 +41,13 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def read_member_text(tar: tarfile.TarFile, name: str) -> str:
+    member = tar.getmember(name)
+    handle = tar.extractfile(member)
+    require(handle is not None, f"bundle member cannot be read: {name}")
+    return handle.read().decode("utf-8")
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmpdir:
         output = Path(tmpdir) / "retos-audit-handoff.tar.gz"
@@ -69,9 +77,40 @@ def main() -> int:
         )
         with tarfile.open(output, "r:gz") as tar:
             members = {member.name for member in tar.getmembers() if member.isfile()}
+            manifest_text = read_member_text(
+                tar, f"{BUNDLE_ROOT}/evals/reports/audit-manifest.json"
+            )
+            handoff = read_member_text(
+                tar, f"{BUNDLE_ROOT}/evals/reports/audit-handoff.md"
+            )
+            production = read_member_text(
+                tar, f"{BUNDLE_ROOT}/docs/production-readiness.md"
+            )
+            promotion_template = read_member_text(
+                tar,
+                f"{BUNDLE_ROOT}/docs/releases/evidence/production-promotion-template.md",
+            )
 
     missing = sorted(REQUIRED_MEMBERS - members)
     require(not missing, f"bundle missing required member(s): {', '.join(missing)}")
+    manifest = json.loads(manifest_text)
+    require(
+        "make local-acceptance" in manifest["local_gates_required"],
+        "bundled manifest must require make local-acceptance",
+    )
+    for name, content in (
+        ("audit handoff report", handoff),
+        ("production readiness pack", production),
+        ("promotion template", promotion_template),
+    ):
+        require(
+            "make local-acceptance" in content,
+            f"bundled {name} must mention make local-acceptance",
+        )
+    require(
+        "Promotion Decision Checklist" in handoff,
+        "bundled handoff report must include the promotion decision checklist",
+    )
     if (ROOT / "frontend/visual-audit/manifest.json").is_file():
         require(
             any(
