@@ -12,6 +12,7 @@ required_files=(
   "SECURITY.md"
   "LICENSE"
   "CHANGELOG.md"
+  "Makefile"
   "docs/releases/README.md"
   "docs/releases/2026.06.28-alpha.1.md"
   "docs/releases/evidence/production-promotion-template.md"
@@ -81,6 +82,7 @@ docker_docs = Path("docs/docker.md").read_text(encoding="utf-8")
 readme = Path("README.md").read_text(encoding="utf-8")
 audit_pack = Path("docs/production-readiness.md").read_text(encoding="utf-8")
 contributing = Path("CONTRIBUTING.md").read_text(encoding="utf-8")
+makefile = Path("Makefile").read_text(encoding="utf-8")
 
 require(env.get("RETOS_ALLOW_PAID_LLM") == "false", "paid LLMs must be disabled by default")
 require(env.get("RETOS_PROVIDER") == "local", "local provider must be the default")
@@ -163,6 +165,28 @@ require(
 require(
     "make local-acceptance" in contributing,
     "CONTRIBUTING.md must document the local acceptance gate",
+)
+local_acceptance_line = next(
+    (line for line in makefile.splitlines() if line.startswith("local-acceptance:")),
+    "",
+)
+require(local_acceptance_line, "Makefile must define local-acceptance")
+for dependency in (
+    "check",
+    "integration",
+    "frontend-test",
+    "frontend-visual-audit",
+    "docker-config",
+    "auditor-handoff-check",
+    "docker-smoke",
+):
+    require(
+        dependency in local_acceptance_line,
+        f"local-acceptance must depend on {dependency}",
+    )
+require(
+    "make local-acceptance Run the local pre-audit acceptance gate" in makefile,
+    "Makefile help must expose local-acceptance",
 )
 require(
     "RetOS is not production-promoted yet" in audit_pack,
