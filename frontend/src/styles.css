@@ -1115,14 +1115,43 @@ button:focus-visible {
   align-items: start;
 }
 
+#documents:has(#documents-library:not([hidden])) {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
+  gap: 12px;
+  align-items: start;
+}
+
+#documents:has(#documents-library:not([hidden])) > .panel-heading {
+  grid-column: 1 / -1;
+}
+
+#documents:has(#documents-library:not([hidden])) > #documents-library {
+  grid-column: 1;
+  grid-template-columns: 1fr;
+  max-height: calc(100vh - 250px);
+  gap: 10px;
+}
+
+#documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]) {
+  grid-column: 2;
+  max-height: calc(100vh - 250px);
+  margin-top: 0;
+}
+
+#documents:has(#documents-library:not([hidden])) > .inline-error,
+#documents:has(#documents-library:not([hidden])) > .inline-success {
+  grid-column: 1 / -1;
+}
+
 .domain-block {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: #f8fafc;
-  padding: 12px;
+  padding: 10px;
 }
 
 .domain-block .section-heading {
@@ -1132,7 +1161,7 @@ button:focus-visible {
 .domain-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto auto;
-  gap: 12px;
+  gap: 10px;
   align-items: end;
   margin-top: 0;
 }
@@ -3474,6 +3503,7 @@ button:focus-visible {
   .overview-actions,
   .overview-layout,
   .content-grid,
+  #documents:has(#documents-library:not([hidden])),
   #queries:not([hidden]),
   .query-context,
   .document-context,
@@ -3515,6 +3545,12 @@ button:focus-visible {
   .provider-context,
   .provider-summary {
     grid-template-columns: 1fr;
+  }
+
+  #documents:has(#documents-library:not([hidden])) > #documents-library,
+  #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]) {
+    grid-column: 1;
+    max-height: none;
   }
 
   .provider-row,

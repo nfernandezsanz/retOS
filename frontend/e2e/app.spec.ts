@@ -2090,6 +2090,36 @@ test("loads the operational console", async ({ page }) => {
     "data-tooltip",
     /selected domain/,
   );
+  const documentLibraryLayout = await page.locator("#documents").evaluate((panel) => {
+    const style = getComputedStyle(panel);
+    const library = panel.querySelector("#documents-library");
+    const documentList = panel.querySelector(".document-list:not([hidden])");
+    return {
+      columns: style.gridTemplateColumns.split(" ").filter(Boolean).length,
+      horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      panelScrollHeight: panel.scrollHeight,
+      panelClientHeight: panel.clientHeight,
+      libraryScrollHeight: library?.scrollHeight ?? 0,
+      libraryClientHeight: library?.clientHeight ?? 0,
+      documentListScrollHeight: documentList?.scrollHeight ?? 0,
+      documentListClientHeight: documentList?.clientHeight ?? 0,
+      tooltipCount: panel.querySelectorAll("[data-tooltip]").length,
+    };
+  });
+  expect(documentLibraryLayout.columns).toBeGreaterThanOrEqual(2);
+  expect(documentLibraryLayout.horizontalOverflow).toBe(false);
+  expect(documentLibraryLayout.panelScrollHeight).toBeLessThanOrEqual(
+    documentLibraryLayout.panelClientHeight + 120,
+  );
+  expect(documentLibraryLayout.libraryClientHeight).toBeGreaterThan(0);
+  expect(documentLibraryLayout.documentListClientHeight).toBeGreaterThan(0);
+  expect(documentLibraryLayout.libraryScrollHeight).toBeLessThanOrEqual(
+    documentLibraryLayout.libraryClientHeight + 320,
+  );
+  expect(documentLibraryLayout.documentListScrollHeight).toBeLessThanOrEqual(
+    documentLibraryLayout.documentListClientHeight + 120,
+  );
+  expect(documentLibraryLayout.tooltipCount).toBeGreaterThanOrEqual(12);
   await expect(page.getByText("Smoke Document")).toBeVisible();
   await page.getByLabel("Documents modules").getByRole("link", { name: "Sources" }).click();
   await expect(page.getByLabel("Document sources context").getByText("Smoke Research")).toBeVisible();
