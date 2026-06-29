@@ -174,6 +174,9 @@ tag in GitHub.
   and visual-audit smoke test so brand evidence is part of the machine-readable handoff.
 - README onboarding now uses live GitHub Actions status badges, action-oriented local
   workflow pills, and collapsible operator paths for try/audit/develop entry points.
+- The React eval runner now groups dataset-specific SQuAD, HotpotQA, Natural Questions,
+  and OCR controls into compact tooltip-backed accordions so the quality screen starts
+  shorter while keeping local execution controls one click away.
 - The React console now uses a more explicit audit-console brand treatment with a
   compact operating-posture band, stronger first-viewport identity, reduced-motion
   handling, and stable responsive heading sizing.
