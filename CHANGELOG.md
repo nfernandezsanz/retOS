@@ -13,6 +13,11 @@ tag in GitHub.
 
 - Human-readable audit handoff report generated from the JSON manifest, plus a local
   checker so the report preserves candidate, gate, blocker, hash, and visual evidence.
+- Audit handoff reports now include a promotion decision checklist that separates
+  locally proven evidence from external release and target-environment decisions.
+- `make local-acceptance` now provides one local pre-audit gate across backend quality,
+  API/browser integration, frontend build, visual audit, Docker config, auditor handoff,
+  and Docker stack smoke.
 - Audit manifests now hash the Markdown handoff exporter and checker so the human
   report path is covered by the same critical-file evidence as the JSON manifest.
 - CI now publishes a `retos-audit-handoff-<commit>` Markdown artifact and the current

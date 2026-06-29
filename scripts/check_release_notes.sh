@@ -36,6 +36,8 @@ for phrase in (
     "Migration notes",
     "Validation evidence",
     "rollback guidance",
+    "make local-acceptance",
+    "promotion decision checklist",
 ):
     require(phrase in changelog, f"CHANGELOG.md missing release note guidance: {phrase}")
 
