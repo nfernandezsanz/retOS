@@ -17,6 +17,9 @@ production_readiness = Path("docs/production-readiness.md").read_text(encoding="
 promotion_template = Path("docs/releases/evidence/production-promotion-template.md").read_text(
     encoding="utf-8"
 )
+drill_template = Path("docs/releases/evidence/backup-restore-drill-template.md").read_text(
+    encoding="utf-8"
+)
 gitignore = Path(".gitignore").read_text(encoding="utf-8")
 dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
 api_smoke = Path("backend/scripts/smoke_api.py").read_text(encoding="utf-8")
@@ -50,6 +53,7 @@ for phrase in (
     "RETOS_CREATED",
     "export RETOS_IMAGE_TAG=<previous-tag>",
     "restore the backup captured",
+    "backup-restore-drill-template.md",
 ):
     require(phrase in operations, f"docs/operations.md missing operational phrase: {phrase}")
 
@@ -98,6 +102,19 @@ for phrase in (
     require(
         phrase in promotion_template,
         f"promotion evidence template missing operational evidence field: {phrase}",
+    )
+
+for phrase in (
+    "Backup And Restore Drill Evidence Template",
+    "Postgres dump path",
+    "`make api-smoke` output",
+    "`make audit-export-check EXPORT=retos-audit-export.json` output",
+    "`/audit/export` head hash",
+    "Promotion impact",
+):
+    require(
+        phrase in drill_template,
+        f"backup/restore drill template missing evidence field: {phrase}",
     )
 
 print("Operations runbook OK: backup, restore, rollback, audit export, and evidence fields are aligned.")

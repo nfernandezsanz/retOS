@@ -52,6 +52,7 @@ For targeted reruns, the local gate expands to:
 make release-check
 make audit-pack-check
 make production-preflight
+make backup-restore-drill-check
 make promotion-template-check
 make auditor-static-check
 make auditor-handoff-check
@@ -114,6 +115,7 @@ make release-evidence-check
 | Eval smoke | Yes |
 | Migration notes | Yes |
 | Rollback notes | Yes |
+| Backup/restore drill template | Yes |
 | Production promotion template | Yes |
 
 Before production promotion, reconcile this release evidence with

@@ -15,6 +15,7 @@ required_files=(
   "Makefile"
   "docs/releases/README.md"
   "docs/releases/2026.06.28-alpha.1.md"
+  "docs/releases/evidence/backup-restore-drill-template.md"
   "docs/releases/evidence/production-promotion-template.md"
   ".env.example"
   "docker-compose.yml"
@@ -25,6 +26,7 @@ required_files=(
   "scripts/check_production_preflight.sh"
   "scripts/check_published_release_evidence.sh"
   "scripts/check_env_security.py"
+  "scripts/check_backup_restore_drill.py"
   "scripts/check_promotion_template.py"
   "scripts/check_eval_calibration_evidence.py"
   "scripts/check_eval_calibration_trend.py"
@@ -49,6 +51,7 @@ scripts/check_release_workflow.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
 python3 scripts/check_env_security.py >/dev/null
+python3 scripts/check_backup_restore_drill.py >/dev/null
 python3 scripts/check_promotion_template.py >/dev/null
 python3 scripts/check_eval_calibration_evidence.py >/dev/null
 python3 scripts/check_eval_calibration_trend.py >/dev/null
@@ -187,6 +190,11 @@ require(
     "make promotion-template-check" in readme
     and "make promotion-template-check" in audit_pack,
     "README and production readiness pack must expose promotion-template-check",
+)
+require(
+    "make backup-restore-drill-check" in readme
+    and "make backup-restore-drill-check" in audit_pack,
+    "README and production readiness pack must expose backup-restore-drill-check",
 )
 require(
     "make docker-seed-demo" in readme and "make docker-seed-demo" in docker_docs,

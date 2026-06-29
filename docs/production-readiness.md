@@ -57,6 +57,7 @@ make dependency-audit
 make security-policy-check
 make ignore-hygiene-check
 make operations-runbook-check
+make backup-restore-drill-check
 make promotion-template-check
 make auditor-static-check
 make auditor-handoff-check
@@ -98,7 +99,7 @@ auditor a stable local entry point:
 | Environment security | `make env-security-check` | Active `.env` security posture is validated without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Local demo corpus | `make docker-seed-demo`, `make api-smoke`, and `make frontend-e2e` | The running Docker stack, real HTTP smoke, and React console can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
-| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 595 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
+| Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 599 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |
 | Frontend build | `make frontend-test` | TypeScript project build and Vite production bundle. |
 | Browser and branding | `make frontend-e2e`, `make frontend-visual-audit`, and `make brand-check` | RetOS mark, palette, favicon, reduced motion, skip-link focus, responsive breakpoints, provider controls, end-to-end console workflows, reproducible desktop/mobile screenshots, and visual screenshot hash metadata. |
@@ -110,6 +111,7 @@ auditor a stable local entry point:
 | Security policy | `make security-policy-check` | Security reporting, secure defaults, human review scope, and operational links are aligned. |
 | Ignore hygiene | `make ignore-hygiene-check` | Git and Docker contexts exclude secrets, generated files, local volumes, public datasets, reports, and backups. |
 | Operations runbook | `make operations-runbook-check` | Backup, restore, rollback, health-check, audit-export, and promotion-evidence fields are aligned. |
+| Backup/restore drill template | `make backup-restore-drill-check` | Detailed rehearsal evidence fields are present for backup artifacts, restore commands, health checks, audit-export validation, and promotion impact. |
 | Promotion template | `make promotion-template-check` | The human promotion evidence template keeps required sections, local machine gates, release provenance, visual/security review, backup/restore rehearsal, rollback, and decision fields aligned. |
 | Auditor evidence matrix | `make auditor-evidence-matrix-check` | Objective requirements map to current evidence, local gates, and external promotion blockers in `docs/auditor-evidence-matrix.md`. |
 | Auditor static pack | `make auditor-static-check` | Non-destructive dependency, security, ignore, operations, branding, release, preflight, and audit-pack guards pass together. |
@@ -162,6 +164,7 @@ These items must be closed before a final production release:
 - [ ] `make env-security-check` passes or records only the expected missing local `.env` warning.
 - [ ] `make ignore-hygiene-check` passes.
 - [ ] `make operations-runbook-check` passes.
+- [ ] `make backup-restore-drill-check` passes.
 - [ ] `make auditor-static-check` passes.
 - [ ] `make auditor-handoff-check` passes and writes the offline audit manifest for the promotion record.
 - [ ] `make audit-manifest-check` passes.
@@ -201,6 +204,7 @@ These items must be closed before a final production release:
 | Security policy and human review | `SECURITY.md`, `scripts/check_security_policy.sh`, `make security-policy-check` |
 | Ignore hygiene | `.gitignore`, `.dockerignore`, `scripts/check_ignore_hygiene.sh`, `make ignore-hygiene-check` |
 | Operations runbook | `docs/operations.md`, `scripts/check_operations_runbook.sh`, `make operations-runbook-check` |
+| Backup/restore drill template | `docs/releases/evidence/backup-restore-drill-template.md`, `scripts/check_backup_restore_drill.py`, `make backup-restore-drill-check` |
 | Audit manifest schema | `scripts/check_audit_manifest.py`, `make audit-manifest-check` |
 | Calibration trend evidence | `scripts/check_eval_calibration_trend.py`, `make eval-calibration-trend-gate` |
 | Audit handoff report | `scripts/export_audit_handoff_report.py`, `scripts/check_audit_handoff_report.py`, `make audit-handoff-report` |

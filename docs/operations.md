@@ -91,7 +91,10 @@ evidence, blockers, and acceptance checklist. Security reporting, secure default
 target-environment review requirements live in [SECURITY.md](../SECURITY.md).
 Use [docs/releases/evidence/production-promotion-template.md](releases/evidence/production-promotion-template.md)
 to record machine evidence, release provenance, backup/restore rehearsal, security review,
-and rollback ownership for the target environment.
+and rollback ownership for the target environment. Use
+[docs/releases/evidence/backup-restore-drill-template.md](releases/evidence/backup-restore-drill-template.md)
+for the detailed backup/restore rehearsal record; validate the template with
+`make backup-restore-drill-check`.
 
 Use immutable image tags for shared environments. Avoid `local` and `latest` outside a
 developer workstation.
@@ -181,6 +184,9 @@ docker run --rm \
 ```
 
 Use the actual Compose project prefix if it differs from the default `retos`.
+Record the rehearsal in
+[docs/releases/evidence/backup-restore-drill-template.md](releases/evidence/backup-restore-drill-template.md)
+or a completed copy kept with the release promotion evidence.
 
 ## Restore Runbook
 

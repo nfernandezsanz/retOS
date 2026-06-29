@@ -68,6 +68,9 @@ tag in GitHub.
 - Standalone `make promotion-template-check` gate for required production promotion
   template sections, machine gates, release provenance, visual/security review,
   backup/restore rehearsal, rollback, and decision fields.
+- Standalone `make backup-restore-drill-check` gate and evidence template for
+  recording backup artifacts, disposable restore commands, health checks,
+  audit-export validation, and promotion impact.
 - Opt-in real-dataset calibration runner that fetches or reuses bounded public SQuAD,
   HotpotQA, HotpotQA-agent, and NQ-Open adapter samples, writes per-suite reports, and
   emits a manifest with provenance, metrics, and report paths.
