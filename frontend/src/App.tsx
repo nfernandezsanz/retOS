@@ -1921,11 +1921,36 @@ function App() {
   );
 
   const metrics = [
-    { label: "Domains", value: domains.length.toString(), icon: Database },
-    { label: "Documents", value: documents.length.toString(), icon: FileSearch },
-    { label: "Active jobs", value: activeJobs.toString(), icon: Activity },
-    { label: "Provider", value: activeProviderLabel, icon: Bot },
-    { label: "Build", value: runtimeVersion?.version ?? "Unknown", icon: ServerCog },
+    {
+      label: "Domains",
+      value: domains.length.toString(),
+      icon: Database,
+      tooltip: "Research domains currently loaded in the local workspace",
+    },
+    {
+      label: "Documents",
+      value: documents.length.toString(),
+      icon: FileSearch,
+      tooltip: "Documents visible for the active domain and archive filter",
+    },
+    {
+      label: "Active jobs",
+      value: activeJobs.toString(),
+      icon: Activity,
+      tooltip: "Queued or running work observed from jobs and live progress",
+    },
+    {
+      label: "Provider",
+      value: activeProviderLabel,
+      icon: Bot,
+      tooltip: "LLM provider selected by the current local configuration",
+    },
+    {
+      label: "Build",
+      value: runtimeVersion?.version ?? "Unknown",
+      icon: ServerCog,
+      tooltip: "Runtime version reported by the API",
+    },
   ];
 
   const filteredJobs = useMemo(
@@ -3388,78 +3413,84 @@ function App() {
 
         {activeSection === "overview" ? (
           <>
-            <section className="brand-brief" aria-label="RetOS operating posture">
-              <div>
-                <ServerCog aria-hidden="true" />
-                <span>Docker-first runtime</span>
-              </div>
-              <div>
-                <GitCompare aria-hidden="true" />
-                <span>
-                  {runtimeVersion
-                    ? `Revision ${runtimeVersion.revision.slice(0, 12)}`
-                    : runtimeVersionError
-                      ? "Runtime metadata unavailable"
-                      : "Runtime metadata loading"}
-                </span>
-              </div>
-              <div>
-                <Database aria-hidden="true" />
-                <span>{runtimeReadinessLabel}</span>
-              </div>
-              <div>
-                <ShieldAlert aria-hidden="true" />
-                <span>Hash-chained journals</span>
-              </div>
-              <div>
-                <CheckCircle2 aria-hidden="true" />
-                <span>No paid calls in tests</span>
-              </div>
-            </section>
+            <div className="overview-layout">
+              <section className="overview-section" aria-label="System snapshot">
+                <section className="brand-brief" aria-label="RetOS operating posture">
+                  <div data-tooltip="API and worker run from the dockerized local stack">
+                    <ServerCog aria-hidden="true" />
+                    <span>Docker-first runtime</span>
+                  </div>
+                  <div data-tooltip="Current backend revision reported by the runtime endpoint">
+                    <GitCompare aria-hidden="true" />
+                    <span>
+                      {runtimeVersion
+                        ? `Revision ${runtimeVersion.revision.slice(0, 12)}`
+                        : runtimeVersionError
+                          ? "Runtime metadata unavailable"
+                          : "Runtime metadata loading"}
+                    </span>
+                  </div>
+                  <div data-tooltip="API readiness and database connectivity">
+                    <Database aria-hidden="true" />
+                    <span>{runtimeReadinessLabel}</span>
+                  </div>
+                  <div data-tooltip="Audit events are persisted with hash-chain evidence">
+                    <ShieldAlert aria-hidden="true" />
+                    <span>Hash-chained journals</span>
+                  </div>
+                  <div data-tooltip="Automated tests use mocked providers and local fixtures">
+                    <CheckCircle2 aria-hidden="true" />
+                    <span>No paid calls in tests</span>
+                  </div>
+                </section>
 
-            <section className="metrics" aria-label="System metrics">
-              {metrics.map((metric) => {
-                const Icon = metric.icon;
-                return (
-                  <article className="metric" key={metric.label}>
-                    <Icon aria-hidden="true" />
-                    <div>
-                      <span>{metric.label}</span>
-                      <strong>{metric.value}</strong>
-                    </div>
-                  </article>
-                );
-              })}
-            </section>
+                <section className="metrics" aria-label="System metrics">
+                  {metrics.map((metric) => {
+                    const Icon = metric.icon;
+                    return (
+                      <article className="metric" data-tooltip={metric.tooltip} key={metric.label}>
+                        <Icon aria-hidden="true" />
+                        <div>
+                          <span>{metric.label}</span>
+                          <strong>{metric.value}</strong>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </section>
+              </section>
 
-            <section className="overview-actions" aria-label="Primary workflows">
-              <button
-                className="workflow-card workflow-button"
-                data-tooltip="Load a small auditable local corpus and rebuild the BM25 index"
-                disabled={isSeedingDemo}
-                type="button"
-                onClick={() => void handleSeedDemoCorpus()}
-              >
-                <span>Demo</span>
-                <strong>{isSeedingDemo ? "Seeding corpus" : "Seed local corpus"}</strong>
-                <small>Apollo, incident, and field-note fixtures for trying documents and queries.</small>
-              </button>
-              {workspaceSections
-                .filter((section) => section.id !== "overview")
-                .map((section) => (
-                  <a
-                    className="workflow-card"
-                    data-tooltip={section.tooltip}
-                    href={`#${section.id}`}
-                    key={section.id}
-                    onClick={(event) => handleSectionClick(event, section.id)}
+              <section className="overview-section" aria-label="Primary workflows">
+                <section className="overview-actions" aria-label="Workflow shortcuts">
+                  <button
+                    className="workflow-card workflow-button"
+                    data-tooltip="Load a small auditable local corpus and rebuild the BM25 index"
+                    disabled={isSeedingDemo}
+                    type="button"
+                    onClick={() => void handleSeedDemoCorpus()}
                   >
-                    <span>{section.eyebrow}</span>
-                    <strong>{section.title}</strong>
-                    <small>{section.description}</small>
-                  </a>
-                ))}
-            </section>
+                    <span>Demo</span>
+                    <strong>{isSeedingDemo ? "Seeding corpus" : "Seed local corpus"}</strong>
+                    <small>Apollo, incident, and field-note fixtures for trying documents and queries.</small>
+                  </button>
+                  {workspaceSections
+                    .filter((section) => section.id !== "overview")
+                    .map((section) => (
+                      <a
+                        className="workflow-card"
+                        data-tooltip={section.tooltip}
+                        href={`#${section.id}`}
+                        key={section.id}
+                        onClick={(event) => handleSectionClick(event, section.id)}
+                      >
+                        <span>{section.eyebrow}</span>
+                        <strong>{section.title}</strong>
+                        <small>{section.description}</small>
+                      </a>
+                    ))}
+                </section>
+              </section>
+            </div>
             {workspaceError ? (
               <p className="inline-error overview-feedback" role="alert">
                 {workspaceError}
