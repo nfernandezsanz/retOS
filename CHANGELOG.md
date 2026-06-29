@@ -11,6 +11,9 @@ tag in GitHub.
 
 ### Added
 
+- `make local-demo` now gives first-time users the shortest local path: bootstrap safe
+  environment defaults, run the doctor, start the Docker API/worker/web stack without
+  pulling optional Ollama, seed the demo corpus, and print the useful URLs.
 - File upload ingestion now rejects declared MIME/extension mismatches for `.txt`,
   `.md`, and `.pdf` uploads before writing bytes, and preserves declared
   `content_type` in job/document audit metadata.
@@ -168,6 +171,9 @@ tag in GitHub.
 
 ### Changed
 
+- The React console now uses shorter headers, tighter bounded module scroll regions,
+  native tooltip fallbacks on navigation pills, and hover tooltips preserved in audit
+  summary panels so operational screens feel less like long pages.
 - Audit manifests now hash the auditor evidence matrix and record its local gate so the
   machine-readable handoff preserves objective-to-evidence traceability.
 - Audit manifests now hash the RetOS project card, favicon mark, frontend brand tokens,

@@ -17,7 +17,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 
 **Action pills**
 
-[![Run local Docker](https://img.shields.io/badge/run-docker%20compose%20up%20--build-2563eb?style=for-the-badge)](#local-quick-start)
+[![Run local demo](https://img.shields.io/badge/run-make%20local--demo-2563eb?style=for-the-badge)](#local-quick-start)
 [![Open console](https://img.shields.io/badge/open-react%20console-0f766e?style=for-the-badge)](#local-quick-start)
 [![Audit handoff](https://img.shields.io/badge/audit-make%20auditor--handoff--check-f97316?style=for-the-badge)](#local-audit-handoff)
 [![Quality gates](https://img.shields.io/badge/verify-local%20quality%20gates-334155?style=for-the-badge)](#quality-gates)
@@ -37,10 +37,7 @@ indexes when needed, and make every ingestion/query/eval step traceable.
 <summary><strong>I want to try it locally</strong></summary>
 
 ```bash
-make bootstrap-env
-make doctor
-docker compose up --build
-make docker-seed-demo
+make local-demo
 ```
 
 Open http://localhost:8080 for the console or http://localhost:8000/docs for the API.
@@ -89,10 +86,7 @@ auditor-friendly evidence.
 ## Local Quick Start
 
 ```bash
-make bootstrap-env
-make doctor
-docker compose up --build
-make docker-seed-demo
+make local-demo
 ```
 
 Then open the console and API:
@@ -105,6 +99,15 @@ Then open the console and API:
 | Check API readiness | http://localhost:8000/readyz |
 | Check runtime metadata | http://localhost:8000/versionz |
 | Watch RabbitMQ | http://localhost:15672 |
+
+`make local-demo` is the fastest local path: it runs `make bootstrap-env`, `make doctor`,
+starts the API, worker, web, Postgres, RabbitMQ, and migration services in the
+background, seeds the demo corpus, and prints the useful URLs. It does not pull the
+optional Ollama image; use the model command below only when you want local LLM calls.
+Use `make docker-down` when you are done.
+
+For manual control, run `make bootstrap-env`, `make doctor`, `docker compose up --build`,
+then `make docker-seed-demo` in another shell.
 
 `make docker-seed-demo` runs inside the API container, creates or reuses a `retos-demo`
 domain, ingests three local text documents through normal auditable jobs, rebuilds the
@@ -406,6 +409,7 @@ Every meaningful change should pass these gates:
 
 | Gate | Command | Purpose |
 | --- | --- | --- |
+| Local demo | `make local-demo` | Boots the local Docker stack in the background, seeds auditable demo data, and prints the console/API/RabbitMQ URLs for hands-on review. |
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Environment security | `make env-security-check` | Validates the active `.env` without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Demo corpus seed | `make docker-seed-demo` or `make seed-demo SEED_DEMO_ARGS=--create-schema` | Seeds an idempotent, auditable demo domain with text-ingestion jobs, hash-chained journal/progress events, and a rebuilt local BM25 index for hands-on UI checks. |

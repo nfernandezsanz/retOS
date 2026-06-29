@@ -97,7 +97,7 @@ button:disabled {
   border-right: 1px solid rgba(148, 163, 184, 0.22);
   background: var(--retos-ink);
   color: var(--retos-canvas);
-  padding: 24px;
+  padding: 20px;
 }
 
 .brand {
@@ -106,7 +106,7 @@ button:disabled {
   gap: 12px;
   font-weight: 800;
   font-size: 20px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .brand img {
@@ -178,7 +178,7 @@ button:disabled {
   min-width: 0;
   flex-direction: column;
   overflow: hidden;
-  padding: 18px 22px;
+  padding: 14px 18px;
 }
 
 .workspace:focus {
@@ -190,7 +190,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .section-topbar {
@@ -211,7 +211,7 @@ button:disabled {
   display: none;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .section-switcher a {
@@ -260,7 +260,7 @@ button:disabled {
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  margin: -2px 0 6px;
+  margin: -2px 0 4px;
   border: 1px solid var(--retos-border);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
@@ -315,7 +315,7 @@ button:disabled {
   border-left: 4px solid var(--retos-primary);
   border-radius: 8px;
   background: #f8fafc;
-  padding: 7px 12px;
+  padding: 6px 10px;
 }
 
 .workspace-context,
@@ -392,8 +392,8 @@ button:disabled {
   grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
   grid-auto-rows: max-content;
   align-content: start;
-  gap: 14px;
-  max-height: calc(100vh - 162px);
+  gap: 12px;
+  max-height: calc(100vh - 142px);
   overflow: auto;
   padding-right: 4px;
   min-height: 0;
@@ -412,7 +412,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  max-height: calc(100vh - 178px);
+  max-height: calc(100vh - 158px);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -421,14 +421,14 @@ button:disabled {
 .workflow-card {
   position: relative;
   display: grid;
-  min-height: 104px;
+  min-height: 92px;
   align-content: start;
   gap: 6px;
   border: 1px solid var(--retos-border);
   border-radius: 8px;
   background: var(--retos-surface);
   color: var(--retos-ink);
-  padding: 12px;
+  padding: 10px;
   text-decoration: none;
   text-align: left;
   transition:
@@ -501,7 +501,7 @@ h2 {
 
 h1 {
   max-width: 760px;
-  font-size: 36px;
+  font-size: 32px;
   line-height: 1.08;
 }
 
@@ -511,9 +511,9 @@ h2 {
 
 .hero-copy {
   max-width: 760px;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--retos-muted);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.55;
 }
 
@@ -685,7 +685,7 @@ h2 {
 .section-content > .panel:not([hidden]) {
   display: grid;
   align-content: start;
-  max-height: calc(100vh - 166px);
+  max-height: calc(100vh - 150px);
   overflow: auto;
   scrollbar-gutter: stable;
 }
@@ -693,8 +693,8 @@ h2 {
 .section-content > .panel > [id]:not([hidden]) {
   display: grid;
   align-content: start;
-  gap: 12px;
-  max-height: calc(100vh - 238px);
+  gap: 10px;
+  max-height: calc(100vh - 218px);
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -779,7 +779,7 @@ h2 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .panel-heading h2 {
@@ -1152,13 +1152,13 @@ button:focus-visible {
 #documents:has(#documents-library:not([hidden])) > #documents-library {
   grid-column: 1;
   grid-template-columns: 1fr;
-  max-height: calc(100vh - 250px);
+  max-height: calc(100vh - 228px);
   gap: 10px;
 }
 
 #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]) {
   grid-column: 2;
-  max-height: calc(100vh - 250px);
+  max-height: calc(100vh - 228px);
   margin-top: 0;
 }
 
@@ -2120,7 +2120,7 @@ button:focus-visible {
   border-radius: 8px;
   background: #eff6ff;
   padding: 12px;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .audit-export-summary .section-heading > div {
@@ -2248,7 +2248,7 @@ button:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
-  max-height: min(450px, calc(100vh - 262px));
+  max-height: min(380px, calc(100vh - 240px));
   overflow: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;
@@ -2272,11 +2272,11 @@ button:focus-visible {
 .workflow-section summary {
   position: relative;
   display: flex;
-  min-height: 52px;
+  min-height: 46px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   color: #0f172a;
   cursor: pointer;
   font-weight: 900;
@@ -2307,7 +2307,7 @@ button:focus-visible {
 
 .workflow-section > form,
 .workflow-section > div {
-  margin: 12px;
+  margin: 10px;
 }
 
 .workflow-section > .source-list,
@@ -2318,11 +2318,11 @@ button:focus-visible {
 .dataset-accordion summary {
   position: relative;
   display: flex;
-  min-height: 54px;
+  min-height: 46px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   color: #0f172a;
   cursor: pointer;
   font-weight: 900;
@@ -2358,7 +2358,7 @@ button:focus-visible {
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: 12px;
+  padding: 10px;
 }
 
 .dataset-accordion .dataset-form-heading {

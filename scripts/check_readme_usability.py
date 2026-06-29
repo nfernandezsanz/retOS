@@ -21,7 +21,7 @@ REQUIRED_HEADINGS = (
 
 REQUIRED_PHRASES = (
     "Action pills",
-    "run-docker%20compose%20up%20--build",
+    "run-make%20local--demo",
     "open-react%20console",
     "audit-make%20auditor--handoff--check",
     "verify-local%20quality%20gates",
@@ -32,6 +32,7 @@ REQUIRED_PHRASES = (
     "Backend coverage",
     "Production status",
     "Not production-promoted",
+    "make local-demo",
     "make bootstrap-env",
     "docker compose up --build",
     "make docker-seed-demo",
@@ -58,6 +59,7 @@ FIRST_MINUTE_ROWS = (
 REQUIRED_MAKE_TARGETS = (
     "check",
     "bootstrap-env",
+    "local-demo",
     "local-acceptance",
     "auditor-handoff-check",
     "audit-bundle-check",

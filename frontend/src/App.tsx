@@ -3643,6 +3643,7 @@ function App() {
               data-tooltip={section.tooltip}
               href={`#${section.id}`}
               key={section.id}
+              title={section.tooltip}
               onClick={(event) => handleSectionClick(event, section.id)}
             >
               {section.label}
@@ -3687,6 +3688,7 @@ function App() {
               data-tooltip={section.tooltip}
               href={`#${section.id}`}
               key={section.id}
+              title={section.tooltip}
               onClick={(event) => handleSectionClick(event, section.id)}
             >
               {section.label}
@@ -3702,6 +3704,7 @@ function App() {
                 data-tooltip={module.tooltip}
                 href={moduleHref(module.id)}
                 key={module.id}
+                title={module.tooltip}
                 onClick={(event) => handleModuleClick(event, module.id)}
               >
                 {module.label}

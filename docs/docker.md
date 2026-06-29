@@ -139,16 +139,20 @@ make docker-runtime-image-check
 ## Run
 
 ```bash
-make bootstrap-env
-make doctor
-docker compose up --build
-make docker-seed-demo
+make local-demo
 ```
 
-`make bootstrap-env` creates `.env` from `.env.example` when missing and leaves existing
-local secrets untouched. `make doctor` validates prerequisites, `.env.example`, and the
-active `.env` when it exists. It fails on production placeholders, wildcard CORS outside
-development, unknown provider profiles, and unsafe secret lengths before the stack starts.
+`make local-demo` creates `.env` from `.env.example` when missing, leaves existing local
+secrets untouched, runs the local doctor, starts the API, worker, web, Postgres,
+RabbitMQ, and migration services in the background, and seeds the demo corpus through
+the running API container. It does not pull the optional Ollama image; use the model
+profile only when you want local LLM calls.
+
+For manual control, run `make bootstrap-env`, `make doctor`, `docker compose up --build`,
+then `make docker-seed-demo` in another shell. `make doctor` validates prerequisites,
+`.env.example`, and the active `.env` when it exists. It fails on production
+placeholders, wildcard CORS outside development, unknown provider profiles, and unsafe
+secret lengths before the stack starts.
 Run `make env-security-check` when you only want that `.env` security audit without
 probing Docker, Node, or the rest of the local toolchain.
 
