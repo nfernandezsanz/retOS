@@ -65,6 +65,12 @@ Cosign signatures and immutable version tag-to-digest resolution for both images
 Before tagging a release candidate, run:
 
 ```bash
+make local-acceptance
+```
+
+For targeted reruns, the local acceptance gate expands to:
+
+```bash
 make release-check
 make production-preflight
 make check

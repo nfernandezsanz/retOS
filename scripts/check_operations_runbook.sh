@@ -39,6 +39,7 @@ for phrase in (
     "docker compose stop api worker web",
     "docker compose run --rm migrate migrate",
     "docker compose up -d api worker web",
+    "make local-acceptance",
     "make docker-smoke",
     "make api-smoke",
     "export RETOS_IMAGE_TAG=<previous-tag>",
