@@ -224,6 +224,10 @@ require(
     "Final release promotion still requires" in tracker,
     "process tracker must keep final release blockers visible",
 )
+require(
+    "make local-acceptance" in tracker and "promotion decision checklist" in tracker,
+    "process tracker must keep local acceptance and audit checklist evidence visible",
+)
 for phrase in (
     "Desktop visual audit PNG reviewed",
     "Mobile visual audit PNG reviewed",

@@ -85,6 +85,14 @@ require(
     "process tracker must keep final release blockers visible",
 )
 require(
+    "make local-acceptance" in tracker,
+    "process tracker must keep the local acceptance gate visible",
+)
+require(
+    "promotion decision checklist" in tracker,
+    "process tracker must keep the audit handoff checklist visible",
+)
+require(
     "check_production_preflight.sh" in ci,
     "CI must run the production preflight guard",
 )
