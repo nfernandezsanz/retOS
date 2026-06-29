@@ -5,6 +5,7 @@ scripts/check_release_readiness.sh >/dev/null
 scripts/check_ci_workflow.sh >/dev/null
 python3 scripts/check_readme_usability.py >/dev/null
 python3 scripts/check_visual_review.py >/dev/null
+python3 scripts/check_process_tracker.py >/dev/null
 scripts/check_audit_pack.sh >/dev/null
 scripts/check_release_notes.sh >/dev/null
 scripts/check_versioned_release_notes.sh >/dev/null
@@ -52,6 +53,7 @@ for command in (
     "make security-policy-check",
     "make ignore-hygiene-check",
     "make operations-runbook-check",
+    "make process-tracker-check",
     "make auditor-static-check",
     "make audit-manifest-check",
     "make audit-manifest",
@@ -77,7 +79,7 @@ require(
     "coverage evidence must match the current README/release note ratchet",
 )
 require(
-    "777 pytest cases" in audit_pack,
+    "780 pytest cases" in audit_pack,
     "production readiness pack must record the current backend pytest case count",
 )
 for unique_gate in (
@@ -85,6 +87,7 @@ for unique_gate in (
     "| Security policy |",
     "| README usability |",
     "| Auditor evidence matrix |",
+    "| Process tracker |",
 ):
     require(
         audit_pack.count(unique_gate) == 1,

@@ -8,7 +8,7 @@ AUDIT_BUNDLE_OUTPUT ?= evals/reports/retos-audit-handoff.tar.gz
 AUDIT_MANIFEST_SKIP_CI ?= false
 ROOT_PY_SCRIPTS := scripts
 
-.PHONY: help bootstrap-env local-demo local-access local-status local-smoke local-logs doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check target-security-review-check visual-review-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check readme-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-workflow-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
+.PHONY: help bootstrap-env local-demo local-access local-status local-smoke local-logs doctor env-security-check seed-demo docker-seed-demo install format format-check test lint typecheck dependency-audit security-policy-check target-security-review-check visual-review-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check process-tracker-check auditor-evidence-matrix-check readme-check auditor-static-check auditor-handoff-check audit-manifest audit-manifest-check audit-handoff-report audit-handoff-report-check audit-bundle audit-bundle-check audit-export-check visual-audit-check db-upgrade db-downgrade api-smoke eval-smoke eval-agent-multihop eval-fetch-dataset eval-calibration eval-calibration-evidence eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check eval-calibration-compare eval-ocr eval-ocr-benchmark eval-squad eval-hotpotqa eval-hotpotqa-agent eval-natural-questions check local-acceptance frontend-install frontend-test frontend-e2e frontend-visual-audit integration docker-config docker-build docker-runtime-image-check docker-smoke release-check audit-pack-check production-preflight brand-check ci-workflow-check ci-status-check release-notes-check versioned-release-notes-check release-workflow-check release-evidence-check image-size-check docker-up docker-down
 
 help:
 	@printf "RetOS development commands\n"
@@ -36,6 +36,7 @@ help:
 	@printf "  make operations-runbook-check Validate backup, restore, rollback, and audit-export runbooks\n"
 	@printf "  make backup-restore-drill-check Validate backup/restore drill evidence template\n"
 	@printf "  make promotion-template-check Validate human promotion evidence template contract\n"
+	@printf "  make process-tracker-check Validate phase tracker coverage, gates, and blockers\n"
 	@printf "  make auditor-evidence-matrix-check Validate objective-to-evidence traceability\n"
 	@printf "  make readme-check     Validate README onboarding, pills, status, and agent workflow\n"
 	@printf "  make auditor-static-check Run non-destructive auditor documentation/release/security gates\n"
@@ -171,13 +172,16 @@ backup-restore-drill-check:
 promotion-template-check:
 	$(PYTHON) scripts/check_promotion_template.py $(if $(TEMPLATE),--template "$(abspath $(TEMPLATE))",)
 
+process-tracker-check:
+	$(PYTHON) scripts/check_process_tracker.py $(if $(TRACKER),--tracker "$(abspath $(TRACKER))",)
+
 auditor-evidence-matrix-check:
 	scripts/check_auditor_evidence_matrix.sh
 
 readme-check:
 	$(PYTHON) scripts/check_readme_usability.py
 
-auditor-static-check: dependency-audit security-policy-check target-security-review-check visual-review-check env-security-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check auditor-evidence-matrix-check readme-check brand-check visual-audit-check ci-workflow-check release-workflow-check release-notes-check versioned-release-notes-check eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
+auditor-static-check: dependency-audit security-policy-check target-security-review-check visual-review-check env-security-check ignore-hygiene-check operations-runbook-check backup-restore-drill-check promotion-template-check process-tracker-check auditor-evidence-matrix-check readme-check brand-check visual-audit-check ci-workflow-check release-workflow-check release-notes-check versioned-release-notes-check eval-calibration-gate eval-calibration-trend-gate calibration-scope-decision-check release-check production-preflight audit-pack-check audit-manifest-check audit-handoff-report-check audit-bundle-check
 
 auditor-handoff-check: auditor-static-check
 	$(MAKE) audit-manifest OUTPUT="$(AUDIT_MANIFEST_OUTPUT)" AUDIT_MANIFEST_SKIP_CI=true

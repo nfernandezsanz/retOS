@@ -14,6 +14,7 @@ REQUIRED_FILES = (
     Path("planning/04-process-tracker.md"),
     Path(".github/workflows/ci.yml"),
     Path(".github/workflows/release.yml"),
+    Path("scripts/check_process_tracker.py"),
 )
 SHELL_SUBCHECKS = (
     "check_release_readiness.sh",
@@ -39,7 +40,7 @@ def copy_minimal_repo(tmp_path: Path) -> Path:
         shutil.copyfile(ROOT / relative, target)
 
     scripts_dir = repo / "scripts"
-    scripts_dir.mkdir()
+    scripts_dir.mkdir(exist_ok=True)
     for script in SHELL_SUBCHECKS:
         path = scripts_dir / script
         path.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
@@ -81,8 +82,8 @@ def test_production_preflight_check_fails_when_pytest_count_drifts(
     repo = copy_minimal_repo(tmp_path)
     replace_text(
         repo / "docs" / "production-readiness.md",
-        "777 pytest cases",
-        "776 pytest cases",
+        "780 pytest cases",
+        "779 pytest cases",
     )
 
     result = run_checker(repo)
@@ -118,7 +119,7 @@ def test_production_preflight_check_fails_when_external_blockers_are_removed(
     result = run_checker(repo)
 
     assert result.returncode != 0
-    assert "process tracker must keep final release blockers visible" in result.stderr
+    assert "phase 6 must keep external promotion blockers visible" in result.stderr
 
 
 def test_production_preflight_check_propagates_subcheck_failures(

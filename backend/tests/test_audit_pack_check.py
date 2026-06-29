@@ -28,8 +28,10 @@ REQUIRED_FILES = (
     Path("scripts/check_target_security_review.py"),
     Path("scripts/check_visual_review.py"),
     Path("scripts/check_promotion_template.py"),
+    Path("scripts/check_process_tracker.py"),
     Path("SECURITY.md"),
     Path("scripts/export_audit_manifest.py"),
+    Path("Makefile"),
 )
 
 

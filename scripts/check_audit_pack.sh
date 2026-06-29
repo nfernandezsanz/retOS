@@ -34,8 +34,10 @@ paths = {
     "target_security_review_script": Path("scripts/check_target_security_review.py"),
     "visual_review_script": Path("scripts/check_visual_review.py"),
     "promotion_template_script": Path("scripts/check_promotion_template.py"),
+    "process_tracker_script": Path("scripts/check_process_tracker.py"),
     "security_policy": Path("SECURITY.md"),
     "audit_manifest_script": Path("scripts/export_audit_manifest.py"),
+    "makefile": Path("Makefile"),
 }
 
 for name, path in paths.items():
@@ -50,6 +52,7 @@ release_note = paths["release_note"].read_text(encoding="utf-8")
 promotion_template = paths["promotion_template"].read_text(encoding="utf-8")
 ci = paths["ci"].read_text(encoding="utf-8")
 audit_manifest_script = paths["audit_manifest_script"].read_text(encoding="utf-8")
+makefile = paths["makefile"].read_text(encoding="utf-8")
 
 for heading in (
     "## Current Verdict",
@@ -83,6 +86,7 @@ for phrase in (
     "make operations-runbook-check",
     "make backup-restore-drill-check",
     "make auditor-static-check",
+    "make process-tracker-check",
     "make auditor-handoff-check",
     "make audit-manifest-check",
     "make audit-manifest",
@@ -104,6 +108,7 @@ for phrase in (
     "scripts/check_ignore_hygiene.sh",
     "scripts/check_backup_restore_drill.py",
     "scripts/check_promotion_template.py",
+    "scripts/check_process_tracker.py",
     "scripts/check_operations_runbook.sh",
     "scripts/check_audit_export.py",
     "scripts/check_ci_status.sh",
@@ -286,6 +291,13 @@ require(
 require(
     "make local-acceptance" in tracker and "promotion decision checklist" in tracker,
     "process tracker must keep local acceptance and audit checklist evidence visible",
+)
+require(
+    "process-tracker-check" in makefile
+    and "check_process_tracker.py" in makefile
+    and "auditor-static-check:" in makefile
+    and "process-tracker-check" in makefile.split("auditor-static-check:", 1)[1].splitlines()[0],
+    "Makefile must expose process-tracker-check in the auditor static pack",
 )
 for phrase in (
     "Desktop visual audit PNG reviewed",
