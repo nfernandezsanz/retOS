@@ -58,11 +58,12 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit(f"README usability failed: {message}")
 
 
-def main() -> None:
+def validate_readme(readme_path: Path = README) -> None:
     require(
-        README.is_file() and README.stat().st_size > 0, "missing or empty README.md"
+        readme_path.is_file() and readme_path.stat().st_size > 0,
+        "missing or empty README.md",
     )
-    content = README.read_text(encoding="utf-8")
+    content = readme_path.read_text(encoding="utf-8")
 
     for heading in REQUIRED_HEADINGS:
         require(heading in content, f"missing heading: {heading}")
@@ -82,6 +83,9 @@ def main() -> None:
         "Current Status must appear before workflow details",
     )
 
+
+def main() -> None:
+    validate_readme()
     print(
         "README usability OK: onboarding, status, local actions, and agent workflow are visible."
     )
