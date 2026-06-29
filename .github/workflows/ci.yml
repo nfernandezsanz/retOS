@@ -35,6 +35,12 @@ jobs:
           cd backend
           pytest
           python scripts/check_branch_coverage.py --fail-under 90.48
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: retos-backend-coverage-${{ github.sha }}
+          path: backend/coverage.json
+          if-no-files-found: error
       - name: Eval smoke
         env:
           RETOS_ALLOW_PAID_LLM: "false"
@@ -131,6 +137,15 @@ jobs:
       - docker
     steps:
       - uses: actions/checkout@v6
+      - name: Download backend coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: retos-backend-coverage-${{ github.sha }}
+          path: /tmp/retos-backend-coverage
+      - name: Install backend coverage report
+        run: |
+          mkdir -p backend
+          cp /tmp/retos-backend-coverage/coverage.json backend/coverage.json
       - name: Export audit manifest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

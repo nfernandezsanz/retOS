@@ -97,6 +97,7 @@ subprocess.run(curl_cmd, check=True)
 artifacts = json.loads(artifacts_path.read_text(encoding="utf-8")).get("artifacts", [])
 artifact_by_name = {artifact.get("name"): artifact for artifact in artifacts}
 required_artifacts = {
+    f"retos-backend-coverage-{sha}",
     f"retos-visual-audit-{sha}",
     f"retos-audit-manifest-{sha}",
     f"retos-audit-handoff-{sha}",

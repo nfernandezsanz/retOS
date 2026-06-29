@@ -107,13 +107,13 @@ auditor a stable local entry point:
 | Auditor static pack | `make auditor-static-check` | Non-destructive dependency, security, ignore, operations, branding, release, preflight, and audit-pack guards pass together. |
 | Auditor handoff | `make auditor-handoff-check` | Runs local static auditor gates and exports an offline audit manifest for the promotion record. |
 | Audit manifest schema | `make audit-manifest-check` | Offline schema check for required manifest fields, gates, critical file hashes, visual artifact names, and external blockers. |
-| Audit manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | JSON handoff with current commit, dirty state, generation context, coverage evidence derived from `backend/coverage.json`, required gates, critical file hashes including the auditor evidence matrix and branding assets, local visual screenshots, release artifact names, and remaining external promotion evidence. CI also uploads `retos-audit-manifest-<commit>` as an in-run snapshot; treat that artifact as final evidence only with a later `make ci-status-check` success for the same commit. |
+| Audit manifest | `make audit-manifest OUTPUT=evals/reports/audit-manifest.json` | JSON handoff with current commit, dirty state, generation context, coverage evidence derived from `backend/coverage.json`, required gates, critical file hashes including the auditor evidence matrix and branding assets, local visual screenshots, release artifact names, and remaining external promotion evidence. CI downloads the `retos-backend-coverage-<commit>` artifact before exporting `retos-audit-manifest-<commit>` as an in-run snapshot; treat that artifact as final evidence only with a later `make ci-status-check` success for the same commit. |
 | Audit handoff report | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Human-readable Markdown companion for the JSON manifest with candidate, verdict, coverage source, local gates, blockers, hashes, and visual evidence. CI also uploads `retos-audit-handoff-<commit>` from the same manifest snapshot for reviewers who want a readable artifact. |
 | Audit handoff report schema | `make audit-handoff-report-check` | Offline check that the generated Markdown summary preserves key manifest evidence. |
 | Promotion decision checklist | `make audit-handoff-report MANIFEST=evals/reports/audit-manifest.json OUTPUT=evals/reports/audit-handoff.md` | Generated checklist showing clean worktree, CI success, critical file hashes, local visual evidence, and remaining external promotion decisions. |
 | Audit handoff bundle | `make audit-bundle OUTPUT=evals/reports/retos-audit-handoff.tar.gz AUDIT_MANIFEST_SKIP_CI=true` | Local tarball plus `.sha256` sidecar containing the JSON manifest, Markdown handoff, production readiness pack, release process, operations guide, branding guide, release note, promotion template, and CI/release workflows. |
 | Audit handoff bundle schema | `make audit-bundle-check` | Offline check that the generated tarball has the required members and checksum. |
-| Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, docker, final audit-evidence jobs, and required visual-audit/audit-manifest/audit-handoff artifacts for the current commit. |
+| Current HEAD CI | `make ci-status-check` | GitHub Actions has successful backend, frontend, docker, final audit-evidence jobs, and required backend-coverage/visual-audit/audit-manifest/audit-handoff artifacts for the current commit. |
 
 ## External Promotion Evidence
 
@@ -188,7 +188,7 @@ These items must be closed before a final production release:
 | Audit manifest schema | `scripts/check_audit_manifest.py`, `make audit-manifest-check` |
 | Audit handoff report | `scripts/export_audit_handoff_report.py`, `scripts/check_audit_handoff_report.py`, `make audit-handoff-report` |
 | Audit handoff bundle | `scripts/export_audit_bundle.py`, `scripts/check_audit_bundle.py`, `make audit-bundle` |
-| Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check`, the `retos-visual-audit-<commit>` artifact, the `retos-audit-manifest-<commit>` artifact, and the `retos-audit-handoff-<commit>` artifact |
+| Current HEAD CI evidence | `scripts/check_ci_status.sh`, `make ci-status-check`, the `retos-backend-coverage-<commit>` artifact, the `retos-visual-audit-<commit>` artifact, the `retos-audit-manifest-<commit>` artifact, and the `retos-audit-handoff-<commit>` artifact |
 | Audit handoff manifest | `scripts/export_audit_manifest.py`, `make audit-manifest` |
 | Release procedure | `docs/release-process.md` |
 | Operations runbooks | `docs/operations.md` |

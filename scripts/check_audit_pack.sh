@@ -263,6 +263,7 @@ require(
 )
 for phrase in (
     "artifacts?per_page=50",
+    "retos-backend-coverage-{sha}",
     "retos-visual-audit-{sha}",
     "retos-audit-manifest-{sha}",
     "retos-audit-handoff-{sha}",
@@ -277,6 +278,9 @@ for phrase in (
     "- backend",
     "- frontend",
     "- docker",
+    "actions/download-artifact@v4",
+    "retos-backend-coverage-${{ github.sha }}",
+    "cp /tmp/retos-backend-coverage/coverage.json backend/coverage.json",
     "make audit-manifest OUTPUT=retos-audit-manifest.json",
     "make audit-handoff-report MANIFEST=retos-audit-manifest.json OUTPUT=retos-audit-handoff.md",
     "retos-audit-manifest-${{ github.sha }}",
