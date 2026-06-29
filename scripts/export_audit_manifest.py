@@ -13,6 +13,15 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPO = "nfernandezsanz/retOS"
+DEFAULT_COVERAGE_TARGETS = {
+    "branch_minimum_percent": 90.0,
+    "last_recorded_branch_percent": 0.0,
+    "last_recorded_total_percent": 0.0,
+    "source": "fallback",
+    "source_available": False,
+    "source_path": "backend/coverage.json",
+    "total_minimum_percent": 90.0,
+}
 
 CRITICAL_FILES = (
     "README.md",
@@ -125,6 +134,52 @@ def json_record(relative_path: str) -> dict[str, Any]:
     return record
 
 
+def branch_coverage_minimum() -> float:
+    makefile = ROOT / "Makefile"
+    for line in makefile.read_text(encoding="utf-8").splitlines():
+        if line.startswith("BRANCH_COVERAGE_MIN"):
+            _, value = line.split("?=", maxsplit=1)
+            return round(float(value.strip()), 2)
+    return DEFAULT_COVERAGE_TARGETS["branch_minimum_percent"]
+
+
+def coverage_targets() -> dict[str, Any]:
+    coverage_path = ROOT / "backend" / "coverage.json"
+    targets = {
+        **DEFAULT_COVERAGE_TARGETS,
+        "branch_minimum_percent": branch_coverage_minimum(),
+    }
+    if not coverage_path.is_file():
+        targets["source_reason"] = "coverage report not found"
+        return targets
+
+    try:
+        report = json.loads(coverage_path.read_text(encoding="utf-8"))
+        totals = report["totals"]
+        meta = report.get("meta", {})
+        branch_percent = float(totals["percent_branches_covered"])
+        total_percent = float(totals["percent_covered"])
+        covered_branches = int(totals["covered_branches"])
+        num_branches = int(totals["num_branches"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        targets["source_reason"] = f"coverage report could not be parsed: {exc}"
+        return targets
+
+    targets.update(
+        {
+            "branch_coverage_enabled": meta.get("branch_coverage") is True,
+            "covered_branches": covered_branches,
+            "last_recorded_branch_percent": round(branch_percent, 2),
+            "last_recorded_total_percent": round(total_percent, 2),
+            "num_branches": num_branches,
+            "source": "coverage.py json",
+            "source_available": True,
+            "source_path": str(coverage_path.relative_to(ROOT)),
+        }
+    )
+    return targets
+
+
 def github_ci(repo: str, sha: str) -> dict[str, Any]:
     api_root = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
     headers = [
@@ -211,12 +266,7 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
             "post_run_ci_validation_required": generated_for_current_github_run,
             "post_run_ci_validation_command": "make ci-status-check",
         },
-        "coverage_targets": {
-            "branch_minimum_percent": 90.48,
-            "last_recorded_branch_percent": 90.48,
-            "last_recorded_total_percent": 95.23,
-            "total_minimum_percent": 90.0,
-        },
+        "coverage_targets": coverage_targets(),
         "critical_file_hashes": [file_record(path) for path in CRITICAL_FILES],
         "external_promotion_evidence_required": list(EXTERNAL_PROMOTION_EVIDENCE),
         "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),

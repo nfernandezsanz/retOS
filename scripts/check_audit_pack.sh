@@ -104,6 +104,7 @@ for phrase in (
     ".dockerignore",
     "docs/releases/evidence/production-promotion-template.md",
     "JSON handoff",
+    "coverage evidence derived from `backend/coverage.json`",
     "Promotion decision checklist",
     "generation context",
     "in-run snapshot",
@@ -195,6 +196,8 @@ for phrase in (
     "generated_for_current_github_run",
     "post_run_ci_validation_required",
     "post_run_ci_validation_command",
+    "coverage_targets()",
+    "backend/coverage.json",
     "make audit-manifest-check",
 ):
     require(phrase in audit_manifest_script, f"audit manifest must record CI generation semantics: {phrase}")

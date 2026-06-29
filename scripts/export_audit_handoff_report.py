@@ -109,6 +109,7 @@ def build_report(manifest: dict[str, Any], *, manifest_path: Path) -> str:
         f"| Production promotion ready | {status_text(manifest['production_promotion_ready'])} |",
         f"| Total coverage recorded | {coverage['last_recorded_total_percent']:.2f}% |",
         f"| Branch coverage recorded | {coverage['last_recorded_branch_percent']:.2f}% |",
+        f"| Coverage evidence source | `{coverage.get('source_path', 'unknown')}` ({coverage.get('source', 'unknown')}) |",
         f"| CI available in manifest | {status_text(ci.get('available'))} |",
         f"| CI status | `{ci.get('status', 'not available')}` |",
         f"| CI conclusion | `{ci.get('conclusion', 'not available')}` |",

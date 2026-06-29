@@ -138,6 +138,31 @@ def main() -> int:
         coverage["branch_minimum_percent"] >= 90,
         "branch coverage target must stay at least 90%",
     )
+    require(
+        coverage["source_path"] == "backend/coverage.json",
+        "coverage evidence must point at backend/coverage.json",
+    )
+    if coverage["source_available"]:
+        require(
+            coverage["source"] == "coverage.py json",
+            "available coverage evidence must come from coverage.py JSON",
+        )
+        require(
+            coverage["branch_coverage_enabled"] is True,
+            "coverage evidence must include branch coverage",
+        )
+        require(
+            coverage["last_recorded_total_percent"] >= coverage["total_minimum_percent"],
+            "recorded total coverage must meet the total target",
+        )
+        require(
+            coverage["last_recorded_branch_percent"] >= coverage["branch_minimum_percent"],
+            "recorded branch coverage must meet the branch target",
+        )
+        require(
+            coverage["covered_branches"] <= coverage["num_branches"],
+            "coverage branch counters must be internally consistent",
+        )
 
     critical_files = manifest["critical_file_hashes"]
     by_path = {record["path"]: record for record in critical_files}
