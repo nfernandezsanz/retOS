@@ -690,6 +690,8 @@ async function mockProviderApi(page: Page) {
           can_call: true,
           reason: null,
         },
+        agent_runtime: "deepagents",
+        paid_providers_enabled: false,
         providers: [
           {
             name: "local",
@@ -1695,7 +1697,10 @@ test("loads the operational console", async ({ page }) => {
 
   await expect(page.getByText("Active provider")).toBeVisible();
   await expect(page.getByText("Active model")).toBeVisible();
+  await expect(page.getByText("Agent runtime")).toBeVisible();
   await expect(page.getByText("ollama:gemma4")).toBeVisible();
+  await expect(page.getByText("deepagents")).toBeVisible();
+  await expect(page.getByText("Paid providers blocked")).toBeVisible();
   const localProviderRow = page
     .getByLabel("Available LLM providers")
     .locator(".provider-row")

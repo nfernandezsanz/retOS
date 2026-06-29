@@ -55,6 +55,8 @@ type ActiveProvider = {
 
 type ProviderCatalog = {
   active: ActiveProvider;
+  agent_runtime: string;
+  paid_providers_enabled: boolean;
   providers: ProviderProfile[];
 };
 
@@ -4854,8 +4856,16 @@ function App() {
                   <strong>{catalog ? catalog.active.model : "Waiting for login"}</strong>
                 </div>
                 <div>
+                  <span>Agent runtime</span>
+                  <strong>{catalog ? catalog.agent_runtime : "Waiting for login"}</strong>
+                </div>
+                <div>
                   <span>Cost guardrail</span>
-                  <strong>{catalog?.active.paid ? "Paid provider" : "No paid calls"}</strong>
+                  <strong>
+                    {catalog?.paid_providers_enabled
+                      ? "Paid providers enabled"
+                      : "Paid providers blocked"}
+                  </strong>
                 </div>
                 <div>
                   <span>Status</span>

@@ -56,6 +56,7 @@ The backend exposes `GET /llm/providers` for authenticated admins. The endpoint 
 only safe metadata:
 
 - Active provider name, model, paid/free flag, and whether calls are allowed.
+- Active agent runtime and whether paid providers are enabled for this process.
 - Available profiles and whether each profile is configured and enabled.
 - A human-readable disabled reason when configuration or cost opt-in is missing.
 - Safe `missing_config` environment variable names so the UI can show exactly what is
@@ -67,10 +68,11 @@ connected.
 
 The implemented Admin UI currently keeps provider configuration read-only and
 operator-safe: it marks the active provider/model, labels profiles as active or
-available, distinguishes configured profiles from missing configuration, and surfaces
-only safe hints such as missing environment variable names or the Ollama base URL. Live
-runtime switching is intentionally deferred until there is a persisted, audited
-configuration story; today switching profiles is done by changing `RETOS_PROVIDER` and
+available, distinguishes configured profiles from missing configuration, shows the
+active agent runtime and paid-provider process policy, and surfaces only safe hints such
+as missing environment variable names or the Ollama base URL. Live runtime switching is
+intentionally deferred until there is a persisted, audited configuration story; today
+switching profiles is done by changing `RETOS_PROVIDER`, `RETOS_AGENT_RUNTIME`, and
 related environment variables, then letting startup validation fail fast if the choice is
 unsafe.
 

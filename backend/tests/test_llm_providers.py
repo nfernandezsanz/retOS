@@ -152,6 +152,8 @@ def test_llm_providers_endpoint_returns_safe_catalog(client: TestClient) -> None
         "can_call": True,
         "reason": None,
     }
+    assert body["agent_runtime"] == "deterministic"
+    assert body["paid_providers_enabled"] is False
     assert {provider["name"] for provider in body["providers"]} == {
         "fake",
         "local",
