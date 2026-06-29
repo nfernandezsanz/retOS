@@ -240,6 +240,7 @@ require(local_acceptance_line, "Makefile must define local-acceptance")
 for dependency in (
     "doctor",
     "check",
+    "frontend-format-check",
     "integration",
     "frontend-test",
     "frontend-visual-audit",

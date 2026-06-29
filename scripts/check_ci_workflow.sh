@@ -58,6 +58,7 @@ required_workflow_phrases = (
     "scripts/run_api_smoke.sh",
     "npm ci",
     "npm audit --audit-level=high",
+    "npm run format:check",
     "npm run check",
     "npx playwright install --with-deps chromium",
     "npm run e2e",
@@ -91,7 +92,8 @@ for phrase in required_workflow_phrases:
 
 for phrase in (
     "actions/workflows/ci.yml/badge.svg?branch=main",
-    "backend and root Python script format/PEP 8",
+    "backend/root Python format/PEP 8",
+    "frontend Prettier format",
     "make ci-status-check",
 ):
     require(phrase in readme, f"README.md missing CI phrase: {phrase}")

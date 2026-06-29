@@ -57,6 +57,7 @@ required_workflow_phrases = (
     "pytest",
     "python scripts/check_branch_coverage.py --fail-under 90.65",
     "npm audit --audit-level=high",
+    "npm run format:check",
     "npm run check",
     "npx playwright install --with-deps chromium",
     "npm run e2e",

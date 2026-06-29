@@ -68,6 +68,7 @@ for phrase in (
     "RetOS is not production-promoted yet",
     "make local-acceptance",
     "make check",
+    "make frontend-format-check",
     "make integration",
     "make frontend-test",
     "make frontend-e2e",

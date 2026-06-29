@@ -43,6 +43,13 @@ def test_readme_usability_gate_accepts_current_contract(tmp_path: Path) -> None:
     gate.validate_readme(readme_path, makefile_path)
 
 
+def test_readme_usability_gate_tracks_frontend_format_contract() -> None:
+    gate = load_readme_usability_gate()
+
+    assert "frontend-format-check" in gate.REQUIRED_MAKE_TARGETS
+    assert "make frontend-format-check" in gate.REQUIRED_PHRASES
+
+
 def test_readme_usability_gate_rejects_missing_status_heading(tmp_path: Path) -> None:
     gate = load_readme_usability_gate()
     readme_path = write_readme(
@@ -127,11 +134,11 @@ def test_readme_usability_gate_rejects_missing_make_target(tmp_path: Path) -> No
     gate = load_readme_usability_gate()
     readme_path = write_readme(tmp_path)
     local_acceptance_target = (
-        "\nlocal-acceptance: doctor check integration frontend-test "
+        "\nlocal-acceptance: doctor check frontend-format-check integration frontend-test "
         "frontend-visual-audit docker-config auditor-handoff-check docker-smoke\n"
     )
     renamed_acceptance_target = (
-        "\nlocal-preflight: doctor check integration frontend-test "
+        "\nlocal-preflight: doctor check frontend-format-check integration frontend-test "
         "frontend-visual-audit docker-config auditor-handoff-check docker-smoke\n"
     )
     makefile_content = (

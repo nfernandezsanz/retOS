@@ -28,6 +28,7 @@ make eval-smoke
 make eval-ocr
 make eval-ocr-benchmark OCR_PATH=evals/datasets/ocr-benchmark/manifest.json
 make eval-squad SQUAD_PATH=evals/datasets/dev-v2.0.json MAX_CASES=50 REPORT_DIR=evals/reports
+make frontend-format-check
 make frontend-e2e
 make integration
 make docker-smoke

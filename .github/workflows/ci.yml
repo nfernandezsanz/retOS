@@ -71,6 +71,8 @@ jobs:
         run: cd frontend && npm ci
       - name: Node dependency audit
         run: cd frontend && npm audit --audit-level=high
+      - name: Frontend format
+        run: cd frontend && npm run format:check
       - name: Check
         run: cd frontend && npm run check
       - name: Install browser

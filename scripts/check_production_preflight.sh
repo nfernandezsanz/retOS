@@ -40,6 +40,7 @@ for heading in (
 
 for command in (
     "make check",
+    "make frontend-format-check",
     "make integration",
     "make frontend-test",
     "make frontend-e2e",
@@ -79,7 +80,7 @@ require(
     "coverage evidence must match the current README/release note ratchet",
 )
 require(
-    "790 pytest cases" in audit_pack,
+    "793 pytest cases" in audit_pack,
     "production readiness pack must record the current backend pytest case count",
 )
 for unique_gate in (

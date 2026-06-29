@@ -304,7 +304,7 @@ backend-coverage, visual-audit, audit-manifest, and audit-handoff artifacts.
 - Planning, ADRs, and architecture assets for the open source implementation path.
 - Branding assets and visual guidance for a coherent audit-console identity.
 - Test and coverage defaults that avoid paid LLM calls.
-- CI jobs that validate backend and root Python script format/PEP 8, types, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke.
+- CI jobs that validate backend/root Python format/PEP 8, frontend Prettier format, types, tests, API smoke, frontend build, browser smoke, Docker build, and Docker stack smoke.
 - Release workflow for GHCR image publishing with SBOM/provenance attestations, Cosign
   signing, and signature verification for `retos-backend` and `retos-web`.
 
@@ -396,7 +396,7 @@ Apply local database migrations:
 make db-upgrade
 ```
 
-Format backend code while working:
+Format code while working:
 
 ```bash
 make format
@@ -407,6 +407,7 @@ Install and check the frontend:
 ```bash
 cd frontend
 npm install
+npm run format:check
 npm run check
 npm run e2e
 ```
@@ -422,6 +423,7 @@ The expanded command sequence behind that gate is:
 ```bash
 make doctor
 make check
+make frontend-format-check
 make integration
 make frontend-test
 make frontend-e2e
@@ -455,7 +457,8 @@ Every meaningful change should pass these gates:
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
 | Environment security | `make env-security-check` | Validates the active `.env` without starting services; missing local `.env` warns, while unsafe production placeholders, wildcard CORS outside development, invalid providers, paid-provider opt-in drift, and short secrets fail. |
 | Demo corpus seed | `make docker-seed-demo` or `make seed-demo SEED_DEMO_ARGS=--create-schema` | Seeds an idempotent, auditable demo domain with text-ingestion jobs, hash-chained journal/progress events, and a rebuilt local BM25 index for hands-on UI checks. |
-| Python format | `make format-check` | Enforces Black formatting for backend code and root Python audit/release scripts. |
+| Python and frontend format | `make format-check` | Enforces Black formatting for backend/root Python scripts and Prettier formatting for React, TypeScript, CSS, tests, and frontend config files. |
+| Frontend format | `make frontend-format-check` | Runs the version-pinned Prettier check over the frontend workspace without mutating files. |
 | Python PEP 8/lint | `make lint` | Uses Ruff for PEP 8 and bug-prone patterns across backend code and root Python scripts. |
 | Backend types | `make typecheck` | Enforces strict mypy on `src`. |
 | Backend tests | `make test` | Runs pytest with the 90% total coverage gate and an explicit branch coverage ratchet from `coverage.json` (`BRANCH_COVERAGE_MIN`, currently 90.65%). |

@@ -3391,10 +3391,9 @@ button:focus-visible {
 
 .admin-user-form {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(
-      120px,
-      0.4fr
-    ) max-content;
+  grid-template-columns:
+    minmax(180px, 1fr) minmax(180px, 1fr) minmax(120px, 0.4fr)
+    max-content;
   gap: 10px;
   align-items: end;
 }

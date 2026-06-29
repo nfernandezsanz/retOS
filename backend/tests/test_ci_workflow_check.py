@@ -60,6 +60,20 @@ def test_ci_workflow_check_fails_without_root_python_black_gate(tmp_path: Path) 
     assert "ci.yml missing black --check --diff scripts" in result.stderr
 
 
+def test_ci_workflow_check_fails_without_frontend_format_gate(tmp_path: Path) -> None:
+    repo = copy_minimal_repo(tmp_path)
+    replace_text(
+        repo / ".github/workflows/ci.yml",
+        "npm run format:check",
+        "npm run check:format",
+    )
+
+    result = run_checker(repo)
+
+    assert result.returncode != 0
+    assert "ci.yml missing npm run format:check" in result.stderr
+
+
 def test_ci_workflow_check_fails_without_visual_audit_manifest_artifact(
     tmp_path: Path,
 ) -> None:

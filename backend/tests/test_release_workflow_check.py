@@ -59,6 +59,20 @@ def test_release_workflow_check_fails_without_cosign_signing_step(tmp_path: Path
     assert "release.yml missing cosign sign --yes" in result.stderr
 
 
+def test_release_workflow_check_fails_without_frontend_format_gate(tmp_path: Path) -> None:
+    repo = copy_minimal_repo(tmp_path)
+    replace_text(
+        repo / ".github/workflows/release.yml",
+        "npm run format:check",
+        "npm run check:format",
+    )
+
+    result = run_checker(repo)
+
+    assert result.returncode != 0
+    assert "release.yml missing npm run format:check" in result.stderr
+
+
 def test_release_workflow_check_fails_when_worker_image_is_published(tmp_path: Path) -> None:
     repo = copy_minimal_repo(tmp_path)
     workflow = repo / ".github/workflows/release.yml"

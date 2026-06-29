@@ -69,6 +69,7 @@ docker compose --dry-run build
 make dependency-audit
 make ci-status-check
 make check
+make frontend-format-check
 make integration
 make frontend-test
 make frontend-e2e
@@ -170,7 +171,7 @@ Images:
 
 ## Validation
 
-- Python format/lint, backend typecheck/tests, and root script checks:
+- Python format/lint, frontend Prettier format, backend typecheck/tests, and root script checks:
 - Backend coverage:
 - API smoke:
 - Frontend build:
