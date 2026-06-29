@@ -94,7 +94,7 @@ auditor a stable local entry point:
 | Area | Gate | Proves |
 | --- | --- | --- |
 | Local prerequisites | `make doctor` | Python, Node, npm, Docker Compose, safe local defaults, Compose config, Docker topology guard, and audit-export verifier are available before heavier validation. |
-| Local demo corpus | `make docker-seed-demo` | The running Docker stack can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
+| Local demo corpus | `make docker-seed-demo`, `make api-smoke`, and `make frontend-e2e` | The running Docker stack, real HTTP smoke, and React console can create or reuse an auditable demo domain, ingest local text fixtures through normal jobs, rebuild BM25, and expose searchable UI data without paid providers. |
 | Local acceptance | `make local-acceptance` | Runs the local pre-audit acceptance path across backend quality, API/browser integration, frontend build, visual audit, Docker config, auditor handoff, and Docker stack smoke. |
 | Backend quality | `make check` | Black, Ruff/PEP 8, mypy, 570 pytest cases, eval smoke, agent multi-hop eval, 95.35% total coverage, and 90.65% branch coverage. |
 | HTTP and UI behavior | `make integration` | API smoke against real local endpoints plus Playwright browser smoke against the React console. |

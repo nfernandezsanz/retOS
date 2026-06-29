@@ -12,6 +12,7 @@ def test_app_registers_expected_routes(settings: Settings) -> None:
     assert "/readyz" in route_paths
     assert "/versionz" in route_paths
     assert "/auth/login" in route_paths
+    assert "/demo/seed" in route_paths
     assert "/admin/users" in route_paths
     assert "/admin/users/{admin_user_id}/status" in route_paths
     assert "/admin/users/{admin_user_id}/password" in route_paths

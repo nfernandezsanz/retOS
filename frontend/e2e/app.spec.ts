@@ -80,6 +80,53 @@ async function mockProviderApi(page: Page) {
       updated_at: "2026-06-27T00:00:00Z",
     },
   ];
+  const demoDomain = {
+    id: "domain-demo",
+    slug: "retos-demo",
+    name: "RetOS Demo",
+    description: "Local seeded corpus for evaluating RetOS document workflows.",
+    created_at: "2026-06-27T00:08:00Z",
+    updated_at: "2026-06-27T00:08:00Z",
+  };
+  const demoSource = {
+    id: "source-demo",
+    domain_id: demoDomain.id,
+    kind: "upload",
+    name: "Local demo fixtures",
+    uri: "demo://retos/local-fixtures",
+    created_at: "2026-06-27T00:08:00Z",
+    updated_at: "2026-06-27T00:08:00Z",
+  };
+  const demoDocuments = [
+    {
+      id: "document-demo-apollo",
+      domain_id: demoDomain.id,
+      source_id: demoSource.id,
+      external_id: "retos-demo-apollo-guidance",
+      title: "Apollo Guidance Notes",
+      content_hash: "demoapollo1234567890",
+      metadata: { seed: "retos-demo" },
+      source_uri: "demo://retos/local-fixtures/retos-demo-apollo-guidance.txt",
+      size_bytes: 192,
+      archived_at: null,
+      created_at: "2026-06-27T00:08:00Z",
+      updated_at: "2026-06-27T00:08:00Z",
+    },
+    {
+      id: "document-demo-incident",
+      domain_id: demoDomain.id,
+      source_id: demoSource.id,
+      external_id: "retos-demo-incident-policy",
+      title: "Incident Retention Policy",
+      content_hash: "demoincident123456",
+      metadata: { seed: "retos-demo" },
+      source_uri: "demo://retos/local-fixtures/retos-demo-incident-policy.txt",
+      size_bytes: 184,
+      archived_at: null,
+      created_at: "2026-06-27T00:08:00Z",
+      updated_at: "2026-06-27T00:08:00Z",
+    },
+  ];
   const documentVersions = [
     {
       id: "version-1",
@@ -543,6 +590,37 @@ async function mockProviderApi(page: Page) {
       payload: { domain_id: domainId },
     });
   }
+
+  await page.route("http://localhost:8000/demo/seed", async (route) => {
+    if (!domains.some((domain) => domain.id === demoDomain.id)) {
+      domains.push(demoDomain);
+    }
+    if (!sources.some((source) => source.id === demoSource.id)) {
+      sources.push(demoSource);
+    }
+    for (const document of demoDocuments) {
+      if (!documents.some((item) => item.id === document.id)) {
+        documents.push(document);
+      }
+    }
+    const indexJob = jobFixture("job-demo-index-1", "index.domain", "succeeded", {
+      requested_by: "seed-demo",
+      seed: "retos-demo",
+    });
+    jobs.unshift(indexJob);
+    recordAudit(indexJob);
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        domain_id: demoDomain.id,
+        source_id: demoSource.id,
+        created_documents: demoDocuments.length,
+        skipped_documents: 0,
+        index_job_id: indexJob.id,
+        indexed_segments: 4,
+      },
+    });
+  });
 
   await page.route("http://localhost:8000/auth/login", async (route) => {
     await route.fulfill({
@@ -1659,6 +1737,16 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
       "utf8",
     );
   }
+});
+
+test("seeds the local demo corpus from the overview", async ({ page }) => {
+  await page.locator(".workflow-button").click();
+
+  await expect(page).toHaveURL(/#documents-library$/);
+  await expect(page.getByLabel("Active domain")).toHaveValue("domain-demo");
+  await expect(page.locator("#documents").getByText("retos-demo", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Domain documents").getByText("Apollo Guidance Notes")).toBeVisible();
+  await expect(page.getByRole("status").getByText("Demo corpus ready: 2 created, 0 skipped.")).toBeVisible();
 });
 
 test("clears expired stored admin sessions", async ({ page }) => {

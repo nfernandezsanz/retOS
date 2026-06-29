@@ -7,6 +7,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import Any, cast
 
 import httpx
 import pymupdf
@@ -265,6 +266,42 @@ def main() -> None:
             token = login.json()["access_token"]
             require(isinstance(token, str) and token, "missing access token")
             auth_headers = {"Authorization": f"Bearer {token}"}
+
+            seeded_demo = client.post(
+                "/demo/seed",
+                headers=auth_headers,
+                json={"rebuild_index": True},
+            )
+            require(
+                seeded_demo.status_code == 200,
+                f"demo seed failed: {seeded_demo.status_code} {seeded_demo.text}",
+            )
+            seeded_demo_body = cast(dict[str, Any], seeded_demo.json())
+            require(
+                seeded_demo_body["created_documents"] == 3,
+                f"demo seed created unexpected document count: {seeded_demo_body}",
+            )
+            require(
+                seeded_demo_body["indexed_segments"] >= 3,
+                f"demo seed did not build searchable segments: {seeded_demo_body}",
+            )
+            seeded_demo_search = client.get(
+                f"/domains/{seeded_demo_body['domain_id']}/search",
+                headers=auth_headers,
+                params={"q": "Apollo guidance", "limit": 3},
+            )
+            require(
+                seeded_demo_search.status_code == 200,
+                "demo seed search failed: "
+                f"{seeded_demo_search.status_code} {seeded_demo_search.text}",
+            )
+            require(
+                any(
+                    hit["title"] == "Apollo Guidance Notes"
+                    for hit in seeded_demo_search.json()["hits"]
+                ),
+                "demo seed search did not return Apollo Guidance Notes",
+            )
 
             admin_users = client.get("/admin/users", headers=auth_headers)
             require(
