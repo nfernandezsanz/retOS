@@ -63,8 +63,10 @@ required_phrases = (
     "make audit-manifest",
     "Audit handoff manifest",
     "Audit handoff report",
+    "Local audit bundle",
     "retos-audit-manifest-",
     "retos-audit-handoff-",
+    "retos-audit-handoff.tar.gz.sha256",
     "audit-evidence",
     "Rollback",
 )
