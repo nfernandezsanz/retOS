@@ -3855,6 +3855,20 @@ function App() {
               id="documents-library"
               tabIndex={-1}
             >
+              <div className="document-context" aria-label="Document library context">
+                <div data-tooltip="Documents and edits apply to the selected research domain">
+                  <span>Active domain</span>
+                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                </div>
+                <div data-tooltip="Document count follows the active domain and archive visibility filter">
+                  <span>Visible documents</span>
+                  <strong>{documents.length}</strong>
+                </div>
+                <div data-tooltip="Archived domains and documents stay readable for audit review">
+                  <span>Archive view</span>
+                  <strong>{showArchivedDocuments ? "Including archived" : "Active only"}</strong>
+                </div>
+              </div>
               <section className="domain-block" aria-label="Create domain">
                 <div className="section-heading compact">
                   <h3>Create</h3>
@@ -4321,6 +4335,20 @@ function App() {
               tabIndex={-1}
               aria-label="Domain sources"
             >
+              <div className="document-context" aria-label="Document sources context">
+                <div data-tooltip="Sources are scoped to the active domain before scans or uploads run">
+                  <span>Target domain</span>
+                  <strong>{selectedDomain ? selectedDomain.name : "Select a domain"}</strong>
+                </div>
+                <div data-tooltip="Registered sources can be scanned, edited, or removed with audit evidence">
+                  <span>Registered sources</span>
+                  <strong>{sources.length}</strong>
+                </div>
+                <div data-tooltip="Index rebuilds run locally and preserve journal/progress evidence">
+                  <span>Index mode</span>
+                  <strong>Local rebuild</strong>
+                </div>
+              </div>
               <div className="section-heading">
                 <h3>Sources</h3>
                 <button

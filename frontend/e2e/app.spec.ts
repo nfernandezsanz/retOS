@@ -2076,6 +2076,13 @@ test("loads the operational console", async ({ page }) => {
     "href",
     "#documents-library",
   );
+  await expect(page.getByLabel("Document library context").getByText("Smoke Research")).toBeVisible();
+  await expect(page.getByLabel("Document library context").getByText("Active only")).toBeVisible();
+  await expect(
+    page.getByLabel("Document library context").locator("[data-tooltip]").filter({
+      hasText: "Visible documents",
+    }),
+  ).toHaveAttribute("data-tooltip", /archive visibility filter/);
   await expect(page.getByLabel("Active domain")).toHaveValue("domain-123");
   await expect(page.getByLabel("Domain documents").getByText("Corpus")).toBeVisible();
   await expect(page.getByLabel("Domain documents").getByText("Documents", { exact: true })).toBeVisible();
@@ -2085,8 +2092,17 @@ test("loads the operational console", async ({ page }) => {
   );
   await expect(page.getByText("Smoke Document")).toBeVisible();
   await page.getByLabel("Documents modules").getByRole("link", { name: "Sources" }).click();
+  await expect(page.getByLabel("Document sources context").getByText("Smoke Research")).toBeVisible();
+  await expect(page.getByLabel("Document sources context").getByText("Local rebuild")).toBeVisible();
+  await expect(
+    page.getByLabel("Document sources context").locator("[data-tooltip]").filter({
+      hasText: "Registered sources",
+    }),
+  ).toHaveAttribute("data-tooltip", /audit evidence/);
   await expect(page.getByLabel("Domain sources").getByText("Corpus inputs")).toBeVisible();
-  await expect(page.getByLabel("Domain sources").getByText("Registered sources")).toBeVisible();
+  await expect(
+    page.getByLabel("Domain sources").locator(".source-list-heading").getByText("Registered sources"),
+  ).toBeVisible();
   await expect(page.getByLabel("Domain sources").getByText("1 registered")).toHaveAttribute(
     "data-tooltip",
     /active domain/,
