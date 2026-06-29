@@ -200,6 +200,32 @@ def test_runtime_security_allows_wildcard_cors_in_development() -> None:
     settings.validate_runtime_security()
 
 
+def test_allowed_origins_accepts_csv_env_string() -> None:
+    settings = Settings(
+        env="development",
+        jwt_secret=SecretStr("development-secret-value-that-is-long-enough"),
+        allowed_origins="http://localhost:5173,http://localhost:8080",  # type: ignore[arg-type]
+    )
+
+    assert settings.allowed_origins == [
+        "http://localhost:5173",
+        "http://localhost:8080",
+    ]
+
+
+def test_allowed_origins_accepts_json_env_string() -> None:
+    settings = Settings(
+        env="development",
+        jwt_secret=SecretStr("development-secret-value-that-is-long-enough"),
+        allowed_origins='["http://localhost:5173", "http://localhost:8080"]',  # type: ignore[arg-type]
+    )
+
+    assert settings.allowed_origins == [
+        "http://localhost:5173",
+        "http://localhost:8080",
+    ]
+
+
 def test_runtime_security_rejects_wildcard_cors_outside_development() -> None:
     settings = Settings(
         env="test",

@@ -26,12 +26,13 @@ REQUIRED_PHRASES = (
     "audit-make%20auditor--handoff--check",
     "verify-local%20quality%20gates",
     "release-human%20promotion%20pack",
-    "coverage-95.43%25%20total%20%7C%2090.78%25%20branch",
+    "coverage-95.42%25%20total%20%7C%2090.75%25%20branch",
     "stability-pre--alpha",
     "Product maturity",
     "Backend coverage",
     "Production status",
     "Not production-promoted",
+    "make bootstrap-env",
     "docker compose up --build",
     "make docker-seed-demo",
     "make auditor-handoff-check",
@@ -56,6 +57,7 @@ FIRST_MINUTE_ROWS = (
 
 REQUIRED_MAKE_TARGETS = (
     "check",
+    "bootstrap-env",
     "local-acceptance",
     "auditor-handoff-check",
     "audit-bundle-check",

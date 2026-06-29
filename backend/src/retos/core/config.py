@@ -1,8 +1,9 @@
+import json
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import EmailStr, Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import EmailStr, Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from retos.core.security import hash_password
 
@@ -57,7 +58,7 @@ class Settings(BaseSettings):
     access_token_ttl_minutes: int = Field(default=30, ge=5, le=1440)
     bootstrap_admin_email: EmailStr | None = "admin@retos.dev"
     bootstrap_admin_password: SecretStr | None = SecretStr(DEVELOPMENT_ADMIN_PASSWORD)
-    allowed_origins: list[str] = Field(
+    allowed_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: [
             "http://localhost:5173",
             "http://localhost:8080",
@@ -84,6 +85,18 @@ class Settings(BaseSettings):
     azure_openai_deployment: str | None = None
     allow_paid_llm: bool = False
     agent_runtime: AgentRuntimeMode = "deterministic"
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return []
+            if stripped.startswith("["):
+                return json.loads(stripped)
+            return [origin.strip() for origin in stripped.split(",") if origin.strip()]
+        return value
 
     @property
     def bootstrap_admin(self) -> BootstrapAdmin | None:

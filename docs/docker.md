@@ -139,15 +139,16 @@ make docker-runtime-image-check
 ## Run
 
 ```bash
-cp .env.example .env
+make bootstrap-env
 make doctor
 docker compose up --build
 make docker-seed-demo
 ```
 
-`make doctor` validates prerequisites, `.env.example`, and the active `.env` when it
-exists. It fails on production placeholders, wildcard CORS outside development, unknown
-provider profiles, and unsafe secret lengths before the stack starts.
+`make bootstrap-env` creates `.env` from `.env.example` when missing and leaves existing
+local secrets untouched. `make doctor` validates prerequisites, `.env.example`, and the
+active `.env` when it exists. It fails on production placeholders, wildcard CORS outside
+development, unknown provider profiles, and unsafe secret lengths before the stack starts.
 Run `make env-security-check` when you only want that `.env` security audit without
 probing Docker, Node, or the rest of the local toolchain.
 

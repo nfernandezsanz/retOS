@@ -33,8 +33,8 @@ def manifest_fixture(
             "dirty": dirty,
         },
         "coverage_targets": {
-            "last_recorded_total_percent": 95.43,
-            "last_recorded_branch_percent": 90.78,
+            "last_recorded_total_percent": 95.42,
+            "last_recorded_branch_percent": 90.75,
             "source_path": "backend/coverage.json",
             "source": "coverage.py json",
         },

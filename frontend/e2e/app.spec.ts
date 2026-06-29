@@ -2044,6 +2044,13 @@ test("loads the operational console", async ({ page }) => {
     }),
   ).toHaveAttribute("data-tooltip", /explicit domain grants/);
   await expect(page.getByLabel("Admin users").getByText("admin@retos.dev")).toBeVisible();
+  await expect(
+    page.getByLabel("Admin users").locator("summary").filter({ hasText: "Create user" }),
+  ).toHaveAttribute("data-tooltip", /account creation/);
+  await expect(
+    page.getByLabel("Admin users").locator("summary").filter({ hasText: "User directory" }),
+  ).toHaveAttribute("data-tooltip", /Review users/);
+  await page.getByLabel("Admin users").locator("summary").filter({ hasText: "Create user" }).click();
   await page.getByLabel("New admin email").fill("ui-admin@retos.dev");
   await page.getByLabel("New admin password").fill("ui-admin-password");
   await page.getByLabel("New admin role").selectOption("viewer");
@@ -2129,7 +2136,14 @@ test("loads the operational console", async ({ page }) => {
       hasText: "Registered sources",
     }),
   ).toHaveAttribute("data-tooltip", /audit evidence/);
-  await expect(page.getByLabel("Domain sources").getByText("Corpus inputs")).toBeVisible();
+  await expect(
+    page.getByLabel("Domain sources").locator("summary").filter({ hasText: "Add source" }),
+  ).toHaveAttribute("data-tooltip", /source registration/);
+  await expect(
+    page.getByLabel("Domain sources").locator("summary").filter({ hasText: "Registered sources" }),
+  ).toHaveAttribute("data-tooltip", /scan controls/);
+  await page.getByLabel("Domain sources").locator("summary").filter({ hasText: "Registered sources" }).click();
+  await expect(page.getByLabel("Domain sources").getByText("Corpus inputs", { exact: true })).toBeVisible();
   await expect(
     page.getByLabel("Domain sources").locator(".source-list-heading").getByText("Registered sources"),
   ).toBeVisible();

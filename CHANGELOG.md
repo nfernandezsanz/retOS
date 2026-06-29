@@ -174,6 +174,8 @@ tag in GitHub.
   and visual-audit smoke test so brand evidence is part of the machine-readable handoff.
 - README onboarding now uses live GitHub Actions status badges, action-oriented local
   workflow pills, and collapsible operator paths for try/audit/develop entry points.
+- Local onboarding now includes an idempotent `make bootstrap-env` command that creates
+  `.env` from `.env.example` without overwriting existing local secrets.
 - The React eval runner now groups dataset-specific SQuAD, HotpotQA, Natural Questions,
   and OCR controls into compact tooltip-backed accordions so the quality screen starts
   shorter while keeping local execution controls one click away.

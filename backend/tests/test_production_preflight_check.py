@@ -81,8 +81,8 @@ def test_production_preflight_check_fails_when_pytest_count_drifts(
     repo = copy_minimal_repo(tmp_path)
     replace_text(
         repo / "docs" / "production-readiness.md",
-        "743 pytest cases",
-        "742 pytest cases",
+        "748 pytest cases",
+        "747 pytest cases",
     )
 
     result = run_checker(repo)

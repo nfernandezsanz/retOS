@@ -2261,6 +2261,60 @@ button:focus-visible {
   background: #ffffff;
 }
 
+.workflow-section {
+  display: grid;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.workflow-section summary {
+  position: relative;
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.workflow-section summary span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.workflow-section summary strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.workflow-section summary:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.workflow-section[open] summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.workflow-section > form,
+.workflow-section > div {
+  margin: 12px;
+}
+
+.workflow-section > .source-list,
+.workflow-section > .admin-user-list {
+  margin-top: 12px;
+}
+
 .dataset-accordion summary {
   position: relative;
   display: flex;

@@ -73,11 +73,11 @@ require(
     "branch coverage blocker must stay removed after 90% branch ratchet",
 )
 require(
-    "90.78% branch" in audit_pack and "95.43% total" in audit_pack,
+    "90.75% branch" in audit_pack and "95.42% total" in audit_pack,
     "coverage evidence must match the current README/release note ratchet",
 )
 require(
-    "743 pytest cases" in audit_pack,
+    "748 pytest cases" in audit_pack,
     "production readiness pack must record the current backend pytest case count",
 )
 for unique_gate in (

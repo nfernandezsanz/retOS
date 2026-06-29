@@ -117,7 +117,7 @@ def test_versioned_release_notes_check_fails_when_coverage_is_stale(
     repo = copy_minimal_repo(tmp_path)
     replace_text(
         repo / "docs" / "releases" / "2026.06.28-alpha.1.md",
-        "95.43% total coverage",
+        "95.42% total coverage",
         "94.00% total coverage",
     )
 

@@ -4362,48 +4362,59 @@ function App() {
                   {isQueueingIndex ? "Queueing index" : "Rebuild index"}
                 </button>
               </div>
-              <form className="source-form" onSubmit={handleCreateSource}>
-                <label data-tooltip="Choose how RetOS should treat this source">
-                  <span>Kind</span>
-                  <select
-                    value={sourceKind}
-                    onChange={(event) => setSourceKind(event.target.value as SourceKind)}
+              <details className="workflow-section" open>
+                <summary data-tooltip="Open the source registration form for the selected domain">
+                  <span>Add source</span>
+                  <strong>Register corpus input</strong>
+                </summary>
+                <form className="source-form" onSubmit={handleCreateSource}>
+                  <label data-tooltip="Choose how RetOS should treat this source">
+                    <span>Kind</span>
+                    <select
+                      value={sourceKind}
+                      onChange={(event) => setSourceKind(event.target.value as SourceKind)}
+                    >
+                      <option value="mount">Mount</option>
+                      <option value="upload">Upload</option>
+                      <option value="url">URL</option>
+                    </select>
+                  </label>
+                  <label data-tooltip="Short name shown in source lists and job payloads">
+                    <span>Name</span>
+                    <input
+                      placeholder="Research corpus"
+                      value={sourceName}
+                      onChange={(event) => setSourceName(event.target.value)}
+                    />
+                  </label>
+                  <label
+                    className="span-two"
+                    data-tooltip="Use a mounted file URI for local scans, or a traceable URI for uploads and URLs"
                   >
-                    <option value="mount">Mount</option>
-                    <option value="upload">Upload</option>
-                    <option value="url">URL</option>
-                  </select>
-                </label>
-                <label data-tooltip="Short name shown in source lists and job payloads">
-                  <span>Name</span>
-                  <input
-                    placeholder="Research corpus"
-                    value={sourceName}
-                    onChange={(event) => setSourceName(event.target.value)}
-                  />
-                </label>
-                <label
-                  className="span-two"
-                  data-tooltip="Use a mounted file URI for local scans, or a traceable URI for uploads and URLs"
-                >
-                  <span>URI</span>
-                  <input
-                    placeholder="file:///corpus/research"
-                    value={sourceUri}
-                    onChange={(event) => setSourceUri(event.target.value)}
-                  />
-                </label>
-                <button
-                  className="secondary-action"
-                  data-tooltip="Register a reusable corpus source for this domain"
-                  disabled={!selectedDomainId || isCreatingSource || isSelectedDomainArchived}
-                  type="submit"
-                >
-                  <FolderPlus aria-hidden="true" />
-                  {isCreatingSource ? "Adding source" : "Add source"}
-                </button>
-              </form>
-              <div className="source-list">
+                    <span>URI</span>
+                    <input
+                      placeholder="file:///corpus/research"
+                      value={sourceUri}
+                      onChange={(event) => setSourceUri(event.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Register a reusable corpus source for this domain"
+                    disabled={!selectedDomainId || isCreatingSource || isSelectedDomainArchived}
+                    type="submit"
+                  >
+                    <FolderPlus aria-hidden="true" />
+                    {isCreatingSource ? "Adding source" : "Add source"}
+                  </button>
+                </form>
+              </details>
+              <details className="workflow-section">
+                <summary data-tooltip="Show registered sources and their scan controls">
+                  <span>Registered sources</span>
+                  <strong>{sources.length} corpus inputs</strong>
+                </summary>
+                <div className="source-list">
                 <div className="source-list-heading">
                   <div>
                     <span>Corpus inputs</span>
@@ -4546,6 +4557,7 @@ function App() {
                   </div>
                 ) : null}
               </div>
+              </details>
             </section>
             <section
               className="file-upload"
@@ -6075,48 +6087,54 @@ function App() {
                   <strong>Admin journals</strong>
                 </div>
               </div>
-              <form className="admin-user-form" onSubmit={(event) => void handleCreateAdminUser(event)}>
-                <label>
-                  <span>Email</span>
-                  <input
-                    aria-label="New admin email"
-                    autoComplete="off"
-                    type="email"
-                    value={adminUserEmail}
-                    onChange={(event) => setAdminUserEmail(event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span>Password</span>
-                  <input
-                    aria-label="New admin password"
-                    autoComplete="new-password"
-                    type="password"
-                    value={adminUserPassword}
-                    onChange={(event) => setAdminUserPassword(event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span>Role</span>
-                  <select
-                    aria-label="New admin role"
-                    value={adminUserRole}
-                    onChange={(event) => setAdminUserRole(event.target.value)}
+              <details className="workflow-section">
+                <summary data-tooltip="Open the local account creation form">
+                  <span>Create user</span>
+                  <strong>New local admin account</strong>
+                </summary>
+                <form className="admin-user-form" onSubmit={(event) => void handleCreateAdminUser(event)}>
+                  <label>
+                    <span>Email</span>
+                    <input
+                      aria-label="New admin email"
+                      autoComplete="off"
+                      type="email"
+                      value={adminUserEmail}
+                      onChange={(event) => setAdminUserEmail(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Password</span>
+                    <input
+                      aria-label="New admin password"
+                      autoComplete="new-password"
+                      type="password"
+                      value={adminUserPassword}
+                      onChange={(event) => setAdminUserPassword(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Role</span>
+                    <select
+                      aria-label="New admin role"
+                      value={adminUserRole}
+                      onChange={(event) => setAdminUserRole(event.target.value)}
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                  </label>
+                  <button
+                    className="secondary-action"
+                    data-tooltip="Create a local admin account with the selected role"
+                    disabled={isCreatingAdminUser || !token}
+                    type="submit"
                   >
-                    <option value="admin">Admin</option>
-                    <option value="viewer">Viewer</option>
-                  </select>
-                </label>
-                <button
-                  className="secondary-action"
-                  data-tooltip="Create a local admin account with the selected role"
-                  disabled={isCreatingAdminUser || !token}
-                  type="submit"
-                >
-                  <UserPlus aria-hidden="true" />
-                  {isCreatingAdminUser ? "Creating admin" : "Create admin"}
-                </button>
-              </form>
+                    <UserPlus aria-hidden="true" />
+                    {isCreatingAdminUser ? "Creating admin" : "Create admin"}
+                  </button>
+                </form>
+              </details>
               {adminUserError ? (
                 <p className="inline-error" role="alert">
                   {adminUserError}
@@ -6127,7 +6145,12 @@ function App() {
                   {adminUserMessage}
                 </p>
               ) : null}
-              <div className="admin-user-list">
+              <details className="workflow-section" open>
+                <summary data-tooltip="Review users, grants, status toggles, and password resets">
+                  <span>User directory</span>
+                  <strong>{adminUsers.length} accounts</strong>
+                </summary>
+                <div className="admin-user-list">
                 {adminUsers.map((user) => (
                   <article className="admin-user-row" key={user.id}>
                     <div>
@@ -6273,6 +6296,7 @@ function App() {
                   </div>
                 ) : null}
               </div>
+              </details>
             </section>
           </article>
 
