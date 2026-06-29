@@ -2119,6 +2119,12 @@ test("loads the operational console", async ({ page }) => {
   );
   await page.getByLabel("Queries modules").getByRole("link", { name: "Live" }).click();
   await expect(page.getByRole("button", { name: "Connect live updates" })).toBeVisible();
+  await expect(page.getByLabel("Live progress context").getByText("SSE stream")).toBeVisible();
+  await expect(
+    page.getByLabel("Live progress context").locator("[data-tooltip]").filter({
+      hasText: "Persisted progress",
+    }),
+  ).toHaveAttribute("data-tooltip", /durable audit records/);
   await expect(page.getByLabel("Live progress summary").getByText("Waiting")).toBeVisible();
   await page.getByLabel("Queries modules").getByRole("link", { name: "Ask" }).click();
   await expect(page.getByLabel("Query run context").getByText("Smoke Research")).toBeVisible();

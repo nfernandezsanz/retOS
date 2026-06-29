@@ -854,6 +854,34 @@ h2 {
   gap: 10px;
 }
 
+.live-context {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.live-context div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.live-context span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.live-context strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
 .live-progress-summary div {
   display: grid;
   gap: 4px;
@@ -3444,6 +3472,7 @@ button:focus-visible {
   .eval-metrics,
   .ingestion-context,
   .runtime-plan-form,
+  .live-context,
   .live-progress-summary,
   .audit-context,
   .job-row-grid,

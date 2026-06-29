@@ -4971,6 +4971,20 @@ function App() {
                 </li>
               ))}
             </ol>
+            <div className="live-context" aria-label="Live progress context">
+              <div data-tooltip="Authenticated SSE stream keeps operators close to indexing and query progress">
+                <span>Connection</span>
+                <strong>{liveStatus === "connected" ? "SSE connected" : "SSE stream"}</strong>
+              </div>
+              <div data-tooltip="Reconnects resume from the persisted event cursor when one exists">
+                <span>Replay cursor</span>
+                <strong>{lastProgressCursor ? lastProgressCursor.slice(0, 18) : "Awaiting events"}</strong>
+              </div>
+              <div data-tooltip="Progress events are mirrored into durable audit records for later review">
+                <span>Audit trail</span>
+                <strong>Persisted progress</strong>
+              </div>
+            </div>
             <section className="event-ledger" aria-label="Live progress events" aria-live="polite">
               <div className="live-progress-summary" aria-label="Live progress summary">
                 <div>
