@@ -4,6 +4,23 @@ import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 
 const VISUAL_AUDIT_DIR = resolve(process.cwd(), "visual-audit");
+const VISUAL_AUDIT_SECTIONS = ["Overview", "Documents", "Queries", "Evals", "Audit", "Admin"];
+const VISUAL_AUDIT_MODULES = [
+  "documents-library",
+  "documents-sources",
+  "documents-upload",
+  "documents-text",
+  "queries-runner",
+  "queries-live",
+  "evals-runner",
+  "evals-results",
+  "evals-history",
+  "audit-jobs",
+  "audit-progress",
+  "audit-events",
+  "admin-providers",
+  "admin-users",
+];
 
 async function visualAuditRecord(
   name: string,
@@ -18,6 +35,24 @@ async function visualAuditRecord(
     size_bytes: metadata.size,
     viewport,
   };
+}
+
+async function visualAuditCoverage(page: Page) {
+  return await page.evaluate(({ sections, modules }) => {
+    const sectionLinks = [...document.querySelectorAll(".sidebar nav a")].map((link) =>
+      link.textContent?.trim(),
+    );
+    return {
+      sections,
+      modules,
+      visible_sections: sectionLinks.filter((label): label is string => Boolean(label)),
+      tooltip_targets: [...document.querySelectorAll("[data-tooltip]")].filter(
+        (element) => element.getClientRects().length > 0,
+      ).length,
+      no_horizontal_overflow:
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    };
+  }, { sections: VISUAL_AUDIT_SECTIONS, modules: VISUAL_AUDIT_MODULES });
 }
 
 function jobFixture(
@@ -1857,12 +1892,22 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
   });
   expect(transitionDurationMs).toBeLessThanOrEqual(0.01);
 
+  const responsiveChecks: Array<{
+    width: number;
+    height: number;
+    no_horizontal_overflow: boolean;
+  }> = [];
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     const hasHorizontalOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
     expect(hasHorizontalOverflow).toBe(false);
+    responsiveChecks.push({
+      width,
+      height: 900,
+      no_horizontal_overflow: !hasHorizontalOverflow,
+    });
   }
 
   if (process.env.RETOS_VISUAL_AUDIT === "1") {
@@ -1883,11 +1928,16 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
       fullPage: true,
       path: mobilePath,
     });
+    const coverage = await visualAuditCoverage(page);
     await writeFile(
       resolve(VISUAL_AUDIT_DIR, "manifest.json"),
       `${JSON.stringify(
         {
           generated_by: "frontend/e2e/app.spec.ts",
+          coverage: {
+            ...coverage,
+            responsive_checks: responsiveChecks,
+          },
           screenshots: [
             await visualAuditRecord("desktop", desktopPath, desktopViewport),
             await visualAuditRecord("mobile", mobilePath, mobileViewport),

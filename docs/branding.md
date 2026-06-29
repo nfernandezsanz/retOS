@@ -89,10 +89,12 @@ The app uses system UI fonts by default for Docker/offline reliability. The inte
   section/module navigation, tooltip contract, and the full operational console flow.
 - Reproducible screenshots: run `make frontend-visual-audit` to write ignored local
   desktop and mobile PNGs plus `frontend/visual-audit/manifest.json` with viewport,
-  size, and SHA-256 metadata for human design review.
+  size, SHA-256, section/module coverage, tooltip coverage, and responsive no-overflow
+  metadata for human design review.
 - Evidence gate: run `make visual-audit-check` after `make frontend-visual-audit` to
   verify the manifest, expected desktop/mobile screenshot records, PNG existence,
-  byte sizes, SHA-256 hashes, and viewport dimensions offline.
+  byte sizes, SHA-256 hashes, viewport dimensions, section/module coverage, tooltip
+  coverage, and responsive no-overflow checks offline.
 - Human review evidence: run `make visual-review-check`, then complete
   `docs/releases/evidence/visual-review-template.md` with desktop/mobile screenshots,
   screenshot hashes, workflow coverage, tooltip/overflow findings, accepted risks, and

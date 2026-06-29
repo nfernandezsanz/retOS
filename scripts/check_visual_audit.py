@@ -21,6 +21,25 @@ EXPECTED_SCREENSHOTS = {
         "viewport": {"width": 390, "height": 844},
     },
 }
+EXPECTED_SECTIONS = ["Overview", "Documents", "Queries", "Evals", "Audit", "Admin"]
+EXPECTED_MODULES = [
+    "documents-library",
+    "documents-sources",
+    "documents-upload",
+    "documents-text",
+    "queries-runner",
+    "queries-live",
+    "evals-runner",
+    "evals-results",
+    "evals-history",
+    "audit-jobs",
+    "audit-progress",
+    "audit-events",
+    "admin-providers",
+    "admin-users",
+]
+EXPECTED_RESPONSIVE_WIDTHS = [375, 768, 1024, 1440]
+MIN_TOOLTIP_TARGETS = 10
 
 
 class VisualAuditError(RuntimeError):
@@ -31,6 +50,8 @@ class VisualAuditError(RuntimeError):
 class VisualAuditResult:
     screenshots: int
     total_size_bytes: int
+    sections: int
+    modules: int
 
 
 def sha256(path: Path) -> str:
@@ -59,6 +80,10 @@ def validate_visual_audit(manifest_path: Path = DEFAULT_MANIFEST) -> VisualAudit
         raise VisualAuditError(
             "manifest generated_by must remain frontend/e2e/app.spec.ts"
         )
+    coverage = manifest.get("coverage")
+    if not isinstance(coverage, dict):
+        raise VisualAuditError("manifest coverage must be a JSON object")
+    validate_coverage(coverage)
     screenshots = manifest.get("screenshots")
     if not isinstance(screenshots, list):
         raise VisualAuditError("manifest screenshots must be a list")
@@ -85,7 +110,51 @@ def validate_visual_audit(manifest_path: Path = DEFAULT_MANIFEST) -> VisualAudit
     return VisualAuditResult(
         screenshots=len(EXPECTED_SCREENSHOTS),
         total_size_bytes=total_size,
+        sections=len(EXPECTED_SECTIONS),
+        modules=len(EXPECTED_MODULES),
     )
+
+
+def validate_coverage(coverage: dict[str, Any]) -> None:
+    sections = coverage.get("sections")
+    if sections != EXPECTED_SECTIONS:
+        raise VisualAuditError(f"coverage sections must be {EXPECTED_SECTIONS}")
+    visible_sections = coverage.get("visible_sections")
+    if visible_sections != EXPECTED_SECTIONS:
+        raise VisualAuditError(f"coverage visible_sections must be {EXPECTED_SECTIONS}")
+    modules = coverage.get("modules")
+    if modules != EXPECTED_MODULES:
+        raise VisualAuditError("coverage modules must match the workspace module list")
+    tooltip_targets = coverage.get("tooltip_targets")
+    if not isinstance(tooltip_targets, int) or tooltip_targets < MIN_TOOLTIP_TARGETS:
+        raise VisualAuditError(
+            f"coverage tooltip_targets must be at least {MIN_TOOLTIP_TARGETS}"
+        )
+    if coverage.get("no_horizontal_overflow") is not True:
+        raise VisualAuditError("coverage must record no_horizontal_overflow=true")
+
+    responsive_checks = coverage.get("responsive_checks")
+    if not isinstance(responsive_checks, list):
+        raise VisualAuditError("coverage responsive_checks must be a list")
+    by_width = {
+        record.get("width"): record
+        for record in responsive_checks
+        if isinstance(record, dict) and record.get("width")
+    }
+    missing_widths = sorted(set(EXPECTED_RESPONSIVE_WIDTHS) - set(by_width))
+    if missing_widths:
+        raise VisualAuditError(
+            "coverage missing responsive width(s): "
+            + ", ".join(str(width) for width in missing_widths)
+        )
+    for width in EXPECTED_RESPONSIVE_WIDTHS:
+        record = by_width[width]
+        if record.get("height") != 900:
+            raise VisualAuditError(f"coverage width {width} must use height 900")
+        if record.get("no_horizontal_overflow") is not True:
+            raise VisualAuditError(
+                f"coverage width {width} must record no_horizontal_overflow=true"
+            )
 
 
 def validate_record(
@@ -142,7 +211,8 @@ def main() -> int:
     print(
         "Visual audit OK: "
         f"{result.screenshots} screenshot(s), {result.total_size_bytes} bytes, "
-        "manifest hashes verified."
+        f"{result.sections} section(s), {result.modules} module(s), "
+        "manifest hashes and coverage verified."
     )
     return 0
 

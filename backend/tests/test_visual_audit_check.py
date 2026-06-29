@@ -19,7 +19,12 @@ def load_visual_gate() -> ModuleType:
 
 
 def write_visual_audit(
-    tmp_path: Path, *, bad_hash: bool = False, bad_viewport: bool = False
+    tmp_path: Path,
+    *,
+    bad_hash: bool = False,
+    bad_viewport: bool = False,
+    missing_coverage: bool = False,
+    missing_responsive_width: bool = False,
 ) -> Path:
     gate = load_visual_gate()
     visual_dir = tmp_path / "frontend" / "visual-audit"
@@ -43,16 +48,27 @@ def write_visual_audit(
                 "viewport": viewport,
             }
         )
+    responsive_checks = [
+        {"width": width, "height": 900, "no_horizontal_overflow": True}
+        for width in gate.EXPECTED_RESPONSIVE_WIDTHS
+    ]
+    if missing_responsive_width:
+        responsive_checks = responsive_checks[:-1]
+    manifest = {
+        "generated_by": "frontend/e2e/app.spec.ts",
+        "screenshots": records,
+    }
+    if not missing_coverage:
+        manifest["coverage"] = {
+            "sections": gate.EXPECTED_SECTIONS,
+            "visible_sections": gate.EXPECTED_SECTIONS,
+            "modules": gate.EXPECTED_MODULES,
+            "tooltip_targets": gate.MIN_TOOLTIP_TARGETS,
+            "no_horizontal_overflow": True,
+            "responsive_checks": responsive_checks,
+        }
     manifest_path = visual_dir / "manifest.json"
-    manifest_path.write_text(
-        json.dumps(
-            {
-                "generated_by": "frontend/e2e/app.spec.ts",
-                "screenshots": records,
-            }
-        ),
-        encoding="utf-8",
-    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     return manifest_path
 
 
@@ -63,6 +79,8 @@ def test_visual_audit_gate_accepts_hash_backed_manifest(tmp_path: Path) -> None:
     result = gate.validate_visual_audit(manifest_path)
 
     assert result.screenshots == 2
+    assert result.sections == 6
+    assert result.modules == 14
     assert result.total_size_bytes > 0
 
 
@@ -101,3 +119,27 @@ def test_visual_audit_gate_rejects_wrong_viewport(tmp_path: Path) -> None:
         assert "mobile viewport must be" in str(exc)
     else:
         raise AssertionError("Expected wrong viewport to fail")
+
+
+def test_visual_audit_gate_rejects_missing_coverage(tmp_path: Path) -> None:
+    gate = load_visual_gate()
+    manifest_path = write_visual_audit(tmp_path, missing_coverage=True)
+
+    try:
+        gate.validate_visual_audit(manifest_path)
+    except gate.VisualAuditError as exc:
+        assert "manifest coverage must be a JSON object" in str(exc)
+    else:
+        raise AssertionError("Expected missing coverage to fail")
+
+
+def test_visual_audit_gate_rejects_missing_responsive_width(tmp_path: Path) -> None:
+    gate = load_visual_gate()
+    manifest_path = write_visual_audit(tmp_path, missing_responsive_width=True)
+
+    try:
+        gate.validate_visual_audit(manifest_path)
+    except gate.VisualAuditError as exc:
+        assert "coverage missing responsive width" in str(exc)
+    else:
+        raise AssertionError("Expected missing responsive width to fail")
