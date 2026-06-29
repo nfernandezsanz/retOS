@@ -30,9 +30,23 @@ def test_local_status_accepts_compose_json_array() -> None:
     status = load_local_status()
     payload = json.dumps(
         [
-            {"Service": "api", "State": "running", "Health": "healthy"},
-            {"Service": "migrate", "State": "exited", "Status": "Exited (0) 2 minutes ago"},
-            {"Service": "worker", "State": "running"},
+            {
+                "Service": "api",
+                "State": "running",
+                "Health": "healthy",
+                "Labels": "com.docker.compose.image=sha256:backend-runtime",
+            },
+            {
+                "Service": "migrate",
+                "State": "exited",
+                "Status": "Exited (0) 2 minutes ago",
+                "Labels": "com.docker.compose.image=sha256:backend-runtime",
+            },
+            {
+                "Service": "worker",
+                "State": "running",
+                "Labels": "com.docker.compose.image=sha256:backend-runtime",
+            },
             {"Service": "web", "State": "running"},
             {"Service": "postgres", "State": "running", "Health": "healthy"},
             {"Service": "rabbitmq", "State": "running", "Health": "healthy"},
@@ -48,6 +62,7 @@ def test_local_status_accepts_compose_json_array() -> None:
         "service:rabbitmq": "OK",
         "service:web": "OK",
         "service:worker": "OK",
+        "backend runtime image": "OK",
     }
 
 
@@ -61,6 +76,60 @@ def test_local_status_accepts_compose_json_lines() -> None:
     checks = status.collect_compose_checks(lambda _command: completed(payload))
 
     assert not [check for check in checks if check.status == "FAIL"]
+
+
+def test_local_status_detects_backend_runtime_image_drift() -> None:
+    status = load_local_status()
+    payload = json.dumps(
+        [
+            {
+                "Service": "api",
+                "State": "running",
+                "Labels": {"com.docker.compose.image": "sha256:api"},
+            },
+            {
+                "Service": "migrate",
+                "State": "exited",
+                "ExitCode": 0,
+                "Labels": {"com.docker.compose.image": "sha256:api"},
+            },
+            {
+                "Service": "worker",
+                "State": "running",
+                "Labels": {"com.docker.compose.image": "sha256:worker"},
+            },
+            {"Service": "web", "State": "running"},
+            {"Service": "postgres", "State": "running"},
+            {"Service": "rabbitmq", "State": "running"},
+        ]
+    )
+
+    checks = status.collect_compose_checks(lambda _command: completed(payload))
+
+    failures = {check.name: check.detail for check in checks if check.status == "FAIL"}
+    assert "api=sha256:api" in failures["backend runtime image"]
+    assert "worker=sha256:worker" in failures["backend runtime image"]
+
+
+def test_local_status_warns_when_backend_runtime_image_metadata_is_missing() -> None:
+    status = load_local_status()
+    payload = json.dumps(
+        [
+            {"Service": "api", "State": "running"},
+            {"Service": "migrate", "State": "exited", "ExitCode": 0},
+            {"Service": "worker", "State": "running"},
+            {"Service": "web", "State": "running"},
+            {"Service": "postgres", "State": "running"},
+            {"Service": "rabbitmq", "State": "running"},
+        ]
+    )
+
+    checks = status.collect_compose_checks(lambda _command: completed(payload))
+
+    warnings = {check.name: check.detail for check in checks if check.status == "WARN"}
+    assert warnings["backend runtime image"] == (
+        "missing compose image digest for api, worker, migrate"
+    )
 
 
 def test_local_status_uses_all_services_for_compose_status() -> None:

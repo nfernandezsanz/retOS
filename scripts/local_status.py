@@ -98,6 +98,47 @@ def service_succeeded(service: dict[str, Any]) -> bool:
     return "exited (0)" in status or "exit 0" in status or status == "completed"
 
 
+def compose_label_value(service: dict[str, Any], label: str) -> str | None:
+    raw_labels = service.get("Labels")
+    if isinstance(raw_labels, dict):
+        value = raw_labels.get(label)
+        return str(value) if value else None
+    if not isinstance(raw_labels, str):
+        return None
+    for item in raw_labels.split(","):
+        key, separator, value = item.partition("=")
+        if separator and key.strip() == label:
+            stripped = value.strip()
+            return stripped or None
+    return None
+
+
+def backend_runtime_image_check(by_name: dict[str, dict[str, Any]]) -> StatusCheck:
+    roles = ("api", "worker", "migrate")
+    digests: dict[str, str] = {}
+    missing: list[str] = []
+    for role in roles:
+        service = by_name.get(role)
+        if service is None:
+            missing.append(role)
+            continue
+        digest = compose_label_value(service, "com.docker.compose.image")
+        if digest:
+            digests[role] = digest
+        else:
+            missing.append(role)
+    if missing:
+        return warn(
+            "backend runtime image",
+            "missing compose image digest for " + ", ".join(missing),
+        )
+    if len(set(digests.values())) != 1:
+        detail = ", ".join(f"{role}={digest}" for role, digest in digests.items())
+        return fail("backend runtime image", f"image drift: {detail}")
+    digest = next(iter(digests.values()))
+    return ok("backend runtime image", f"api/worker/migrate share {digest[:19]}")
+
+
 def collect_compose_checks(runner: CommandRunner = default_runner) -> list[StatusCheck]:
     result = runner(["docker", "compose", "ps", "--all", "--format", "json"])
     if result.returncode != 0:
@@ -134,6 +175,7 @@ def collect_compose_checks(runner: CommandRunner = default_runner) -> list[Statu
     else:
         status = str(migrate.get("Status") or service_state(migrate)).strip()
         checks.append(fail("service:migrate", status))
+    checks.append(backend_runtime_image_check(by_name))
     return checks
 
 

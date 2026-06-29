@@ -152,7 +152,10 @@ profile only when you want local LLM calls.
 
 `make local-status` does not start or mutate services. It prints the local URLs, checks
 the API, worker, web, Postgres, RabbitMQ, and one-shot migration service states from
-`docker compose ps --all`, and verifies the console/API endpoints from the host.
+`docker compose ps --all`, verifies that API, worker, and migrate share one backend
+image digest when Compose exposes image metadata, and verifies the console/API endpoints
+from the host. Use `make docker-runtime-image-check` when you need the stricter
+container-inspection guard.
 
 `make local-smoke` assumes the stack is already running. It loads the web console,
 checks API readiness and version metadata, authenticates with the local bootstrap admin,

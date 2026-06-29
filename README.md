@@ -112,7 +112,9 @@ Use `make docker-down` when you are done.
 
 Run `make local-status` any time after startup to print the useful URLs, inspect the
 Docker services, confirm the one-shot migration container when Compose exposes it, and
-verify the console/API endpoints from your machine.
+verify the console/API endpoints from your machine. It also checks that the API, worker,
+and migration roles are running the same backend image digest, so image drift is visible
+before deeper Docker smoke runs.
 
 Run `make local-smoke` when you want a fast end-to-end check against the already-running
 stack: it loads the web console, checks API readiness/version metadata, logs in with the
@@ -147,7 +149,7 @@ and leaves an existing local `.env` untouched.
 
 | Symptom | Local check | What to do |
 | --- | --- | --- |
-| The console does not load | `make local-status` | Confirm `web`, `api`, Postgres, RabbitMQ, migrations, and host endpoints are reachable; rerun `make local-demo` if a required service is missing. |
+| The console does not load | `make local-status` | Confirm `web`, `api`, Postgres, RabbitMQ, migrations, the shared backend runtime image digest, and host endpoints are reachable; rerun `make local-demo` if a required service is missing. |
 | API readiness is failing | `curl --fail http://localhost:8000/readyz` | Run `make local-logs` and rerun `make doctor` before changing code or secrets. |
 | Demo data is missing | `make docker-seed-demo` | Re-seed the idempotent demo corpus, then refresh Documents or run `make local-status` to confirm the stack stayed healthy. |
 | Search or demo flow feels broken | `make local-smoke` | Exercise login, idempotent demo seeding, indexed search, API readiness/version, journal/progress hash-chain evidence, SSE replay/resume, limited audit export integrity with offline verifier recomputation, and the web console against the running stack. |
@@ -437,7 +439,7 @@ Every meaningful change should pass these gates:
 | Gate | Command | Purpose |
 | --- | --- | --- |
 | Local demo | `make local-demo` | Boots the local Docker stack in the background, seeds auditable demo data, and prints the console/API/RabbitMQ URLs for hands-on review. |
-| Local status | `make local-status` | Prints useful local URLs, checks Docker service and migration state, and verifies the console/API endpoints without starting or mutating the stack. |
+| Local status | `make local-status` | Prints useful local URLs, checks Docker service and migration state, verifies API/worker/migrate share one backend image digest, and checks console/API endpoints without starting or mutating the stack. |
 | Local smoke | `make local-smoke` | Hits the already-running local web/API stack, authenticates with the bootstrap admin, re-seeds demo data idempotently, and verifies demo search plus journal/progress hash-chain, authenticated SSE replay/resume, and limited audit export evidence with offline verifier recomputation. |
 | Local logs | `make local-logs` | Prints recent Compose logs for Postgres, RabbitMQ, migrations, API, worker, and web without following or mutating the stack. |
 | Local doctor | `make doctor` | Checks local prerequisites, safe `.env.example` defaults, the active `.env` when present, Docker Compose config, topology guard, and audit-export verifier before heavier gates. |
