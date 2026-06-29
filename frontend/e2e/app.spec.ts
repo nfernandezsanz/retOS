@@ -1599,11 +1599,24 @@ test("loads the operational console", async ({ page }) => {
   await page.getByLabel("Password", { exact: true }).fill("retos-dev-admin-change-me");
   await page.getByRole("button", { name: "Load providers" }).click();
 
+  await expect(page.getByText("Active provider")).toBeVisible();
+  await expect(page.getByText("Active model")).toBeVisible();
   await expect(page.getByText("ollama:gemma4")).toBeVisible();
-  await expect(page.getByText("Ollama local runtime")).toBeVisible();
-  await expect(page.getByText("OpenAI", { exact: true })).toBeVisible();
-  await expect(page.getByText("Blocked")).toBeVisible();
-  await expect(page.getByText("Missing RETOS_OPENAI_API_KEY")).toBeVisible();
+  const localProviderRow = page
+    .getByLabel("Available LLM providers")
+    .locator(".provider-row")
+    .filter({ hasText: "Ollama local runtime" });
+  await expect(localProviderRow.getByText("Active")).toBeVisible();
+  await expect(localProviderRow.getByText("Configured")).toBeVisible();
+  await expect(localProviderRow.getByText("Enabled")).toBeVisible();
+  const openAiProviderRow = page
+    .getByLabel("Available LLM providers")
+    .locator(".provider-row")
+    .filter({ hasText: "OpenAI" });
+  await expect(openAiProviderRow.getByText("Available")).toBeVisible();
+  await expect(openAiProviderRow.getByText("Missing config")).toBeVisible();
+  await expect(openAiProviderRow.getByText("Blocked")).toBeVisible();
+  await expect(openAiProviderRow.getByText("Missing RETOS_OPENAI_API_KEY")).toBeVisible();
   await expect(page.getByLabel("Admin users").getByText("admin@retos.dev")).toBeVisible();
   await page.getByLabel("New admin email").fill("ui-admin@retos.dev");
   await page.getByLabel("New admin password").fill("ui-admin-password");

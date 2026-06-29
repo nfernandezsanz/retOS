@@ -706,6 +706,13 @@ return `RETOS_AZURE_OPENAI_API_KEY`, `RETOS_AZURE_OPENAI_ENDPOINT`, and
 selected as `RETOS_PROVIDER`, runtime security validation fails fast until both
 `RETOS_ALLOW_PAID_LLM=true` and all required provider settings are present.
 
+The Admin UI treats this catalog as safe operational metadata. It highlights the active
+provider and active model, marks each profile as active or available, shows configured
+versus missing-config state, preserves the paid/local guardrail badges, and renders safe
+runtime hints such as the Ollama base URL or missing environment variable names. It does
+not write provider settings or expose secrets; runtime switching remains an explicit
+environment/configuration change that is validated on startup.
+
 ## Evals
 
 Run the deterministic local smoke eval suite:

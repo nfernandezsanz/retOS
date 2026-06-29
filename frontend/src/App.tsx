@@ -4323,8 +4323,14 @@ function App() {
 
               <section className="provider-summary" aria-live="polite">
                 <div>
-                  <span>Active runtime</span>
-                  <strong>{catalog ? catalog.active.model : "Connect admin session"}</strong>
+                  <span>Active provider</span>
+                  <strong>
+                    {catalog ? providerLabel(catalog.active.provider) : "Connect admin session"}
+                  </strong>
+                </div>
+                <div>
+                  <span>Active model</span>
+                  <strong>{catalog ? catalog.active.model : "Waiting for login"}</strong>
                 </div>
                 <div>
                   <span>Cost guardrail</span>
@@ -4338,32 +4344,44 @@ function App() {
             </div>
 
             <div className="provider-list" aria-label="Available LLM providers">
-              {(catalog?.providers ?? []).map((provider) => (
-                <article className="provider-row" key={provider.name}>
-                  <div>
-                    <strong>{provider.label}</strong>
-                    <span>{provider.default_model}</span>
-                  </div>
-                  <div className="provider-badges">
-                    <span className={provider.paid ? "badge warning" : "badge success"}>
-                      {provider.paid ? "Paid" : "Local/test"}
-                    </span>
-                    <span className={provider.enabled ? "badge success" : "badge muted"}>
-                      {provider.enabled ? "Enabled" : "Blocked"}
-                    </span>
-                  </div>
-                  {provider.enabled ? (
-                    <CheckCircle2 aria-label="Provider enabled" className="row-icon success" />
-                  ) : (
-                    <ShieldAlert aria-label={provider.reason ?? "Provider blocked"} className="row-icon" />
-                  )}
-                  {provider.missing_config.length > 0 ? (
-                    <p className="provider-missing">
-                      Missing {provider.missing_config.join(", ")}
-                    </p>
-                  ) : null}
-                </article>
-              ))}
+              {(catalog?.providers ?? []).map((provider) => {
+                const isActiveProvider = catalog?.active.provider === provider.name;
+                return (
+                  <article className="provider-row" key={provider.name}>
+                    <div>
+                      <strong>{provider.label}</strong>
+                      <span>{provider.default_model}</span>
+                      {provider.base_url ? <span>{provider.base_url}</span> : null}
+                    </div>
+                    <div className="provider-badges">
+                      <span className={isActiveProvider ? "badge success" : "badge muted"}>
+                        {isActiveProvider ? "Active" : "Available"}
+                      </span>
+                      <span className={provider.configured ? "badge success" : "badge muted"}>
+                        {provider.configured ? "Configured" : "Missing config"}
+                      </span>
+                      <span className={provider.paid ? "badge warning" : "badge success"}>
+                        {provider.paid ? "Paid" : "Local/test"}
+                      </span>
+                      <span className={provider.enabled ? "badge success" : "badge muted"}>
+                        {provider.enabled ? "Enabled" : "Blocked"}
+                      </span>
+                    </div>
+                    {provider.enabled ? (
+                      <CheckCircle2 aria-label="Provider enabled" className="row-icon success" />
+                    ) : (
+                      <ShieldAlert aria-label={provider.reason ?? "Provider blocked"} className="row-icon" />
+                    )}
+                    {provider.missing_config.length > 0 || provider.reason ? (
+                      <p className="provider-missing">
+                        {provider.missing_config.length > 0
+                          ? `Missing ${provider.missing_config.join(", ")}`
+                          : provider.reason}
+                      </p>
+                    ) : null}
+                  </article>
+                );
+              })}
               {!catalog ? (
                 <div className="empty-state compact">
                   <LockKeyhole aria-hidden="true" />

@@ -65,6 +65,15 @@ The endpoint never returns API keys and never performs a model call. This gives 
 safe way to render provider switches and warnings before the Deep Agents runtime is
 connected.
 
+The implemented Admin UI currently keeps provider configuration read-only and
+operator-safe: it marks the active provider/model, labels profiles as active or
+available, distinguishes configured profiles from missing configuration, and surfaces
+only safe hints such as missing environment variable names or the Ollama base URL. Live
+runtime switching is intentionally deferred until there is a persisted, audited
+configuration story; today switching profiles is done by changing `RETOS_PROVIDER` and
+related environment variables, then letting startup validation fail fast if the choice is
+unsafe.
+
 Runtime startup uses the same configuration checks as the catalog. Selecting a paid
 provider requires both `RETOS_ALLOW_PAID_LLM=true` and complete provider configuration;
 otherwise startup fails fast instead of silently running with an unusable provider.
