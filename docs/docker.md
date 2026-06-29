@@ -140,6 +140,7 @@ make docker-runtime-image-check
 
 ```bash
 make local-demo
+make local-access
 make local-status
 make local-smoke
 ```
@@ -149,6 +150,10 @@ secrets untouched, runs the local doctor, starts the API, worker, web, Postgres,
 RabbitMQ, and migration services in the background, and seeds the demo corpus through
 the running API container. It does not pull the optional Ollama image; use the model
 profile only when you want local LLM calls.
+
+`make local-access` prints the local console/API/RabbitMQ URLs plus the bootstrap admin
+email. It prints the password only when it is still the development placeholder from
+`.env.example`; custom `.env` passwords remain local and are not echoed.
 
 `make local-status` does not start or mutate services. It prints the local URLs, checks
 the API, worker, web, Postgres, RabbitMQ, and one-shot migration service states from
