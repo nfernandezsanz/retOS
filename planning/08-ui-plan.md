@@ -94,6 +94,9 @@ keeps local browser sessions short, scan-friendly, and easy to validate with Pla
 - The shell includes a keyboard-visible skip link to the workspace, keeps sidebar focus
   rings visible, and verifies mobile provider/eval/audit surfaces do not create
   document-level horizontal overflow.
+- Stored admin tokens are treated as a convenience, not durable trust. If provider
+  catalog loading returns `401`, the UI clears `retos.adminToken`, resets provider state,
+  re-enables password entry, and asks the operator to reconnect.
 - The shell renders a compact Overview first, then separates Documents, Queries, Evals,
   Audit, and Admin into focused hash-addressable sections with matching sidebar and
   workspace controls. Hover/focus tooltips describe navigation targets and high-impact

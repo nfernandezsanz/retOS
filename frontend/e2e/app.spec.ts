@@ -1578,6 +1578,32 @@ test("keeps the RetOS brand system accessible and responsive", async ({ page }) 
   }
 });
 
+test("clears expired stored admin sessions", async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem("retos.adminToken", "expired-token"));
+  await page.route("http://localhost:8000/llm/providers", async (route) => {
+    expect(route.request().headers().authorization).toBe("Bearer expired-token");
+    await route.fulfill({
+      contentType: "application/json",
+      status: 401,
+      json: { detail: "Token has expired" },
+    });
+  });
+  await page.reload();
+
+  await page.getByRole("link", { name: "Admin" }).first().click();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveValue("stored-session");
+  await page.getByRole("button", { name: "Load providers" }).click();
+
+  await expect(page.getByRole("alert")).toContainText(
+    "Admin session expired. Enter the password and load providers again.",
+  );
+  await expect(page.getByLabel("Password", { exact: true })).toBeEditable();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveValue("");
+  await expect(page.getByText("Connect admin session")).toBeVisible();
+  const storedToken = await page.evaluate(() => localStorage.getItem("retos.adminToken"));
+  expect(storedToken).toBeNull();
+});
+
 test("loads the operational console", async ({ page }) => {
   test.setTimeout(45_000);
 

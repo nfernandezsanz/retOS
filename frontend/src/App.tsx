@@ -624,6 +624,36 @@ const API_BASE_URL = import.meta.env.VITE_RETOS_API_URL ?? "http://localhost:800
 const TOKEN_STORAGE_KEY = "retos.adminToken";
 const JOB_LEDGER_LIMIT = 16;
 
+class ApiRequestError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
+
+async function responseErrorMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    if (typeof body.detail === "string") {
+      return body.detail;
+    }
+  } catch {
+    // Fall through to the status-based message.
+  }
+  return `Request failed with ${response.status}`;
+}
+
+function isUnauthorizedError(error: unknown): boolean {
+  return error instanceof ApiRequestError && error.status === 401;
+}
+
+function readableError(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 const pipelineSteps = [
   { label: "Scan", value: "Discover mounted files and uploads", state: "ready" },
   { label: "Hash", value: "Create deterministic content identities", state: "ready" },
@@ -643,7 +673,7 @@ async function requestJson<T>(
     },
   });
   if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
+    throw new ApiRequestError(response.status, await responseErrorMessage(response));
   }
   return (await response.json()) as T;
 }
@@ -1833,7 +1863,11 @@ function App() {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       setToken("");
       setCatalog(null);
-      setProviderError(error instanceof Error ? error.message : "Provider catalog failed");
+      setProviderError(
+        isUnauthorizedError(error)
+          ? "Admin session expired. Enter the password and load providers again."
+          : readableError(error, "Provider catalog failed"),
+      );
     } finally {
       setIsLoadingProvider(false);
     }
