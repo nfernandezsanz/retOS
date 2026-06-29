@@ -1981,6 +1981,39 @@ test("keeps operational modules compact and segmented", async ({ page }) => {
     );
     expect(layout.tooltipTargets, `${section}/${module ?? "overview"} tooltip targets`).toBeGreaterThan(0);
   }
+
+  await page.setViewportSize({ width: 599, height: 773 });
+  await page.getByLabel("Primary navigation").getByRole("link", { name: "Documents" }).click();
+  await page.locator('.module-nav a[href="#documents-library"]').click();
+  const mediumDocumentLayout = await page.locator("#documents").evaluate((panel) => {
+    const library = panel.querySelector("#documents-library");
+    const documentList = panel.querySelector(".document-list:not([hidden])");
+    const panelRect = panel.getBoundingClientRect();
+    const libraryRect = library?.getBoundingClientRect();
+    const documentListRect = documentList?.getBoundingClientRect();
+    return {
+      columns: getComputedStyle(panel).gridTemplateColumns.split(" ").filter(Boolean).length,
+      documentListHeight: Math.round(documentListRect?.height ?? 0),
+      documentListLeft: Math.round(documentListRect?.left ?? 0),
+      horizontalOverflow:
+        document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      libraryHeight: Math.round(libraryRect?.height ?? 0),
+      libraryRight: Math.round(libraryRect?.right ?? 0),
+      panelBottom: Math.round(panelRect.bottom),
+      panelScroll: panel.scrollHeight - panel.clientHeight,
+      visibleTooltipTargets: panel.querySelectorAll("[data-tooltip]").length,
+    };
+  });
+  expect(mediumDocumentLayout.columns).toBeGreaterThanOrEqual(2);
+  expect(mediumDocumentLayout.horizontalOverflow).toBe(false);
+  expect(mediumDocumentLayout.panelScroll).toBeLessThanOrEqual(20);
+  expect(mediumDocumentLayout.libraryHeight).toBeGreaterThan(260);
+  expect(mediumDocumentLayout.documentListHeight).toBeGreaterThan(160);
+  expect(mediumDocumentLayout.documentListLeft).toBeGreaterThanOrEqual(
+    mediumDocumentLayout.libraryRight,
+  );
+  expect(mediumDocumentLayout.panelBottom).toBeLessThanOrEqual(773);
+  expect(mediumDocumentLayout.visibleTooltipTargets).toBeGreaterThanOrEqual(12);
 });
 
 test("seeds the local demo corpus from the overview", async ({ page }) => {

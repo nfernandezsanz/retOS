@@ -3999,6 +3999,30 @@ button:focus-visible {
 }
 
 @media (max-width: 760px) {
+  .sidebar {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .brand {
+    font-size: 16px;
+  }
+
+  .brand img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sidebar nav {
+    gap: 4px;
+  }
+
+  .sidebar a {
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 14px;
+  }
+
   .workspace {
     padding: 12px;
   }
@@ -4179,8 +4203,31 @@ button:focus-visible {
 }
 
 @media (min-width: 560px) and (max-width: 760px) {
+  #documents:has(#documents-library:not([hidden])) {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 10px;
+  }
+
+  #documents:has(#documents-library:not([hidden])) > .panel-heading {
+    grid-column: 1 / -1;
+  }
+
+  #documents:has(#documents-library:not([hidden])) > #documents-library {
+    grid-column: 1;
+    max-height: calc(100vh - 334px);
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  #documents:has(#documents-library:not([hidden])) > .document-list:not([hidden]) {
+    grid-column: 2;
+    max-height: calc(100vh - 334px);
+    border-top: 0;
+    padding-top: 0;
+  }
+
   .domain-management {
-    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    grid-template-columns: 1fr;
   }
 
   .domain-form,
