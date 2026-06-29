@@ -60,6 +60,7 @@ def main() -> int:
         "External GHCR digests, SBOM/provenance, and Cosign verification are recorded",
         "Target-environment human security review is complete",
         "Promotion owner accepted the bounded calibration scope",
+        "make local-acceptance",
         "make auditor-static-check",
         "make ci-status-check",
         "GHCR backend and web digests",
