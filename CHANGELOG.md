@@ -177,9 +177,14 @@ tag in GitHub.
 - The React eval runner now groups dataset-specific SQuAD, HotpotQA, Natural Questions,
   and OCR controls into compact tooltip-backed accordions so the quality screen starts
   shorter while keeping local execution controls one click away.
+- The React console now keeps responsive context cards in horizontal strips on smaller
+  screens, bounds the mobile document Library into separate scrollable sections, and
+  keeps secondary query evidence collapsed behind tooltip-backed review sections.
 - The React console now uses a more explicit audit-console brand treatment with a
   compact operating-posture band, stronger first-viewport identity, reduced-motion
   handling, and stable responsive heading sizing.
+- SQLite-backed tests now close direct inspection connections deterministically so
+  Python 3.14 resource warnings do not pollute local audit gates.
 - HotpotQA and HotpotQA-agent calibration now use deterministic named-entity follow-up
   retrieval and a larger supporting-fact evidence budget, improving bounded public
   sample grounding and multi-hop support to PASS without provider calls.
